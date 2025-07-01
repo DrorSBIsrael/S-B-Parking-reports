@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>אימות דו-שלבי - מערכת דוחות חניונים S&B</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-blue: #1E40AF;
+            --primary-orange: #EA580C;
+            --secondary-blue: #3B82F6;
+            --accent-gold: #F59E0B;
+            --success-green: #10B981;
+            --gray-50: #F9FAFB;
+            --gray-100: #F3F4F6;
+            --gray-200: #E5E7EB;
+            --gray-300: #D1D5DB;
+            --gray-400: #9CA3AF;
+            --gray-600: #4B5563;
+            --gray-700: #374151;
+            --gray-800: #1F2937;
+            --gray-900: #111827;
+            --white: #FFFFFF;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans Hebrew', sans-serif;
+            background: linear-gradient(135deg, var(--success-green) 0%, var(--secondary-blue) 100%);
+            min-height: 100vh;
+            color: var(--gray-900);
+            line-height: 1.6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .verify-container {
+            background: var(--white);
+            border-radius: 24px;
+            box-shadow: var(--shadow-xl);
+            padding: 3rem;
+            width: 100%;
+            max-width: 480px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: fadeInScale 0.6s ease-out;
+        }
+
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .security-icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, var(--success-green), var(--secondary-blue));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+            margin: 0 auto 2rem;
+            box-shadow: var(--shadow-lg);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--success-green), var(--secondary-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+        }
+
+        .subtitle {
+            color: var(--gray-600);
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+
+        .email-hint {
+            color: var(--gray-500);
+            font-size: 0.9rem;
+            margin-bottom: 2.5rem;
+            padding: 1rem;
+            background: var(--gray-50);
+            border-radius: 12px;
+            border: 1px solid var(--gray-200);
+        }
+
+        .timer-section {
+            margin-bottom: 2rem;
+            padding: 1.2rem;
+            background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+            border-radius: 14px;
+            border: 1px solid var(--accent-gold);
+        }
+
+        .timer-text {
+            font-size: 0.9rem;
+            color: #92400E;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .timer-display {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #92400E;
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+            letter-spacing: 2px;
+        }
+
+        .form-group {
+            margin-bottom: 2rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 700;
+            color: var(--gray-700);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .code-input {
+            width: 100%;
+            padding: 1.5rem;
+            border: 3px solid var(--gray-300);
+            border-radius: 16px;
+            font-size: 2rem;
+            font-weight: 700;
+            text-align: center;
+            letter-spacing: 8px;
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, var(--gray-50), var(--white));
+            color: var(--gray-900);
+            direction: ltr;
+        }
+
+        .code-input:focus {
+            outline: none;
+            border-color: var(--success-green);
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+            transform: translateY(-2px);
+            background: var(--white);
+        }
+
+        .code-input::placeholder {
+            color: var(--gray-400);
+            font-weight: 400;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            padding: 1.2rem 2.5rem;
+            border: none;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            font-family: inherit;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success-green), #059669);
+            color: white;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .btn-success:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: var(--white);
+            color: var(--gray-700);
+            border: 2px solid var(--gray-300);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-400);
+            transform: translateY(-1px);
+        }
+
+        .spinner {
+            width: 22px;
+            height: 22px;
+            border: 3px solid transparent;
+            border-top: 3px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .alert {
+            padding: 1.2rem;
+            border-radius: 14px;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .alert-error {
+            background: linear-gradient(135deg, #FEE2E2, #FECACA);
+            color: #991B1B;
+            border: 1px solid #F87171;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
+            color: #065F46;
+            border: 1px solid #34D399;
+        }
+
+        .security-tips {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #EEF2FF, #E0E7FF);
+            border-radius: 14px;
+            border: 1px solid var(--secondary-blue);
+            text-align: right;
+        }
+
+        .security-title {
+            font-weight: 700;
+            color: var(--secondary-blue);
+            margin-bottom: 0.8rem;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .security-text {
+            color: var(--secondary-blue);
+            font-size: 0.85rem;
+            font-weight: 500;
+            line-height: 1.6;
+        }
+
+        .resend-section {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .resend-text {
+            color: var(--gray-600);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .btn-resend {
+            background: linear-gradient(135deg, var(--gray-100), var(--gray-50));
+            color: var(--gray-700);
+            border: 2px solid var(--gray-300);
+            padding: 0.8rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .btn-resend:hover {
+            background: linear-gradient(135deg, var(--gray-200), var(--gray-100));
+            border-color: var(--gray-400);
+        }
+
+        /* אנימציות קוד נכון/שגוי */
+        .code-success {
+            border-color: var(--success-green) !important;
+            background: linear-gradient(135deg, #D1FAE5, #A7F3D0) !important;
+        }
+
+        .code-error {
+            border-color: #EF4444 !important;
+            background: linear-gradient(135deg, #FEE2E2, #FECACA) !important;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+            20%, 40%, 60%, 80% { transform: translateX(8px); }
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .verify-container {
+                padding: 2rem 1.5rem;
+                margin: 1rem;
+                border-radius: 20px;
+            }
+
+            .title {
+                font-size: 1.8rem;
+            }
+
+            .subtitle {
+                font-size: 1rem;
+            }
+
+            .security-icon {
+                width: 80px;
+                height: 80px;
+                font-size: 2.5rem;
+            }
+
+            .code-input {
+                padding: 1.2rem;
+                font-size: 1.8rem;
+                letter-spacing: 6px;
+            }
+
+            .btn {
+                padding: 1rem 2rem;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="verify-container">
+        <!-- אייקון אבטחה -->
+        <div class="security-icon">
+            🔐
+        </div>
+        
+        <!-- כותרות -->
+        <h1 class="title">אימות דו-שלבי</h1>
+        <p class="subtitle">נשלח קוד אימות לכתובת המייל שלך</p>
+        <div class="email-hint">
+            📧 בדוק את תיבת הדואר שלך (כולל תיקיית הספאם)
+        </div>
+        
+        <!-- טיימר -->
+        <div class="timer-section">
+            <div class="timer-text">⏰ הקוד תקף עוד:</div>
+            <div class="timer-display" id="timer">10:00</div>
+        </div>
+        
+        <!-- אזור התראות -->
+        <div id="alert-area"></div>
+        
+        <!-- טופס אימות -->
+        <form id="verifyForm">
+            <div class="form-group">
+                <label class="form-label">🔑 הזן את קוד האימות בן 6 הספרות</label>
+                <input type="text" 
+                       class="code-input" 
+                       id="verificationCode" 
+                       placeholder="123456"
+                       maxlength="6"
+                       pattern="[0-9]{6}"
+                       required 
+                       autocomplete="one-time-code">
+            </div>
+            
+            <button type="submit" class="btn btn-success">
+                <span id="verifyText">✅ אמת ובצע כניסה</span>
+                <span id="verifySpinner" class="spinner hidden"></span>
+            </button>
+            
+            <button type="button" class="btn btn-secondary" onclick="goBack()">
+                🔄 חזור להתחברות
+            </button>
+        </form>
+        
+        <!-- מחדש שליחה -->
+        <div class="resend-section">
+            <p class="resend-text">לא הגיע הקוד?</p>
+            <button type="button" class="btn btn-resend" id="resendBtn">
+                📨 שלח קוד חדש
+            </button>
+        </div>
+        
+        <!-- טיפים אבטחה -->
+        <div class="security-tips">
+            <div class="security-title">
+                🛡️ טיפ אבטחה
+            </div>
+            <div class="security-text">
+                • אל תשתף את הקוד עם אף אחד<br>
+                • הקוד תקף למשך 10 דקות בלבד<br>
+                • אם לא ביקשת התחברות, התעלם מהמייל
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let timeLeft = 600; // 10 דקות בשניות
+        let timerInterval;
+        let resendCooldown = 60;
+        let resendInterval;
+
+        // התחלת הטיימר
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                
+                document.getElementById('timer').textContent = 
+                    `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    showAlert('הקוד פג תוקף. יש לבקש קוד חדש.', 'error');
+                    document.getElementById('verificationCode').disabled = true;
+                }
+                
+                timeLeft--;
+            }, 1000);
+        }
+
+        // אירועי הטופס
+        document.getElementById('verifyForm').addEventListener('submit', handleVerification);
+        document.getElementById('resendBtn').addEventListener('click', resendCode);
+        document.getElementById('verificationCode').addEventListener('input', handleCodeInput);
+        
+        // פונקציית אימות
+        async function handleVerification(e) {
+            e.preventDefault();
+            
+            const code = document.getElementById('verificationCode').value.trim();
+            const spinner = document.getElementById('verifySpinner');
+            const verifyText = document.getElementById('verifyText');
+            const codeInput = document.getElementById('verificationCode');
+            
+            if (!code || code.length !== 6) {
+                showAlert('נא להזין קוד בן 6 ספרות', 'error');
+                codeInput.classList.add('code-error');
+                setTimeout(() => codeInput.classList.remove('code-error'), 500);
+                return;
+            }
+            
+            // הצגת מצב טעינה
+            spinner.classList.remove('hidden');
+            verifyText.textContent = 'מאמת...';
+            codeInput.disabled = true;
+            
+            try {
+                // סימולציה של בדיקת קוד
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // בדיקת הקוד (דמו)
+                if (code === '123456') {
+                    codeInput.classList.add('code-success');
+                    showAlert('הקוד נכון! מעביר לדף הראשי...', 'success');
+                    
+                    // עצירת הטיימר
+                    clearInterval(timerInterval);
+                    
+                    // המתנה ומעבר
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 2000);
+                } else {
+                    throw new Error('קוד אימות שגוי. נסה שוב.');
+                }
+                
+            } catch (error) {
+                showAlert(error.message, 'error');
+                codeInput.classList.add('code-error');
+                setTimeout(() => codeInput.classList.remove('code-error'), 500);
+            } finally {
+                spinner.classList.add('hidden');
+                verifyText.textContent = '✅ אמת ובצע כניסה';
+                codeInput.disabled = false;
+                codeInput.focus();
+            }
+        }
+        
+        // טיפול בהקלדת קוד
+        function handleCodeInput(e) {
+            const input = e.target;
+            
+            // הגבלה לספרות בלבד
+            input.value = input.value.replace(/[^0-9]/g, '');
+            
+            // הסרת מחלקות שגיאה/הצלחה
+            input.classList.remove('code-error', 'code-success');
+            
+            // שליחה אוטומטית כשמגיעים ל-6 ספרות
+            if (input.value.length === 6) {
+                setTimeout(() => {
+                    document.getElementById('verifyForm').dispatchEvent(new Event('submit'));
+                }, 300);
+            }
+        }
+        
+        // שליחה מחדש של קוד
+        async function resendCode() {
+            const resendBtn = document.getElementById('resendBtn');
+            
+            if (resendCooldown > 0) {
+                return;
+            }
+            
+            try {
+                resendBtn.disabled = true;
+                resendBtn.textContent = '🔄 שולח...';
+                
+                // סימולציה של שליחה
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                showAlert('קוד חדש נשלח לכתובת המייל שלך', 'success');
+                
+                // איפוס הטיימר
+                timeLeft = 600;
+                clearInterval(timerInterval);
+                startTimer();
+                
+                // קולדאון לשליחה מחדש
+                resendCooldown = 60;
+                startResendCooldown();
+                
+                // ניקוי השדה
+                document.getElementById('verificationCode').value = '';
+                document.getElementById('verificationCode').focus();
+                
+            } catch (error) {
+                showAlert('שגיאה בשליחת הקוד. נסה שוב.', 'error');
+            }
+        }
+        
+        // קולדאון לשליחה מחדש
+        function startResendCooldown() {
+            const resendBtn = document.getElementById('resendBtn');
+            
+            resendInterval = setInterval(() => {
+                resendBtn.textContent = `⏱️ נסה שוב בעוד ${resendCooldown} שניות`;
+                resendBtn.disabled = true;
+                
+                resendCooldown--;
+                
+                if (resendCooldown < 0) {
+                    clearInterval(resendInterval);
+                    resendBtn.textContent = '📨 שלח קוד חדש';
+                    resendBtn.disabled = false;
+                    resendCooldown = 60;
+                }
+            }, 1000);
+        }
+        
+        // חזרה להתחברות
+        function goBack() {
+            if (confirm('האם אתה בטוח שברצונך לחזור להתחברות?')) {
+                window.location.href = '/login';
+            }
+        }
+        
+        // הצגת התראות
+        function showAlert(message, type = 'success') {
+            const alertArea = document.getElementById('alert-area');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            alertArea.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.style.transition = 'all 0.3s ease';
+                alertDiv.style.opacity = '0';
+                alertDiv.style.transform = 'translateY(-10px)';
+                setTimeout(() => alertDiv.remove(), 300);
+            }, 5000);
+        }
+        
+        // אתחול
+        document.addEventListener('DOMContentLoaded', function() {
+            startTimer();
+            startResendCooldown();
+            document.getElementById('verificationCode').focus();
+        });
+        
+        // מקש ESC לחזרה
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                goBack();
+            }
+        });
+    </script>
+</body>
+</html>
