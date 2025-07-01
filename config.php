@@ -11,7 +11,7 @@ class SupabaseConfig {
     private $db_host = 'db.tbfebkuyhxlchjdamtkx.supabase.co';    // DB Host
     private $db_name = 'postgres';                               // שם בסיס הנתונים
     private $db_user = 'postgres';                               // שם משתמש
-    private $db_password = 'tbfebkuyhxlchjdamtkx';               // סיסמת בסיס הנתונים
+    private $db_password = '1qaz@#EDC2879';                     // סיסמת בסיס הנתונים
     private $db_port = 5432;                                // פורט PostgreSQL
     
     private $pdo = null;
