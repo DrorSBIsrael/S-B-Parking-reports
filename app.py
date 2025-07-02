@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'  # החלף במפתח חזק יותר
+app.secret_key = 'your-secret-key-here'
 
 # Supabase configuration
 SUPABASE_URL = os.environ.get('SUPABASE_URL')
@@ -21,14 +21,12 @@ def login_page():
 
 @app.route('/verify')
 def verify_page():
-    # וודא שיש משתמש בהמתנה לאימות
     if 'pending_email' not in session:
         return redirect(url_for('login_page'))
     return render_template('verify.html')
 
 @app.route('/dashboard')
 def dashboard():
-    # וודא שהמשתמש מחובר
     if 'user_email' not in session:
         return redirect(url_for('login_page'))
     return render_template('dashboard.html')
@@ -44,30 +42,38 @@ def login():
         if not username or not password:
             return jsonify({'success': False, 'message': 'נא למלא את כל השדות'})
         
-        # בדיקת פרטי התחברות עם הפונקציה החדשה
+        print(f"Attempting login for user: {username}")
+        
+        # בדיקת פרטי התחברות
         auth_result = supabase.rpc('user_login', {
             'p_username': username,
             'p_password': password
         }).execute()
         
+        print(f"Auth result: {auth_result.data}")
+        
         if auth_result.data:
-            # קבלת כתובת המייל של המשתמש מטבלת user_parkings
+            # קבלת כתובת המייל
             user_result = supabase.table('user_parkings').select('email').eq('username', username).execute()
+            
+            print(f"User result: {user_result.data}")
             
             if user_result.data and len(user_result.data) > 0:
                 email = user_result.data[0]['email']
+                print(f"Found email: {email}")
                 
-                # שליחת קוד אימות עם הפונקציה החדשה
-                code_result = supabase.rpc('send_verification_code', {
-                    'p_email': email
-                }).execute()
+                # שליחת קוד אימות - גם אם נכשל, ממשיכים
+                try:
+                    code_result = supabase.rpc('send_verification_code', {
+                        'p_email': email
+                    }).execute()
+                    print(f"Code result: {code_result.data}")
+                except Exception as code_error:
+                    print(f"Code sending failed: {code_error}")
                 
-                if code_result.data:
-                    # שמירת המייל בסשן לשלב האימות
-                    session['pending_email'] = email
-                    return jsonify({'success': True, 'redirect': '/verify'})
-                else:
-                    return jsonify({'success': False, 'message': 'שגיאה בשליחת קוד אימות'})
+                # בכל מקרה ממשיכים לverify
+                session['pending_email'] = email
+                return jsonify({'success': True, 'redirect': '/verify'})
             else:
                 return jsonify({'success': False, 'message': 'שגיאה במציאת פרטי משתמש'})
         else:
@@ -90,7 +96,7 @@ def verify_code_endpoint():
         if not code or len(code) != 6:
             return jsonify({'success': False, 'message': 'נא להזין קוד בן 6 ספרות'})
         
-        # אימות הקוד עם הפונקציה החדשה
+        # אימות הקוד
         result = supabase.rpc('verify_code', {
             'p_email': email,
             'p_code': code
@@ -98,12 +104,10 @@ def verify_code_endpoint():
         
         # בדיקת התוצאה (הפונקציה מחזירה JSON)
         if result.data and result.data.get('success'):
-            # אימות בוצע בהצלחה
             session['user_email'] = email
-            session.pop('pending_email', None)  # ניקוי מהסשן
+            session.pop('pending_email', None)
             return jsonify({'success': True, 'redirect': '/dashboard'})
         else:
-            # קבלת הודעת השגיאה מהפונקציה
             error_message = result.data.get('message', 'קוד אימות שגוי או פג תוקף') if result.data else 'שגיאה באימות הקוד'
             return jsonify({'success': False, 'message': error_message})
             
@@ -119,7 +123,6 @@ def resend_code():
         if not email:
             return jsonify({'success': False, 'message': 'לא נמצא משתמש בהמתנה לאימות'})
         
-        # שליחת קוד חדש
         result = supabase.rpc('send_verification_code', {
             'p_email': email
         }).execute()
@@ -138,11 +141,9 @@ def logout():
     session.clear()
     return redirect(url_for('login_page'))
 
-# בדיקת בריאות השרת
 @app.route('/health')
 def health_check():
     try:
-        # בדיקת חיבור ל-Supabase עם הטבלה החדשה
         result = supabase.table('user_parkings').select('count').execute()
         return jsonify({'status': 'healthy', 'database': 'connected'})
     except Exception as e:
