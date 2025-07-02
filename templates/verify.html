@@ -469,57 +469,70 @@
         document.getElementById('verificationCode').addEventListener('input', handleCodeInput);
         
         // פונקציית אימות
-        async function handleVerification(e) {
-            e.preventDefault();
+// פונקציית אימות מעודכנת
+async function handleVerification(e) {
+    e.preventDefault();
+    
+    const code = document.getElementById('verificationCode').value.trim();
+    const spinner = document.getElementById('verifySpinner');
+    const verifyText = document.getElementById('verifyText');
+    const codeInput = document.getElementById('verificationCode');
+    
+    if (!code || code.length !== 6) {
+        showAlert('נא להזין קוד בן 6 ספרות', 'error');
+        codeInput.classList.add('code-error');
+        setTimeout(() => codeInput.classList.remove('code-error'), 500);
+        return;
+    }
+    
+    // הצגת מצב טעינה
+    spinner.classList.remove('hidden');
+    verifyText.textContent = 'מאמת...';
+    codeInput.disabled = true;
+    
+    try {
+        // שליחת בקשה לשרת לאימות הקוד
+        const response = await fetch('/api/verify-code', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                code: code
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            codeInput.classList.add('code-success');
+            showAlert('הקוד נכון! מעביר לדף הראשי...', 'success');
             
-            const code = document.getElementById('verificationCode').value.trim();
-            const spinner = document.getElementById('verifySpinner');
-            const verifyText = document.getElementById('verifyText');
-            const codeInput = document.getElementById('verificationCode');
-            
-            if (!code || code.length !== 6) {
-                showAlert('נא להזין קוד בן 6 ספרות', 'error');
-                codeInput.classList.add('code-error');
-                setTimeout(() => codeInput.classList.remove('code-error'), 500);
-                return;
+            // עצירת הטיימר
+            if (typeof timerInterval !== 'undefined') {
+                clearInterval(timerInterval);
             }
             
-            // הצגת מצב טעינה
-            spinner.classList.remove('hidden');
-            verifyText.textContent = 'מאמת...';
-            codeInput.disabled = true;
-            
-            try {
-                // סימולציה של בדיקת קוד
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                
-                // בדיקת הקוד (דמו)
-                if (code === '123456') {
-                    codeInput.classList.add('code-success');
-                    showAlert('הקוד נכון! מעביר לדף הראשי...', 'success');
-                    
-                    // עצירת הטיימר
-                    clearInterval(timerInterval);
-                    
-                    // המתנה ומעבר
-                    setTimeout(() => {
-                        window.location.href = '/dashboard';
-                    }, 2000);
-                } else {
-                    throw new Error('קוד אימות שגוי. נסה שוב.');
-                }
-                
-            } catch (error) {
-                showAlert(error.message, 'error');
-                codeInput.classList.add('code-error');
-                setTimeout(() => codeInput.classList.remove('code-error'), 500);
-            } finally {
-                spinner.classList.add('hidden');
-                verifyText.textContent = '✅ אמת ובצע כניסה';
-                codeInput.disabled = false;
-                codeInput.focus();
-            }
+            // המתנה ומעבר לדשבורד
+            setTimeout(() => {
+                window.location.href = result.redirect;
+            }, 2000);
+        } else {
+            throw new Error(result.message || 'שגיאה לא ידועה');
         }
+        
+    } catch (error) {
+        console.error('Verification error:', error);
+        showAlert(error.message || 'שגיאה באימות הקוד', 'error');
+        codeInput.classList.add('code-error');
+        setTimeout(() => codeInput.classList.remove('code-error'), 500);
+    } finally {
+        spinner.classList.add('hidden');
+        verifyText.textContent = '✅ אמת ובצע כניסה';
+        codeInput.disabled = false;
+        codeInput.focus();
+    }
+}
         
         // טיפול בהקלדת קוד
         function handleCodeInput(e) {
@@ -539,41 +552,54 @@
             }
         }
         
-        // שליחה מחדש של קוד
-        async function resendCode() {
-            const resendBtn = document.getElementById('resendBtn');
-            
-            if (resendCooldown > 0) {
-                return;
+// שליחה מחדש של קוד מעודכנת
+async function resendCode() {
+    const resendBtn = document.getElementById('resendBtn');
+    
+    if (resendCooldown > 0) {
+        return;
+    }
+    
+    try {
+        resendBtn.disabled = true;
+        resendBtn.textContent = '🔄 שולח...';
+        
+        // שליחת בקשה לשרת לשליחת קוד חדש
+        const response = await fetch('/api/resend-code', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
             }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showAlert('קוד חדש נשלח לכתובת המייל שלך', 'success');
             
-            try {
-                resendBtn.disabled = true;
-                resendBtn.textContent = '🔄 שולח...';
-                
-                // סימולציה של שליחה
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                
-                showAlert('קוד חדש נשלח לכתובת המייל שלך', 'success');
-                
-                // איפוס הטיימר
-                timeLeft = 600;
-                clearInterval(timerInterval);
-                startTimer();
-                
-                // קולדאון לשליחה מחדש
-                resendCooldown = 60;
-                startResendCooldown();
-                
-                // ניקוי השדה
-                document.getElementById('verificationCode').value = '';
-                document.getElementById('verificationCode').focus();
-                
-            } catch (error) {
-                showAlert('שגיאה בשליחת הקוד. נסה שוב.', 'error');
-            }
+            // איפוס הטיימר
+            timeLeft = 600;
+            clearInterval(timerInterval);
+            startTimer();
+            
+            // קולדאון לשליחה מחדש
+            resendCooldown = 60;
+            startResendCooldown();
+            
+            // ניקוי השדה
+            document.getElementById('verificationCode').value = '';
+            document.getElementById('verificationCode').focus();
+        } else {
+            throw new Error(result.message || 'שגיאה בשליחת קוד חדש');
         }
         
+    } catch (error) {
+        console.error('Resend error:', error);
+        showAlert(error.message || 'שגיאה בשליחת הקוד. נסה שוב.', 'error');
+    } finally {
+        // החזרת מצב הכפתור תתבצע ב-startResendCooldown
+    }
+}        
         // קולדאון לשליחה מחדש
         function startResendCooldown() {
             const resendBtn = document.getElementById('resendBtn');
