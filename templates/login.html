@@ -374,55 +374,65 @@
         document.getElementById('loginForm').addEventListener('submit', handleLogin);
         document.getElementById('whatsappBtn').addEventListener('click', openWhatsApp);
         
-        // פונקציית התחברות
-        async function handleLogin(e) {
-            e.preventDefault();
+ // החלף את הפונקציה handleLogin בקובץ login.html בזה:
+async function handleLogin(e) {
+    e.preventDefault();
+    
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const spinner = document.getElementById('loginSpinner');
+    const loginText = document.getElementById('loginText');
+    
+    if (!username || !password) {
+        showAlert('נא למלא את כל השדות', 'error');
+        return;
+    }
+    
+    // הצגת מצב טעינה
+    spinner.classList.remove('hidden');
+    loginText.textContent = 'מתחבר...';
+    
+    try {
+        // שליחת בקשה לשרת (לא סימולציה!)
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: username,
+                password: password
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showAlert('התחברות בוצעה בהצלחה! שולח קוד אימות למייל...', 'success');
             
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value.trim();
-            const spinner = document.getElementById('loginSpinner');
-            const loginText = document.getElementById('loginText');
-            
-            // בדיקות בסיסיות
-            if (!username || !password) {
-                showAlert('נא למלא את כל השדות', 'error');
-                return;
-            }
-            
-            // הצגת מצב טעינה
-            spinner.classList.remove('hidden');
-            loginText.textContent = 'מתחבר...';
-            
-            try {
-                // סימולציה של בקשת שרת
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                
-                // בדיקת פרטי התחברות
-                if (username === 'demo' && password === 'demo123') {
-                    showAlert('התחברות בוצעה בהצלחה! מעביר לדף הראשי...', 'success');
-                    
-                    // המתנה קצרה ומעבר לדף הבא
-                    setTimeout(() => {
-                        window.location.href = '/dashboard';
-                    }, 1500);
-                } else {
-                    throw new Error('שם משתמש או סיסמה שגויים');
-                }
-                
-            } catch (error) {
-                showAlert(error.message, 'error');
-                // רעידה קלה של הטופס
-                document.querySelector('.login-container').style.animation = 'shake 0.5s ease-in-out';
-                setTimeout(() => {
-                    document.querySelector('.login-container').style.animation = '';
-                }, 500);
-            } finally {
-                // החזרת מצב הכפתור
-                spinner.classList.add('hidden');
-                loginText.textContent = '🔐 התחבר למערכת';
-            }
+            // המתנה קצרה ומעבר לדף האימות
+            setTimeout(() => {
+                window.location.href = result.redirect;
+            }, 1500);
+        } else {
+            throw new Error(result.message || 'שגיאה לא ידועה');
         }
         
+    } catch (error) {
+        console.error('Login error:', error);
+        showAlert(error.message || 'שגיאה בהתחברות', 'error');
+        
+        // אנימציית רעידה של הטופס
+        document.querySelector('.login-container').style.animation = 'shake 0.5s ease-in-out';
+        setTimeout(() => {
+            document.querySelector('.login-container').style.animation = '';
+        }, 500);
+    } finally {
+        // החזרת מצב הכפתור
+        spinner.classList.add('hidden');
+        loginText.textContent = '🔐 התחבר למערכת';
+    }
+}        
         // פתיחת ווטסאפ
         function openWhatsApp() {
             const phoneNumber = '972501234567';
