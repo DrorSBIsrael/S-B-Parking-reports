@@ -106,6 +106,7 @@ def verify_code_endpoint():
             session['user_email'] = email
             session.pop('pending_email', None)
             print(f"✅ SUCCESS - User {email} verified, redirecting to dashboard")
+            print(f"🚀 SENDING TO FRONTEND: {{'success': True, 'redirect': '/dashboard'}}")
             return jsonify({'success': True, 'redirect': '/dashboard'})
         else:
             print(f"❌ FAILED - verification unsuccessful for {email}")
