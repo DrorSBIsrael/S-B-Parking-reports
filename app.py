@@ -1,10 +1,10 @@
-# שורה זו מאלצת עדכון - 2025-07-02 09:40
+# VERSION: 2025-07-02 20:10 - FINAL CLEAN VERSION
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from supabase import create_client, Client
 import os
 from datetime import datetime, timedelta
 
-print("🚀 NEW APP VERSION - 2025-07-02 20:01 - VERIFY FIX")  # שורה חדשה
+print("🚀 FINAL CLEAN VERSION - 2025-07-02 20:10")
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'
@@ -54,20 +54,15 @@ def login():
         }).execute()
         
         print(f"🔐 Auth result: {auth_result.data}")
-        print(f"🔐 Auth result type: {type(auth_result.data)}")
         
-        # בדיקה פשוטה
         if auth_result.data == True:
             # קבלת כתובת המייל
             user_result = supabase.table('user_parkings').select('email').eq('username', username).execute()
-            
-            print(f"📧 User result: {user_result.data}")
             
             if user_result.data and len(user_result.data) > 0:
                 email = user_result.data[0]['email']
                 print(f"✅ Found email: {email}")
                 
-                # בכל מקרה ממשיכים לverify
                 session['pending_email'] = email
                 return jsonify({'success': True, 'redirect': '/verify'})
             else:
@@ -78,28 +73,16 @@ def login():
     except Exception as e:
         print(f"❌ Login error: {str(e)}")
         return jsonify({'success': False, 'message': f'שגיאת שרת: {str(e)}'})
-        
+
 @app.route('/api/verify-code', methods=['POST'])
 def verify_code_endpoint():
+    print("🔧 CLEAN VERIFY FUNCTION VERSION 20:10")
     try:
         data = request.get_json()
         code = data.get('code')
         email = session.get('pending_email')
         
-        # הוסף את השורות האלה בתחילת הפונקציה verify_code_endpoint:
-
-        data = request.get_json()
-        code = data.get('code')
-        email = session.get('pending_email')
-        
-        print(f"🔍 Verifying code: {code}")
-        print(f"🔍 Email from session: {email}")
-        print(f"🔍 Session contents: {dict(session)}")
-        
-        if not email:
-            return jsonify({'success': False, 'message': 'לא נמצא משתמש בהמתנה לאימות'})
-
-        print(f"🔍 Verifying code {code} for email {email}")
+        print(f"🔍 Verifying code: {code} for email: {email}")
         
         if not email:
             return jsonify({'success': False, 'message': 'לא נמצא משתמש בהמתנה לאימות'})
@@ -107,45 +90,43 @@ def verify_code_endpoint():
         if not code or len(code) != 6:
             return jsonify({'success': False, 'message': 'נא להזין קוד בן 6 ספרות'})
         
-# הוסף את השורות האלה אחרי הקריאה לsupabase.rpc:
-
+        # אימות הקוד
         result = supabase.rpc('verify_code', {
             'p_email': email,
             'p_code': code
         }).execute()
         
-        print(f"🎯 Raw result: {result}")
-        print(f"🎯 Result data: {result.data}")
+        print(f"🎯 Verify result: {result.data}")
         
-        # פתרון פשוט - בדיקה אם התוצאה מכילה success
+        # בדיקה אם התוצאה מכילה success
         result_str = str(result.data)
+        print(f"🎯 Result string: {result_str}")
+        
         if "'success': True" in result_str or '"success": true' in result_str:
             session['user_email'] = email
             session.pop('pending_email', None)
-            print(f"✅ SUCCESS - redirecting to dashboard")
+            print(f"✅ SUCCESS - User {email} verified, redirecting to dashboard")
             return jsonify({'success': True, 'redirect': '/dashboard'})
         else:
-            print(f"❌ FAILED - verification unsuccessful")
+            print(f"❌ FAILED - verification unsuccessful for {email}")
             return jsonify({'success': False, 'message': 'קוד אימות שגוי או פג תוקף'})
-        
-        # בדיקת התוצאה - הפונקציה מחזירה JSON object
-        if result.data and isinstance(result.data, dict) and result.data.get('success'):
-            session['user_email'] = email
-            session.pop('pending_email', None)
-            print(f"✅ User verified successfully: {email}")
-            return jsonify({'success': True, 'redirect': '/dashboard'})
-        else:
-            error_message = result.data.get('message', 'קוד אימות שגוי או פג תוקף') if result.data else 'שגיאה באימות הקוד'
-            return jsonify({'success': False, 'message': error_message})
             
     except Exception as e:
-        print(f"❌ Verify code error: {str(e)}")
+        print(f"❌ Verify exception: {str(e)}")
         return jsonify({'success': False, 'message': f'שגיאת שרת: {str(e)}'})
 
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login_page'))
+
+@app.route('/health')
+def health_check():
+    try:
+        result = supabase.table('user_parkings').select('count').execute()
+        return jsonify({'status': 'healthy', 'database': 'connected'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
