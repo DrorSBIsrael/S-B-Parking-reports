@@ -54,12 +54,10 @@ def login():
         }).execute()
         
         print(f"🔐 Auth result: {auth_result.data}")
+        print(f"🔐 Auth result type: {type(auth_result.data)}")
         
-        print(f"🔍 Debug - auth_result: {auth_result}")
-        print(f"🔍 Debug - auth_result.data: {auth_result.data}")
-        print(f"🔍 Debug - type: {type(auth_result.data)}")
-
-if str(auth_result.data).lower() == 'true' or auth_result.data == True:
+        # בדיקה פשוטה
+        if auth_result.data == True:
             # קבלת כתובת המייל
             user_result = supabase.table('user_parkings').select('email').eq('username', username).execute()
             
@@ -68,15 +66,6 @@ if str(auth_result.data).lower() == 'true' or auth_result.data == True:
             if user_result.data and len(user_result.data) > 0:
                 email = user_result.data[0]['email']
                 print(f"✅ Found email: {email}")
-                
-                # שליחת קוד אימות - גם אם נכשל, ממשיכים
-                try:
-                    code_result = supabase.rpc('send_verification_code', {
-                        'p_email': email
-                    }).execute()
-                    print(f"📨 Code result: {code_result.data}")
-                except Exception as code_error:
-                    print(f"❌ Code sending failed: {code_error}")
                 
                 # בכל מקרה ממשיכים לverify
                 session['pending_email'] = email
@@ -89,7 +78,7 @@ if str(auth_result.data).lower() == 'true' or auth_result.data == True:
     except Exception as e:
         print(f"❌ Login error: {str(e)}")
         return jsonify({'success': False, 'message': f'שגיאת שרת: {str(e)}'})
-
+        
 @app.route('/api/verify-code', methods=['POST'])
 def verify_code_endpoint():
     try:
