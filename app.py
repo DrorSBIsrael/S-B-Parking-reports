@@ -86,6 +86,19 @@ def verify_code_endpoint():
         code = data.get('code')
         email = session.get('pending_email')
         
+        # הוסף את השורות האלה בתחילת הפונקציה verify_code_endpoint:
+
+        data = request.get_json()
+        code = data.get('code')
+        email = session.get('pending_email')
+        
+        print(f"🔍 Verifying code: {code}")
+        print(f"🔍 Email from session: {email}")
+        print(f"🔍 Session contents: {dict(session)}")
+        
+        if not email:
+            return jsonify({'success': False, 'message': 'לא נמצא משתמש בהמתנה לאימות'})
+            
         print(f"🔍 Verifying code {code} for email {email}")
         
         if not email:
