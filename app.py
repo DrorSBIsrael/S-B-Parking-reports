@@ -107,15 +107,20 @@ def verify_code_endpoint():
         if not code or len(code) != 6:
             return jsonify({'success': False, 'message': 'נא להזין קוד בן 6 ספרות'})
         
-# במקום הקוד הישן בפונקציית verify_code_endpoint, החלף את החלק הזה:
+# הוסף את השורות האלה אחרי הקריאה לsupabase.rpc:
 
-        # אימות הקוד
         result = supabase.rpc('verify_code', {
             'p_email': email,
             'p_code': code
         }).execute()
         
         print(f"🎯 Verify result: {result.data}")
+        print(f"🎯 Verify result type: {type(result.data)}")
+        print(f"🎯 Is dict?: {isinstance(result.data, dict)}")
+        if result.data:
+            print(f"🎯 Success value: {result.data.get('success')}")
+        
+        # בדיקת התוצאה
         
         # בדיקת התוצאה - הפונקציה מחזירה JSON object
         if result.data and isinstance(result.data, dict) and result.data.get('success'):
