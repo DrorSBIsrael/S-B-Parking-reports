@@ -98,7 +98,7 @@ def verify_code_endpoint():
         
         if not email:
             return jsonify({'success': False, 'message': 'לא נמצא משתמש בהמתנה לאימות'})
-            
+
         print(f"🔍 Verifying code {code} for email {email}")
         
         if not email:
@@ -107,6 +107,8 @@ def verify_code_endpoint():
         if not code or len(code) != 6:
             return jsonify({'success': False, 'message': 'נא להזין קוד בן 6 ספרות'})
         
+# במקום הקוד הישן בפונקציית verify_code_endpoint, החלף את החלק הזה:
+
         # אימות הקוד
         result = supabase.rpc('verify_code', {
             'p_email': email,
@@ -115,8 +117,8 @@ def verify_code_endpoint():
         
         print(f"🎯 Verify result: {result.data}")
         
-        # בדיקת התוצאה (הפונקציה מחזירה JSON)
-        if result.data and result.data.get('success'):
+        # בדיקת התוצאה - הפונקציה מחזירה JSON object
+        if result.data and isinstance(result.data, dict) and result.data.get('success'):
             session['user_email'] = email
             session.pop('pending_email', None)
             print(f"✅ User verified successfully: {email}")
