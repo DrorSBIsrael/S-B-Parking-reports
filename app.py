@@ -4,7 +4,7 @@ from supabase import create_client, Client
 import os
 from datetime import datetime, timedelta
 
-print("🚀 NEW APP VERSION - 2025-07-02 09:40")  # שורה זו תוודא שהקוד החדש רץ
+print("🚀 NEW APP VERSION - 2025-07-02 20:01 - VERIFY FIX")  # שורה חדשה
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'
@@ -114,13 +114,19 @@ def verify_code_endpoint():
             'p_code': code
         }).execute()
         
-        print(f"🎯 Verify result: {result.data}")
-        print(f"🎯 Verify result type: {type(result.data)}")
-        print(f"🎯 Is dict?: {isinstance(result.data, dict)}")
-        if result.data:
-            print(f"🎯 Success value: {result.data.get('success')}")
+        print(f"🎯 Raw result: {result}")
+        print(f"🎯 Result data: {result.data}")
         
-        # בדיקת התוצאה
+        # פתרון פשוט - בדיקה אם התוצאה מכילה success
+        result_str = str(result.data)
+        if "'success': True" in result_str or '"success": true' in result_str:
+            session['user_email'] = email
+            session.pop('pending_email', None)
+            print(f"✅ SUCCESS - redirecting to dashboard")
+            return jsonify({'success': True, 'redirect': '/dashboard'})
+        else:
+            print(f"❌ FAILED - verification unsuccessful")
+            return jsonify({'success': False, 'message': 'קוד אימות שגוי או פג תוקף'})
         
         # בדיקת התוצאה - הפונקציה מחזירה JSON object
         if result.data and isinstance(result.data, dict) and result.data.get('success'):
