@@ -468,8 +468,7 @@
         document.getElementById('resendBtn').addEventListener('click', resendCode);
         document.getElementById('verificationCode').addEventListener('input', handleCodeInput);
         
-        // פונקציית אימות
-// פונקציית אימות מעודכנת
+// החלף את הפונקציה handleVerification בverify.html בזו:
 async function handleVerification(e) {
     e.preventDefault();
     
@@ -491,7 +490,7 @@ async function handleVerification(e) {
     codeInput.disabled = true;
     
     try {
-        // שליחת בקשה לשרת לאימות הקוד
+        // שליחת בקשה לשרת (לא דמו!)
         const response = await fetch('/api/verify-code', {
             method: 'POST',
             headers: {
@@ -532,8 +531,7 @@ async function handleVerification(e) {
         codeInput.disabled = false;
         codeInput.focus();
     }
-}
-        
+}        
         // טיפול בהקלדת קוד
         function handleCodeInput(e) {
             const input = e.target;
