@@ -93,7 +93,7 @@ def verify_code():
         }).execute()
         
         print(f"🎯 Supabase result: {result.data}")
-        
+        print(f"🎯 Result type: {type(result.data)}")
         # Simple check for success
         if result.data:
             try:
