@@ -73,53 +73,36 @@ def login():
 
 @app.route('/api/verify-code', methods=['POST'])
 def verify_code():
-    try:
-        data = request.get_json()
-        code = data.get('code')
-        email = session.get('pending_email')
-        
-        print(f"🔍 Verify attempt: code={code}, email={email}")
-        
-        if not email:
-            return jsonify({'success': False, 'message': 'No pending verification'})
-        
-        if not code or len(code) != 6:
-            return jsonify({'success': False, 'message': 'Invalid code format'})
-        
-        # Call verify function
-        result = supabase.rpc('verify_code', {
-            'p_email': email,
-            'p_code': code
-        }).execute()
-        
-        print(f"🎯 Supabase result: {result.data}")
-        print(f"🎯 Result type: {type(result.data)}")
-        # Simple check for success
-        if result.data:
-            try:
-                # Try to parse as dict
-                if hasattr(result.data, 'get') and result.data.get('success'):
-                    success = True
-                # Try string check
-                elif 'success' in str(result.data) and 'True' in str(result.data):
-                    success = True
-                else:
-                    success = False
-            except:
-                success = False
-            
-            if success:
-                session['user_email'] = email
-                session.pop('pending_email', None)
-                print(f"✅ VERIFICATION SUCCESS for {email}")
-                return jsonify({'success': True, 'redirect': '/dashboard'})
-        
-        print(f"❌ VERIFICATION FAILED")
-        return jsonify({'success': False, 'message': 'קוד שגוי או פג תוקף'})
-        
-    except Exception as e:
-        print(f"❌ Verify error: {str(e)}")
-        return jsonify({'success': False, 'message': 'Verification failed'})
+    data = request.get_json()
+    code = data.get('code')
+    email = session.get('pending_email')
+    
+    print(f"🔍 Verify attempt: code={code}, email={email}")
+    
+    if not email:
+        return jsonify({'success': False, 'message': 'No pending verification'})
+    
+    if not code or len(code) != 6:
+        return jsonify({'success': False, 'message': 'Invalid code format'})
+    
+    # Call verify function
+    result = supabase.rpc('verify_code', {
+        'p_email': email,
+        'p_code': code
+    }).execute()
+    
+    print(f"🎯 Raw result: {result.data}")
+    
+    # Simple string check - if it contains success and True
+    result_str = str(result.data)
+    if 'success' in result_str and 'True' in result_str:
+        session['user_email'] = email
+        session.pop('pending_email', None)
+        print(f"✅ SUCCESS - Redirecting to dashboard")
+        return jsonify({'success': True, 'redirect': '/dashboard'})
+    
+    print(f"❌ FAILED - No success found in result")
+    return jsonify({'success': False, 'message': 'קוד שגוי או פג תוקף'})
 
 @app.route('/logout')
 def logout():
