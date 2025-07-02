@@ -55,7 +55,11 @@ def login():
         
         print(f"🔐 Auth result: {auth_result.data}")
         
-        if auth_result.data is True:
+        print(f"🔍 Debug - auth_result: {auth_result}")
+        print(f"🔍 Debug - auth_result.data: {auth_result.data}")
+        print(f"🔍 Debug - type: {type(auth_result.data)}")
+
+if str(auth_result.data).lower() == 'true' or auth_result.data == True:
             # קבלת כתובת המייל
             user_result = supabase.table('user_parkings').select('email').eq('username', username).execute()
             
