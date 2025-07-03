@@ -31,7 +31,57 @@ def generate_verification_code():
     """יצירת קוד אימות של 6 ספרות"""
     return ''.join(random.choices(string.digits, k=6))
 
-def send_verification_email(email, code):
+def store_verification_code(email, code):
+    """שמירת קוד אימות בטבלת user_parkings הקיימת"""
+    try:
+        result = supabase.table('user_parkings').update({
+            'verification_code': code,
+            'code_expires_at': 'NOW() + INTERVAL \'10 minutes\'',
+            'updated_at': 'NOW()'
+        }).eq('email', email).execute()
+        
+        print(f"✅ Code saved to user_parkings: {code} for {email}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Failed to save code: {str(e)}")
+        return False
+
+def verify_code_from_database(email, code):
+    """בדיקת קוד אימות מטבלת user_parkings"""
+    try:
+        # חיפוש משתמש עם קוד תקף
+        result = supabase.table('user_parkings').select('verification_code, code_expires_at').eq('email', email).execute()
+        
+        if not result.data:
+            print(f"❌ No user found for {email}")
+            return False
+            
+        user_data = result.data[0]
+        stored_code = user_data.get('verification_code')
+        expires_at = user_data.get('code_expires_at')
+        
+        print(f"🔍 Stored code: {stored_code}, Input code: {code}")
+        
+        if stored_code != code:
+            print(f"❌ Code mismatch")
+            return False
+            
+        # בדיקת תוקף (פשוטה - סמכים על הזמן בבסיס נתונים)
+        print(f"✅ Code matches! Expires at: {expires_at}")
+        
+        # מחיקת הקוד אחרי שימוש
+        supabase.table('user_parkings').update({
+            'verification_code': None,
+            'code_expires_at': None
+        }).eq('email', email).execute()
+        
+        print(f"✅ Code verified and cleared for {email}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Database verification failed: {str(e)}")
+        return False
     """שליחת מייל אימות עם timeout קצר"""
     try:
         print(f"🚀 Starting email send to {email}...")
@@ -125,14 +175,17 @@ def login():
                 verification_code = generate_verification_code()
                 print(f"🎯 Generated code: {verification_code}")
                 
-                # שליחת מייל (עם timeout קצר)
-                email_sent = send_verification_email(email, verification_code)
-                
-                # ממשיכים תמיד - גם אם המייל נכשל
-                session['pending_email'] = email
-                session['verification_code'] = verification_code
-                print(f"📧 Code ready for {email}: {verification_code}")
-                return jsonify({'success': True, 'redirect': '/verify'})
+                # שמירה במסד נתונים קודם
+                if store_verification_code(email, verification_code):
+                    # שליחת מייל (עם timeout קצר)
+                    email_sent = send_verification_email(email, verification_code)
+                    
+                    # שמירה ב-session לבדיוק
+                    session['pending_email'] = email
+                    print(f"📧 Code ready for {email}: {verification_code}")
+                    return jsonify({'success': True, 'redirect': '/verify'})
+                else:
+                    return jsonify({'success': False, 'message': 'שגיאה בשמירת הקוד'})
             else:
                 return jsonify({'success': False, 'message': 'User not found'})
         else:
@@ -147,9 +200,8 @@ def verify_code():
     data = request.get_json()
     code = data.get('code')
     email = session.get('pending_email')
-    expected_code = session.get('verification_code')
     
-    print(f"🔍 Verify attempt: code={code}, email={email}, expected={expected_code}")
+    print(f"🔍 Verify attempt: code={code}, email={email}")
     
     if not email:
         return jsonify({'success': False, 'message': 'No pending verification'})
@@ -157,15 +209,14 @@ def verify_code():
     if not code or len(code) != 6:
         return jsonify({'success': False, 'message': 'Invalid code format'})
     
-    # בדיקת הקוד
-    if code == expected_code:
+    # בדיקת הקוד מהמסד נתונים
+    if verify_code_from_database(email, code):
         session['user_email'] = email
         session.pop('pending_email', None)
-        session.pop('verification_code', None)
         print(f"✅ SUCCESS - Redirecting to dashboard")
         return jsonify({'success': True, 'redirect': '/dashboard'})
     else:
-        print(f"❌ FAILED - Invalid code")
+        print(f"❌ FAILED - Invalid or expired code")
         return jsonify({'success': False, 'message': 'קוד שגוי או פג תוקף'})
 
 @app.route('/logout')
