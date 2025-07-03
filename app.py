@@ -15,15 +15,14 @@ SUPABASE_URL = os.environ.get('SUPABASE_URL')
 SUPABASE_KEY = os.environ.get('SUPABASE_ANON_KEY')
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# הגדרות מייל S&B עם timeout מתוקן
+# הגדרות מייל S&B - נסיון 1: SSL Port 465
 app.config['MAIL_SERVER'] = 'smtp.012.net.il'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_PORT'] = 465
+app.config['MAIL_USE_SSL'] = True  # SSL במקום TLS
+app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USERNAME'] = 'Report@sbparking.co.il'
 app.config['MAIL_PASSWORD'] = 'o51W38D5'
 app.config['MAIL_DEFAULT_SENDER'] = 'Report@sbparking.co.il'
-app.config['MAIL_SUPPRESS_SEND'] = False  # וודא שהמייל נשלח
-app.config['MAIL_MAX_EMAILS'] = None      # ללא הגבלה
 
 mail = Mail(app)
 
