@@ -158,25 +158,6 @@
     </div>
 
     <script>
-        // התחברות דמו
-        function handleDemoLogin(username, password) {
-            console.log('Demo login attempt:', username, password);
-            
-            // בדיקת משתמשים דמו
-            const demoUsers = {
-                'demo': 'demo123',
-                'prince.dror': 'Dror2879'
-            };
-            
-            if (demoUsers[username] && demoUsers[username] === password) {
-                console.log('Demo login successful');
-                return { success: true, redirect: '/verify' };
-            } else {
-                console.log('Demo login failed');
-                return { success: false, message: 'שם משתמש או סיסמה שגויים' };
-            }
-        }
-
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -194,22 +175,37 @@
             loginBtn.textContent = 'מתחבר...';
             loadingDiv.style.display = 'block';
             
-            // דמו - אמור להיות API call אמיתי
-            const result = handleDemoLogin(username, password);
-            
-            // סימולציה של זמן טעינה
-            setTimeout(() => {
-                if (result.success) {
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
                     // Success - redirect to verify
-                    window.location.href = result.redirect;
+                    window.location.href = data.redirect || '/verify';
                 } else {
                     // Show error message
-                    errorDiv.textContent = result.message;
-                    loginBtn.disabled = false;
-                    loginBtn.textContent = 'התחבר';
-                    loadingDiv.style.display = 'none';
+                    errorDiv.textContent = data.message || 'שגיאה בהתחברות';
                 }
-            }, 1000);
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                errorDiv.textContent = 'שגיאה בחיבור לשרת';
+            } finally {
+                // Hide loading
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'התחבר';
+                loadingDiv.style.display = 'none';
+            }
         });
 
         // Auto-focus on username input
