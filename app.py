@@ -85,23 +85,38 @@ def verify_code():
     if not code or len(code) != 6:
         return jsonify({'success': False, 'message': 'Invalid code format'})
     
-    # Call verify function
-    result = supabase.rpc('verify_code', {
-        'p_email': email,
-        'p_code': code
-    }).execute()
-    
-    print(f"🎯 Raw result: {result.data}")
-    
-    # בדיקה נכונה של התוצאה
-    if result.data is True:
-        session['user_email'] = email
-        session.pop('pending_email', None)
-        print(f"✅ SUCCESS - Redirecting to dashboard")
-        return jsonify({'success': True, 'redirect': '/dashboard'})
-    
-    print(f"❌ FAILED - No success found in result")
-    return jsonify({'success': False, 'message': 'קוד שגוי או פג תוקף'})
+    try:
+        # Call verify function
+        result = supabase.rpc('verify_code', {
+            'p_email': email,
+            'p_code': code
+        }).execute()
+        
+        print(f"🎯 Raw result: {result.data}")
+        
+        # הפונקציה מחזירה JSON עם success ו-message
+        # אז נבדוק אם result.data הוא dictionary עם success: True
+        if isinstance(result.data, dict) and result.data.get('success') == True:
+            session['user_email'] = email
+            session.pop('pending_email', None)
+            print(f"✅ SUCCESS - Redirecting to dashboard")
+            return jsonify({'success': True, 'redirect': '/dashboard'})
+        else:
+            print(f"❌ FAILED - Verification failed: {result.data}")
+            return jsonify({'success': False, 'message': 'קוד שגוי או פג תוקף'})
+            
+    except Exception as e:
+        print(f"❌ Exception in verify_code: {str(e)}")
+        
+        # אם יש שגיאה שמכילה success: True, זה בעצם הצלחה!
+        error_str = str(e)
+        if "'success': True" in error_str and 'אימות בוצע בהצלחה' in error_str:
+            session['user_email'] = email
+            session.pop('pending_email', None)
+            print(f"✅ SUCCESS via exception - Redirecting to dashboard")
+            return jsonify({'success': True, 'redirect': '/dashboard'})
+        
+        return jsonify({'success': False, 'message': 'שגיאה באימות הקוד'})
 
 @app.route('/logout')
 def logout():
