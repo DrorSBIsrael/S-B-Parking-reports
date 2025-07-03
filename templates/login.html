@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<html dir="rtl" lang="he">
+<html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>התחברות - מערכת דוחות חניונים S&B</title>
-    
+    <title>התחברות - S&B Parking</title>
     <style>
         * {
             margin: 0;
@@ -12,236 +11,118 @@
             box-sizing: border-box;
         }
 
-        :root {
-            --primary-blue: #1E40AF;
-            --primary-orange: #EA580C;
-            --secondary-blue: #3B82F6;
-            --accent-gold: #F59E0B;
-            --gray-50: #F9FAFB;
-            --gray-100: #F3F4F6;
-            --gray-200: #E5E7EB;
-            --gray-300: #D1D5DB;
-            --gray-600: #4B5563;
-            --gray-700: #374151;
-            --gray-800: #1F2937;
-            --gray-900: #111827;
-            --white: #FFFFFF;
-            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-            --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-        }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans Hebrew', sans-serif;
-            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-orange) 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            color: var(--gray-900);
-            line-height: 1.6;
             display: flex;
-            align-items: center;
             justify-content: center;
-            padding: 1rem;
+            align-items: center;
         }
 
-        .login-container {
-            background: var(--white);
-            border-radius: 24px;
-            box-shadow: var(--shadow-xl);
-            padding: 3rem;
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
             width: 100%;
-            max-width: 420px;
+            max-width: 400px;
             text-align: center;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            animation: slideUp 0.6s ease-out;
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
 
         .logo {
-            width: 90px;
-            height: 90px;
-            background: linear-gradient(135deg, var(--primary-blue), var(--primary-orange));
-            border-radius: 22px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 800;
-            margin: 0 auto 2rem;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .logo-text-main {
-            font-size: 1.4rem;
-            line-height: 1;
-            letter-spacing: 2px;
-        }
-
-        .logo-text-sub {
-            font-size: 0.6rem;
-            opacity: 0.9;
-            letter-spacing: 1px;
-            margin-top: 2px;
-        }
-
-        .title {
-            font-size: 2.2rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--primary-blue), var(--primary-orange));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 0.5rem;
+            font-size: 2.5rem;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-weight: bold;
         }
 
         .subtitle {
-            color: var(--gray-600);
-            margin-bottom: 2.5rem;
+            color: #666;
+            margin-bottom: 30px;
             font-size: 1.1rem;
-            font-weight: 500;
         }
 
         .form-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 20px;
             text-align: right;
         }
 
-        .form-label {
+        label {
             display: block;
-            font-weight: 600;
-            color: var(--gray-700);
-            margin-bottom: 0.5rem;
-            font-size: 0.95rem;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
         }
 
-        .form-input {
+        input[type="text"],
+        input[type="password"] {
             width: 100%;
-            padding: 1.1rem;
-            border: 2px solid var(--gray-300);
-            border-radius: 14px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            background: var(--white);
-            font-family: inherit;
-            direction: ltr;
-            text-align: right;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
         }
 
-        .form-input:focus {
+        input[type="text"]:focus,
+        input[type="password"]:focus {
             outline: none;
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.1);
-            transform: translateY(-1px);
+            border-color: #667eea;
         }
 
-        .form-input::placeholder {
-            color: var(--gray-400);
-            text-align: right;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            padding: 1.1rem 2rem;
-            border: none;
-            border-radius: 14px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            font-family: inherit;
+        .login-btn {
             width: 100%;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            box-shadow: var(--shadow);
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-bottom: 15px;
         }
 
-        .btn-primary:hover {
+        .login-btn:hover {
             transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
         }
 
-        .btn-primary:active {
-            transform: translateY(0);
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
 
-        .btn-whatsapp {
-            background: linear-gradient(135deg, #25D366, #1DA851);
-            color: white;
-            margin-top: 1rem;
-            box-shadow: var(--shadow);
+        .forgot-password {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
         }
 
-        .btn-whatsapp:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
+        .forgot-password:hover {
+            text-decoration: underline;
         }
 
-        .whatsapp-section {
-            margin-top: 2.5rem;
-            padding-top: 2rem;
-            border-top: 1px solid var(--gray-200);
+        .error-message {
+            color: #e74c3c;
+            margin-top: 10px;
+            font-size: 14px;
         }
 
-        .help-text {
-            color: var(--gray-600);
-            margin-bottom: 1rem;
-            font-size: 0.95rem;
-            font-weight: 500;
+        .loading {
+            display: none;
+            margin-top: 10px;
         }
 
-        .demo-info {
-            background: linear-gradient(135deg, #FEF3C7, #FDE68A);
-            border: 1px solid var(--accent-gold);
-            border-radius: 14px;
-            padding: 1.2rem;
-            margin-top: 2rem;
-            text-align: right;
-        }
-
-        .demo-title {
-            font-weight: 700;
-            color: #92400E;
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-        }
-
-        .demo-text {
-            color: #92400E;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-
-        .demo-code {
-            background: #FCD34D;
-            padding: 0.3rem 0.6rem;
-            border-radius: 6px;
-            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-            font-weight: 600;
-        }
-
-        .spinner {
+        .loading::after {
+            content: '';
+            display: inline-block;
             width: 20px;
             height: 20px;
-            border: 2px solid transparent;
-            border-top: 2px solid currentColor;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -250,240 +131,89 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .alert {
-            padding: 1rem;
-            border-radius: 12px;
-            margin-bottom: 1rem;
-            font-weight: 500;
-            font-size: 0.9rem;
-        }
-
-        .alert-error {
-            background: linear-gradient(135deg, #FEE2E2, #FECACA);
-            color: #991B1B;
-            border: 1px solid #F87171;
-        }
-
-        .alert-success {
-            background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
-            color: #065F46;
-            border: 1px solid #34D399;
-        }
-
-        /* Responsive */
-        @media (max-width: 480px) {
-            .login-container {
-                padding: 2rem 1.5rem;
-                margin: 1rem;
-                border-radius: 20px;
-            }
-
-            .title {
-                font-size: 1.8rem;
-            }
-
-            .subtitle {
-                font-size: 1rem;
-            }
-
-            .logo {
-                width: 70px;
-                height: 70px;
-            }
-
-            .logo-text-main {
-                font-size: 1.1rem;
-            }
-
-            .form-input,
-            .btn {
-                padding: 1rem;
-            }
-        }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <!-- לוגו -->
-        <div class="logo">
-            <div class="logo-text-main">S&B</div>
-            <div class="logo-text-sub">PARKING</div>
-        </div>
+    <div class="container">
+        <div class="logo">🚗 S&B</div>
+        <div class="subtitle">מערכת דוחות חניות</div>
         
-        <!-- כותרות -->
-        <h1 class="title">ברוכים הבאים</h1>
-        <p class="subtitle">מערכת דוחות חניונים מתקדמת</p>
-        
-        <!-- אזור התראות -->
-        <div id="alert-area"></div>
-        
-        <!-- טופס התחברות -->
         <form id="loginForm">
             <div class="form-group">
-                <label class="form-label">👤 שם משתמש</label>
-                <input type="text" 
-                       class="form-input" 
-                       id="username" 
-                       placeholder="הזן את שם המשתמש שלך"
-                       required 
-                       autocomplete="username">
+                <label for="username">שם משתמש:</label>
+                <input type="text" id="username" name="username" required>
             </div>
-            
+
             <div class="form-group">
-                <label class="form-label">🔒 סיסמה</label>
-                <input type="password" 
-                       class="form-input" 
-                       id="password" 
-                       placeholder="הזן את הסיסמה שלך"
-                       required 
-                       autocomplete="current-password">
+                <label for="password">סיסמה:</label>
+                <input type="password" id="password" name="password" required>
             </div>
-            
-            <button type="submit" class="btn btn-primary">
-                <span id="loginText">🔐 התחבר למערכת</span>
-                <span id="loginSpinner" class="spinner hidden"></span>
-            </button>
+
+            <button type="submit" class="login-btn" id="loginBtn">התחבר</button>
+            <div class="loading" id="loading"></div>
+            <div class="error-message" id="errorMessage"></div>
         </form>
-        
-        <!-- מידע על דמו -->
-        <div class="demo-info">
-            <div class="demo-title">🎮 גישה לדמו:</div>
-            <div class="demo-text">
-                שם משתמש: <span class="demo-code">demo</span><br>
-                סיסמה: <span class="demo-code">demo123</span>
-            </div>
-        </div>
-        
-        <!-- סעיף עזרה -->
-        <div class="whatsapp-section">
-            <p class="help-text">💬 צריך עזרה בהתחברות?</p>
-            <button type="button" class="btn btn-whatsapp" id="whatsappBtn">
-                <span>📱</span>
-                <span>פנה אלינו בווטסאפ</span>
-            </button>
-        </div>
+
+        <a href="#" class="forgot-password">שכחת סיסמה?</a>
     </div>
 
     <script>
-        // אירועי הטופס
-        document.getElementById('loginForm').addEventListener('submit', handleLogin);
-        document.getElementById('whatsappBtn').addEventListener('click', openWhatsApp);
-        
- // החלף את הפונקציה handleLogin בקובץ login.html בזה:
-async function handleLogin(e) {
-    e.preventDefault();
-    
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
-    const spinner = document.getElementById('loginSpinner');
-    const loginText = document.getElementById('loginText');
-    
-    if (!username || !password) {
-        showAlert('נא למלא את כל השדות', 'error');
-        return;
-    }
-    
-    // הצגת מצב טעינה
-    spinner.classList.remove('hidden');
-    loginText.textContent = 'מתחבר...';
-    
-    try {
-        // שליחת בקשה לשרת (לא סימולציה!)
-        const response = await fetch('/api/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                username: username,
-                password: password
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showAlert('התחברות בוצעה בהצלחה! שולח קוד אימות למייל...', 'success');
+        // התחברות דמו
+        function handleDemoLogin(username, password) {
+            console.log('Demo login attempt:', username, password);
             
-            // המתנה קצרה ומעבר לדף האימות
-            setTimeout(() => {
-                window.location.href = result.redirect;
-            }, 1500);
-        } else {
-            throw new Error(result.message || 'שגיאה לא ידועה');
-        }
-        
-    } catch (error) {
-        console.error('Login error:', error);
-        showAlert(error.message || 'שגיאה בהתחברות', 'error');
-        
-        // אנימציית רעידה של הטופס
-        document.querySelector('.login-container').style.animation = 'shake 0.5s ease-in-out';
-        setTimeout(() => {
-            document.querySelector('.login-container').style.animation = '';
-        }, 500);
-    } finally {
-        // החזרת מצב הכפתור
-        spinner.classList.add('hidden');
-        loginText.textContent = '🔐 התחבר למערכת';
-    }
-}        
-        // פתיחת ווטסאפ
-        function openWhatsApp() {
-            const phoneNumber = '972501234567';
-            const message = 'שלום, אני צריך עזרה בהתחברות למערכת S&B Parking Reports';
-            const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-            window.open(url, '_blank');
-        }
-        
-        // הצגת התראות
-        function showAlert(message, type = 'success') {
-            const alertArea = document.getElementById('alert-area');
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type}`;
-            alertDiv.textContent = message;
-            alertArea.appendChild(alertDiv);
+            // בדיקת משתמשים דמו
+            const demoUsers = {
+                'demo': 'demo123',
+                'prince.dror': 'Dror2879'
+            };
             
-            // הסרה אוטומטית אחרי 5 שניות
-            setTimeout(() => {
-                alertDiv.style.transition = 'all 0.3s ease';
-                alertDiv.style.opacity = '0';
-                alertDiv.style.transform = 'translateY(-10px)';
-                setTimeout(() => alertDiv.remove(), 300);
-            }, 5000);
+            if (demoUsers[username] && demoUsers[username] === password) {
+                console.log('Demo login successful');
+                return { success: true, redirect: '/verify' };
+            } else {
+                console.log('Demo login failed');
+                return { success: false, message: 'שם משתמש או סיסמה שגויים' };
+            }
         }
-        
-        // אנימציית רעידה
-        const shakeKeyframes = `
-            @keyframes shake {
-                0%, 100% { transform: translateX(0); }
-                10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-                20%, 40%, 60%, 80% { transform: translateX(5px); }
-            }
-        `;
-        
-        // הוספת האנימציה ל-CSS
-        const style = document.createElement('style');
-        style.textContent = shakeKeyframes;
-        document.head.appendChild(style);
-        
-        // פוקוס אוטומטי על שדה המשתמש
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('username').focus();
+
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('errorMessage');
+            const loadingDiv = document.getElementById('loading');
+            const loginBtn = document.getElementById('loginBtn');
+            
+            // Clear previous errors
+            errorDiv.textContent = '';
+            
+            // Show loading
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'מתחבר...';
+            loadingDiv.style.display = 'block';
+            
+            // דמו - אמור להיות API call אמיתי
+            const result = handleDemoLogin(username, password);
+            
+            // סימולציה של זמן טעינה
+            setTimeout(() => {
+                if (result.success) {
+                    // Success - redirect to verify
+                    window.location.href = result.redirect;
+                } else {
+                    // Show error message
+                    errorDiv.textContent = result.message;
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'התחבר';
+                    loadingDiv.style.display = 'none';
+                }
+            }, 1000);
         });
-        
-        // Enter במעבר בין שדות
-        document.getElementById('username').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                document.getElementById('password').focus();
-            }
-        });
+
+        // Auto-focus on username input
+        document.getElementById('username').focus();
     </script>
 </body>
 </html>
