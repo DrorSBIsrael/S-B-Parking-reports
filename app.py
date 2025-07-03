@@ -34,13 +34,21 @@ def generate_verification_code():
 def store_verification_code(email, code):
     """שמירת קוד אימות בטבלת user_parkings הקיימת"""
     try:
+        from datetime import datetime, timedelta
+        
+        # חישוב זמן תפוגה (10 דקות מעכשיו)
+        expires_at = datetime.now() + timedelta(minutes=10)
+        expires_str = expires_at.strftime('%Y-%m-%d %H:%M:%S')
+        
+        print(f"🔄 Updating user_parkings for {email} with code {code}")
+        
         result = supabase.table('user_parkings').update({
             'verification_code': code,
-            'code_expires_at': 'NOW() + INTERVAL \'10 minutes\'',
-            'updated_at': 'NOW()'
+            'code_expires_at': expires_str
         }).eq('email', email).execute()
         
-        print(f"✅ Code saved to user_parkings: {code} for {email}")
+        print(f"✅ Update result: {result.data}")
+        print(f"✅ Code saved: {code} expires at {expires_str}")
         return True
         
     except Exception as e:
@@ -50,7 +58,9 @@ def store_verification_code(email, code):
 def verify_code_from_database(email, code):
     """בדיקת קוד אימות מטבלת user_parkings"""
     try:
-        # חיפוש משתמש עם קוד תקף
+        from datetime import datetime
+        
+        # חיפוש משתמש עם הקוד
         result = supabase.table('user_parkings').select('verification_code, code_expires_at').eq('email', email).execute()
         
         if not result.data:
@@ -59,18 +69,23 @@ def verify_code_from_database(email, code):
             
         user_data = result.data[0]
         stored_code = user_data.get('verification_code')
-        expires_at = user_data.get('code_expires_at')
+        expires_at_str = user_data.get('code_expires_at')
         
         print(f"🔍 Stored code: {stored_code}, Input code: {code}")
+        print(f"🔍 Expires at: {expires_at_str}")
         
-        if stored_code != code:
-            print(f"❌ Code mismatch")
+        if not stored_code or stored_code != code:
+            print(f"❌ Code mismatch or missing")
             return False
             
-        # בדיקת תוקף (פשוטה - סמכים על הזמן בבסיס נתונים)
-        print(f"✅ Code matches! Expires at: {expires_at}")
+        # בדיקת תוקף
+        if expires_at_str:
+            expires_at = datetime.fromisoformat(expires_at_str.replace('Z', '').replace('+00:00', ''))
+            if datetime.now() > expires_at:
+                print(f"❌ Code expired")
+                return False
         
-        # מחיקת הקוד אחרי שימוש
+        # מחיקת הקוד אחרי שימוש מוצלח
         supabase.table('user_parkings').update({
             'verification_code': None,
             'code_expires_at': None
