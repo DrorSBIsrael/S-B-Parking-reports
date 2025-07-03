@@ -1,8 +1,11 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask_mail import Mail, Message
 from supabase import create_client, Client
 import os
+import random
+import string
 
-print("🔥 WORKING VERSION - NO MORE BUGS!")
+print("🔥 WORKING VERSION - NOW WITH EMAIL!")
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'
@@ -11,6 +14,49 @@ app.secret_key = 'your-secret-key-here'
 SUPABASE_URL = os.environ.get('SUPABASE_URL')
 SUPABASE_KEY = os.environ.get('SUPABASE_ANON_KEY')
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# הגדרות מייל S&B
+app.config['MAIL_SERVER'] = 'smtp.012.net.il'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'Report@sbparking.co.il'
+app.config['MAIL_PASSWORD'] = 'o51W38D5'
+app.config['MAIL_DEFAULT_SENDER'] = 'Report@sbparking.co.il'
+
+mail = Mail(app)
+
+def generate_verification_code():
+    """יצירת קוד אימות של 6 ספרות"""
+    return ''.join(random.choices(string.digits, k=6))
+
+def send_verification_email(email, code):
+    """שליחת מייל אימות"""
+    try:
+        msg = Message(
+            subject='קוד אימות - S&B Parking',
+            recipients=[email],
+            html=f"""
+            <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">
+                <h2 style="color: #667eea;">🚗 S&B Parking</h2>
+                <h3>קוד האימות שלך:</h3>
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+                    <span style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px;">{code}</span>
+                </div>
+                <p>הקוד תקף ל-10 דקות בלבד.</p>
+                <p>אם לא ביקשת קוד זה, התעלם מהודעה זו.</p>
+                <hr>
+                <p style="color: #666; font-size: 12px;">S&B Parking - מערכת דוחות חניות</p>
+            </div>
+            """
+        )
+        
+        mail.send(msg)
+        print(f"✅ Email sent successfully to {email}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Email sending failed: {str(e)}")
+        return False
 
 @app.route('/')
 def index():
@@ -60,8 +106,20 @@ def login():
                 email = user_result.data[0]['email']
                 print(f"✅ Email found: {email}")
                 
-                session['pending_email'] = email
-                return jsonify({'success': True, 'redirect': '/verify'})
+                # יצירת קוד אימות חדש
+                verification_code = generate_verification_code()
+                print(f"🎯 Generated code: {verification_code}")
+                
+                # שליחת מייל
+                if send_verification_email(email, verification_code):
+                    # שמירת הקוד ב-session (פשוט ובטוח)
+                    session['pending_email'] = email
+                    session['verification_code'] = verification_code
+                    print(f"📧 Email sent to {email}")
+                    return jsonify({'success': True, 'redirect': '/verify'})
+                else:
+                    print(f"❌ Failed to send email to {email}")
+                    return jsonify({'success': False, 'message': 'שגיאה בשליחת המייל'})
             else:
                 return jsonify({'success': False, 'message': 'User not found'})
         else:
@@ -76,8 +134,9 @@ def verify_code():
     data = request.get_json()
     code = data.get('code')
     email = session.get('pending_email')
+    expected_code = session.get('verification_code')
     
-    print(f"🔍 Verify attempt: code={code}, email={email}")
+    print(f"🔍 Verify attempt: code={code}, email={email}, expected={expected_code}")
     
     if not email:
         return jsonify({'success': False, 'message': 'No pending verification'})
@@ -85,38 +144,16 @@ def verify_code():
     if not code or len(code) != 6:
         return jsonify({'success': False, 'message': 'Invalid code format'})
     
-    try:
-        # Call verify function
-        result = supabase.rpc('verify_code', {
-            'p_email': email,
-            'p_code': code
-        }).execute()
-        
-        print(f"🎯 Raw result: {result.data}")
-        
-        # הפונקציה מחזירה JSON עם success ו-message
-        # אז נבדוק אם result.data הוא dictionary עם success: True
-        if isinstance(result.data, dict) and result.data.get('success') == True:
-            session['user_email'] = email
-            session.pop('pending_email', None)
-            print(f"✅ SUCCESS - Redirecting to dashboard")
-            return jsonify({'success': True, 'redirect': '/dashboard'})
-        else:
-            print(f"❌ FAILED - Verification failed: {result.data}")
-            return jsonify({'success': False, 'message': 'קוד שגוי או פג תוקף'})
-            
-    except Exception as e:
-        print(f"❌ Exception in verify_code: {str(e)}")
-        
-        # אם יש שגיאה שמכילה success: True, זה בעצם הצלחה!
-        error_str = str(e)
-        if "'success': True" in error_str and 'אימות בוצע בהצלחה' in error_str:
-            session['user_email'] = email
-            session.pop('pending_email', None)
-            print(f"✅ SUCCESS via exception - Redirecting to dashboard")
-            return jsonify({'success': True, 'redirect': '/dashboard'})
-        
-        return jsonify({'success': False, 'message': 'שגיאה באימות הקוד'})
+    # בדיקת הקוד
+    if code == expected_code:
+        session['user_email'] = email
+        session.pop('pending_email', None)
+        session.pop('verification_code', None)
+        print(f"✅ SUCCESS - Redirecting to dashboard")
+        return jsonify({'success': True, 'redirect': '/dashboard'})
+    else:
+        print(f"❌ FAILED - Invalid code")
+        return jsonify({'success': False, 'message': 'קוד שגוי או פג תוקף'})
 
 @app.route('/logout')
 def logout():
