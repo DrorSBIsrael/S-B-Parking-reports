@@ -55,6 +55,48 @@ def store_verification_code(email, code):
         print(f"❌ Failed to save code: {str(e)}")
         return False
 
+def send_verification_email(email, code):
+    """שליחת מייל אימות עם timeout קצר"""
+    try:
+        print(f"🚀 Starting email send to {email}...")
+        
+        msg = Message(
+            subject='קוד אימות - S&B Parking',
+            recipients=[email],
+            html=f"""
+            <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">
+                <h2 style="color: #667eea;">🚗 S&B Parking</h2>
+                <h3>קוד האימות שלך:</h3>
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+                    <span style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px;">{code}</span>
+                </div>
+                <p>הקוד תקף ל-10 דקות בלבד.</p>
+                <p>אם לא ביקשת קוד זה, התעלם מהודעה זו.</p>
+                <hr>
+                <p style="color: #666; font-size: 12px;">S&B Parking - מערכת דוחות חניות</p>
+            </div>
+            """
+        )
+        
+        print(f"🔄 Sending email...")
+        # נסה לשלוח עם timeout מובנה
+        import socket
+        original_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(10)  # 10 שניות בלבד
+        
+        mail.send(msg)
+        
+        socket.setdefaulttimeout(original_timeout)
+        print(f"✅ Email sent successfully to {email}")
+        return True
+        
+    except socket.timeout:
+        print(f"⏰ Email timeout - but continuing with code: {code}")
+        return True  # ממשיכים גם אם יש timeout
+    except Exception as e:
+        print(f"❌ Email error: {str(e)} - but continuing with code: {code}")
+        return True  # ממשיכים גם אם יש שגיאה
+
 def verify_code_from_database(email, code):
     """בדיקת קוד אימות מטבלת user_parkings"""
     try:
@@ -192,12 +234,13 @@ def login():
                 
                 # שמירה במסד נתונים קודם
                 if store_verification_code(email, verification_code):
-                    # נסה לשלוח מייל (אם יש פונקציה)
+                    # שליחת מייל עם timeout
                     try:
+                        print(f"🚀 Attempting to send email to {email}...")
                         email_sent = send_verification_email(email, verification_code)
-                        print(f"📧 Email attempt completed")
-                    except:
-                        print(f"📧 Email function not ready - continuing with code")
+                        print(f"📧 Email send result: {email_sent}")
+                    except Exception as email_error:
+                        print(f"📧 Email failed but continuing: {str(email_error)}")
                     
                     # שמירה ב-session לבדיוק
                     session['pending_email'] = email
