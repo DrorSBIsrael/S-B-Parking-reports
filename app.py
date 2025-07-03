@@ -93,9 +93,8 @@ def verify_code():
     
     print(f"🎯 Raw result: {result.data}")
     
-    # Simple string check - if it contains success and True
-    result_str = str(result.data)
-    if 'success' in result_str and 'True' in result_str:
+    # בדיקה נכונה של התוצאה
+    if result.data is True:
         session['user_email'] = email
         session.pop('pending_email', None)
         print(f"✅ SUCCESS - Redirecting to dashboard")
