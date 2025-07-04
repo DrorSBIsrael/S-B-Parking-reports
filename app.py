@@ -15,14 +15,14 @@ SUPABASE_URL = os.environ.get('SUPABASE_URL')
 SUPABASE_KEY = os.environ.get('SUPABASE_ANON_KEY')
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# הגדרות מייל S&B - משתני סביבה
-app.config['MAIL_SERVER'] = 'smtp.012.net.il'
-app.config['MAIL_PORT'] = int(os.environ.get('EMAIL_PORT', 465))
-app.config['MAIL_USE_SSL'] = os.environ.get('EMAIL_SECURE', 'true').lower() == 'true'
+# הגדרות מייל - Outlook (עובד תמיד!)
+app.config['MAIL_SERVER'] = os.environ.get('EMAIL_HOST', 'smtp-mail.outlook.com')
+app.config['MAIL_PORT'] = int(os.environ.get('EMAIL_PORT', 587))
+app.config['MAIL_USE_SSL'] = os.environ.get('EMAIL_SECURE', 'false').lower() == 'true'
 app.config['MAIL_USE_TLS'] = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
-app.config['MAIL_USERNAME'] = os.environ.get('EMAIL_USER', 'Report@sbparking.co.il')
-app.config['MAIL_PASSWORD'] = os.environ.get('EMAIL_PASS', 'o51W38D5')
-app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('EMAIL_USER', 'Report@sbparking.co.il')
+app.config['MAIL_USERNAME'] = os.environ.get('EMAIL_USER', 'SBparkingReport@gmail.com')
+app.config['MAIL_PASSWORD'] = os.environ.get('EMAIL_PASS', 'your-password')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('EMAIL_USER', 'SBparkingReport@gmail.com')
 
 mail = Mail(app)
 
