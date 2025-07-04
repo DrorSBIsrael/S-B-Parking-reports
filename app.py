@@ -19,7 +19,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # אופציה 1: הגדרות מייל עם פורט 587 (TLS)
 app.config['MAIL_SERVER'] = os.environ.get('EMAIL_HOST', 'smtp.012.net.il')
-app.config['MAIL_PORT'] = int(os.environ.get('EMAIL_PORT', 465))
+app.config['MAIL_PORT'] = int(os.environ.get('EMAIL_PORT', 587))
 app.config['MAIL_USE_SSL'] = False
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.environ.get('EMAIL_USER', 'Report@sbparking.co.il')
