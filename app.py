@@ -15,14 +15,14 @@ SUPABASE_URL = os.environ.get('SUPABASE_URL')
 SUPABASE_KEY = os.environ.get('SUPABASE_ANON_KEY')
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# הגדרות מייל S&B - נסיון 1: SSL Port 465
+# הגדרות מייל S&B - משתני סביבה
 app.config['MAIL_SERVER'] = 'smtp.012.net.il'
-app.config['MAIL_PORT'] = 465
-app.config['MAIL_USE_SSL'] = True  # SSL במקום TLS
-app.config['MAIL_USE_TLS'] = False
-app.config['MAIL_USERNAME'] = 'Report@sbparking.co.il'
-app.config['MAIL_PASSWORD'] = 'o51W38D5'
-app.config['MAIL_DEFAULT_SENDER'] = 'Report@sbparking.co.il'
+app.config['MAIL_PORT'] = int(os.environ.get('EMAIL_PORT', 465))
+app.config['MAIL_USE_SSL'] = os.environ.get('EMAIL_SECURE', 'true').lower() == 'true'
+app.config['MAIL_USE_TLS'] = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
+app.config['MAIL_USERNAME'] = os.environ.get('EMAIL_USER', 'Report@sbparking.co.il')
+app.config['MAIL_PASSWORD'] = os.environ.get('EMAIL_PASS', 'o51W38D5')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('EMAIL_USER', 'Report@sbparking.co.il')
 
 mail = Mail(app)
 
