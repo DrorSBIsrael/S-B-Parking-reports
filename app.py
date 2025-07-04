@@ -4,6 +4,8 @@ from supabase import create_client, Client
 import os
 import random
 import string
+import socket
+from datetime import datetime, timedelta
 
 print("🔥 WORKING VERSION - NOW WITH EMAIL!")
 
@@ -15,15 +17,20 @@ SUPABASE_URL = os.environ.get('SUPABASE_URL')
 SUPABASE_KEY = os.environ.get('SUPABASE_ANON_KEY')
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# הגדרות מייל - Outlook (עובד תמיד!)
+# אופציה 1: הגדרות מייל עם פורט 587 (TLS)
 app.config['MAIL_SERVER'] = os.environ.get('EMAIL_HOST', 'smtp.012.net.il')
 app.config['MAIL_PORT'] = int(os.environ.get('EMAIL_PORT', 465))
-app.config['MAIL_USE_SSL'] = os.environ.get('EMAIL_SECURE', 'true').lower() == 'true'
-app.config['MAIL_USE_TLS'] = os.environ.get('EMAIL_USE_TLS', 'false').lower() == 'true'
+app.config['MAIL_USE_SSL'] = False
+app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.environ.get('EMAIL_USER', 'Report@sbparking.co.il')
 app.config['MAIL_PASSWORD'] = os.environ.get('EMAIL_PASS', 'o51W38D5')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('EMAIL_USER', 'Report@sbparking.co.il')
 
+# הגדרות נוספות
+app.config['MAIL_SUPPRESS_SEND'] = False
+app.config['MAIL_DEBUG'] = True
+
+# יצירת אובייקט Mail
 mail = Mail(app)
 
 def generate_verification_code():
@@ -33,8 +40,6 @@ def generate_verification_code():
 def store_verification_code(email, code):
     """שמירת קוד אימות בטבלת user_parkings הקיימת"""
     try:
-        from datetime import datetime, timedelta
-        
         # חישוב זמן תפוגה (10 דקות מעכשיו)
         expires_at = datetime.now() + timedelta(minutes=10)
         expires_str = expires_at.strftime('%Y-%m-%d %H:%M:%S')
@@ -55,10 +60,11 @@ def store_verification_code(email, code):
         return False
 
 def send_verification_email(email, code):
-    """שליחת מייל אימות עם timeout קצר"""
+    """שליחת מייל אימות - גרסה מתוקנת יחידה"""
     try:
         print(f"🚀 Starting email send to {email}...")
         
+        # יצירת הודעת המייל
         msg = Message(
             subject='קוד אימות - S&B Parking',
             recipients=[email],
@@ -74,33 +80,38 @@ def send_verification_email(email, code):
                 <hr>
                 <p style="color: #666; font-size: 12px;">S&B Parking - מערכת דוחות חניות</p>
             </div>
-            """
+            """,
+            sender=app.config['MAIL_DEFAULT_SENDER']
         )
         
-        print(f"🔄 Sending email...")
-        # נסה לשלוח עם timeout מובנה
-        import socket
-        original_timeout = socket.getdefaulttimeout()
-        socket.setdefaulttimeout(10)  # 10 שניות בלבד
+        print(f"🔄 Sending email with timeout...")
         
+        # הגדרת timeout קצר
+        original_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(15)  # 15 שניות
+        
+        # שליחת המייל
         mail.send(msg)
         
+        # החזרת timeout מקורי
         socket.setdefaulttimeout(original_timeout)
+        
         print(f"✅ Email sent successfully to {email}")
         return True
         
     except socket.timeout:
-        print(f"⏰ Email timeout - but continuing with code: {code}")
-        return True  # ממשיכים גם אם יש timeout
+        print(f"⏰ Email timeout to {email} - but code {code} is saved in DB")
+        socket.setdefaulttimeout(original_timeout) if 'original_timeout' in locals() else None
+        return True  # ממשיכים למרות timeout
+        
     except Exception as e:
-        print(f"❌ Email error: {str(e)} - but continuing with code: {code}")
-        return True  # ממשיכים גם אם יש שגיאה
+        print(f"❌ Email error: {str(e)} - but code {code} is saved in DB")
+        socket.setdefaulttimeout(original_timeout) if 'original_timeout' in locals() else None
+        return True  # ממשיכים למרות שגיאה
 
 def verify_code_from_database(email, code):
     """בדיקת קוד אימות מטבלת user_parkings"""
     try:
-        from datetime import datetime
-        
         # חיפוש משתמש עם הקוד
         result = supabase.table('user_parkings').select('verification_code, code_expires_at').eq('email', email).execute()
         
@@ -138,46 +149,6 @@ def verify_code_from_database(email, code):
     except Exception as e:
         print(f"❌ Database verification failed: {str(e)}")
         return False
-    """שליחת מייל אימות עם timeout קצר"""
-    try:
-        print(f"🚀 Starting email send to {email}...")
-        
-        msg = Message(
-            subject='קוד אימות - S&B Parking',
-            recipients=[email],
-            html=f"""
-            <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">
-                <h2 style="color: #667eea;">🚗 S&B Parking</h2>
-                <h3>קוד האימות שלך:</h3>
-                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-                    <span style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px;">{code}</span>
-                </div>
-                <p>הקוד תקף ל-10 דקות בלבד.</p>
-                <p>אם לא ביקשת קוד זה, התעלם מהודעה זו.</p>
-                <hr>
-                <p style="color: #666; font-size: 12px;">S&B Parking - מערכת דוחות חניות</p>
-            </div>
-            """
-        )
-        
-        print(f"🔄 Sending email...")
-        # נסה לשלוח עם timeout מובנה
-        import socket
-        original_timeout = socket.getdefaulttimeout()
-        socket.setdefaulttimeout(10)  # 10 שניות בלבד
-        
-        mail.send(msg)
-        
-        socket.setdefaulttimeout(original_timeout)
-        print(f"✅ Email sent successfully to {email}")
-        return True
-        
-    except socket.timeout:
-        print(f"⏰ Email timeout - but continuing with code: {code}")
-        return True  # ממשיכים גם אם יש timeout
-    except Exception as e:
-        print(f"❌ Email error: {str(e)} - but continuing with code: {code}")
-        return True  # ממשיכים גם אם יש שגיאה
 
 @app.route('/')
 def index():
@@ -233,15 +204,12 @@ def login():
                 
                 # שמירה במסד נתונים קודם
                 if store_verification_code(email, verification_code):
-                    # שליחת מייל עם timeout
-                    try:
-                        print(f"🚀 Attempting to send email to {email}...")
-                        email_sent = send_verification_email(email, verification_code)
-                        print(f"📧 Email send result: {email_sent}")
-                    except Exception as email_error:
-                        print(f"📧 Email failed but continuing: {str(email_error)}")
+                    # שליחת מייל
+                    print(f"🚀 Attempting to send email to {email}...")
+                    email_sent = send_verification_email(email, verification_code)
+                    print(f"📧 Email process result: {email_sent}")
                     
-                    # שמירה ב-session לבדיוק
+                    # שמירה ב-session
                     session['pending_email'] = email
                     print(f"📧 Code ready for {email}: {verification_code}")
                     return jsonify({'success': True, 'redirect': '/verify'})
