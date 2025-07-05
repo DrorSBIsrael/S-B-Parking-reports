@@ -363,7 +363,7 @@
                     updateUserInterface();
                     loadParkingOptions();
                 } else {
-                    showError('שגיאה בטעינת נתוני משתמש');
+                    showError('שגיאה בטעינת נתוני משתמש: ' + result.message);
                 }
             } catch (error) {
                 console.error('Error loading user data:', error);
@@ -414,7 +414,7 @@
                     // טען נתונים ראשוניים
                     loadParkingData();
                 } else {
-                    showError('שגיאה בטעינת רשימת חניונים');
+                    showError('שגיאה בטעינת רשימת חניונים: ' + result.message);
                 }
             } catch (error) {
                 console.error('Error loading parking options:', error);
@@ -451,7 +451,11 @@
                 
                 if (result.success) {
                     currentData = result.data;
-                    updateDashboard();
+                    if (currentData.length === 0) {
+                        showError('🚧 ' + (result.message || 'אין נתונים זמינים לטווח התאריכים שנבחר'));
+                    } else {
+                        updateDashboard();
+                    }
                 } else {
                     showError(result.message || 'שגיאה בטעינת הנתונים');
                 }
@@ -478,14 +482,14 @@
 
         // עדכון סטטיסטיקות
         function updateStatistics() {
-            const totalRevenue = currentData.reduce((sum, d) => sum + d.total_revenue_shekels, 0);
-            const totalEntries = currentData.reduce((sum, d) => sum + d.t_entry_tot, 0);
-            const totalExits = currentData.reduce((sum, d) => sum + d.t_exit_tot, 0);
-            const totalBarrierOpenings = currentData.reduce((sum, d) => sum + d.t_open_b, 0);
-            const totalCash = currentData.reduce((sum, d) => sum + d.s_cash_shekels, 0);
-            const totalCredit = currentData.reduce((sum, d) => sum + d.s_credit_shekels, 0);
-            const totalPango = currentData.reduce((sum, d) => sum + d.s_pango_shekels, 0);
-            const totalCelo = currentData.reduce((sum, d) => sum + d.s_celo_shekels, 0);
+            const totalRevenue = currentData.reduce((sum, d) => sum + (d.total_revenue_shekels || 0), 0);
+            const totalEntries = currentData.reduce((sum, d) => sum + (d.t_entry_tot || 0), 0);
+            const totalExits = currentData.reduce((sum, d) => sum + (d.t_exit_tot || 0), 0);
+            const totalBarrierOpenings = currentData.reduce((sum, d) => sum + (d.t_open_b || 0), 0);
+            const totalCash = currentData.reduce((sum, d) => sum + (d.s_cash_shekels || 0), 0);
+            const totalCredit = currentData.reduce((sum, d) => sum + (d.s_credit_shekels || 0), 0);
+            const totalPango = currentData.reduce((sum, d) => sum + (d.s_pango_shekels || 0), 0);
+            const totalCelo = currentData.reduce((sum, d) => sum + (d.s_celo_shekels || 0), 0);
             
             const uniqueDays = [...new Set(currentData.map(d => d.report_date))].length;
             const avgDailyRevenue = uniqueDays > 0 ? totalRevenue / uniqueDays : 0;
@@ -504,4 +508,79 @@
                 </div>
                 
                 <div class="stat-card">
-                    <h3>סה"כ יציאות</h
+                    <h3>סה"כ יציאות</h3>
+                    <div class="value">${totalExits.toLocaleString()}</div>
+                    <div class="subtext">כלי רכב</div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>פתיחות מחסום</h3>
+                    <div class="value">${totalBarrierOpenings.toLocaleString()}</div>
+                    <div class="subtext">סה"כ פתיחות</div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>ממוצע יומי</h3>
+                    <div class="value">₪${Math.round(avgDailyRevenue).toLocaleString()}</div>
+                    <div class="subtext">הכנסה יומית</div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>מזומן</h3>
+                    <div class="value">₪${totalCash.toLocaleString()}</div>
+                    <div class="subtext">${totalRevenue > 0 ? ((totalCash/totalRevenue)*100).toFixed(1) : 0}% מההכנסות</div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>אשראי</h3>
+                    <div class="value">₪${totalCredit.toLocaleString()}</div>
+                    <div class="subtext">${totalRevenue > 0 ? ((totalCredit/totalRevenue)*100).toFixed(1) : 0}% מההכנסות</div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>פנגו</h3>
+                    <div class="value">₪${totalPango.toLocaleString()}</div>
+                    <div class="subtext">${totalRevenue > 0 ? ((totalPango/totalRevenue)*100).toFixed(1) : 0}% מההכנסות</div>
+                </div>
+            `;
+            
+            document.getElementById('statsGrid').innerHTML = html;
+        }
+
+        // עדכון גרפים
+        function updateCharts() {
+            // כאן נוסיף את כל הגרפים
+            console.log('Charts will be implemented when we have real data');
+        }
+
+        // הגדרת event listeners
+        function setupEventListeners() {
+            document.getElementById('loadDataBtn').addEventListener('click', loadParkingData);
+            document.getElementById('parkingSelector').addEventListener('change', loadParkingData);
+            document.getElementById('logoutBtn').addEventListener('click', logout);
+        }
+
+        // פונקציות עזר
+        function showLoading(show) {
+            document.getElementById('loadingSection').style.display = show ? 'block' : 'none';
+            document.getElementById('dashboardContent').style.display = show ? 'none' : 'block';
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorSection').style.display = 'block';
+            document.getElementById('dashboardContent').style.display = 'none';
+        }
+
+        function hideError() {
+            document.getElementById('errorSection').style.display = 'none';
+        }
+
+        function logout() {
+            if (confirm('האם אתה בטוח שברצונך להתנתק?')) {
+                window.location.href = '/logout';
+            }
+        }
+    </script>
+</body>
+</html>
