@@ -28,6 +28,7 @@
             width: 100%;
             max-width: 400px;
             text-align: center;
+            position: relative;
         }
 
         .logo {
@@ -95,14 +96,22 @@
             transform: none;
         }
 
-        .forgot-password {
-            color: #667eea;
+        .whatsapp-link {
+            display: inline-block;
+            color: #25D366;
             text-decoration: none;
             font-size: 14px;
+            padding: 8px 12px;
+            border: 1px solid #25D366;
+            border-radius: 6px;
+            transition: all 0.3s;
+            margin-bottom: 20px;
         }
 
-        .forgot-password:hover {
-            text-decoration: underline;
+        .whatsapp-link:hover {
+            background-color: #25D366;
+            color: white;
+            transform: translateY(-1px);
         }
 
         .error-message {
@@ -127,6 +136,16 @@
             animation: spin 1s linear infinite;
         }
 
+        .credit {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #999;
+            font-style: italic;
+        }
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -135,7 +154,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="logo">🚗 S&B</div>
+        <div class="logo">שיידט את בכמן ישראל</div>
         <div class="subtitle">מערכת דוחות חניות</div>
         
         <form id="loginForm">
@@ -154,7 +173,11 @@
             <div class="error-message" id="errorMessage"></div>
         </form>
 
-        <a href="#" class="forgot-password">שכחת סיסמה?</a>
+        <a href="https://wa.me/972546284210?text=שלום, שכחתי את הסיסמה למערכת S&B Parking" class="whatsapp-link" target="_blank">
+            📱 שכחת סיסמה? פנה בווטסאפ
+        </a>
+
+        <div class="credit">נוצר ע"י דרור פרינץ</div>
     </div>
 
     <script>
