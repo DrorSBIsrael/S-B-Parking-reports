@@ -15,14 +15,14 @@ SUPABASE_URL = os.environ.get('SUPABASE_URL')
 SUPABASE_KEY = os.environ.get('SUPABASE_ANON_KEY')
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# הגדרות מייל S&B עם timeout מתוקן
-app.config['MAIL_SERVER'] = 'smtp.012.net.il'
-app.config['MAIL_PORT'] = 465
-app.config['MAIL_USE_SSL'] = True  # secure: true
-app.config['MAIL_USE_TLS'] = False  # לא TLS כי זה SSL
-app.config['MAIL_USERNAME'] = 'Report@sbparking.co.il'
-app.config['MAIL_PASSWORD'] = 'o51W38D5'
-app.config['MAIL_DEFAULT_SENDER'] = 'Report@sbparking.co.il'
+# הגדרות מייל עם Gmail (יציב על Render)
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_SSL'] = False
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'SBparkingReport@gmail.com'
+app.config['MAIL_PASSWORD'] = 'tkra bpdz bsbp rhgl'  # App Password של Gmail
+app.config['MAIL_DEFAULT_SENDER'] = 'SBparkingReport@gmail.com'
 app.config['MAIL_SUPPRESS_SEND'] = False
 app.config['MAIL_DEBUG'] = True
 
@@ -57,76 +57,39 @@ def store_verification_code(email, code):
         return False
 
 def send_verification_email(email, code):
-    """שליחת מייל אימות - SMTP ידני כמו Node.js"""
-    
-    # נסה כמה שיטות שונות
-    methods = [
-        {"name": "פורט 465 SSL", "port": 465, "ssl": True, "tls": False},
-        {"name": "פורט 587 TLS", "port": 587, "ssl": False, "tls": True}, 
-        {"name": "פורט 25 רגיל", "port": 25, "ssl": False, "tls": False}
-    ]
-    
-    for method in methods:
-        try:
-            import smtplib
-            from email.mime.text import MIMEText
-            from email.mime.multipart import MIMEMultipart
-            import ssl
-            
-            print(f"🔄 Trying {method['name']}...")
-            
-            # יצירת הודעה
-            msg = MIMEMultipart()
-            msg['From'] = 'Report@sbparking.co.il'
-            msg['To'] = email
-            msg['Subject'] = 'קוד אימות - S&B Parking'
-            
-            body = f"""
-קוד האימות שלך: {code}
-
-הקוד תקף ל-10 דקות בלבד.
-
-S&B Parking - מערכת דוחות חניות
-            """
-            
-            msg.attach(MIMEText(body, 'plain', 'utf-8'))
-            
-            # התחברות בהתאם לשיטה
-            if method['ssl']:
-                # SSL עם פורט 465
-                context = ssl.create_default_context()
-                server = smtplib.SMTP_SSL('smtp.012.net.il', method['port'], context=context)
-                print(f"✅ SSL connection established")
-            else:
-                # רגיל או TLS
-                server = smtplib.SMTP('smtp.012.net.il', method['port'])
-                print(f"✅ SMTP connection established")
-                
-                if method['tls']:
-                    server.starttls()
-                    print(f"✅ TLS started")
-            
-            # התחברות
-            print(f"🔄 Attempting login...")
-            server.login('Report@sbparking.co.il', 'o51W38D5')
-            print(f"✅ Login successful with {method['name']}")
-            
-            # שליחה
-            print(f"🔄 Sending message...")
-            server.send_message(msg)
-            server.quit()
-            
-            print(f"✅ Email sent successfully to {email} via {method['name']}")
-            return True
-            
-        except Exception as e:
-            print(f"❌ {method['name']} failed: {str(e)}")
-            continue
-    
-    # אם כל השיטות נכשלו
-    print(f"❌ All email methods failed for {email}")
-    print(f"📱 MANUAL CODE: {code} (copy this to verify)")
-    return False
+    """שליחת מייל אימות עם Gmail - יציב"""
+    try:
+        print(f"🚀 Starting Gmail send to {email}...")
+        
+        msg = Message(
+            subject='קוד אימות - S&B Parking',
+            recipients=[email],
+            html=f"""
+            <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">
+                <h2 style="color: #667eea;">🚗 S&B Parking</h2>
+                <h3>קוד האימות שלך:</h3>
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+                    <span style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px;">{code}</span>
+                </div>
+                <p>הקוד תקף ל-10 דקות בלבד.</p>
+                <p>אם לא ביקשת קוד זה, התעלם מהודעה זו.</p>
+                <hr>
+                <p style="color: #666; font-size: 12px;">S&B Parking - מערכת דוחות חניות</p>
+            </div>
+            """,
+            sender='SBparkingReport@gmail.com'
+        )
+        
+        print(f"🔄 Sending via Gmail...")
+        mail.send(msg)
+        
+        print(f"✅ Gmail email sent successfully to {email}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Gmail error: {str(e)}")
+        print(f"📱 BACKUP CODE for {email}: {code}")
+        return False
 
 def verify_code_from_database(email, code):
     """בדיקת קוד אימות מטבלת user_parkings"""
