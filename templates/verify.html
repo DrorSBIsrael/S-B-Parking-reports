@@ -28,6 +28,7 @@
             width: 100%;
             max-width: 400px;
             text-align: center;
+            position: relative;
         }
 
         .logo {
@@ -137,6 +138,16 @@
             animation: spin 1s linear infinite;
         }
 
+        .credit {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #999;
+            font-style: italic;
+        }
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -145,7 +156,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="logo">🚗 S&B</div>
+        <div class="logo">שיידט את בכמן ישראל</div>
         <div class="subtitle">אימות קוד</div>
         
         <div class="instructions">
@@ -165,6 +176,8 @@
         </form>
 
         <a href="/login" class="back-link">חזרה להתחברות</a>
+        
+        <div class="credit">נוצר ע"י דרור פרינץ</div>
     </div>
 
     <script>
