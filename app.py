@@ -57,39 +57,76 @@ def store_verification_code(email, code):
         return False
 
 def send_verification_email(email, code):
-    """שליחת מייל אימות - פונקציה מתוקנת"""
-    try:
-        print(f"🚀 Starting email send to {email}...")
-        print(f"📧 Using server: smtp.012.net.il:465 with SSL")
-        
-        msg = Message(
-            subject='קוד אימות - S&B Parking',
-            recipients=[email],
-            html=f"""
-            <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">
-                <h2 style="color: #667eea;">🚗 S&B Parking</h2>
-                <h3>קוד האימות שלך:</h3>
-                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-                    <span style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px;">{code}</span>
-                </div>
-                <p>הקוד תקף ל-10 דקות בלבד.</p>
-                <p>אם לא ביקשת קוד זה, התעלם מהודעה זו.</p>
-                <hr>
-                <p style="color: #666; font-size: 12px;">S&B Parking - מערכת דוחות חניות</p>
-            </div>
-            """,
-            sender='Report@sbparking.co.il'
-        )
-        
-        print(f"🔄 Sending email...")
-        mail.send(msg)
-        
-        print(f"✅ Email sent successfully to {email}")
-        return True
-        
-    except Exception as e:
-        print(f"❌ Email error: {str(e)}")
-        return False
+    """שליחת מייל אימות - SMTP ידני כמו Node.js"""
+    
+    # נסה כמה שיטות שונות
+    methods = [
+        {"name": "פורט 465 SSL", "port": 465, "ssl": True, "tls": False},
+        {"name": "פורט 587 TLS", "port": 587, "ssl": False, "tls": True}, 
+        {"name": "פורט 25 רגיל", "port": 25, "ssl": False, "tls": False}
+    ]
+    
+    for method in methods:
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            import ssl
+            
+            print(f"🔄 Trying {method['name']}...")
+            
+            # יצירת הודעה
+            msg = MIMEMultipart()
+            msg['From'] = 'Report@sbparking.co.il'
+            msg['To'] = email
+            msg['Subject'] = 'קוד אימות - S&B Parking'
+            
+            body = f"""
+קוד האימות שלך: {code}
+
+הקוד תקף ל-10 דקות בלבד.
+
+S&B Parking - מערכת דוחות חניות
+            """
+            
+            msg.attach(MIMEText(body, 'plain', 'utf-8'))
+            
+            # התחברות בהתאם לשיטה
+            if method['ssl']:
+                # SSL עם פורט 465
+                context = ssl.create_default_context()
+                server = smtplib.SMTP_SSL('smtp.012.net.il', method['port'], context=context)
+                print(f"✅ SSL connection established")
+            else:
+                # רגיל או TLS
+                server = smtplib.SMTP('smtp.012.net.il', method['port'])
+                print(f"✅ SMTP connection established")
+                
+                if method['tls']:
+                    server.starttls()
+                    print(f"✅ TLS started")
+            
+            # התחברות
+            print(f"🔄 Attempting login...")
+            server.login('Report@sbparking.co.il', 'o51W38D5')
+            print(f"✅ Login successful with {method['name']}")
+            
+            # שליחה
+            print(f"🔄 Sending message...")
+            server.send_message(msg)
+            server.quit()
+            
+            print(f"✅ Email sent successfully to {email} via {method['name']}")
+            return True
+            
+        except Exception as e:
+            print(f"❌ {method['name']} failed: {str(e)}")
+            continue
+    
+    # אם כל השיטות נכשלו
+    print(f"❌ All email methods failed for {email}")
+    print(f"📱 MANUAL CODE: {code} (copy this to verify)")
+    return False
 
 def verify_code_from_database(email, code):
     """בדיקת קוד אימות מטבלת user_parkings"""
