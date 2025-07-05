@@ -15,16 +15,21 @@ SUPABASE_URL = os.environ.get('SUPABASE_URL')
 SUPABASE_KEY = os.environ.get('SUPABASE_ANON_KEY')
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# הגדרות מייל עם Gmail (יציב על Render)
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_SSL'] = False
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'SBparkingReport@gmail.com'
-app.config['MAIL_PASSWORD'] = 'tkra bpdz bsbp rhgl'  # App Password של Gmail
-app.config['MAIL_DEFAULT_SENDER'] = 'SBparkingReport@gmail.com'
+# הגדרות מייל עם Gmail + Environment Variables
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
+app.config['MAIL_USERNAME'] = os.environ.get('GMAIL_USERNAME')  # Environment Variable
+app.config['MAIL_PASSWORD'] = os.environ.get('GMAIL_APP_PASSWORD')  # Environment Variable
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('GMAIL_USERNAME')
 app.config['MAIL_SUPPRESS_SEND'] = False
 app.config['MAIL_DEBUG'] = True
+
+# בדיקה שהמשתנים קיימים
+if not app.config['MAIL_USERNAME'] or not app.config['MAIL_PASSWORD']:
+    print("⚠️  WARNING: Gmail credentials not found in environment variables!")
+    print("⚠️  Set GMAIL_USERNAME and GMAIL_APP_PASSWORD in your environment")
 
 mail = Mail(app)
 
@@ -57,9 +62,17 @@ def store_verification_code(email, code):
         return False
 
 def send_verification_email(email, code):
-    """שליחת מייל אימות עם Gmail - יציב"""
+    """שליחת מייל עם Gmail + App Password מ-Environment Variables"""
+    
+    # בדיקה שיש נתונים
+    if not app.config['MAIL_USERNAME'] or not app.config['MAIL_PASSWORD']:
+        print(f"❌ Gmail credentials missing in environment variables")
+        print(f"📱 BACKUP CODE for {email}: {code}")
+        return False
+    
     try:
         print(f"🚀 Starting Gmail send to {email}...")
+        print(f"📧 Using Gmail account: {app.config['MAIL_USERNAME']}")
         
         msg = Message(
             subject='קוד אימות - S&B Parking',
@@ -77,7 +90,7 @@ def send_verification_email(email, code):
                 <p style="color: #666; font-size: 12px;">S&B Parking - מערכת דוחות חניות</p>
             </div>
             """,
-            sender='SBparkingReport@gmail.com'
+            sender=app.config['MAIL_USERNAME']
         )
         
         print(f"🔄 Sending via Gmail...")
