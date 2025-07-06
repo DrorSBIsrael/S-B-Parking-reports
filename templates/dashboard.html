@@ -12,45 +12,6 @@
             box-sizing: border-box;
         }
 
-        // המרת תאריך לפורמט DD/MM/YYYY
-        function formatDateForInput(date) {
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = date.getFullYear();
-            return `${day}/${month}/${year}`;
-        }
-
-        // המרת תאריך מפורמט DD/MM/YYYY לאובייקט Date
-        function parseInputDate(dateString) {
-            if (!dateString || !dateString.includes('/')) return null;
-            
-            const parts = dateString.split('/');
-            if (parts.length !== 3) return null;
-            
-            const day = parseInt(parts[0]);
-            const month = parseInt(parts[1]) - 1; // חודש מתחיל מ-0
-            const year = parseInt(parts[2]);
-            
-            if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
-            
-            const date = new Date(year, month, day);
-            
-            // בדיקה שהתאריך תקין
-            if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
-                return null;
-            }
-            
-            return date;
-        }
-
-        // המרת תאריך לפורמט למסד הנתונים (YYYY-MM-DD)
-        function formatDateForAPI(date) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
         // הגדרת טווח תאריכים מהיר
         function setQuickRange(range) {
             const today = new Date();
@@ -564,6 +525,45 @@
             });
             
             populateMonthSelector();
+        }
+
+        // המרת תאריך לפורמט DD/MM/YYYY
+        function formatDateForInput(date) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        // המרת תאריך מפורמט DD/MM/YYYY לאובייקט Date
+        function parseInputDate(dateString) {
+            if (!dateString || !dateString.includes('/')) return null;
+            
+            const parts = dateString.split('/');
+            if (parts.length !== 3) return null;
+            
+            const day = parseInt(parts[0]);
+            const month = parseInt(parts[1]) - 1; // חודש מתחיל מ-0
+            const year = parseInt(parts[2]);
+            
+            if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+            
+            const date = new Date(year, month, day);
+            
+            // בדיקה שהתאריך תקין
+            if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
+                return null;
+            }
+            
+            return date;
+        }
+
+        // המרת תאריך לפורמט למסד הנתונים (YYYY-MM-DD)
+        function formatDateForAPI(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
         }
 
         // מילוי בוחר החודשים
