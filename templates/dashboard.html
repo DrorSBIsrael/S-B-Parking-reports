@@ -424,6 +424,8 @@
                                 style="padding: 5px 10px; font-size: 0.7rem; background: #28a745;">השנה כולה</button>
                         <button class="btn quick-range-btn" data-range="all" 
                                 style="padding: 5px 10px; font-size: 0.7rem; background: #fd7e14;">🔍 חפש נתונים</button>
+                        <button id="investigateBtn" class="btn" 
+                                style="padding: 5px 10px; font-size: 0.7rem; background: #9c27b0; color: white;">🕵️ חקירה</button>
                         <button id="debugBtn" class="btn" 
                                 style="padding: 5px 10px; font-size: 0.7rem; background: #e74c3c; color: white;">🔍 Debug</button>
                     </div>
@@ -686,8 +688,9 @@
         // טעינת אפשרויות חניונים (למנהלי קבוצה)
         async function loadParkingOptions() {
             if (userData.access_level !== 'group_manager') {
-                // למשתמש חניון בודד - טען נתונים מיד
-                loadParkingData();
+                // למשתמש חניון בודד - נסה טעינה ראשונית עם חקירה
+                console.log('👤 משתמש חניון בודד - בודק נתונים...');
+                performInitialDataSearch();
                 return;
             }
             
@@ -707,13 +710,48 @@
                     });
                     
                     // טען נתונים ראשוניים
-                    loadParkingData();
+                    performInitialDataSearch();
                 } else {
                     showError('שגיאה בטעינת רשימת חניונים: ' + result.message);
                 }
             } catch (error) {
                 console.error('Error loading parking options:', error);
                 showError('שגיאה בטעינת רשימת חניונים');
+            }
+        }
+
+        // חיפוש נתונים ראשוני
+        async function performInitialDataSearch() {
+            console.log('🔍 מבצע חיפוש נתונים ראשוני...');
+            
+            try {
+                // נסה עם התאריכים המוגדרים מראש
+                await loadParkingData();
+                
+                // אם לא נמצא כלום, נסה טווח רחב יותר
+                if (currentData.length === 0) {
+                    console.log('🔍 לא נמצאו נתונים בטווח הבסיסי, מרחיב חיפוש...');
+                    
+                    const endDate = new Date();
+                    const startDate = new Date(endDate.getFullYear() - 1, 0, 1); // שנה אחורה
+                    
+                    document.getElementById('startDate').value = formatDateForInput(startDate);
+                    document.getElementById('endDate').value = formatDateForInput(endDate);
+                    
+                    await loadParkingData();
+                    
+                    if (currentData.length === 0) {
+                        console.log('⚠️ לא נמצאו נתונים גם בטווח רחב - מציג הודעה');
+                        showError(`
+                            🚧 לא נמצאו נתונים עבור החניון שלך<br><br>
+                            <strong>החניון שלך:</strong> ${userData ? userData.parking_name : 'לא ידוע'}<br>
+                            <strong>מספר פרויקט:</strong> ${userData ? userData.project_number : 'לא ידוע'}<br><br>
+                            <strong>לחץ על כפתור "🕵️ חקירה" לבדיקה מתקדמת</strong>
+                        `);
+                    }
+                }
+            } catch (error) {
+                console.error('❌ שגיאה בחיפוש ראשוני:', error);
             }
         }
 
@@ -1412,6 +1450,105 @@
             document.getElementById('parkingSelector').addEventListener('change', loadParkingData);
             document.getElementById('logoutBtn').addEventListener('click', logout);
             
+            // כפתור חקירה מתקדמת
+            document.getElementById('investigateBtn').addEventListener('click', async function() {
+                if (!userData) {
+                    alert('❌ נתוני משתמש לא נטענו עדיין');
+                    return;
+                }
+                
+                try {
+                    showLoading(true);
+                    console.log('🕵️ מתחיל חקירה מתקדמת...');
+                    
+                    // בדיקה 1: חיפוש בטווח רחב מאוד (5 שנים)
+                    const endDate = new Date();
+                    const startDate = new Date(endDate.getFullYear() - 5, 0, 1);
+                    
+                    const params = new URLSearchParams({
+                        start_date: formatDateForAPI(startDate),
+                        end_date: formatDateForAPI(endDate)
+                    });
+                    
+                    console.log('🔍 חיפוש בטווח רחב:', formatDateForAPI(startDate), 'עד', formatDateForAPI(endDate));
+                    
+                    const response = await fetch(`/api/parking-data?${params}`);
+                    const result = await response.json();
+                    
+                    let investigationReport = `
+🕵️ דוח חקירה מתקדם:
+
+👤 פרטי משתמש:
+• שם משתמש: ${userData.username}
+• אימייל: ${userData.email}
+• חניון: ${userData.parking_name}
+• מספר פרויקט: ${userData.project_number}
+• רמת גישה: ${userData.access_level}
+
+🔍 תוצאות חיפוש (${formatDateForAPI(startDate)} עד ${formatDateForAPI(endDate)}):
+• נמצאו: ${result.data ? result.data.length : 0} רשומות
+• סטטוס API: ${result.success ? '✅ תקין' : '❌ שגיאה'}
+`;
+
+                    if (result.data && result.data.length > 0) {
+                        // ניתוח התאריכים שנמצאו
+                        const dates = result.data.map(d => d.report_date).sort();
+                        const firstDate = dates[0];
+                        const lastDate = dates[dates.length - 1];
+                        
+                        investigationReport += `
+📅 טווח נתונים שנמצא:
+• תאריך ראשון: ${firstDate}
+• תאריך אחרון: ${lastDate}
+• סה"כ ימים עם נתונים: ${dates.length}
+
+💰 סיכום כספי:
+• סה"כ הכנסות: ₪${result.data.reduce((sum, d) => sum + (d.total_revenue_shekels || 0), 0).toLocaleString()}
+• סה"כ כניסות: ${result.data.reduce((sum, d) => sum + (d.t_entry_tot || 0), 0).toLocaleString()}
+
+✅ הנתונים קיימים! נסה להגדיר תאריכים בטווח ${firstDate} - ${lastDate}
+`;
+                        
+                        // עדכון השדות עם הטווח שנמצא
+                        const firstDateObj = new Date(firstDate);
+                        const lastDateObj = new Date(lastDate);
+                        document.getElementById('startDate').value = formatDateForInput(firstDateObj);
+                        document.getElementById('endDate').value = formatDateForInput(lastDateObj);
+                        
+                    } else {
+                        investigationReport += `
+❌ לא נמצאו נתונים כלל!
+
+🔍 בדיקות נוספות:
+• ודא שמספר הפרויקט נכון: ${userData.project_number}
+• ייתכן שהנתונים עדיין לא הועלו למערכת
+• פנה למנהל המערכת לבדיקה
+
+💡 הצעות:
+• בדוק שהחניון פעיל ושולח נתונים
+• ודא שההעלאה למערכת עובדת
+• בדוק עם משתמשים אחרים אם יש להם נתונים
+`;
+                    }
+                    
+                    console.log(investigationReport);
+                    alert(investigationReport);
+                    
+                    // אם נמצאו נתונים, טען אותם
+                    if (result.data && result.data.length > 0) {
+                        currentData = result.data;
+                        updateDashboard();
+                        document.getElementById('dashboardContent').style.display = 'block';
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ שגיאה בחקירה:', error);
+                    alert('❌ שגיאה בביצוע החקירה: ' + error.message);
+                } finally {
+                    showLoading(false);
+                }
+            });
+            
             // כפתור דיבוג
             document.getElementById('debugBtn').addEventListener('click', function() {
                 const startInput = document.getElementById('startDate').value;
@@ -1535,7 +1672,7 @@
         }
 
         function showError(message) {
-            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorMessage').innerHTML = message; // שינוי ל-innerHTML במקום textContent
             document.getElementById('errorSection').style.display = 'block';
             document.getElementById('dashboardContent').style.display = 'none';
         }
