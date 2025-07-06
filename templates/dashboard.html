@@ -332,13 +332,39 @@
                     <option value="">טוען חניונים...</option>
                 </select>
                 
-                <!-- טווח תאריכים -->
+                <!-- בחירת תאריכים -->
                 <div class="date-range">
-                    <label>מתאריך:</label>
-                    <input type="date" id="startDate" class="date-input">
-                    <label>עד תאריך:</label>
-                    <input type="date" id="endDate" class="date-input">
-                    <button id="loadDataBtn" class="btn btn-primary">📊 טען נתונים</button>
+                    <!-- בוחר חודש מהיר -->
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <label style="font-weight: bold;">בחירה מהירה:</label>
+                        <select id="monthSelector" class="date-input" style="min-width: 150px;">
+                            <option value="">בחר חודש...</option>
+                        </select>
+                        <button id="loadMonthBtn" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.8rem;">📅 חודש מלא</button>
+                    </div>
+                    
+                    <!-- בחירה מותאמת אישית -->
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <label>מתאריך:</label>
+                        <input type="text" id="startDate" class="date-input" placeholder="DD/MM/YYYY" 
+                               style="width: 120px;" maxlength="10">
+                        <label>עד תאריך:</label>
+                        <input type="text" id="endDate" class="date-input" placeholder="DD/MM/YYYY" 
+                               style="width: 120px;" maxlength="10">
+                        <button id="loadDataBtn" class="btn btn-primary">📊 טען נתונים</button>
+                    </div>
+                    
+                    <!-- כפתורי טווחים מוכנים -->
+                    <div style="display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap;">
+                        <button class="btn quick-range-btn" data-range="today" 
+                                style="padding: 5px 10px; font-size: 0.7rem; background: #28a745;">היום</button>
+                        <button class="btn quick-range-btn" data-range="yesterday" 
+                                style="padding: 5px 10px; font-size: 0.7rem; background: #17a2b8;">אתמול</button>
+                        <button class="btn quick-range-btn" data-range="week" 
+                                style="padding: 5px 10px; font-size: 0.7rem; background: #ffc107; color: #000;">השבוע</button>
+                        <button class="btn quick-range-btn" data-range="lastweek" 
+                                style="padding: 5px 10px; font-size: 0.7rem; background: #6c757d;">שבוע שעבר</button>
+                    </div>
                 </div>
                 
                 <!-- מידע משתמש -->
@@ -438,8 +464,127 @@
             const today = new Date();
             const twoWeeksAgo = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 14);
             
-            document.getElementById('endDate').value = today.toISOString().split('T')[0];
-            document.getElementById('startDate').value = twoWeeksAgo.toISOString().split('T')[0];
+            document.getElementById('endDate').value = formatDateForInput(today);
+            document.getElementById('startDate').value = formatDateForInput(twoWeeksAgo);
+            
+            populateMonthSelector();
+        }
+
+        // מילוי בוחר החודשים
+        function populateMonthSelector() {
+            const monthSelector = document.getElementById('monthSelector');
+            const currentDate = new Date();
+            
+            // יצירת רשימת חודשים (6 חודשים אחורה ו-2 קדימה)
+            for (let i = -6; i <= 2; i++) {
+                const date = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1);
+                const monthKey = `${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+                const monthName = date.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+                
+                const option = document.createElement('option');
+                option.value = monthKey;
+                option.textContent = monthName;
+                
+                // בחירת החודש הנוכחי כברירת מחדל
+                if (i === 0) {
+                    option.selected = true;
+                }
+                
+                monthSelector.appendChild(option);
+            }
+        }
+
+        // המרת תאריך לפורמט DD/MM/YYYY
+        function formatDateForInput(date) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        // המרת תאריך מפורמט DD/MM/YYYY לאובייקט Date
+        function parseInputDate(dateString) {
+            if (!dateString || !dateString.includes('/')) return null;
+            
+            const parts = dateString.split('/');
+            if (parts.length !== 3) return null;
+            
+            const day = parseInt(parts[0]);
+            const month = parseInt(parts[1]) - 1; // חודש מתחיל מ-0
+            const year = parseInt(parts[2]);
+            
+            const date = new Date(year, month, day);
+            
+            // בדיקה שהתאריך תקין
+            if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
+                return null;
+            }
+            
+            return date;
+        }
+
+        // המרת תאריך לפורמט למסד הנתונים (YYYY-MM-DD)
+        function formatDateForAPI(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // אימות פורמט תאריך
+        function validateDateInput(input) {
+            const dateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+            return dateRegex.test(input.value);
+        }
+
+        // הגדרת טווח תאריכים מהיר
+        function setQuickRange(range) {
+            const today = new Date();
+            let startDate, endDate;
+            
+            switch(range) {
+                case 'today':
+                    startDate = endDate = today;
+                    break;
+                case 'yesterday':
+                    startDate = endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+                    break;
+                case 'week':
+                    endDate = today;
+                    startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay());
+                    break;
+                case 'lastweek':
+                    endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() - 1);
+                    startDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate() - 6);
+                    break;
+            }
+            
+            document.getElementById('startDate').value = formatDateForInput(startDate);
+            document.getElementById('endDate').value = formatDateForInput(endDate);
+            
+            // טען נתונים אוטומטית
+            loadParkingData();
+        }
+
+        // טעינת חודש מלא
+        function loadFullMonth() {
+            const monthSelector = document.getElementById('monthSelector');
+            const selectedMonth = monthSelector.value;
+            
+            if (!selectedMonth) {
+                alert('אנא בחר חודש תחילה');
+                return;
+            }
+            
+            const [month, year] = selectedMonth.split('/');
+            const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+            const endDate = new Date(parseInt(year), parseInt(month), 0); // יום אחרון בחודש
+            
+            document.getElementById('startDate').value = formatDateForInput(startDate);
+            document.getElementById('endDate').value = formatDateForInput(endDate);
+            
+            // טען נתונים אוטומטית
+            loadParkingData();
         }
 
         // טעינת נתוני משתמש
