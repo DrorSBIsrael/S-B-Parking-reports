@@ -29,6 +29,15 @@
                     endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() - 1);
                     startDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate() - 6);
                     break;
+                case 'year':
+                    endDate = today;
+                    startDate = new Date(today.getFullYear(), 0, 1); // 1 בינואר השנה הנוכחית
+                    break;
+                case 'all':
+                    // טווח רחב לחיפוש נתונים - 2 שנים אחורה
+                    endDate = today;
+                    startDate = new Date(today.getFullYear() - 2, 0, 1);
+                    break;
                 default:
                     console.error('Unknown range:', range);
                     return;
@@ -411,6 +420,10 @@
                                 style="padding: 5px 10px; font-size: 0.7rem; background: #ffc107; color: #000;">השבוע</button>
                         <button class="btn quick-range-btn" data-range="lastweek" 
                                 style="padding: 5px 10px; font-size: 0.7rem; background: #6c757d;">שבוע שעבר</button>
+                        <button class="btn quick-range-btn" data-range="year" 
+                                style="padding: 5px 10px; font-size: 0.7rem; background: #28a745;">השנה כולה</button>
+                        <button class="btn quick-range-btn" data-range="all" 
+                                style="padding: 5px 10px; font-size: 0.7rem; background: #fd7e14;">🔍 חפש נתונים</button>
                         <button id="debugBtn" class="btn" 
                                 style="padding: 5px 10px; font-size: 0.7rem; background: #e74c3c; color: white;">🔍 Debug</button>
                     </div>
@@ -508,19 +521,19 @@
             setDefaultDates();
         });
 
-        // הגדרת תאריכים ברירת מחדל (שבועיים אחרונים)
+        // הגדרת תאריכים ברירת מחדל (חודש אחרון)
         function setDefaultDates() {
             const today = new Date();
-            const twoWeeksAgo = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 14);
+            const oneMonthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
             
             document.getElementById('endDate').value = formatDateForInput(today);
-            document.getElementById('startDate').value = formatDateForInput(twoWeeksAgo);
+            document.getElementById('startDate').value = formatDateForInput(oneMonthAgo);
             
             // הוספת לוג לבדיקה
             console.log('Default dates set:', {
-                start: formatDateForInput(twoWeeksAgo),
+                start: formatDateForInput(oneMonthAgo),
                 end: formatDateForInput(today),
-                startAPI: formatDateForAPI(twoWeeksAgo),
+                startAPI: formatDateForAPI(oneMonthAgo),
                 endAPI: formatDateForAPI(today)
             });
             
@@ -765,7 +778,14 @@
                 if (result.success) {
                     currentData = result.data;
                     if (currentData.length === 0) {
-                        showError(`🚧 אין נתונים זמינים לתקופה ${startDateInput} - ${endDateInput}. נסה טווח תאריכים אחר או בדוק שהנתונים קיימים במסד הנתונים.`);
+                        showError(`
+                            🚧 אין נתונים זמינים לתקופה ${startDateInput} - ${endDateInput}<br><br>
+                            <strong>אפשרויות:</strong><br>
+                            • נסה טווח תאריכים רחב יותר<br>
+                            • לחץ על הכפתור "🔍 חפש נתונים" לחיפוש בטווח רחב<br>
+                            • ודא שהחניון שלך (${userData ? userData.parking_name : 'לא ידוע'}) מכיל נתונים בתאריכים האלה<br>
+                            • פנה למנהל המערכת אם הבעיה נמשכת
+                        `);
                     } else {
                         console.log(`Loaded ${currentData.length} records`);
                         updateDashboard();
@@ -1418,15 +1438,35 @@
                             end_date: formatDateForAPI(endParsed)
                         });
                         console.log('Full URL:', `/api/parking-data?${params}`);
+                        
+                        // בדיקת פרטי משתמש
+                        console.log('User Data:', userData);
                     } else {
                         console.log('❌ Date parsing failed');
+                        if (startParsed === null) console.log('❌ Start date is invalid:', startInput);
+                        if (endParsed === null) console.log('❌ End date is invalid:', endInput);
                     }
                 } else {
                     console.log('❌ Missing input dates');
                 }
                 console.log('==================');
                 
-                alert('בדוק את ה-Console (F12) לפרטי הדיבוג');
+                // הצגת פרטים בחלונית
+                alert(`
+בדיקת מצב הדשבורד:
+
+📅 תאריכים:
+התחלה: ${startInput || 'חסר'}
+סיום: ${endInput || 'חסר'}
+
+👤 משתמש: ${userData ? userData.username : 'לא נטען'}
+🏢 חניון: ${userData ? userData.parking_name : 'לא נטען'}
+🔑 פרויקט: ${userData ? userData.project_number : 'לא נטען'}
+
+📊 נתונים נוכחיים: ${currentData.length} רשומות
+
+לפרטים נוספים ראה Console (F12)
+                `);
             });
             
             // כפתורי טווחים מהירים
@@ -1442,17 +1482,39 @@
             
             [startDateInput, endDateInput].forEach(input => {
                 input.addEventListener('input', function() {
-                    // הוספת סלאשים אוטומטית
+                    // הוספת סלאשים אוטומטית עם אימות
                     let value = this.value.replace(/\D/g, ''); // רק ספרות
                     
                     if (value.length >= 2) {
-                        value = value.substring(0, 2) + '/' + value.substring(2);
+                        let day = value.substring(0, 2);
+                        // ווידוא שהיום לא יותר מ-31
+                        if (parseInt(day) > 31) {
+                            day = '31';
+                        }
+                        value = day + '/' + value.substring(2);
                     }
                     if (value.length >= 5) {
-                        value = value.substring(0, 5) + '/' + value.substring(5, 9);
+                        let month = value.substring(3, 5);
+                        // ווידוא שהחודש לא יותר מ-12
+                        if (parseInt(month) > 12) {
+                            month = '12';
+                        }
+                        value = value.substring(0, 3) + month + '/' + value.substring(5, 9);
                     }
                     
                     this.value = value;
+                    
+                    // הוספת אינדיקטור ויזואלי
+                    if (value.length === 10) {
+                        const date = parseInputDate(value);
+                        if (date) {
+                            this.style.borderColor = '#28a745'; // ירוק
+                        } else {
+                            this.style.borderColor = '#dc3545'; // אדום
+                        }
+                    } else {
+                        this.style.borderColor = '#ddd'; // ברירת מחדל
+                    }
                 });
                 
                 // טעינה עם Enter
