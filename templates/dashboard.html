@@ -11,6 +11,82 @@
             padding: 0;
             box-sizing: border-box;
         }
+
+        // המרת תאריך לפורמט DD/MM/YYYY
+        function formatDateForInput(date) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        // המרת תאריך מפורמט DD/MM/YYYY לאובייקט Date
+        function parseInputDate(dateString) {
+            if (!dateString || !dateString.includes('/')) return null;
+            
+            const parts = dateString.split('/');
+            if (parts.length !== 3) return null;
+            
+            const day = parseInt(parts[0]);
+            const month = parseInt(parts[1]) - 1; // חודש מתחיל מ-0
+            const year = parseInt(parts[2]);
+            
+            if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+            
+            const date = new Date(year, month, day);
+            
+            // בדיקה שהתאריך תקין
+            if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
+                return null;
+            }
+            
+            return date;
+        }
+
+        // המרת תאריך לפורמט למסד הנתונים (YYYY-MM-DD)
+        function formatDateForAPI(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // הגדרת טווח תאריכים מהיר
+        function setQuickRange(range) {
+            const today = new Date();
+            let startDate, endDate;
+            
+            switch(range) {
+                case 'yesterday':
+                    startDate = endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+                    break;
+                case 'week':
+                    endDate = today;
+                    startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay());
+                    break;
+                case 'lastweek':
+                    endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() - 1);
+                    startDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate() - 6);
+                    break;
+                default:
+                    console.error('Unknown range:', range);
+                    return;
+            }
+            
+            console.log('Quick range selection:', {
+                range: range,
+                startDate: startDate,
+                endDate: endDate,
+                startFormatted: formatDateForInput(startDate),
+                endFormatted: formatDateForInput(endDate)
+            });
+            
+            document.getElementById('startDate').value = formatDateForInput(startDate);
+            document.getElementById('endDate').value = formatDateForInput(endDate);
+            
+            // טען נתונים אוטומטית
+            loadParkingData();
+        }
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -88,19 +164,6 @@
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
-        }
-        
-        .quick-range-btn {
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s;
-            color: white;
-        }
-        
-        .quick-range-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         
         .btn {
@@ -387,6 +450,8 @@
                                 style="padding: 5px 10px; font-size: 0.7rem; background: #ffc107; color: #000;">השבוע</button>
                         <button class="btn quick-range-btn" data-range="lastweek" 
                                 style="padding: 5px 10px; font-size: 0.7rem; background: #6c757d;">שבוע שעבר</button>
+                        <button id="debugBtn" class="btn" 
+                                style="padding: 5px 10px; font-size: 0.7rem; background: #e74c3c; color: white;">🔍 Debug</button>
                     </div>
                 </div>
                 
@@ -490,19 +555,37 @@
             document.getElementById('endDate').value = formatDateForInput(today);
             document.getElementById('startDate').value = formatDateForInput(twoWeeksAgo);
             
+            // הוספת לוג לבדיקה
+            console.log('Default dates set:', {
+                start: formatDateForInput(twoWeeksAgo),
+                end: formatDateForInput(today),
+                startAPI: formatDateForAPI(twoWeeksAgo),
+                endAPI: formatDateForAPI(today)
+            });
+            
             populateMonthSelector();
         }
 
         // מילוי בוחר החודשים
         function populateMonthSelector() {
             const monthSelector = document.getElementById('monthSelector');
+            if (!monthSelector) return;
+            
+            monthSelector.innerHTML = '<option value="">בחר חודש...</option>';
+            
             const currentDate = new Date();
             
             // יצירת רשימת חודשים (6 חודשים אחורה ו-2 קדימה)
             for (let i = -6; i <= 2; i++) {
                 const date = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1);
                 const monthKey = `${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
-                const monthName = date.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+                
+                const monthNames = [
+                    'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+                    'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
+                ];
+                
+                const monthName = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
                 
                 const option = document.createElement('option');
                 option.value = monthKey;
@@ -517,77 +600,6 @@
             }
         }
 
-        // המרת תאריך לפורמט DD/MM/YYYY
-        function formatDateForInput(date) {
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = date.getFullYear();
-            return `${day}/${month}/${year}`;
-        }
-
-        // המרת תאריך מפורמט DD/MM/YYYY לאובייקט Date
-        function parseInputDate(dateString) {
-            if (!dateString || !dateString.includes('/')) return null;
-            
-            const parts = dateString.split('/');
-            if (parts.length !== 3) return null;
-            
-            const day = parseInt(parts[0]);
-            const month = parseInt(parts[1]) - 1; // חודש מתחיל מ-0
-            const year = parseInt(parts[2]);
-            
-            const date = new Date(year, month, day);
-            
-            // בדיקה שהתאריך תקין
-            if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
-                return null;
-            }
-            
-            return date;
-        }
-
-        // המרת תאריך לפורמט למסד הנתונים (YYYY-MM-DD)
-        function formatDateForAPI(date) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
-        // אימות פורמט תאריך
-        function validateDateInput(input) {
-            const dateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
-            return dateRegex.test(input.value);
-        }
-
-        // הגדרת טווח תאריכים מהיר
-        function setQuickRange(range) {
-            const today = new Date();
-            let startDate, endDate;
-            
-            switch(range) {
-                case 'yesterday':
-                    startDate = endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
-                    break;
-                case 'week':
-                    endDate = today;
-                    startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay());
-                    break;
-                case 'lastweek':
-                    endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() - 1);
-                    startDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate() - 6);
-                    break;
-                default:
-                    return;
-            }
-            
-            document.getElementById('startDate').value = formatDateForInput(startDate);
-            document.getElementById('endDate').value = formatDateForInput(endDate);
-            
-            // טען נתונים אוטומטית
-            loadParkingData();
-        }
-
         // טעינת חודש מלא
         function loadFullMonth() {
             const monthSelector = document.getElementById('monthSelector');
@@ -598,15 +610,28 @@
                 return;
             }
             
-            const [month, year] = selectedMonth.split('/');
-            const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
-            const endDate = new Date(parseInt(year), parseInt(month), 0); // יום אחרון בחודש
-            
-            document.getElementById('startDate').value = formatDateForInput(startDate);
-            document.getElementById('endDate').value = formatDateForInput(endDate);
-            
-            // טען נתונים אוטומטית
-            loadParkingData();
+            try {
+                const [month, year] = selectedMonth.split('/');
+                const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+                const endDate = new Date(parseInt(year), parseInt(month), 0); // יום אחרון בחודש
+                
+                console.log('Month selection:', {
+                    selected: selectedMonth,
+                    startDate: startDate,
+                    endDate: endDate,
+                    startFormatted: formatDateForInput(startDate),
+                    endFormatted: formatDateForInput(endDate)
+                });
+                
+                document.getElementById('startDate').value = formatDateForInput(startDate);
+                document.getElementById('endDate').value = formatDateForInput(endDate);
+                
+                // טען נתונים אוטומטית
+                loadParkingData();
+            } catch (error) {
+                console.error('Error setting month range:', error);
+                alert('שגיאה בהגדרת טווח החודש');
+            }
         }
 
         // טעינת נתוני משתמש
@@ -717,24 +742,30 @@
             try {
                 const selectedParking = document.getElementById('parkingSelector').value;
                 
+                const startDateAPI = formatDateForAPI(startDate);
+                const endDateAPI = formatDateForAPI(endDate);
+                
                 const params = new URLSearchParams({
-                    start_date: formatDateForAPI(startDate),
-                    end_date: formatDateForAPI(endDate)
+                    start_date: startDateAPI,
+                    end_date: endDateAPI
                 });
                 
                 if (selectedParking) {
                     params.append('parking_id', selectedParking);
                 }
                 
-                console.log('Loading data for:', formatDateForAPI(startDate), 'to', formatDateForAPI(endDate));
+                console.log('Loading data for:', startDateAPI, 'to', endDateAPI);
+                console.log('API URL:', `/api/parking-data?${params}`);
                 
                 const response = await fetch(`/api/parking-data?${params}`);
                 const result = await response.json();
                 
+                console.log('API Response:', result);
+                
                 if (result.success) {
                     currentData = result.data;
                     if (currentData.length === 0) {
-                        showError(`🚧 אין נתונים זמינים לתקופה ${startDateInput} - ${endDateInput}. נסה טווח תאריכים אחר.`);
+                        showError(`🚧 אין נתונים זמינים לתקופה ${startDateInput} - ${endDateInput}. נסה טווח תאריכים אחר או בדוק שהנתונים קיימים במסד הנתונים.`);
                     } else {
                         console.log(`Loaded ${currentData.length} records`);
                         updateDashboard();
@@ -1361,6 +1392,43 @@
             document.getElementById('parkingSelector').addEventListener('change', loadParkingData);
             document.getElementById('logoutBtn').addEventListener('click', logout);
             
+            // כפתור דיבוג
+            document.getElementById('debugBtn').addEventListener('click', function() {
+                const startInput = document.getElementById('startDate').value;
+                const endInput = document.getElementById('endDate').value;
+                
+                console.log('=== DEBUG INFO ===');
+                console.log('Start Input:', startInput);
+                console.log('End Input:', endInput);
+                
+                if (startInput && endInput) {
+                    const startParsed = parseInputDate(startInput);
+                    const endParsed = parseInputDate(endInput);
+                    
+                    console.log('Start Parsed:', startParsed);
+                    console.log('End Parsed:', endParsed);
+                    
+                    if (startParsed && endParsed) {
+                        console.log('Start API:', formatDateForAPI(startParsed));
+                        console.log('End API:', formatDateForAPI(endParsed));
+                        
+                        // בדיקת URL שיישלח
+                        const params = new URLSearchParams({
+                            start_date: formatDateForAPI(startParsed),
+                            end_date: formatDateForAPI(endParsed)
+                        });
+                        console.log('Full URL:', `/api/parking-data?${params}`);
+                    } else {
+                        console.log('❌ Date parsing failed');
+                    }
+                } else {
+                    console.log('❌ Missing input dates');
+                }
+                console.log('==================');
+                
+                alert('בדוק את ה-Console (F12) לפרטי הדיבוג');
+            });
+            
             // כפתורי טווחים מהירים
             document.querySelectorAll('.quick-range-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
@@ -1368,7 +1436,7 @@
                 });
             });
             
-            // אימות תאריכים בזמן הקלדה
+            // אימות תאריכים בזמן הקלדה - פשוט יותר
             const startDateInput = document.getElementById('startDate');
             const endDateInput = document.getElementById('endDate');
             
@@ -1385,33 +1453,6 @@
                     }
                     
                     this.value = value;
-                    
-                    // אימות אם התאריך מלא
-                    if (value.length === 10) {
-                        const date = parseInputDate(value);
-                        if (date) {
-                            this.style.borderColor = '#28a745'; // ירוק
-                        } else {
-                            this.style.borderColor = '#dc3545'; // אדום
-                        }
-                    } else {
-                        this.style.borderColor = '#ddd'; // ברירת מחדל
-                    }
-                });
-                
-                // טעינה אוטומטית כאשר שני התאריכים תקינים
-                input.addEventListener('blur', function() {
-                    const startValid = parseInputDate(startDateInput.value) !== null;
-                    const endValid = parseInputDate(endDateInput.value) !== null;
-                    
-                    if (startValid && endValid && startDateInput.value.length === 10 && endDateInput.value.length === 10) {
-                        // השהיה קצרה לפני טעינה אוטומטית
-                        setTimeout(() => {
-                            if (currentData.length === 0) { // טען רק אם אין נתונים
-                                loadParkingData();
-                            }
-                        }, 500);
-                    }
                 });
                 
                 // טעינה עם Enter
