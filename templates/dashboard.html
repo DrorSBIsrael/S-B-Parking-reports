@@ -67,8 +67,13 @@
         
         .date-range {
             display: flex;
-            align-items: center;
+            flex-direction: column;
             gap: 10px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #667eea;
+            min-width: 350px;
         }
         
         .date-input {
@@ -76,6 +81,26 @@
             border: 2px solid #ddd;
             border-radius: 6px;
             font-size: 0.9rem;
+            transition: border-color 0.3s;
+        }
+        
+        .date-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+        
+        .quick-range-btn {
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+        }
+        
+        .quick-range-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         
         .btn {
@@ -356,8 +381,6 @@
                     
                     <!-- כפתורי טווחים מוכנים -->
                     <div style="display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap;">
-                        <button class="btn quick-range-btn" data-range="today" 
-                                style="padding: 5px 10px; font-size: 0.7rem; background: #28a745;">היום</button>
                         <button class="btn quick-range-btn" data-range="yesterday" 
                                 style="padding: 5px 10px; font-size: 0.7rem; background: #17a2b8;">אתמול</button>
                         <button class="btn quick-range-btn" data-range="week" 
@@ -543,9 +566,6 @@
             let startDate, endDate;
             
             switch(range) {
-                case 'today':
-                    startDate = endDate = today;
-                    break;
                 case 'yesterday':
                     startDate = endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
                     break;
@@ -557,6 +577,8 @@
                     endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() - 1);
                     startDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate() - 6);
                     break;
+                default:
+                    return;
             }
             
             document.getElementById('startDate').value = formatDateForInput(startDate);
@@ -659,27 +681,52 @@
 
         // טעינת נתוני חניון
         async function loadParkingData() {
+            const startDateInput = document.getElementById('startDate').value;
+            const endDateInput = document.getElementById('endDate').value;
+            
+            if (!startDateInput || !endDateInput) {
+                showError('אנא הכנס טווח תאריכים');
+                return;
+            }
+            
+            // אימות ופרמוט התאריכים
+            const startDate = parseInputDate(startDateInput);
+            const endDate = parseInputDate(endDateInput);
+            
+            if (!startDate || !endDate) {
+                showError('פורמט תאריך לא תקין. השתמש בפורמט DD/MM/YYYY');
+                return;
+            }
+            
+            if (startDate > endDate) {
+                showError('תאריך התחלה חייב להיות לפני או שווה לתאריך הסיום');
+                return;
+            }
+            
+            // בדיקת טווח תאריכים סביר (לא יותר משנה)
+            const daysDiff = (endDate - startDate) / (1000 * 60 * 60 * 24);
+            if (daysDiff > 365) {
+                if (!confirm('הטווח שנבחר גדול מ-365 יום. זה עלול לקחת זמן רב. האם להמשיך?')) {
+                    return;
+                }
+            }
+            
             showLoading(true);
             hideError();
             
             try {
-                const startDate = document.getElementById('startDate').value;
-                const endDate = document.getElementById('endDate').value;
                 const selectedParking = document.getElementById('parkingSelector').value;
                 
-                if (!startDate || !endDate) {
-                    showError('אנא בחר טווח תאריכים');
-                    return;
-                }
-                
                 const params = new URLSearchParams({
-                    start_date: startDate,
-                    end_date: endDate
+                    start_date: formatDateForAPI(startDate),
+                    end_date: formatDateForAPI(endDate)
                 });
                 
                 if (selectedParking) {
                     params.append('parking_id', selectedParking);
                 }
+                
+                console.log('Loading data for:', formatDateForAPI(startDate), 'to', formatDateForAPI(endDate));
                 
                 const response = await fetch(`/api/parking-data?${params}`);
                 const result = await response.json();
@@ -687,8 +734,9 @@
                 if (result.success) {
                     currentData = result.data;
                     if (currentData.length === 0) {
-                        showError('🚧 ' + (result.message || 'אין נתונים זמינים לטווח התאריכים שנבחר'));
+                        showError(`🚧 אין נתונים זמינים לתקופה ${startDateInput} - ${endDateInput}. נסה טווח תאריכים אחר.`);
                     } else {
+                        console.log(`Loaded ${currentData.length} records`);
                         updateDashboard();
                     }
                 } else {
@@ -696,7 +744,7 @@
                 }
             } catch (error) {
                 console.error('Error loading parking data:', error);
-                showError('שגיאה בחיבור לשרת');
+                showError('שגיאה בחיבור לשרת. אנא נסה שוב.');
             } finally {
                 showLoading(false);
             }
@@ -1307,9 +1355,72 @@
 
         // הגדרת event listeners
         function setupEventListeners() {
+            // כפתורי טעינת נתונים
             document.getElementById('loadDataBtn').addEventListener('click', loadParkingData);
+            document.getElementById('loadMonthBtn').addEventListener('click', loadFullMonth);
             document.getElementById('parkingSelector').addEventListener('change', loadParkingData);
             document.getElementById('logoutBtn').addEventListener('click', logout);
+            
+            // כפתורי טווחים מהירים
+            document.querySelectorAll('.quick-range-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    setQuickRange(this.dataset.range);
+                });
+            });
+            
+            // אימות תאריכים בזמן הקלדה
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+            
+            [startDateInput, endDateInput].forEach(input => {
+                input.addEventListener('input', function() {
+                    // הוספת סלאשים אוטומטית
+                    let value = this.value.replace(/\D/g, ''); // רק ספרות
+                    
+                    if (value.length >= 2) {
+                        value = value.substring(0, 2) + '/' + value.substring(2);
+                    }
+                    if (value.length >= 5) {
+                        value = value.substring(0, 5) + '/' + value.substring(5, 9);
+                    }
+                    
+                    this.value = value;
+                    
+                    // אימות אם התאריך מלא
+                    if (value.length === 10) {
+                        const date = parseInputDate(value);
+                        if (date) {
+                            this.style.borderColor = '#28a745'; // ירוק
+                        } else {
+                            this.style.borderColor = '#dc3545'; // אדום
+                        }
+                    } else {
+                        this.style.borderColor = '#ddd'; // ברירת מחדל
+                    }
+                });
+                
+                // טעינה אוטומטית כאשר שני התאריכים תקינים
+                input.addEventListener('blur', function() {
+                    const startValid = parseInputDate(startDateInput.value) !== null;
+                    const endValid = parseInputDate(endDateInput.value) !== null;
+                    
+                    if (startValid && endValid && startDateInput.value.length === 10 && endDateInput.value.length === 10) {
+                        // השהיה קצרה לפני טעינה אוטומטית
+                        setTimeout(() => {
+                            if (currentData.length === 0) { // טען רק אם אין נתונים
+                                loadParkingData();
+                            }
+                        }, 500);
+                    }
+                });
+                
+                // טעינה עם Enter
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        loadParkingData();
+                    }
+                });
+            });
         }
 
         // פונקציות עזר
