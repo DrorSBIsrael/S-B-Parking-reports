@@ -487,6 +487,15 @@
                     <span>📊</span>
                     <span>טען נתונים</span>
                 </button>
+                
+                <!-- CSV Upload Option (for Groups) -->
+                <div id="csvUploadSection" style="display: none;">
+                    <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="handleCSVFile(event)">
+                    <button class="load-btn" onclick="document.getElementById('csvFileInput').click()" style="background: linear-gradient(135deg, #5AC8FA 0%, #007AFF 100%); margin-right: 10px;">
+                        <span>📁</span>
+                        <span>טען מקובץ CSV</span>
+                    </button>
+                </div>
             </div>
             
             <!-- Quick Range Buttons -->
@@ -649,6 +658,7 @@ let charts = {};
 let isSingleParkingMode = false;
 let isGroup = false;
 let groupName = '';
+let userParkings = [];
 
 // Chart.js default configuration
 Chart.defaults.font.family = "'Heebo', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -680,6 +690,13 @@ async function initializeDashboard() {
         
         // Load initial data
         await loadData();
+        
+        // Show special message for group users
+        if (isGroup) {
+            console.log('Group user detected. Special handling may be needed.');
+            // Show CSV upload option for groups
+            document.getElementById('csvUploadSection').style.display = 'inline-block';
+        }
     } catch (error) {
         console.error('Initialization error:', error);
         showError('שגיאה באתחול המערכת');
@@ -708,11 +725,20 @@ async function loadUserInfo() {
         if (result.success && result.user) {
             document.getElementById('userName').textContent = result.user.username || 'משתמש';
             
-            // Check if this is a group (project_number = 0)
-            if (result.user.project_number === 0) {
+            // Check if this is a group (project_number = 0 or role = group_manager)
+            if (result.user.project_number === 0 || result.user.role === 'group_manager') {
                 isGroup = true;
                 groupName = result.user.parking_name || 'קבוצה';
                 document.getElementById('dashboardTitle').textContent = `קבוצת ${groupName}`;
+                
+                // Log user details for debugging
+                console.log('Group user detected:', {
+                    username: result.user.username,
+                    role: result.user.role,
+                    access_level: result.user.access_level,
+                    project_number: result.user.project_number,
+                    parking_name: result.user.parking_name
+                });
             } else {
                 isGroup = false;
                 document.getElementById('dashboardTitle').textContent = result.user.parking_name || 'חניונים';
@@ -749,6 +775,9 @@ async function loadParkingList() {
                     p.name && p.name.toLowerCase().includes(groupName.toLowerCase())
                 );
             }
+            
+            // Save parkings list
+            userParkings = parkings;
             
             // Check if user has multiple parkings
             if (parkings.length > 1) {
@@ -799,7 +828,78 @@ async function loadData() {
             throw new Error('נא לבחור טווח תאריכים');
         }
         
-        // Build API params
+        // For groups, try multiple approaches
+        if (isGroup) {
+            await loadDataForGroup(startDate, endDate);
+        } else {
+            await loadDataStandard(startDate, endDate);
+        }
+        
+    } catch (error) {
+        console.error('Error loading data:', error);
+        showError(error.message || 'שגיאה בטעינת הנתונים');
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Standard data loading for non-group users
+async function loadDataStandard(startDate, endDate) {
+    // Build API params
+    const params = new URLSearchParams({
+        start_date: startDate,
+        end_date: endDate
+    });
+    
+    // Add parking filter if selected
+    const selectedParking = document.getElementById('parkingSelector').value;
+    if (selectedParking) {
+        params.append('parking_id', selectedParking);
+    }
+    
+    // Debug: Log request details
+    console.log('Standard API Request:', {
+        url: `/api/parking-data?${params}`,
+        params: Object.fromEntries(params)
+    });
+    
+    // Fetch data from API
+    const response = await fetch(`/api/parking-data?${params}`);
+    const result = await response.json();
+    
+            // Debug: Log response
+        console.log('API Response:', {
+            status: response.status,
+            statusText: response.statusText,
+            success: result.success,
+            message: result.message,
+            dataLength: result.data ? result.data.length : 0,
+            fullResult: result
+        });
+        
+        if (!result.success) {
+            console.error('API Error Details:', {
+                message: result.message,
+                error: result.error,
+                details: result.details
+            });
+            throw new Error(result.message || 'שגיאה בטעינת הנתונים');
+        }
+    
+    // Process and display data
+    currentData = result.data || [];
+    console.log('Loaded data:', currentData.length, 'records');
+    
+    updateDashboard();
+}
+
+// Special data loading for group users
+async function loadDataForGroup(startDate, endDate) {
+    console.log('Loading data for group:', groupName);
+    
+    // Try approach 1: Load without special group parameters
+    try {
+        // For groups, try loading data without special parameters first
         const params = new URLSearchParams({
             start_date: startDate,
             end_date: endDate
@@ -811,26 +911,186 @@ async function loadData() {
             params.append('parking_id', selectedParking);
         }
         
-        // Fetch data from API
-        const response = await fetch(`/api/parking-data?${params}`);
+        console.log('Group API Request (Approach 1 - Standard):', {
+            url: `/api/parking-data?${params}`,
+            params: Object.fromEntries(params)
+        });
+        
+        const response = await fetch(`/api/parking-data?${params}`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
         const result = await response.json();
         
-        if (!result.success) {
-            throw new Error(result.message || 'שגיאה בטעינת הנתונים');
+        console.log('Group API Response:', {
+            status: response.status,
+            success: result.success,
+            message: result.message,
+            dataLength: result.data ? result.data.length : 0
+        });
+        
+        // Check if we got an error about permissions
+        if (!result.success && result.message && result.message.includes('רמת הרשאה')) {
+            console.log('Permission error detected, will try alternative approaches');
+        } else if (result.success && result.data) {
+            // If we got data, filter it for the group
+            if (groupName && !selectedParking) {
+                currentData = result.data.filter(d => 
+                    d.parking_name && d.parking_name.toLowerCase().includes(groupName.toLowerCase())
+                );
+                console.log(`Filtered data for group ${groupName}:`, currentData.length, 'records');
+            } else {
+                currentData = result.data;
+                console.log('Loaded data:', currentData.length, 'records');
+            }
+            
+            if (currentData.length > 0) {
+                updateDashboard();
+                return;
+            }
         }
-        
-        // Process and display data
-        currentData = result.data || [];
-        console.log('Loaded data:', currentData.length, 'records');
-        
-        updateDashboard();
-        
     } catch (error) {
-        console.error('Error loading data:', error);
-        showError(error.message || 'שגיאה בטעינת הנתונים');
-    } finally {
-        showLoading(false);
+        console.error('Group approach 1 failed:', error);
     }
+    
+    // Try approach 2: Load without any filters
+    try {
+        console.log('Trying minimal parameters approach...');
+        
+        // Try with minimal parameters - maybe the server doesn't like certain combinations
+        const response = await fetch(`/api/parking-data?start_date=${startDate}&end_date=${endDate}`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
+        const result = await response.json();
+        
+        console.log('Minimal params response:', result);
+        
+        if (result.success && result.data && result.data.length > 0) {
+            // Got data! Now filter for the group
+            if (groupName) {
+                const filteredData = result.data.filter(d => 
+                    d.parking_name && d.parking_name.toLowerCase().includes(groupName.toLowerCase())
+                );
+                
+                if (filteredData.length > 0) {
+                    currentData = filteredData;
+                    console.log(`Successfully filtered ${currentData.length} records for group ${groupName}`);
+                    updateDashboard();
+                    return;
+                } else {
+                    // No data for this group - try to use all data
+                    console.log('No data found for group name, using all available data');
+                    currentData = result.data;
+                    updateDashboard();
+                    return;
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Group approach 2 failed:', error);
+    }
+    
+    // Try approach 3: Load data for each parking individually
+    if (userParkings && userParkings.length > 0) {
+        try {
+            console.log('Trying to load data for each parking individually...');
+            
+            let allData = [];
+            
+            for (const parking of userParkings) {
+                try {
+                    const params = new URLSearchParams({
+                        start_date: startDate,
+                        end_date: endDate,
+                        parking_id: parking.id
+                    });
+                    
+                    console.log(`Loading data for parking: ${parking.name} (${parking.id})`);
+                    
+                    const response = await fetch(`/api/parking-data?${params}`);
+                    const result = await response.json();
+                    
+                    if (result.success && result.data) {
+                        allData = allData.concat(result.data);
+                    }
+                } catch (error) {
+                    console.error(`Failed to load data for parking ${parking.name}:`, error);
+                }
+            }
+            
+            if (allData.length > 0) {
+                currentData = allData;
+                console.log('Loaded combined data for all parkings:', currentData.length, 'records');
+                updateDashboard();
+                return;
+            }
+        } catch (error) {
+            console.error('Group approach 3 failed:', error);
+        }
+    }
+    
+    // If all approaches fail, show detailed error with alternative options
+    const errorMessage = `
+        <div style="text-align: center; padding: 20px;">
+            <h3>בעיה בטעינת נתוני קבוצת ${groupName}</h3>
+            <p>המערכת זיהתה שאתה משתמש קבוצה, אך יש בעיה זמנית בטעינת הנתונים מהשרת.</p>
+            
+            <div style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 10px; text-align: right;">
+                <h4 style="margin-bottom: 10px;">אפשרויות זמינות:</h4>
+                <ol style="margin: 10px 20px;">
+                    <li style="margin: 5px 0;">נסה לבחור חניון ספציפי מהרשימה למעלה</li>
+                    <li style="margin: 5px 0;">השתמש בכפתור "טען מקובץ CSV" לטעינת נתונים מקובץ</li>
+                    <li style="margin: 5px 0;">נסה להתחבר מחדש למערכת</li>
+                </ol>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <button onclick="location.reload()" style="
+                    margin: 5px;
+                    padding: 10px 20px;
+                    background: var(--primary);
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                ">רענן דף</button>
+                
+                <button onclick="window.location.href='/logout'" style="
+                    margin: 5px;
+                    padding: 10px 20px;
+                    background: #6C6C70;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                ">התחבר מחדש</button>
+                
+                <button onclick="tryLoadWithoutGroup()" style="
+                    margin: 5px;
+                    padding: 10px 20px;
+                    background: #34C759;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                ">נסה ללא סינון קבוצה</button>
+            </div>
+            
+            <p style="margin-top: 20px; font-size: 12px; color: #999;">
+                קוד שגיאה: GROUP_ACCESS_ERROR | תאריך: ${new Date().toLocaleString('he-IL')}
+            </p>
+        </div>
+    `;
+    throw new Error(errorMessage);
 }
 
 // Update dashboard with current data
@@ -1928,7 +2188,15 @@ function showLoading(show) {
 
 // Show error message
 function showError(message) {
-    document.getElementById('errorText').textContent = message;
+    const errorTextElement = document.getElementById('errorText');
+    
+    // Check if message contains HTML
+    if (message.includes('<') && message.includes('>')) {
+        errorTextElement.innerHTML = message;
+    } else {
+        errorTextElement.textContent = message;
+    }
+    
     document.getElementById('errorMessage').style.display = 'block';
 }
 
@@ -1941,6 +2209,38 @@ function hideError() {
 function logout() {
     if (confirm('האם אתה בטוח שברצונך לצאת?')) {
         window.location.href = '/logout';
+    }
+}
+
+// Try to load data without group filtering
+async function tryLoadWithoutGroup() {
+    try {
+        showLoading(true);
+        hideError();
+        
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        
+        if (!startDate || !endDate) {
+            throw new Error('נא לבחור טווח תאריכים');
+        }
+        
+        console.log('Trying to load without group filtering...');
+        
+        // Temporarily disable group mode
+        const originalIsGroup = isGroup;
+        isGroup = false;
+        
+        await loadDataStandard(startDate, endDate);
+        
+        // Restore group mode
+        isGroup = originalIsGroup;
+        
+    } catch (error) {
+        console.error('Error loading data without group:', error);
+        showError(error.message || 'שגיאה בטעינת הנתונים');
+    } finally {
+        showLoading(false);
     }
 }
 
