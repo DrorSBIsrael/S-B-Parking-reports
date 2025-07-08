@@ -15,6 +15,8 @@ import io
 import csv
 from datetime import datetime, timedelta
 import pandas as pd
+from apscheduler.schedulers.background import BackgroundScheduler
+import atexit
 
 print("🔥 WORKING VERSION - NOW WITH EMAIL AND SECURITY!")
 
@@ -500,6 +502,40 @@ def check_and_process_emails():
     except Exception as e:
         print(f"❌ Email processing error: {str(e)}")
         return {"success": False, "message": f"Error: {str(e)}"}
+
+def automated_email_check():
+    """פונקציה לבדיקה אוטומטית של מיילים - רק בשעות 03:00-08:00"""
+    try:
+        current_hour = datetime.now().hour
+        
+        # בדיקה שאנחנו בשעות הנכונות (03:00-08:00)
+        if 3 <= current_hour <= 8:
+            print(f"🕐 {datetime.now().strftime('%H:%M:%S')} - Running automated email check...")
+            result = check_and_process_emails()
+            
+            if result['success']:
+                print(f"✅ Automated processing: {result['total_processed']} rows processed, {result['total_errors']} errors")
+            else:
+                print(f"❌ Automated processing failed: {result['message']}")
+        else:
+            print(f"🕐 {datetime.now().strftime('%H:%M:%S')} - Outside processing hours (03:00-08:00), skipping...")
+    except Exception as e:
+        print(f"❌ Automated email check error: {str(e)}")
+
+# הגדרת Scheduler לעיבוד אוטומטי
+scheduler = BackgroundScheduler()
+scheduler.add_job(
+    func=automated_email_check,
+    trigger="interval",
+    minutes=5,  # כל 5 דקות
+    id='email_check_job'
+)
+
+# הפעלת ה-Scheduler
+scheduler.start()
+
+# סגירת ה-Scheduler כשהאפליקציה נסגרת
+atexit.register(lambda: scheduler.shutdown())
 
 @app.route('/')
 def index():
