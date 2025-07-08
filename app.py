@@ -6,17 +6,6 @@ import random
 import string
 import re
 import html
-# הייבואים החדשים לעיבוד מיילים
-import imaplib
-import email as email_lib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-import io
-import csv
-from datetime import datetime, timedelta
-import pandas as pd
-from apscheduler.schedulers.background import BackgroundScheduler
-import atexit
 
 print("🔥 WORKING VERSION - NOW WITH EMAIL AND SECURITY!")
 
@@ -38,11 +27,6 @@ app.config['MAIL_PASSWORD'] = os.environ.get('GMAIL_APP_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('GMAIL_USERNAME')
 app.config['MAIL_SUPPRESS_SEND'] = False
 app.config['MAIL_DEBUG'] = True
-
-# הגדרות נוספות לעיבוד מיילים
-app.config['REPORTS_EMAIL'] = os.environ.get('GMAIL_USERNAME')  # משתמש בנתונים הקיימים
-app.config['REPORTS_EMAIL_PASSWORD'] = os.environ.get('GMAIL_APP_PASSWORD')  # משתמש בנתונים הקיימים
-app.config['SENDER_EMAIL'] = 'Report@sbparking.co.il'
 
 # בדיקה שהמשתנים קיימים
 if not app.config['MAIL_USERNAME'] or not app.config['MAIL_PASSWORD']:
@@ -122,6 +106,8 @@ def generate_verification_code():
 def store_verification_code(email, code):
     """שמירת קוד אימות בטבלת user_parkings הקיימת"""
     try:
+        from datetime import datetime, timedelta
+        
         # אימות אימייל לפני שמירה
         is_valid, validated_email = validate_input(email, "email")
         if not is_valid:
@@ -199,6 +185,8 @@ def send_verification_email(email, code):
 def verify_code_from_database(email, code):
     """בדיקת קוד אימות מטבלת user_parkings"""
     try:
+        from datetime import datetime
+        
         # אימות קלט
         is_valid_email, validated_email = validate_input(email, "email")
         is_valid_code, validated_code = validate_input(code, "verification_code")
@@ -248,295 +236,6 @@ def verify_code_from_database(email, code):
         print(f"❌ Database verification failed: {str(e)}")
         return False
 
-# פונקציות עיבוד מיילים חדשות
-def connect_to_email():
-    """התחברות לתיבת הדואר לקריאת מיילים"""
-    try:
-        # התחברות ל-Gmail IMAP
-        mail = imaplib.IMAP4_SSL('imap.gmail.com')
-        mail.login(app.config['REPORTS_EMAIL'], app.config['REPORTS_EMAIL_PASSWORD'])
-        return mail
-    except Exception as e:
-        print(f"❌ Failed to connect to email: {str(e)}")
-        return None
-
-def extract_csv_from_email(msg):
-    """חילוץ קובץ CSV מהמייל"""
-    csv_files = []
-    
-    for part in msg.walk():
-        if part.get_content_disposition() == 'attachment':
-            filename = part.get_filename()
-            if filename and filename.lower().endswith('.csv'):
-                csv_content = part.get_payload(decode=True)
-                csv_files.append({
-                    'filename': filename,
-                    'content': csv_content.decode('utf-8-sig')
-                })
-                print(f"📎 Found CSV file: {filename}")
-    
-    return csv_files
-
-def parse_parking_csv(csv_content):
-    """פירוק קובץ CSV של נתוני חניונים"""
-    try:
-        csv_reader = csv.reader(io.StringIO(csv_content))
-        rows = list(csv_reader)
-        
-        print(f"📊 CSV has {len(rows)} rows")
-        
-        parsed_data = []
-        for i, row in enumerate(rows):
-            if i == 0 and any(field.isalpha() for field in row):
-                continue
-                
-            try:
-                if len(row) >= 35:
-                    parking_data = {
-                        'project_number': int(row[0]),
-                        'lglobalref': int(row[1]), 
-                        'scomputer': int(row[2]),
-                        'sshiftid': int(row[3]),
-                        'ttcret': row[4],
-                        'ttendt': row[5],
-                        'ctext': row[6],
-                        'scash': int(float(row[7])) if row[7] else 0,
-                        'scredit': int(float(row[8])) if row[8] else 0,
-                        'stotcacr': int(float(row[9])) if row[9] else 0,
-                        'spango': int(float(row[10])) if row[10] else 0,
-                        'scelo': int(float(row[11])) if row[11] else 0,
-                        'sencoder1': int(row[12]) if row[12] else 0,
-                        'sencoder2': int(row[13]) if row[13] else 0,
-                        'sencoder3': int(row[14]) if row[14] else 0,
-                        'sencodertot': int(row[15]) if row[15] else 0,
-                        'topenb': int(row[16]) if row[16] else 0,
-                        'tentrys': int(row[17]) if row[17] else 0,
-                        'tentryp': int(row[18]) if row[18] else 0,
-                        'tentrytot': int(row[19]) if row[19] else 0,
-                        'teeits': int(row[20]) if row[20] else 0,
-                        'teeitp': int(row[21]) if row[21] else 0,
-                        'teeittot': int(row[22]) if row[22] else 0,
-                        'tentryap': int(row[23]) if row[23] else 0,
-                        'teeitap': int(row[24]) if row[24] else 0,
-                        'tsper1': int(row[25]) if row[25] else 0,
-                        'tsper2': int(row[26]) if row[26] else 0,
-                        'stay015': int(row[27]) if row[27] else 0,
-                        'stay030': int(row[28]) if row[28] else 0,
-                        'stay045': int(row[29]) if row[29] else 0,
-                        'stay060': int(row[30]) if row[30] else 0,
-                        'stay2': int(row[31]) if row[31] else 0,
-                        'stay3': int(row[32]) if row[32] else 0,
-                        'stay4': int(row[33]) if row[33] else 0,
-                        'stay5': int(row[34]) if row[34] else 0,
-                        'stay6': int(row[35]) if len(row) > 35 and row[35] else 0,
-                        'stay724': int(row[36]) if len(row) > 36 and row[36] else 0,
-                        'tsper3': int(row[37]) if len(row) > 37 and row[37] else 0,
-                        'tsper4': int(row[38]) if len(row) > 38 and row[38] else 0,
-                        'tsper5': int(row[39]) if len(row) > 39 and row[39] else 0,
-                        'tsper6': int(row[40]) if len(row) > 40 and row[40] else 0,
-                        'sexp': int(row[41]) if len(row) > 41 and row[41] else 0
-                    }
-                    parsed_data.append(parking_data)
-                    
-            except (ValueError, IndexError) as e:
-                print(f"⚠️ Error parsing row {i}: {str(e)}")
-                continue
-        
-        print(f"✅ Successfully parsed {len(parsed_data)} data rows")
-        return parsed_data
-        
-    except Exception as e:
-        print(f"❌ Error parsing CSV: {str(e)}")
-        return []
-
-def insert_parking_data_to_db(parking_data_list):
-    """הכנסת נתוני חניונים למסד הנתונים"""
-    success_count = 0
-    error_count = 0
-    
-    for data in parking_data_list:
-        try:
-            # קריאה לפונקציה import_single_parking_data
-            result = supabase.rpc('import_single_parking_data', {
-                'p_project_number': data['project_number'],
-                'p_lglobalref': data['lglobalref'],
-                'p_scomputer': data['scomputer'], 
-                'p_sshiftid': data['sshiftid'],
-                'p_ttcret': data['ttcret'],
-                'p_ttendt': data['ttendt'],
-                'p_ctext': data['ctext'],
-                'p_scash': data['scash'],
-                'p_scredit': data['scredit'],
-                'p_stotcacr': data['stotcacr'],
-                'p_spango': data['spango'],
-                'p_scelo': data['scelo'],
-                'p_sencoder1': data['sencoder1'],
-                'p_sencoder2': data['sencoder2'],
-                'p_sencoder3': data['sencoder3'],
-                'p_sencodertot': data['sencodertot'],
-                'p_topenb': data['topenb'],
-                'p_tentrys': data['tentrys'],
-                'p_tentryp': data['tentryp'],
-                'p_tentrytot': data['tentrytot'],
-                'p_teeits': data['teeits'],
-                'p_teeitp': data['teeitp'],
-                'p_teeittot': data['teeittot'],
-                'p_tentryap': data['tentryap'],
-                'p_teeitap': data['teeitap'],
-                'p_tsper1': data['tsper1'],
-                'p_tsper2': data['tsper2'],
-                'p_stay015': data['stay015'],
-                'p_stay030': data['stay030'],
-                'p_stay045': data['stay045'],
-                'p_stay060': data['stay060'],
-                'p_stay2': data['stay2'],
-                'p_stay3': data['stay3'],
-                'p_stay4': data['stay4'],
-                'p_stay5': data['stay5'],
-                'p_stay6': data['stay6'],
-                'p_stay724': data['stay724'],
-                'p_tsper3': data['tsper3'],
-                'p_tsper4': data['tsper4'],
-                'p_tsper5': data['tsper5'],
-                'p_tsper6': data['tsper6'],
-                'p_sexp': data['sexp']
-            }).execute()
-            
-            success_count += 1
-            print(f"✅ Inserted data for project {data['project_number']}")
-            
-        except Exception as e:
-            error_count += 1
-            print(f"❌ Failed to insert data for project {data.get('project_number', 'unknown')}: {str(e)}")
-    
-    return success_count, error_count
-
-def check_and_process_emails():
-    """פונקציה ראשית לבדיקת ועיבוד מיילים"""
-    try:
-        print("🔍 Checking for new parking data emails...")
-        
-        # התחברות לאימייל
-        mail = connect_to_email()
-        if not mail:
-            return {"success": False, "message": "Failed to connect to email"}
-        
-        # בחירת תיבת הדואר הנכנס
-        mail.select('inbox')
-        
-        # חיפוש מיילים חדשים מהשולח הרצוי
-        search_criteria = f'(FROM "{app.config["SENDER_EMAIL"]}" UNSEEN)'
-        result, message_ids = mail.search(None, search_criteria)
-        
-        if result != 'OK':
-            print("❌ Failed to search emails")
-            mail.logout()
-            return {"success": False, "message": "Failed to search emails"}
-        
-        message_ids = message_ids[0].split()
-        print(f"📬 Found {len(message_ids)} unread emails from {app.config['SENDER_EMAIL']}")
-        
-        total_processed = 0
-        total_errors = 0
-        processed_files = []
-        
-        # עיבוד כל מייל
-        for msg_id in message_ids:
-            try:
-                # קבלת המייל
-                result, msg_data = mail.fetch(msg_id, '(RFC822)')
-                if result != 'OK':
-                    continue
-                
-                # פירוק המייל
-                email_body = msg_data[0][1]
-                msg = email_lib.message_from_bytes(email_body)
-                
-                print(f"📧 Processing email: {msg.get('Subject', 'No Subject')}")
-                
-                # חילוץ קבצי CSV
-                csv_files = extract_csv_from_email(msg)
-                
-                # עיבוד כל קובץ CSV
-                for csv_file in csv_files:
-                    print(f"🔄 Processing file: {csv_file['filename']}")
-                    
-                    # פירוק הנתונים
-                    parking_data = parse_parking_csv(csv_file['content'])
-                    
-                    if parking_data:
-                        # הכנסה למסד נתונים
-                        success, errors = insert_parking_data_to_db(parking_data)
-                        total_processed += success
-                        total_errors += errors
-                        
-                        processed_files.append({
-                            'filename': csv_file['filename'],
-                            'rows_processed': success,
-                            'errors': errors
-                        })
-                        
-                        print(f"📊 File {csv_file['filename']}: {success} rows processed, {errors} errors")
-                
-                # סימון המייל כנקרא
-                mail.store(msg_id, '+FLAGS', '\\Seen')
-                
-            except Exception as e:
-                print(f"❌ Error processing email {msg_id}: {str(e)}")
-                total_errors += 1
-        
-        # סגירת החיבור
-        mail.logout()
-        
-        result_message = f"✅ Processing complete: {total_processed} rows processed, {total_errors} errors"
-        print(result_message)
-        
-        return {
-            "success": True,
-            "message": result_message,
-            "total_processed": total_processed,
-            "total_errors": total_errors,
-            "processed_files": processed_files
-        }
-        
-    except Exception as e:
-        print(f"❌ Email processing error: {str(e)}")
-        return {"success": False, "message": f"Error: {str(e)}"}
-
-def automated_email_check():
-    """פונקציה לבדיקה אוטומטית של מיילים - רק בשעות 03:00-08:00"""
-    try:
-        current_hour = datetime.now().hour
-        
-        # בדיקה שאנחנו בשעות הנכונות (03:00-08:00)
-        if 3 <= current_hour <= 8:
-            print(f"🕐 {datetime.now().strftime('%H:%M:%S')} - Running automated email check...")
-            result = check_and_process_emails()
-            
-            if result['success']:
-                print(f"✅ Automated processing: {result['total_processed']} rows processed, {result['total_errors']} errors")
-            else:
-                print(f"❌ Automated processing failed: {result['message']}")
-        else:
-            print(f"🕐 {datetime.now().strftime('%H:%M:%S')} - Outside processing hours (03:00-08:00), skipping...")
-    except Exception as e:
-        print(f"❌ Automated email check error: {str(e)}")
-
-# הגדרת Scheduler לעיבוד אוטומטי
-scheduler = BackgroundScheduler()
-scheduler.add_job(
-    func=automated_email_check,
-    trigger="interval",
-    minutes=5,  # כל 5 דקות
-    id='email_check_job'
-)
-
-# הפעלת ה-Scheduler
-scheduler.start()
-
-# סגירת ה-Scheduler כשהאפליקציה נסגרת
-atexit.register(lambda: scheduler.shutdown())
-
 @app.route('/')
 def index():
     return redirect(url_for('login_page'))
@@ -550,6 +249,8 @@ def verify_page():
     if 'pending_email' not in session:
         return redirect(url_for('login_page'))
     return render_template('verify.html')
+
+# הוסף את הקוד הזה לקובץ app.py שלך
 
 @app.route('/dashboard')
 def dashboard():
@@ -605,7 +306,7 @@ def get_user_parkings():
         
         user_data = user_result.data[0]
         
-        if user_data['access_level'] != 'group_manager':
+        if user_data['access_level'] != 'group_manager' and user_data['access_level'] != 'group_access':
             return jsonify({'success': False, 'message': 'אין הרשאה לצפייה בחניונים מרובים'})
         
         # קבלת כל החניונים של החברה
@@ -675,8 +376,8 @@ def get_parking_data():
             # משתמש חניון בודד - רק החניון שלו
             query = query.eq('project_number', user_data['project_number'])
             
-        elif user_data['access_level'] == 'group_manager':
-            # מנהל קבוצה
+        elif user_data['access_level'] == 'group_manager' or user_data['access_level'] == 'group_access':
+            # מנהל קבוצה או משתמש קבוצה
             if parking_id:
                 # אימות שהחניון שייך לחברה שלו
                 parking_check = supabase.table('user_parkings').select('project_number').eq(
@@ -754,9 +455,11 @@ def get_parking_data():
         print(f"❌ Error getting parking data: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני חניון'})
 
+# הוסף גם פונקציה לבדיקת תקפות תאריך
 def validate_date_format(date_string):
     """בדיקת תקפות פורמט תאריך YYYY-MM-DD"""
     try:
+        from datetime import datetime
         datetime.strptime(date_string, '%Y-%m-%d')
         return True
     except ValueError:
@@ -869,60 +572,6 @@ def verify_code():
     except Exception as e:
         print(f"❌ Verify error: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה במערכת'})
-
-# API endpoints לניטור ובדיקה
-@app.route('/api/email-status', methods=['GET'])
-def get_email_status():
-    """קבלת סטטוס תכונת המיילים והשעות הפעילות"""
-    try:
-        if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
-        
-        current_hour = datetime.now().hour
-        is_active_hours = 3 <= current_hour <= 8
-        
-        # בדיקה שיש את כל הנתונים הנדרשים
-        has_email_config = bool(
-            app.config.get('REPORTS_EMAIL') and 
-            app.config.get('REPORTS_EMAIL_PASSWORD')
-        )
-        
-        return jsonify({
-            'success': True,
-            'email_configured': has_email_config,
-            'reports_email': app.config.get('REPORTS_EMAIL', 'Not configured'),
-            'sender_email': app.config.get('SENDER_EMAIL', 'Not configured'),
-            'current_hour': current_hour,
-            'is_active_hours': is_active_hours,
-            'active_hours': '03:00-08:00',
-            'check_interval': '5 minutes',
-            'scheduler_running': scheduler.running if 'scheduler' in globals() else False
-        })
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/manual-email-check', methods=['POST'])
-def manual_email_check():
-    """בדיקה ידנית של מיילים - רק למנהלים ורק למטרות בדיקה"""
-    try:
-        if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
-        
-        # בדיקת הרשאות - רק מנהלים יכולים להפעיל
-        user_result = supabase.table('user_parkings').select('access_level').eq('email', session['user_email']).execute()
-        
-        if not user_result.data or user_result.data[0]['access_level'] != 'group_manager':
-            return jsonify({'success': False, 'message': 'אין הרשאה לעיבוד מיילים'}), 403
-        
-        # הפעלת עיבוד המיילים
-        result = check_and_process_emails()
-        
-        return jsonify(result)
-        
-    except Exception as e:
-        print(f"❌ Manual email processing error: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה בעיבוד מיילים'})
 
 @app.route('/logout')
 def logout():
