@@ -452,7 +452,7 @@
         <!-- Header -->
         <div class="header">
             <div class="header-top">
-                <h1>לוח בקרה חניונים</h1>
+                <h1>לוח בקרה - <span id="dashboardTitle">טוען...</span></h1>
                 <div class="user-info">
                     <span class="user-name" id="userName">טוען...</span>
                     <button class="logout-btn" onclick="logout()">
@@ -491,7 +491,6 @@
             
             <!-- Quick Range Buttons -->
             <div class="quick-ranges">
-                <button class="quick-btn" onclick="setQuickRange('today')">היום</button>
                 <button class="quick-btn" onclick="setQuickRange('yesterday')">אתמול</button>
                 <button class="quick-btn" onclick="setQuickRange('week')">השבוע</button>
                 <button class="quick-btn" onclick="setQuickRange('lastWeek')">שבוע שעבר</button>
@@ -648,6 +647,8 @@
 let currentData = [];
 let charts = {};
 let isSingleParkingMode = false;
+let isGroup = false;
+let groupName = '';
 
 // Chart.js default configuration
 Chart.defaults.font.family = "'Heebo', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -706,6 +707,16 @@ async function loadUserInfo() {
         
         if (result.success && result.user) {
             document.getElementById('userName').textContent = result.user.username || 'משתמש';
+            
+            // Check if this is a group (project_number = 0)
+            if (result.user.project_number === 0) {
+                isGroup = true;
+                groupName = result.user.parking_name || 'קבוצה';
+                document.getElementById('dashboardTitle').textContent = `קבוצת ${groupName}`;
+            } else {
+                isGroup = false;
+                document.getElementById('dashboardTitle').textContent = result.user.parking_name || 'חניונים';
+            }
         }
     } catch (error) {
         console.error('Error loading user info:', error);
@@ -718,35 +729,59 @@ async function loadParkingList() {
         const response = await fetch('/api/user-parkings');
         const result = await response.json();
         
+        if (!result.success) {
+            // Handle authentication or permission errors
+            if (result.message && result.message.includes('הרשאה')) {
+                showError('שגיאת הרשאה: ' + result.message);
+                return;
+            }
+        }
+        
         if (result.success && result.parkings) {
             const selector = document.getElementById('parkingSelector');
             selector.innerHTML = '';
             
+            // For groups, filter parkings by group name
+            let parkings = result.parkings;
+            if (isGroup && groupName) {
+                // Filter parkings that belong to this group
+                parkings = result.parkings.filter(p => 
+                    p.name && p.name.toLowerCase().includes(groupName.toLowerCase())
+                );
+            }
+            
             // Check if user has multiple parkings
-            if (result.parkings.length > 1) {
+            if (parkings.length > 1) {
                 document.getElementById('parkingSelectorGroup').style.display = 'block';
                 
                 // Add "all parkings" option
                 const allOption = document.createElement('option');
                 allOption.value = '';
-                allOption.textContent = 'כל החניונים';
+                allOption.textContent = isGroup ? `כל חניוני ${groupName}` : 'כל החניונים';
                 selector.appendChild(allOption);
                 
                 // Add individual parkings
-                result.parkings.forEach(parking => {
+                parkings.forEach(parking => {
                     const option = document.createElement('option');
                     option.value = parking.id;
                     option.textContent = parking.name;
                     selector.appendChild(option);
                 });
-            } else {
+            } else if (parkings.length === 1) {
                 // Single parking mode
                 isSingleParkingMode = true;
                 document.body.classList.add('single-parking-mode');
+                
+                // Update title with single parking name
+                document.getElementById('dashboardTitle').textContent = parkings[0].name;
+            } else {
+                // No parkings found
+                showError('לא נמצאו חניונים עבור משתמש זה');
             }
         }
     } catch (error) {
         console.error('Error loading parkings:', error);
+        showError('שגיאה בטעינת רשימת החניונים');
     }
 }
 
@@ -851,18 +886,18 @@ function updateStats() {
             <div class="icon">👤</div>
             <h3>מזדמנים</h3>
             <div class="value">
-                ${stats.casualPercent.toFixed(1)}%
+                ${stats.totalCasual.toLocaleString()}
             </div>
-            <div class="subtext">${stats.totalCasual.toLocaleString()} כניסות</div>
+            <div class="subtext">${stats.casualPercent.toFixed(1)}% מהכניסות</div>
         </div>
         
         <div class="stat-card">
             <div class="icon">⭐</div>
             <h3>מנויים</h3>
             <div class="value">
-                ${stats.memberPercent.toFixed(1)}%
+                ${stats.totalMembers.toLocaleString()}
             </div>
-            <div class="subtext">${stats.totalMembers.toLocaleString()} כניסות</div>
+            <div class="subtext">${stats.memberPercent.toFixed(1)}% מהכניסות</div>
         </div>
         
         ${stats.totalApp > 0 ? `
@@ -870,9 +905,9 @@ function updateStats() {
             <div class="icon">📱</div>
             <h3>אפליקציה</h3>
             <div class="value">
-                ${stats.appPercent.toFixed(1)}%
+                ${stats.totalApp.toLocaleString()}
             </div>
-            <div class="subtext">${stats.totalApp.toLocaleString()} כניסות</div>
+            <div class="subtext">${stats.appPercent.toFixed(1)}% מהכניסות</div>
         </div>
         ` : ''}
         
@@ -889,36 +924,36 @@ function updateStats() {
             <div class="icon">💵</div>
             <h3>מזומן</h3>
             <div class="value">
-                ${stats.cashPercent.toFixed(1)}%
+                ₪${stats.totalCash.toLocaleString()}
             </div>
-            <div class="subtext">₪${stats.totalCash.toLocaleString()}</div>
+            <div class="subtext">${stats.cashPercent.toFixed(1)}% מההכנסות</div>
         </div>
         
         <div class="stat-card">
             <div class="icon">💳</div>
             <h3>אשראי</h3>
             <div class="value">
-                ${stats.creditPercent.toFixed(1)}%
+                ₪${stats.totalCredit.toLocaleString()}
             </div>
-            <div class="subtext">₪${stats.totalCredit.toLocaleString()}</div>
+            <div class="subtext">${stats.creditPercent.toFixed(1)}% מההכנסות</div>
         </div>
         
         <div class="stat-card">
             <div class="icon">📲</div>
             <h3>פנגו</h3>
             <div class="value">
-                ${stats.pangoPercent.toFixed(1)}%
+                ₪${stats.totalPango.toLocaleString()}
             </div>
-            <div class="subtext">₪${stats.totalPango.toLocaleString()}</div>
+            <div class="subtext">${stats.pangoPercent.toFixed(1)}% מההכנסות</div>
         </div>
         
         <div class="stat-card">
             <div class="icon">📞</div>
             <h3>סלו</h3>
             <div class="value">
-                ${stats.celloPercent.toFixed(1)}%
+                ₪${stats.totalCello.toLocaleString()}
             </div>
-            <div class="subtext">₪${stats.totalCello.toLocaleString()}</div>
+            <div class="subtext">${stats.celloPercent.toFixed(1)}% מההכנסות</div>
         </div>
         
         <div class="stat-card">
@@ -1850,9 +1885,6 @@ function setQuickRange(range) {
     let startDate, endDate;
     
     switch(range) {
-        case 'today':
-            startDate = endDate = today;
-            break;
         case 'yesterday':
             startDate = endDate = new Date(today);
             startDate.setDate(startDate.getDate() - 1);
