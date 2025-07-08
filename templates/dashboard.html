@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>לוח בקרה - חניונים</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -50,9 +49,21 @@
         
         /* Header Styles */
         .header {
-            text-align: center;
-            margin-bottom: 40px;
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 32px;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow);
             animation: fadeInDown 0.8s ease;
+        }
+        
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 20px;
         }
         
         .header h1 {
@@ -61,84 +72,155 @@
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 8px;
+            margin: 0;
             letter-spacing: -1px;
         }
         
-        .header .subtitle {
-            color: var(--text-secondary);
-            font-size: 20px;
-            font-weight: 400;
-        }
-        
-        /* Upload Section */
-        .upload-section {
-            background: var(--surface);
-            border-radius: var(--radius);
-            padding: 40px;
-            text-align: center;
-            margin-bottom: 30px;
-            box-shadow: var(--shadow);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .upload-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
-        
-        .upload-section:hover::before {
-            transform: scaleX(1);
-        }
-        
-        .upload-section input {
-            display: none;
-        }
-        
-        .upload-section label {
-            display: inline-flex;
+        .user-info {
+            display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 16px 32px;
+            gap: 16px;
+        }
+        
+        .user-name {
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        .logout-btn {
+            padding: 10px 20px;
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: var(--radius-small);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(255, 59, 48, 0.3);
+        }
+        
+        /* Control Panel */
+        .control-panel {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        
+        .control-group {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .control-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .control-input, .control-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-small);
+            font-size: 16px;
+            font-family: inherit;
+            background: var(--surface);
+            transition: all 0.3s ease;
+        }
+        
+        .control-input:focus, .control-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+        }
+        
+        .load-btn {
+            padding: 12px 32px;
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 20%);
             color: white;
+            border: none;
             border-radius: var(--radius-small);
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
-            font-size: 18px;
-            font-weight: 500;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 122, 255, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
-        .upload-section label:hover {
+        .load-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(0, 122, 255, 0.4);
         }
         
-        .upload-section label:active {
+        .load-btn:active {
             transform: translateY(0);
         }
         
-        .upload-info {
+        /* Quick Range Buttons */
+        .quick-ranges {
+            display: flex;
+            gap: 8px;
             margin-top: 16px;
-            color: var(--text-secondary);
-            font-size: 16px;
+            flex-wrap: wrap;
         }
         
-        /* Dashboard Grid */
-        #dashboard {
+        .quick-btn {
+            padding: 8px 16px;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-small);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .quick-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-1px);
+        }
+        
+        /* Loading State */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
             display: none;
-            opacity: 0;
-            animation: fadeIn 0.8s ease forwards;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .loading-content {
+            text-align: center;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        
+        .loading-text {
+            font-size: 18px;
+            color: var(--text-secondary);
         }
         
         /* Stats Grid */
@@ -147,6 +229,7 @@
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 20px;
             margin-bottom: 40px;
+            animation: fadeIn 0.8s ease;
         }
         
         .stat-card {
@@ -201,29 +284,6 @@
             font-weight: 700;
             color: var(--text-primary);
             margin-bottom: 4px;
-            display: flex;
-            align-items: baseline;
-            gap: 8px;
-        }
-        
-        .stat-card .change {
-            font-size: 14px;
-            font-weight: 500;
-            padding: 4px 12px;
-            border-radius: 20px;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-        
-        .stat-card .change.positive {
-            background: rgba(52, 199, 89, 0.1);
-            color: var(--success);
-        }
-        
-        .stat-card .change.negative {
-            background: rgba(255, 59, 48, 0.1);
-            color: var(--danger);
         }
         
         .stat-card .subtext {
@@ -240,6 +300,7 @@
             margin-bottom: 24px;
             box-shadow: var(--shadow);
             transition: all 0.3s ease;
+            animation: fadeIn 0.8s ease;
         }
         
         .chart-section:hover {
@@ -262,33 +323,6 @@
             gap: 12px;
         }
         
-        .chart-filters {
-            display: flex;
-            gap: 12px;
-        }
-        
-        .filter-btn {
-            padding: 8px 16px;
-            background: var(--background);
-            border: none;
-            border-radius: var(--radius-small);
-            color: var(--text-secondary);
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .filter-btn:hover {
-            background: var(--primary);
-            color: white;
-        }
-        
-        .filter-btn.active {
-            background: var(--primary);
-            color: white;
-        }
-        
         /* Charts Grid */
         .charts-grid {
             display: grid;
@@ -304,6 +338,7 @@
             padding: 32px;
             margin-bottom: 24px;
             box-shadow: var(--shadow);
+            display: none;
         }
         
         .alert-item {
@@ -349,17 +384,24 @@
             font-size: 14px;
         }
         
-        /* Loading Animation */
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(0, 122, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: var(--primary);
-            animation: spin 1s ease infinite;
+        /* Error State */
+        .error-message {
+            background: linear-gradient(135deg, rgba(255, 59, 48, 0.1) 0%, rgba(255, 59, 48, 0.05) 100%);
+            border: 2px solid var(--danger);
+            color: var(--danger);
+            padding: 24px;
+            border-radius: var(--radius);
+            margin: 24px 0;
+            text-align: center;
+            display: none;
         }
         
+        /* Single Parking Mode */
+        .single-parking-mode .multi-parking-only {
+            display: none !important;
+        }
+        
+        /* Animations */
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
@@ -381,11 +423,8 @@
             .stats-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
             .stat-card { padding: 20px; }
             .stat-card .value { font-size: 24px; }
-        }
-        
-        /* Single Parking Mode */
-        .single-parking-mode .multi-parking-only {
-            display: none !important;
+            .control-panel { flex-direction: column; }
+            .control-group { width: 100%; }
         }
         
         /* Custom Scrollbar */
@@ -410,28 +449,81 @@
 </head>
 <body>
     <div class="container">
+        <!-- Header -->
         <div class="header">
-            <h1>לוח בקרה חניונים</h1>
-            <p class="subtitle" id="dateInfo">טען קובץ נתונים להתחלה</p>
+            <div class="header-top">
+                <h1>לוח בקרה חניונים</h1>
+                <div class="user-info">
+                    <span class="user-name" id="userName">טוען...</span>
+                    <button class="logout-btn" onclick="logout()">
+                        יציאה
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Control Panel -->
+            <div class="control-panel">
+                <!-- Parking Selector -->
+                <div class="control-group" id="parkingSelectorGroup" style="display: none;">
+                    <label class="control-label">בחר חניון</label>
+                    <select id="parkingSelector" class="control-select">
+                        <option value="">טוען חניונים...</option>
+                    </select>
+                </div>
+                
+                <!-- Date Range -->
+                <div class="control-group">
+                    <label class="control-label">מתאריך</label>
+                    <input type="date" id="startDate" class="control-input">
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">עד תאריך</label>
+                    <input type="date" id="endDate" class="control-input">
+                </div>
+                
+                <!-- Load Button -->
+                <button class="load-btn" onclick="loadData()">
+                    <span>📊</span>
+                    <span>טען נתונים</span>
+                </button>
+            </div>
+            
+            <!-- Quick Range Buttons -->
+            <div class="quick-ranges">
+                <button class="quick-btn" onclick="setQuickRange('today')">היום</button>
+                <button class="quick-btn" onclick="setQuickRange('yesterday')">אתמול</button>
+                <button class="quick-btn" onclick="setQuickRange('week')">השבוע</button>
+                <button class="quick-btn" onclick="setQuickRange('lastWeek')">שבוע שעבר</button>
+                <button class="quick-btn" onclick="setQuickRange('month')">החודש</button>
+                <button class="quick-btn" onclick="setQuickRange('lastMonth')">חודש שעבר</button>
+                <button class="quick-btn" onclick="setQuickRange('year')">השנה</button>
+            </div>
         </div>
         
-        <div class="upload-section">
-            <input type="file" id="fileInput" accept=".csv">
-            <label for="fileInput">
-                <span>📊</span>
-                <span>בחר קובץ CSV</span>
-            </label>
-            <p class="upload-info" id="uploadInfo">גרור קובץ או לחץ לבחירה</p>
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">טוען נתונים...</div>
+            </div>
         </div>
         
-        <div id="dashboard">
+        <!-- Error Message -->
+        <div class="error-message" id="errorMessage">
+            <h3>שגיאה בטעינת הנתונים</h3>
+            <p id="errorText"></p>
+        </div>
+        
+        <!-- Dashboard Content -->
+        <div id="dashboardContent">
             <!-- Stats Grid -->
             <div class="stats-grid" id="statsGrid">
                 <!-- Dynamic content -->
             </div>
             
             <!-- Alerts Section -->
-            <div class="alerts-section" id="alertsSection" style="display: none;">
+            <div class="alerts-section" id="alertsSection">
                 <div class="chart-header">
                     <h2 class="chart-title">
                         <span>⚡</span>
@@ -553,7 +645,7 @@
 
 <script>
 // Global variables
-let data = [];
+let currentData = [];
 let charts = {};
 let isSingleParkingMode = false;
 
@@ -563,108 +655,158 @@ Chart.defaults.color = '#6C6C70';
 Chart.defaults.plugins.legend.labels.usePointStyle = true;
 Chart.defaults.plugins.legend.labels.padding = 20;
 
-// File input handler
-document.getElementById('fileInput').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    document.getElementById('uploadInfo').innerHTML = '<div class="loading"></div> טוען נתונים...';
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const content = e.target.result;
-        
-        Papa.parse(content, {
-            header: false,
-            skipEmptyLines: true,
-            encoding: 'windows-1255',
-            complete: function(results) {
-                try {
-                    processData(results.data);
-                } catch (error) {
-                    console.error('Error:', error);
-                    document.getElementById('uploadInfo').textContent = '❌ שגיאה בטעינת הקובץ';
-                }
-            }
-        });
-    };
-    reader.readAsText(file, 'windows-1255');
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initializeDashboard();
 });
 
-// Process CSV data
-function processData(rawData) {
-    console.log('Processing data:', rawData.length, 'rows');
-    data = [];
-    
-    // Skip header rows and process data
-    for (let i = 2; i < rawData.length; i++) {
-        const row = rawData[i];
-        if (!row || row.length < 40) continue;
+// Initialize dashboard
+async function initializeDashboard() {
+    try {
+        // Set default dates (last 30 days)
+        const today = new Date();
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         
-        try {
-            const item = {
-                // Basic info
-                projectNumber: row[0] || '',
-                parking: row[6] || '',
-                date: row[4] || '',
-                
-                // Revenue data (convert to shekels from agorot)
-                cash: (parseFloat(row[7]) || 0) / 100,
-                credit: (parseFloat(row[8]) || 0) / 100,
-                pango: (parseFloat(row[10]) || 0) / 100,
-                cello: (parseFloat(row[11]) || 0) / 100,
-                
-                // Entry/Exit data
-                casualEntries: parseFloat(row[17]) || 0,
-                memberEntries: parseFloat(row[18]) || 0,
-                totalEntries: parseFloat(row[19]) || 0,
-                casualExits: parseFloat(row[20]) || 0,
-                memberExits: parseFloat(row[21]) || 0,
-                totalExits: parseFloat(row[22]) || 0,
-                appEntries: parseFloat(row[23]) || 0,
-                appExits: parseFloat(row[24]) || 0,
-                
-                // Barrier & Encoders
-                barrierOpenings: parseFloat(row[16]) || 0,
-                encoder1: parseFloat(row[12]) || 0,
-                encoder2: parseFloat(row[13]) || 0,
-                encoder3: parseFloat(row[14]) || 0,
-                encoderTotal: parseFloat(row[15]) || 0,
-                
-                // Stay duration
-                stay015: parseFloat(row[27]) || 0,
-                stay030: parseFloat(row[28]) || 0,
-                stay045: parseFloat(row[29]) || 0,
-                stay060: parseFloat(row[30]) || 0,
-                stay2: parseFloat(row[31]) || 0,
-                stay3: parseFloat(row[32]) || 0,
-                stay4: parseFloat(row[33]) || 0,
-                stay5: parseFloat(row[34]) || 0,
-                stay6: parseFloat(row[35]) || 0,
-                stay724: parseFloat(row[36]) || 0,
-            };
-            
-            // Calculate total revenue
-            item.revenue = item.cash + item.credit + item.pango + item.cello;
-            
-            // Parse date
-            item.dateObj = parseDate(item.date);
-            item.weekday = getWeekday(item.date);
-            item.isWeekend = isWeekend(item.date);
-            
-            // Add to data if valid
-            if (item.parking && item.date) {
-                data.push(item);
-            }
-        } catch (e) {
-            console.warn('Error in row', i, e);
+        document.getElementById('endDate').value = formatDateForInput(today);
+        document.getElementById('startDate').value = formatDateForInput(thirtyDaysAgo);
+        
+        // Load user info
+        await loadUserInfo();
+        
+        // Load parking list
+        await loadParkingList();
+        
+        // Load initial data
+        await loadData();
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showError('שגיאה באתחול המערכת');
+    }
+}
+
+// Format date for input field
+function formatDateForInput(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// Format date for API
+function formatDateForAPI(date) {
+    return date.toISOString().split('T')[0];
+}
+
+// Load user info
+async function loadUserInfo() {
+    try {
+        const response = await fetch('/api/user-info');
+        const result = await response.json();
+        
+        if (result.success && result.user) {
+            document.getElementById('userName').textContent = result.user.username || 'משתמש';
         }
+    } catch (error) {
+        console.error('Error loading user info:', error);
+    }
+}
+
+// Load parking list
+async function loadParkingList() {
+    try {
+        const response = await fetch('/api/user-parkings');
+        const result = await response.json();
+        
+        if (result.success && result.parkings) {
+            const selector = document.getElementById('parkingSelector');
+            selector.innerHTML = '';
+            
+            // Check if user has multiple parkings
+            if (result.parkings.length > 1) {
+                document.getElementById('parkingSelectorGroup').style.display = 'block';
+                
+                // Add "all parkings" option
+                const allOption = document.createElement('option');
+                allOption.value = '';
+                allOption.textContent = 'כל החניונים';
+                selector.appendChild(allOption);
+                
+                // Add individual parkings
+                result.parkings.forEach(parking => {
+                    const option = document.createElement('option');
+                    option.value = parking.id;
+                    option.textContent = parking.name;
+                    selector.appendChild(option);
+                });
+            } else {
+                // Single parking mode
+                isSingleParkingMode = true;
+                document.body.classList.add('single-parking-mode');
+            }
+        }
+    } catch (error) {
+        console.error('Error loading parkings:', error);
+    }
+}
+
+// Load data from API
+async function loadData() {
+    try {
+        showLoading(true);
+        hideError();
+        
+        // Get date range
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        
+        if (!startDate || !endDate) {
+            throw new Error('נא לבחור טווח תאריכים');
+        }
+        
+        // Build API params
+        const params = new URLSearchParams({
+            start_date: startDate,
+            end_date: endDate
+        });
+        
+        // Add parking filter if selected
+        const selectedParking = document.getElementById('parkingSelector').value;
+        if (selectedParking) {
+            params.append('parking_id', selectedParking);
+        }
+        
+        // Fetch data from API
+        const response = await fetch(`/api/parking-data?${params}`);
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.message || 'שגיאה בטעינת הנתונים');
+        }
+        
+        // Process and display data
+        currentData = result.data || [];
+        console.log('Loaded data:', currentData.length, 'records');
+        
+        updateDashboard();
+        
+    } catch (error) {
+        console.error('Error loading data:', error);
+        showError(error.message || 'שגיאה בטעינת הנתונים');
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Update dashboard with current data
+function updateDashboard() {
+    if (currentData.length === 0) {
+        showError('לא נמצאו נתונים לתקופה המבוקשת');
+        return;
     }
     
-    console.log('Processed data:', data.length, 'valid rows');
-    
     // Check if single parking mode
-    const uniqueParkings = [...new Set(data.map(d => d.parking))];
+    const uniqueParkings = [...new Set(currentData.map(d => d.parking_name))];
     isSingleParkingMode = uniqueParkings.length === 1;
     
     if (isSingleParkingMode) {
@@ -673,63 +815,13 @@ function processData(rawData) {
         document.body.classList.remove('single-parking-mode');
     }
     
-    // Update UI
-    document.getElementById('uploadInfo').textContent = `✅ נטענו ${data.length} רשומות`;
-    updateDashboard();
-}
-
-// Parse date function
-function parseDate(dateStr) {
-    try {
-        const parts = dateStr.split('/');
-        return new Date(parts[2], parts[1] - 1, parts[0]);
-    } catch (e) {
-        return new Date();
-    }
-}
-
-// Get weekday
-function getWeekday(dateStr) {
-    try {
-        const parts = dateStr.split('/');
-        const date = new Date(parts[2], parts[1] - 1, parts[0]);
-        const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
-        return days[date.getDay()];
-    } catch (e) {
-        return '';
-    }
-}
-
-// Check if weekend
-function isWeekend(dateStr) {
-    const day = getWeekday(dateStr);
-    return day === 'שישי' || day === 'שבת';
-}
-
-// Update dashboard
-function updateDashboard() {
-    updateDateInfo();
+    // Update all components
     updateStats();
     updateCharts();
     updateAlerts();
     
-    // Show dashboard with animation
-    const dashboard = document.getElementById('dashboard');
-    dashboard.style.display = 'block';
-    setTimeout(() => {
-        dashboard.style.opacity = '1';
-    }, 100);
-}
-
-// Update date info
-function updateDateInfo() {
-    const dates = data.map(d => d.date).filter(Boolean);
-    if (dates.length > 0) {
-        const minDate = dates.reduce((min, date) => date < min ? date : min);
-        const maxDate = dates.reduce((max, date) => date > max ? date : max);
-        const parkingName = isSingleParkingMode ? data[0].parking : 'כל החניונים';
-        document.getElementById('dateInfo').textContent = `${parkingName} | ${minDate} - ${maxDate}`;
-    }
+    // Show dashboard content
+    document.getElementById('dashboardContent').style.display = 'block';
 }
 
 // Update statistics cards
@@ -855,21 +947,21 @@ function updateStats() {
 
 // Calculate statistics
 function calculateStats() {
-    const totalRevenue = data.reduce((sum, d) => sum + d.revenue, 0);
-    const totalCash = data.reduce((sum, d) => sum + d.cash, 0);
-    const totalCredit = data.reduce((sum, d) => sum + d.credit, 0);
-    const totalPango = data.reduce((sum, d) => sum + d.pango, 0);
-    const totalCello = data.reduce((sum, d) => sum + d.cello, 0);
+    const totalRevenue = currentData.reduce((sum, d) => sum + (d.total_revenue_shekels || 0), 0);
+    const totalCash = currentData.reduce((sum, d) => sum + (d.s_cash_shekels || 0), 0);
+    const totalCredit = currentData.reduce((sum, d) => sum + (d.s_credit_shekels || 0), 0);
+    const totalPango = currentData.reduce((sum, d) => sum + (d.s_pango_shekels || 0), 0);
+    const totalCello = currentData.reduce((sum, d) => sum + (d.s_celo_shekels || 0), 0);
     
-    const totalEntries = data.reduce((sum, d) => sum + d.totalEntries, 0);
-    const totalCasual = data.reduce((sum, d) => sum + d.casualEntries, 0);
-    const totalMembers = data.reduce((sum, d) => sum + d.memberEntries, 0);
-    const totalApp = data.reduce((sum, d) => sum + d.appEntries, 0);
+    const totalEntries = currentData.reduce((sum, d) => sum + (d.t_entry_tot || 0), 0);
+    const totalCasual = currentData.reduce((sum, d) => sum + (d.t_entry_s || 0), 0);
+    const totalMembers = currentData.reduce((sum, d) => sum + (d.t_entry_p || 0), 0);
+    const totalApp = currentData.reduce((sum, d) => sum + (d.t_entry_ap || 0), 0);
     
-    const totalBarrier = data.reduce((sum, d) => sum + d.barrierOpenings, 0);
+    const totalBarrier = currentData.reduce((sum, d) => sum + (d.t_open_b || 0), 0);
     
-    const uniqueDays = [...new Set(data.map(d => d.date))].length;
-    const uniqueParkings = [...new Set(data.map(d => d.parking))].length;
+    const uniqueDays = [...new Set(currentData.map(d => d.report_date))].length;
+    const uniqueParkings = [...new Set(currentData.map(d => d.parking_name))].length;
     
     return {
         totalRevenue,
@@ -925,12 +1017,12 @@ function createRevenueChart() {
     
     // Aggregate data by date
     const dailyData = {};
-    data.forEach(d => {
-        if (!dailyData[d.date]) {
-            dailyData[d.date] = { revenue: 0, entries: 0 };
+    currentData.forEach(d => {
+        if (!dailyData[d.report_date]) {
+            dailyData[d.report_date] = { revenue: 0, entries: 0 };
         }
-        dailyData[d.date].revenue += d.revenue;
-        dailyData[d.date].entries += d.totalEntries;
+        dailyData[d.report_date].revenue += d.total_revenue_shekels || 0;
+        dailyData[d.report_date].entries += d.t_entry_tot || 0;
     });
     
     const dates = Object.keys(dailyData).sort();
@@ -1030,10 +1122,10 @@ function createRevenueChart() {
 function createPaymentChart() {
     const ctx = document.getElementById('paymentChart').getContext('2d');
     
-    const totalCash = data.reduce((sum, d) => sum + d.cash, 0);
-    const totalCredit = data.reduce((sum, d) => sum + d.credit, 0);
-    const totalPango = data.reduce((sum, d) => sum + d.pango, 0);
-    const totalCello = data.reduce((sum, d) => sum + d.cello, 0);
+    const totalCash = currentData.reduce((sum, d) => sum + (d.s_cash_shekels || 0), 0);
+    const totalCredit = currentData.reduce((sum, d) => sum + (d.s_credit_shekels || 0), 0);
+    const totalPango = currentData.reduce((sum, d) => sum + (d.s_pango_shekels || 0), 0);
+    const totalCello = currentData.reduce((sum, d) => sum + (d.s_celo_shekels || 0), 0);
     
     if (charts.payment) charts.payment.destroy();
     
@@ -1106,9 +1198,9 @@ function createPaymentChart() {
 function createEntriesChart() {
     const ctx = document.getElementById('entriesChart').getContext('2d');
     
-    const totalCasual = data.reduce((sum, d) => sum + d.casualEntries, 0);
-    const totalMembers = data.reduce((sum, d) => sum + d.memberEntries, 0);
-    const totalApp = data.reduce((sum, d) => sum + d.appEntries, 0);
+    const totalCasual = currentData.reduce((sum, d) => sum + (d.t_entry_s || 0), 0);
+    const totalMembers = currentData.reduce((sum, d) => sum + (d.t_entry_p || 0), 0);
+    const totalApp = currentData.reduce((sum, d) => sum + (d.t_entry_ap || 0), 0);
     
     const chartData = {
         labels: ['מזדמנים', 'מנויים'],
@@ -1184,11 +1276,13 @@ function createDailyChart() {
         weeklyData[day] = { revenue: 0, entries: 0, count: 0 };
     });
     
-    data.forEach(d => {
-        if (weeklyData[d.weekday]) {
-            weeklyData[d.weekday].revenue += d.revenue;
-            weeklyData[d.weekday].entries += d.totalEntries;
-            weeklyData[d.weekday].count++;
+    currentData.forEach(d => {
+        const date = new Date(d.report_date);
+        const dayName = weekdays[date.getDay()];
+        if (weeklyData[dayName]) {
+            weeklyData[dayName].revenue += d.total_revenue_shekels || 0;
+            weeklyData[dayName].entries += d.t_entry_tot || 0;
+            weeklyData[dayName].count++;
         }
     });
     
@@ -1284,16 +1378,16 @@ function createStayDurationChart() {
     
     // Calculate totals for each duration category
     const durations = {
-        '0-15 דקות': data.reduce((sum, d) => sum + d.stay015, 0),
-        '15-30 דקות': data.reduce((sum, d) => sum + d.stay030, 0),
-        '30-45 דקות': data.reduce((sum, d) => sum + d.stay045, 0),
-        '45-60 דקות': data.reduce((sum, d) => sum + d.stay060, 0),
-        'עד 2 שעות': data.reduce((sum, d) => sum + d.stay2, 0),
-        'עד 3 שעות': data.reduce((sum, d) => sum + d.stay3, 0),
-        'עד 4 שעות': data.reduce((sum, d) => sum + d.stay4, 0),
-        'עד 5 שעות': data.reduce((sum, d) => sum + d.stay5, 0),
-        'עד 6 שעות': data.reduce((sum, d) => sum + d.stay6, 0),
-        '7-24 שעות': data.reduce((sum, d) => sum + d.stay724, 0),
+        '0-15 דקות': currentData.reduce((sum, d) => sum + (d.stay_015 || 0), 0),
+        '15-30 דקות': currentData.reduce((sum, d) => sum + (d.stay_030 || 0), 0),
+        '30-45 דקות': currentData.reduce((sum, d) => sum + (d.stay_045 || 0), 0),
+        '45-60 דקות': currentData.reduce((sum, d) => sum + (d.stay_060 || 0), 0),
+        'עד 2 שעות': currentData.reduce((sum, d) => sum + (d.stay_2 || 0), 0),
+        'עד 3 שעות': currentData.reduce((sum, d) => sum + (d.stay_3 || 0), 0),
+        'עד 4 שעות': currentData.reduce((sum, d) => sum + (d.stay_4 || 0), 0),
+        'עד 5 שעות': currentData.reduce((sum, d) => sum + (d.stay_5 || 0), 0),
+        'עד 6 שעות': currentData.reduce((sum, d) => sum + (d.stay_6 || 0), 0),
+        '7-24 שעות': currentData.reduce((sum, d) => sum + (d.stay_724 || 0), 0),
     };
     
     const labels = Object.keys(durations);
@@ -1334,7 +1428,7 @@ function createStayDurationChart() {
                     callbacks: {
                         label: function(context) {
                             const total = values.reduce((a, b) => a + b, 0);
-                            const percentage = ((context.parsed.y / total) * 100).toFixed(1);
+                            const percentage = total > 0 ? ((context.parsed.y / total) * 100).toFixed(1) : 0;
                             return `${context.parsed.y.toLocaleString()} רכבים (${percentage}%)`;
                         }
                     }
@@ -1364,11 +1458,11 @@ function createBarrierChart() {
     
     // Aggregate barrier data by date
     const dailyBarrier = {};
-    data.forEach(d => {
-        if (!dailyBarrier[d.date]) {
-            dailyBarrier[d.date] = 0;
+    currentData.forEach(d => {
+        if (!dailyBarrier[d.report_date]) {
+            dailyBarrier[d.report_date] = 0;
         }
-        dailyBarrier[d.date] += d.barrierOpenings;
+        dailyBarrier[d.report_date] += d.t_open_b || 0;
     });
     
     const dates = Object.keys(dailyBarrier).sort();
@@ -1430,12 +1524,12 @@ function createParkingComparisonChart() {
     
     // Aggregate data by parking
     const parkingData = {};
-    data.forEach(d => {
-        if (!parkingData[d.parking]) {
-            parkingData[d.parking] = { revenue: 0, entries: 0 };
+    currentData.forEach(d => {
+        if (!parkingData[d.parking_name]) {
+            parkingData[d.parking_name] = { revenue: 0, entries: 0 };
         }
-        parkingData[d.parking].revenue += d.revenue;
-        parkingData[d.parking].entries += d.totalEntries;
+        parkingData[d.parking_name].revenue += d.total_revenue_shekels || 0;
+        parkingData[d.parking_name].entries += d.t_entry_tot || 0;
     });
     
     // Sort by revenue
@@ -1525,18 +1619,18 @@ function updateParkingRanking() {
     // Calculate metrics for each parking
     const parkingMetrics = {};
     
-    data.forEach(d => {
-        if (!parkingMetrics[d.parking]) {
-            parkingMetrics[d.parking] = {
-                name: d.parking,
+    currentData.forEach(d => {
+        if (!parkingMetrics[d.parking_name]) {
+            parkingMetrics[d.parking_name] = {
+                name: d.parking_name,
                 revenue: 0,
                 entries: 0,
                 days: new Set()
             };
         }
-        parkingMetrics[d.parking].revenue += d.revenue;
-        parkingMetrics[d.parking].entries += d.totalEntries;
-        parkingMetrics[d.parking].days.add(d.date);
+        parkingMetrics[d.parking_name].revenue += d.total_revenue_shekels || 0;
+        parkingMetrics[d.parking_name].entries += d.t_entry_tot || 0;
+        parkingMetrics[d.parking_name].days.add(d.report_date);
     });
     
     // Calculate averages and sort
@@ -1591,10 +1685,10 @@ function updateParkingRanking() {
 
 // Update encoders info
 function updateEncodersInfo() {
-    const totalEncoder1 = data.reduce((sum, d) => sum + d.encoder1, 0);
-    const totalEncoder2 = data.reduce((sum, d) => sum + d.encoder2, 0);
-    const totalEncoder3 = data.reduce((sum, d) => sum + d.encoder3, 0);
-    const totalEncoders = data.reduce((sum, d) => sum + d.encoderTotal, 0);
+    const totalEncoder1 = currentData.reduce((sum, d) => sum + (d.s_encoder1 || 0), 0);
+    const totalEncoder2 = currentData.reduce((sum, d) => sum + (d.s_encoder2 || 0), 0);
+    const totalEncoder3 = currentData.reduce((sum, d) => sum + (d.s_encoder3 || 0), 0);
+    const totalEncoders = currentData.reduce((sum, d) => sum + (d.sencodertot || 0), 0);
     
     const encodersHTML = `
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
@@ -1677,19 +1771,19 @@ function updateAlerts() {
     
     // Find significant changes
     const recentDays = 7;
-    const dates = [...new Set(data.map(d => d.date))].sort().slice(-recentDays);
+    const dates = [...new Set(currentData.map(d => d.report_date))].sort().slice(-recentDays);
     
     if (dates.length >= 2) {
         const lastDate = dates[dates.length - 1];
         const prevDate = dates[dates.length - 2];
         
-        const lastData = data.filter(d => d.date === lastDate);
-        const prevData = data.filter(d => d.date === prevDate);
+        const lastData = currentData.filter(d => d.report_date === lastDate);
+        const prevData = currentData.filter(d => d.report_date === prevDate);
         
-        const lastRevenue = lastData.reduce((sum, d) => sum + d.revenue, 0);
-        const prevRevenue = prevData.reduce((sum, d) => sum + d.revenue, 0);
+        const lastRevenue = lastData.reduce((sum, d) => sum + (d.total_revenue_shekels || 0), 0);
+        const prevRevenue = prevData.reduce((sum, d) => sum + (d.total_revenue_shekels || 0), 0);
         
-        const revenueChange = ((lastRevenue - prevRevenue) / prevRevenue) * 100;
+        const revenueChange = prevRevenue > 0 ? ((lastRevenue - prevRevenue) / prevRevenue) * 100 : 0;
         
         if (Math.abs(revenueChange) > 10) {
             alerts.push({
@@ -1702,14 +1796,23 @@ function updateAlerts() {
     }
     
     // Check weekend performance
-    const weekendData = data.filter(d => d.isWeekend);
-    const weekdayData = data.filter(d => !d.isWeekend);
+    const weekendData = currentData.filter(d => {
+        const date = new Date(d.report_date);
+        const day = date.getDay();
+        return day === 5 || day === 6; // Friday or Saturday
+    });
+    
+    const weekdayData = currentData.filter(d => {
+        const date = new Date(d.report_date);
+        const day = date.getDay();
+        return day !== 5 && day !== 6;
+    });
     
     if (weekendData.length > 0 && weekdayData.length > 0) {
-        const avgWeekendRevenue = weekendData.reduce((sum, d) => sum + d.revenue, 0) / weekendData.length;
-        const avgWeekdayRevenue = weekdayData.reduce((sum, d) => sum + d.revenue, 0) / weekdayData.length;
+        const avgWeekendRevenue = weekendData.reduce((sum, d) => sum + (d.total_revenue_shekels || 0), 0) / weekendData.length;
+        const avgWeekdayRevenue = weekdayData.reduce((sum, d) => sum + (d.total_revenue_shekels || 0), 0) / weekdayData.length;
         
-        const weekendDiff = ((avgWeekendRevenue - avgWeekdayRevenue) / avgWeekdayRevenue) * 100;
+        const weekendDiff = avgWeekdayRevenue > 0 ? ((avgWeekendRevenue - avgWeekdayRevenue) / avgWeekdayRevenue) * 100 : 0;
         
         if (Math.abs(weekendDiff) > 20) {
             alerts.push({
@@ -1741,8 +1844,76 @@ function updateAlerts() {
     }
 }
 
+// Set quick date range
+function setQuickRange(range) {
+    const today = new Date();
+    let startDate, endDate;
+    
+    switch(range) {
+        case 'today':
+            startDate = endDate = today;
+            break;
+        case 'yesterday':
+            startDate = endDate = new Date(today);
+            startDate.setDate(startDate.getDate() - 1);
+            break;
+        case 'week':
+            endDate = today;
+            startDate = new Date(today);
+            startDate.setDate(startDate.getDate() - today.getDay());
+            break;
+        case 'lastWeek':
+            endDate = new Date(today);
+            endDate.setDate(endDate.getDate() - today.getDay() - 1);
+            startDate = new Date(endDate);
+            startDate.setDate(startDate.getDate() - 6);
+            break;
+        case 'month':
+            endDate = today;
+            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            break;
+        case 'lastMonth':
+            endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+            startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            break;
+        case 'year':
+            endDate = today;
+            startDate = new Date(today.getFullYear(), 0, 1);
+            break;
+    }
+    
+    document.getElementById('startDate').value = formatDateForInput(startDate);
+    document.getElementById('endDate').value = formatDateForInput(endDate);
+    
+    // Auto load data
+    loadData();
+}
+
+// Show loading state
+function showLoading(show) {
+    document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+}
+
+// Show error message
+function showError(message) {
+    document.getElementById('errorText').textContent = message;
+    document.getElementById('errorMessage').style.display = 'block';
+}
+
+// Hide error message
+function hideError() {
+    document.getElementById('errorMessage').style.display = 'none';
+}
+
+// Logout function
+function logout() {
+    if (confirm('האם אתה בטוח שברצונך לצאת?')) {
+        window.location.href = '/logout';
+    }
+}
+
 // Initialize
-console.log('Dashboard ready!');
+console.log('Apple Dashboard ready!');
 </script>
 
 </body>
