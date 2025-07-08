@@ -3,9 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>S&B Parking Dashboard</title>
+    <title>לוח בקרה - עזריאלי חניונים</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #007AFF;
+            --primary-light: #5AC8FA;
+            --primary-dark: #0051D5;
+            --success: #34C759;
+            --danger: #FF3B30;
+            --warning: #FF9500;
+            --purple: #AF52DE;
+            --background: #F2F2F7;
+            --surface: #FFFFFF;
+            --text-primary: #000000;
+            --text-secondary: #6C6C70;
+            --text-tertiary: #8E8E93;
+            --border: #E5E5EA;
+            --shadow: 0 2px 15px rgba(0,0,0,0.08);
+            --shadow-hover: 0 8px 30px rgba(0,0,0,0.12);
+            --radius: 16px;
+            --radius-small: 12px;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,11 +35,11 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-            color: #1d1d1f;
+            font-family: 'Heebo', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--background);
+            color: var(--text-primary);
             line-height: 1.6;
+            font-weight: 400;
         }
         
         .container {
@@ -26,191 +48,97 @@
             padding: 20px;
         }
         
-        /* Header בסגנון אפל */
+        /* Header Styles */
         .header {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 24px 32px;
-            margin-bottom: 24px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            transition: all 0.3s ease;
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.8s ease;
         }
         
-        .header:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-        }
-        
-        .header-title {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        
-        .header-title h1 {
-            font-size: 28px;
+        .header h1 {
+            font-size: 48px;
             font-weight: 700;
-            background: linear-gradient(135deg, #007AFF, #5856D6);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin: 0;
+            margin-bottom: 8px;
+            letter-spacing: -1px;
         }
         
-        .header-subtitle {
+        .header .subtitle {
+            color: var(--text-secondary);
+            font-size: 20px;
+            font-weight: 400;
+        }
+        
+        /* Upload Section */
+        .upload-section {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .upload-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+        
+        .upload-section:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .upload-section input {
+            display: none;
+        }
+        
+        .upload-section label {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 32px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 20%);
+            color: white;
+            border-radius: var(--radius-small);
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 122, 255, 0.3);
+        }
+        
+        .upload-section label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 122, 255, 0.4);
+        }
+        
+        .upload-section label:active {
+            transform: translateY(0);
+        }
+        
+        .upload-info {
+            margin-top: 16px;
+            color: var(--text-secondary);
             font-size: 16px;
-            color: #6e6e73;
-            font-weight: 500;
         }
         
-        /* Controls */
-        .header-controls {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-        
-        .date-selector {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 16px;
-            padding: 16px 20px;
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            min-width: 320px;
-            transition: all 0.3s ease;
-        }
-        
-        .date-selector:hover {
-            background: rgba(255, 255, 255, 1);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        }
-        
-        .quick-buttons {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 13px;
-            white-space: nowrap;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #007AFF, #5856D6);
-            color: white;
-        }
-        
-        .btn-secondary {
-            background: rgba(0, 122, 255, 0.1);
-            color: #007AFF;
-            border: 1px solid rgba(0, 122, 255, 0.2);
-        }
-        
-        .btn:hover {
-            transform: translateY(-1px) scale(1.02);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-        }
-        
-        .btn:active {
-            transform: translateY(0) scale(0.98);
-        }
-        
-        .date-input {
-            padding: 10px 14px;
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
-            font-size: 14px;
-            background: rgba(255, 255, 255, 0.8);
-            transition: all 0.3s ease;
-            width: 140px;
-        }
-        
-        .date-input:focus {
-            outline: none;
-            border-color: #007AFF;
-            background: white;
-            box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
-        }
-        
-        .custom-date {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: rgba(0, 122, 255, 0.1);
-            padding: 10px 16px;
-            border-radius: 12px;
-            font-size: 14px;
-            color: #007AFF;
-            font-weight: 500;
-        }
-        
-        .logout-btn {
-            background: #FF3B30;
-            color: white;
-            padding: 8px 12px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-        
-        /* Loading & Error States */
-        .loading {
-            text-align: center;
-            padding: 60px;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            margin: 20px 0;
-            backdrop-filter: blur(20px);
-        }
-        
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #007AFF;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .error-message {
-            background: rgba(255, 69, 58, 0.1);
-            color: #D70015;
-            padding: 20px;
-            border-radius: 16px;
-            margin: 20px 0;
-            text-align: center;
-            border: 1px solid rgba(255, 69, 58, 0.2);
+        /* Dashboard Grid */
+        #dashboard {
+            display: none;
+            opacity: 0;
+            animation: fadeIn 0.8s ease forwards;
         }
         
         /* Stats Grid */
@@ -218,168 +146,192 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 20px;
-            margin-bottom: 32px;
+            margin-bottom: 40px;
         }
         
         .stat-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            padding: 24px;
-            border-radius: 20px;
-            text-align: center;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease;
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 28px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
         }
         
-        .stat-card::before {
+        .stat-card::after {
             content: '';
             position: absolute;
             top: 0;
-            left: 0;
             right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #007AFF, #5856D6, #AF52DE);
-            opacity: 0;
-            transition: opacity 0.3s ease;
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, transparent 40%, rgba(0, 122, 255, 0.05) 100%);
+            border-radius: 50%;
+            transform: translate(30px, -30px);
         }
         
         .stat-card:hover {
-            transform: translateY(-4px) scale(1.02);
-            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
         }
         
-        .stat-card:hover::before {
-            opacity: 1;
+        .stat-card .icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            border-radius: var(--radius-small);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            margin-bottom: 16px;
         }
         
         .stat-card h3 {
-            font-size: 14px;
-            color: #8e8e93;
-            margin-bottom: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 8px;
         }
         
         .stat-card .value {
             font-size: 32px;
             font-weight: 700;
-            color: #1d1d1f;
-            margin-bottom: 8px;
-            background: linear-gradient(135deg, #007AFF, #5856D6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+        
+        .stat-card .change {
+            font-size: 14px;
+            font-weight: 500;
+            padding: 4px 12px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .stat-card .change.positive {
+            background: rgba(52, 199, 89, 0.1);
+            color: var(--success);
+        }
+        
+        .stat-card .change.negative {
+            background: rgba(255, 59, 48, 0.1);
+            color: var(--danger);
         }
         
         .stat-card .subtext {
-            color: #8e8e93;
-            font-size: 13px;
-            font-weight: 500;
-        }
-        
-        .stat-card .trend {
+            color: var(--text-tertiary);
+            font-size: 14px;
             margin-top: 8px;
-            font-size: 12px;
-            font-weight: 600;
         }
         
-        .trend.positive {
-            color: #30D158;
-        }
-        
-        .trend.negative {
-            color: #FF3B30;
-        }
-        
-        /* Charts Section */
-        .charts-section {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 24px;
-            margin-bottom: 32px;
-        }
-        
-        .chart-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            padding: 28px;
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        /* Chart Sections */
+        .chart-section {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
             transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
         }
         
-        .chart-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        .chart-section:hover {
+            box-shadow: var(--shadow-hover);
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
         }
         
         .chart-title {
-            font-size: 18px;
-            color: #1d1d1f;
-            margin-bottom: 24px;
-            font-weight: 700;
-            text-align: center;
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
         
-        .chart-subtitle {
-            font-size: 13px;
-            color: #8e8e93;
-            text-align: center;
-            margin-bottom: 20px;
+        .chart-filters {
+            display: flex;
+            gap: 12px;
         }
         
-        /* Parking Duration Chart Specific */
-        .duration-chart {
-            grid-column: 1 / -1;
-            background: linear-gradient(135deg, rgba(0, 122, 255, 0.05), rgba(88, 86, 214, 0.05));
+        .filter-btn {
+            padding: 8px 16px;
+            background: var(--background);
+            border: none;
+            border-radius: var(--radius-small);
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .filter-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .filter-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        /* Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
         }
         
         /* Alerts Section */
         .alerts-section {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            padding: 28px;
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 32px;
             margin-bottom: 24px;
+            box-shadow: var(--shadow);
         }
         
-        .alert {
-            padding: 16px 20px;
-            border-radius: 12px;
-            margin: 12px 0;
-            font-weight: 600;
+        .alert-item {
+            padding: 20px;
+            border-radius: var(--radius-small);
+            margin-bottom: 16px;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 16px;
             transition: all 0.3s ease;
         }
         
-        .alert:hover {
-            transform: translateX(4px);
+        .alert-item:hover {
+            transform: translateX(-4px);
         }
         
-        .alert.positive {
-            background: linear-gradient(135deg, rgba(48, 209, 88, 0.1), rgba(52, 199, 89, 0.05));
-            color: #30D158;
-            border: 1px solid rgba(48, 209, 88, 0.2);
+        .alert-item.positive {
+            background: linear-gradient(135deg, rgba(52, 199, 89, 0.1) 0%, rgba(52, 199, 89, 0.05) 100%);
+            border-right: 4px solid var(--success);
         }
         
-        .alert.negative {
-            background: linear-gradient(135deg, rgba(255, 59, 48, 0.1), rgba(255, 69, 58, 0.05));
-            color: #FF3B30;
-            border: 1px solid rgba(255, 59, 48, 0.2);
+        .alert-item.negative {
+            background: linear-gradient(135deg, rgba(255, 59, 48, 0.1) 0%, rgba(255, 59, 48, 0.05) 100%);
+            border-right: 4px solid var(--danger);
         }
         
         .alert-icon {
-            font-size: 20px;
+            font-size: 24px;
         }
         
         .alert-content {
@@ -387,1614 +339,1411 @@
         }
         
         .alert-title {
-            font-size: 15px;
+            font-weight: 600;
+            font-size: 16px;
             margin-bottom: 4px;
         }
         
-        .alert-details {
-            font-size: 13px;
-            opacity: 0.8;
-            font-weight: 500;
-        }
-        
-        /* Rankings */
-        .rankings {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            padding: 28px;
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .rank-item {
-            display: flex;
-            align-items: center;
-            padding: 16px 20px;
-            margin: 12px 0;
-            background: rgba(247, 247, 247, 0.5);
-            border-radius: 16px;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(0, 0, 0, 0.05);
-        }
-        
-        .rank-item:hover {
-            background: rgba(0, 122, 255, 0.05);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-        }
-        
-        .rank-number {
-            background: linear-gradient(135deg, #007AFF, #5856D6);
-            color: white;
-            width: 36px;
-            height: 36px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            margin-left: 16px;
+        .alert-description {
+            color: var(--text-secondary);
             font-size: 14px;
         }
         
-        .rank-info {
-            flex-grow: 1;
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 122, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease infinite;
         }
         
-        .rank-name {
-            font-weight: 700;
-            margin-bottom: 4px;
-            font-size: 16px;
-            color: #1d1d1f;
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
         
-        .rank-details {
-            font-size: 13px;
-            color: #8e8e93;
-            font-weight: 500;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
-        .rank-value {
-            font-weight: 700;
-            color: #007AFF;
-            font-size: 18px;
-            text-align: left;
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
-        .rank-subvalue {
-            font-size: 12px;
-            color: #8e8e93;
-            font-weight: 500;
-        }
-        
-        /* Interactive Details */
-        .details-panel {
-            margin-top: 20px;
-            padding: 20px;
-            background: rgba(247, 247, 247, 0.5);
-            border-radius: 16px;
-            border: 1px solid rgba(0, 0, 0, 0.05);
-            display: none;
-            animation: slideDown 0.3s ease;
-        }
-        
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .details-buttons {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
-            justify-content: center;
-        }
-        
-        /* Responsive Design */
+        /* Responsive */
         @media (max-width: 768px) {
-            .container {
-                padding: 16px;
-            }
-            
-            .header {
-                flex-direction: column;
-                gap: 20px;
-                padding: 20px;
-            }
-            
-            .date-selector {
-                min-width: auto;
-                width: 100%;
-            }
-            
-            .stats-grid {
-                grid-template-columns: 1fr;
-                gap: 16px;
-            }
-            
-            .charts-section {
-                grid-template-columns: 1fr;
-                gap: 20px;
-            }
-            
-            .quick-buttons {
-                justify-content: center;
-            }
-            
-            .custom-date {
-                justify-content: center;
-            }
+            .header h1 { font-size: 36px; }
+            .charts-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+            .stat-card { padding: 20px; }
+            .stat-card .value { font-size: 24px; }
         }
         
-        /* Data Summary Cards */
-        .summary-section {
-            margin-bottom: 32px;
-        }
-        
-        .summary-card {
-            background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.05));
-            border-radius: 20px;
-            padding: 24px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(0, 122, 255, 0.1);
-        }
-        
-        .summary-title {
-            font-size: 20px;
-            font-weight: 700;
-            color: #1d1d1f;
-            margin-bottom: 16px;
-            text-align: center;
-        }
-        
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 16px;
-        }
-        
-        .summary-item {
-            text-align: center;
-            padding: 16px;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 12px;
-        }
-        
-        .summary-item-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: #007AFF;
-            margin-bottom: 4px;
-        }
-        
-        .summary-item-label {
-            font-size: 12px;
-            color: #8e8e93;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        /* Hidden state */
-        .hidden {
+        /* Single Parking Mode */
+        .single-parking-mode .multi-parking-only {
             display: none !important;
         }
         
-        /* Single parking specific styles */
-        .single-parking .header-subtitle {
-            color: #007AFF;
-            font-weight: 600;
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--background);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-tertiary);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div class="header">
-            <div class="header-title">
-                <h1>🚗 S&B Parking</h1>
-                <div>
-                    <div id="parkingTitle" class="header-subtitle">מערכת דוחות חניות</div>
-                </div>
-            </div>
-            
-            <div class="header-controls">
-                <!-- Date Controls -->
-                <div class="date-selector">
-                    <div class="quick-buttons">
-                        <button class="btn btn-secondary quick-range" data-range="yesterday">אתמול</button>
-                        <button class="btn btn-secondary quick-range" data-range="month">החודש</button>
-                        <button class="btn btn-secondary quick-range" data-range="lastmonth">חודש קודם</button>
-                        <button class="btn btn-primary" id="investigateBtn">🔍 חיפוש מתקדם</button>
-                    </div>
-                    
-                    <div class="custom-date">
-                        <label style="font-weight: 600; color: #1d1d1f;">מתאריך:</label>
-                        <input type="text" id="startDate" class="date-input" placeholder="DD/MM/YYYY" maxlength="10">
-                        <label style="font-weight: 600; color: #1d1d1f;">עד:</label>
-                        <input type="text" id="endDate" class="date-input" placeholder="DD/MM/YYYY" maxlength="10">
-                        <button id="loadDataBtn" class="btn btn-primary">📊 טען</button>
-                    </div>
-                </div>
-                
-                <!-- User Info -->
-                <div class="user-info">
-                    <span id="userInfo">טוען...</span>
-                    <button id="logoutBtn" class="logout-btn">יציאה</button>
-                </div>
-            </div>
+            <h1>לוח בקרה חניונים</h1>
+            <p class="subtitle" id="dateInfo">טען קובץ נתונים להתחלה</p>
         </div>
         
-        <!-- Loading -->
-        <div id="loadingSection" class="loading hidden">
-            <div class="loading-spinner"></div>
-            <h3>טוען נתונים...</h3>
+        <div class="upload-section">
+            <input type="file" id="fileInput" accept=".csv">
+            <label for="fileInput">
+                <span>📊</span>
+                <span>בחר קובץ CSV</span>
+            </label>
+            <p class="upload-info" id="uploadInfo">גרור קובץ או לחץ לבחירה</p>
         </div>
         
-        <!-- Error -->
-        <div id="errorSection" class="error-message hidden">
-            <h3>🚨 שגיאה בטעינת הנתונים</h3>
-            <p id="errorMessage"></p>
-        </div>
-        
-        <!-- Dashboard Content -->
-        <div id="dashboardContent" class="hidden">
-            <!-- Summary Card -->
-            <div class="summary-section">
-                <div class="summary-card">
-                    <div class="summary-title" id="summaryTitle">סיכום תקופה</div>
-                    <div class="summary-grid" id="summaryGrid">
-                        <!-- יתמלא בקוד JS -->
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Statistics Cards -->
+        <div id="dashboard">
+            <!-- Stats Grid -->
             <div class="stats-grid" id="statsGrid">
-                <!-- יתמלא בקוד JS -->
-            </div>
-            
-            <!-- Charts -->
-            <div class="charts-section">
-                <!-- Parking Duration Chart -->
-                <div class="chart-card duration-chart">
-                    <div class="chart-title">זמני שהייה בחניון</div>
-                    <div class="chart-subtitle">התפלגות זמני החנייה לפי קטגוריות</div>
-                    <canvas id="durationChart"></canvas>
-                    <div id="durationDetails" class="details-panel">
-                        <!-- פירוט זמני שהייה -->
-                    </div>
-                </div>
-                
-                <!-- Revenue Trends -->
-                <div class="chart-card">
-                    <div class="chart-title">מגמות הכנסות</div>
-                    <div class="chart-subtitle">הכנסות יומיות לאורך התקופה</div>
-                    <canvas id="revenueChart"></canvas>
-                </div>
-                
-                <!-- Payment Methods -->
-                <div class="chart-card">
-                    <div class="chart-title">אמצעי תשלום</div>
-                    <div class="chart-subtitle">התפלגות תשלומים</div>
-                    <canvas id="paymentChart"></canvas>
-                    <div id="paymentDetails" class="details-panel">
-                        <!-- פירוט תשלומים -->
-                    </div>
-                </div>
-                
-                <!-- Traffic Analysis -->
-                <div class="chart-card">
-                    <div class="chart-title">ניתוח תנועה</div>
-                    <div class="chart-subtitle">כניסות ויציאות יומיות</div>
-                    <canvas id="trafficChart"></canvas>
-                </div>
-                
-                <!-- Weekly Comparison -->
-                <div class="chart-card">
-                    <div class="chart-title">השוואה שבועית</div>
-                    <div class="chart-subtitle">ממוצע הכנסות לפי ימי השבוע</div>
-                    <canvas id="weeklyChart"></canvas>
-                </div>
-                
-                <!-- Efficiency Metrics -->
-                <div class="chart-card">
-                    <div class="chart-title">מדדי יעילות</div>
-                    <div class="chart-subtitle">יחס פתיחות מחסום לכניסות</div>
-                    <canvas id="efficiencyChart"></canvas>
-                </div>
+                <!-- Dynamic content -->
             </div>
             
             <!-- Alerts Section -->
-            <div class="alerts-section">
-                <div class="chart-title">🚨 התראות ומגמות</div>
+            <div class="alerts-section" id="alertsSection" style="display: none;">
+                <div class="chart-header">
+                    <h2 class="chart-title">
+                        <span>⚡</span>
+                        <span>התראות ומגמות</span>
+                    </h2>
+                </div>
                 <div id="alertsContainer">
-                    <!-- התראות יתמלאו כאן -->
+                    <!-- Dynamic alerts -->
                 </div>
             </div>
             
-            <!-- Rankings (for multi-parking users) -->
-            <div id="rankingsSection" class="rankings hidden">
-                <div class="chart-title">🏆 דירוג חניונים</div>
-                <div id="rankingsContainer">
-                    <!-- דירוג יתמלא כאן -->
+            <!-- Charts Grid -->
+            <div class="charts-grid">
+                <!-- Revenue Trends Chart -->
+                <div class="chart-section">
+                    <div class="chart-header">
+                        <h2 class="chart-title">
+                            <span>📈</span>
+                            <span>מגמת הכנסות</span>
+                        </h2>
+                    </div>
+                    <canvas id="revenueChart"></canvas>
+                </div>
+                
+                <!-- Payment Methods Chart -->
+                <div class="chart-section">
+                    <div class="chart-header">
+                        <h2 class="chart-title">
+                            <span>💳</span>
+                            <span>אמצעי תשלום</span>
+                        </h2>
+                    </div>
+                    <canvas id="paymentChart"></canvas>
+                </div>
+                
+                <!-- Entries Chart -->
+                <div class="chart-section">
+                    <div class="chart-header">
+                        <h2 class="chart-title">
+                            <span>🚗</span>
+                            <span>סוגי כניסות</span>
+                        </h2>
+                    </div>
+                    <canvas id="entriesChart"></canvas>
+                </div>
+                
+                <!-- Daily Comparison Chart -->
+                <div class="chart-section">
+                    <div class="chart-header">
+                        <h2 class="chart-title">
+                            <span>📅</span>
+                            <span>השוואה יומית</span>
+                        </h2>
+                    </div>
+                    <canvas id="dailyChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Multi-Parking Charts -->
+            <div class="charts-grid multi-parking-only">
+                <!-- Parking Comparison Chart -->
+                <div class="chart-section">
+                    <div class="chart-header">
+                        <h2 class="chart-title">
+                            <span>🏢</span>
+                            <span>השוואת חניונים</span>
+                        </h2>
+                    </div>
+                    <canvas id="parkingComparisonChart"></canvas>
+                </div>
+                
+                <!-- Parking Ranking -->
+                <div class="chart-section">
+                    <div class="chart-header">
+                        <h2 class="chart-title">
+                            <span>🏆</span>
+                            <span>דירוג חניונים</span>
+                        </h2>
+                    </div>
+                    <div id="parkingRanking"></div>
+                </div>
+            </div>
+            
+            <!-- Stay Duration Chart -->
+            <div class="chart-section">
+                <div class="chart-header">
+                    <h2 class="chart-title">
+                        <span>⏱️</span>
+                        <span>זמני שהייה</span>
+                    </h2>
+                </div>
+                <canvas id="stayDurationChart"></canvas>
+            </div>
+            
+            <!-- Barrier & Encoders Section -->
+            <div class="charts-grid">
+                <div class="chart-section">
+                    <div class="chart-header">
+                        <h2 class="chart-title">
+                            <span>🚧</span>
+                            <span>פתיחות מחסום</span>
+                        </h2>
+                    </div>
+                    <canvas id="barrierChart"></canvas>
+                </div>
+                
+                <div class="chart-section">
+                    <div class="chart-header">
+                        <h2 class="chart-title">
+                            <span>🔢</span>
+                            <span>נתוני מקודדים</span>
+                        </h2>
+                    </div>
+                    <div id="encodersInfo"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        // משתנים גלובליים
-        let userData = null;
-        let currentData = [];
-        let charts = {};
-        let isSingleParking = false;
+<script>
+// Global variables
+let data = [];
+let charts = {};
+let isSingleParkingMode = false;
 
-        // טעינה ראשונית
-        document.addEventListener('DOMContentLoaded', function() {
-            loadUserData();
-            setupEventListeners();
-            setDefaultDates();
-        });
+// Chart.js default configuration
+Chart.defaults.font.family = "'Heebo', -apple-system, BlinkMacSystemFont, sans-serif";
+Chart.defaults.color = '#6C6C70';
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.padding = 20;
 
-        // הגדרת תאריכים ברירת מחדל - אתמול
-        function setDefaultDates() {
-            const today = new Date();
-            const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-            
-            document.getElementById('endDate').value = formatDateForInput(yesterday);
-            document.getElementById('startDate').value = formatDateForInput(yesterday);
-        }
-
-        // המרת תאריך לפורמט DD/MM/YYYY
-        function formatDateForInput(date) {
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = date.getFullYear();
-            return `${day}/${month}/${year}`;
-        }
-
-        // המרת תאריך מפורמט DD/MM/YYYY לאובייקט Date
-        function parseInputDate(dateString) {
-            if (!dateString || !dateString.includes('/')) return null;
-            
-            const parts = dateString.split('/');
-            if (parts.length !== 3) return null;
-            
-            const day = parseInt(parts[0]);
-            const month = parseInt(parts[1]) - 1;
-            const year = parseInt(parts[2]);
-            
-            if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
-            
-            const date = new Date(year, month, day);
-            
-            if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
-                return null;
-            }
-            
-            return date;
-        }
-
-        // המרת תאריך לפורמט למסד הנתונים (YYYY-MM-DD)
-        function formatDateForAPI(date) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
-        // טעינת נתוני משתמש
-        async function loadUserData() {
-            try {
-                const response = await fetch('/api/user-info');
-                const result = await response.json();
-                
-                if (result.success) {
-                    userData = result.user;
-                    updateUserInterface();
-                    // טען נתונים ראשוניים עבור אתמול
-                    await loadParkingData();
-                } else {
-                    showError('שגיאה בטעינת נתוני משתמש: ' + result.message);
-                }
-            } catch (error) {
-                console.error('Error loading user data:', error);
-                showError('שגיאה בחיבור לשרת');
-            }
-        }
-
-        // עדכון ממשק המשתמש
-        function updateUserInterface() {
-            if (!userData) return;
-            
-            // קביעה אם זה משתמש חניון יחיד
-            isSingleParking = userData.access_level === 'single_parking' || userData.project_number !== '0';
-            
-            document.getElementById('userInfo').textContent = 
-                `👤 ${userData.username} | 🏢 ${userData.parking_name}`;
-            
-            if (isSingleParking) {
-                document.body.classList.add('single-parking');
-                document.getElementById('parkingTitle').textContent = userData.parking_name;
-                document.getElementById('rankingsSection').classList.add('hidden');
-            } else {
-                document.getElementById('parkingTitle').textContent = 'מערכת דוחות חניות';
-                document.getElementById('rankingsSection').classList.remove('hidden');
-            }
-        }
-
-        // טעינת נתוני חניון
-        async function loadParkingData() {
-            const startDateInput = document.getElementById('startDate').value;
-            const endDateInput = document.getElementById('endDate').value;
-            
-            if (!startDateInput || !endDateInput) {
-                showError('אנא הכנס טווח תאריכים');
-                return;
-            }
-            
-            const startDate = parseInputDate(startDateInput);
-            const endDate = parseInputDate(endDateInput);
-            
-            if (!startDate || !endDate) {
-                showError('פורמט תאריך לא תקין. השתמש בפורמט DD/MM/YYYY');
-                return;
-            }
-            
-            if (startDate > endDate) {
-                showError('תאריך התחלה חייב להיות לפני או שווה לתאריך הסיום');
-                return;
-            }
-            
-            showLoading(true);
-            hideError();
-            
-            try {
-                const startDateAPI = formatDateForAPI(startDate);
-                const endDateAPI = formatDateForAPI(endDate);
-                
-                const params = new URLSearchParams({
-                    start_date: startDateAPI,
-                    end_date: endDateAPI
-                });
-                
-                console.log('Loading data for:', startDateAPI, 'to', endDateAPI);
-                
-                const response = await fetch(`/api/parking-data?${params}`);
-                const result = await response.json();
-                
-                if (result.success) {
-                    currentData = result.data;
-                    if (currentData.length === 0) {
-                        showError(`אין נתונים זמינים לתקופה ${startDateInput} - ${endDateInput}`);
-                    } else {
-                        console.log(`Loaded ${currentData.length} records`);
-                        updateDashboard();
-                    }
-                } else {
-                    showError(result.message || 'שגיאה בטעינת הנתונים');
-                }
-            } catch (error) {
-                console.error('Error loading parking data:', error);
-                showError('שגיאה בחיבור לשרת. אנא נסה שוב.');
-            } finally {
-                showLoading(false);
-            }
-        }
-
-        // עדכון הדשבורד
-        function updateDashboard() {
-            if (!currentData || currentData.length === 0) {
-                showError('לא נמצאו נתונים לטווח התאריכים שנבחר');
-                return;
-            }
-            
-            updateSummary();
-            updateStatistics();
-            updateCharts();
-            updateAlerts();
-            
-            if (!isSingleParking) {
-                updateRankings();
-            }
-            
-            document.getElementById('dashboardContent').classList.remove('hidden');
-        }
-
-        // עדכון סיכום תקופה
-        function updateSummary() {
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            const uniqueDays = [...new Set(currentData.map(d => d.report_date))].length;
-            
-            let title = `סיכום תקופה: ${startDate}`;
-            if (startDate !== endDate) {
-                title += ` - ${endDate}`;
-            }
-            title += ` (${uniqueDays} ימים)`;
-            
-            if (isSingleParking) {
-                title += ` • ${userData.parking_name}`;
-            }
-            
-            document.getElementById('summaryTitle').textContent = title;
-            
-            const totalRevenue = currentData.reduce((sum, d) => sum + (d.total_revenue_shekels || 0), 0);
-            const totalEntries = currentData.reduce((sum, d) => sum + (d.t_entry_tot || 0), 0);
-            const totalBarriers = currentData.reduce((sum, d) => sum + (d.t_open_b || 0), 0);
-            const avgDailyRevenue = uniqueDays > 0 ? totalRevenue / uniqueDays : 0;
-            const avgDailyEntries = uniqueDays > 0 ? totalEntries / uniqueDays : 0;
-            const efficiency = totalEntries > 0 ? ((totalBarriers / totalEntries) * 100) : 0;
-            
-            const summaryItems = [
-                { label: 'סה"כ הכנסות', value: `₪${totalRevenue.toLocaleString()}` },
-                { label: 'סה"כ כניסות', value: totalEntries.toLocaleString() },
-                { label: 'ממוצע יומי', value: `₪${Math.round(avgDailyRevenue).toLocaleString()}` },
-                { label: 'כניסות יומיות', value: Math.round(avgDailyEntries).toLocaleString() },
-                { label: 'יעילות מחסום', value: `${efficiency.toFixed(1)}%` },
-                { label: 'ימים פעילים', value: uniqueDays.toString() }
-            ];
-            
-            let html = '';
-            summaryItems.forEach(item => {
-                html += `
-                    <div class="summary-item">
-                        <div class="summary-item-value">${item.value}</div>
-                        <div class="summary-item-label">${item.label}</div>
-                    </div>
-                `;
-            });
-            
-            document.getElementById('summaryGrid').innerHTML = html;
-        }
-
-        // עדכון סטטיסטיקות
-        function updateStatistics() {
-            const totalRevenue = currentData.reduce((sum, d) => sum + (d.total_revenue_shekels || 0), 0);
-            const totalEntries = currentData.reduce((sum, d) => sum + (d.t_entry_tot || 0), 0);
-            const totalExits = currentData.reduce((sum, d) => sum + (d.t_exit_tot || 0), 0);
-            const totalBarrierOpenings = currentData.reduce((sum, d) => sum + (d.t_open_b || 0), 0);
-            const totalCash = currentData.reduce((sum, d) => sum + (d.s_cash_shekels || 0), 0);
-            const totalCredit = currentData.reduce((sum, d) => sum + (d.s_credit_shekels || 0), 0);
-            const totalPango = currentData.reduce((sum, d) => sum + (d.s_pango_shekels || 0), 0);
-            const totalCelo = currentData.reduce((sum, d) => sum + (d.s_celo_shekels || 0), 0);
-            const totalCasualEntries = currentData.reduce((sum, d) => sum + (d.t_entry_s || 0), 0);
-            const totalMemberEntries = currentData.reduce((sum, d) => sum + (d.t_entry_p || 0), 0);
-            const totalAppEntries = currentData.reduce((sum, d) => sum + (d.t_entry_ap || 0), 0);
-            
-            const uniqueDays = [...new Set(currentData.map(d => d.report_date))].length;
-            const avgDailyRevenue = uniqueDays > 0 ? totalRevenue / uniqueDays : 0;
-            const avgRevenuePerEntry = totalEntries > 0 ? totalRevenue / totalEntries : 0;
-            
-            const statsCards = [
-                {
-                    title: 'סה"כ הכנסות',
-                    value: `₪${totalRevenue.toLocaleString()}`,
-                    subtext: `ממוצע יומי: ₪${Math.round(avgDailyRevenue).toLocaleString()}`,
-                    trend: null
-                },
-                {
-                    title: 'סה"כ כניסות',
-                    value: totalEntries.toLocaleString(),
-                    subtext: `ממוצע ₪${avgRevenuePerEntry.toFixed(1)} לכניסה`,
-                    trend: null
-                },
-                {
-                    title: 'מזדמנים',
-                    value: totalCasualEntries.toLocaleString(),
-                    subtext: `${totalEntries > 0 ? ((totalCasualEntries/totalEntries)*100).toFixed(1) : 0}% מהכולל`,
-                    trend: null
-                },
-                {
-                    title: 'מנויים',
-                    value: totalMemberEntries.toLocaleString(),
-                    subtext: `${totalEntries > 0 ? ((totalMemberEntries/totalEntries)*100).toFixed(1) : 0}% מהכולל`,
-                    trend: null
-                },
-                {
-                    title: 'תשלומי מזומן',
-                    value: `₪${totalCash.toLocaleString()}`,
-                    subtext: `${totalRevenue > 0 ? ((totalCash/totalRevenue)*100).toFixed(1) : 0}% מההכנסות`,
-                    trend: null
-                },
-                {
-                    title: 'תשלומי אשראי',
-                    value: `₪${totalCredit.toLocaleString()}`,
-                    subtext: `${totalRevenue > 0 ? ((totalCredit/totalRevenue)*100).toFixed(1) : 0}% מההכנסות`,
-                    trend: null
-                },
-                {
-                    title: 'פנגו',
-                    value: `₪${totalPango.toLocaleString()}`,
-                    subtext: `${totalRevenue > 0 ? ((totalPango/totalRevenue)*100).toFixed(1) : 0}% מההכנסות`,
-                    trend: null
-                },
-                {
-                    title: 'סלו',
-                    value: `₪${totalCelo.toLocaleString()}`,
-                    subtext: `${totalRevenue > 0 ? ((totalCelo/totalRevenue)*100).toFixed(1) : 0}% מההכנסות`,
-                    trend: null
-                },
-                {
-                    title: 'פתיחות מחסום',
-                    value: totalBarrierOpenings.toLocaleString(),
-                    subtext: `יעילות: ${totalEntries > 0 ? ((totalBarrierOpenings/totalEntries)*100).toFixed(1) : 0}%`,
-                    trend: totalEntries > 0 && (totalBarrierOpenings/totalEntries) > 1.1 ? 'negative' : 'positive'
-                }
-            ];
-            
-            if (totalAppEntries > 0) {
-                statsCards.splice(4, 0, {
-                    title: 'כניסות אפליקציה',
-                    value: totalAppEntries.toLocaleString(),
-                    subtext: `${totalEntries > 0 ? ((totalAppEntries/totalEntries)*100).toFixed(1) : 0}% מהכולל`,
-                    trend: null
-                });
-            }
-            
-            let html = '';
-            statsCards.forEach(card => {
-                let trendHtml = '';
-                if (card.trend) {
-                    const trendIcon = card.trend === 'positive' ? '📈' : '📉';
-                    trendHtml = `<div class="trend ${card.trend}">${trendIcon}</div>`;
-                }
-                
-                html += `
-                    <div class="stat-card">
-                        <h3>${card.title}</h3>
-                        <div class="value">${card.value}</div>
-                        <div class="subtext">${card.subtext}</div>
-                        ${trendHtml}
-                    </div>
-                `;
-            });
-            
-            document.getElementById('statsGrid').innerHTML = html;
-        }
-
-        // עדכון גרפים
-        function updateCharts() {
-            createDurationChart();
-            createRevenueChart();
-            createPaymentChart();
-            createTrafficChart();
-            createWeeklyChart();
-            createEfficiencyChart();
-        }
-
-        // גרף זמני שהייה
-        function createDurationChart() {
-            const ctx = document.getElementById('durationChart').getContext('2d');
-            
-            // חישוב זמני שהייה מהנתונים
-            const durationData = {
-                '0-15 דק': currentData.reduce((sum, d) => sum + (d.stay_015 || 0), 0),
-                '15-30 דק': currentData.reduce((sum, d) => sum + (d.stay_030 || 0), 0),
-                '30-45 דק': currentData.reduce((sum, d) => sum + (d.stay045 || 0), 0),
-                '45-60 דק': currentData.reduce((sum, d) => sum + (d.stay_060 || 0), 0),
-                '1-2 שעות': currentData.reduce((sum, d) => sum + (d.stay_2 || 0), 0),
-                '2-3 שעות': currentData.reduce((sum, d) => sum + (d.stay_3 || 0), 0),
-                '3-4 שעות': currentData.reduce((sum, d) => sum + (d.stay4 || 0), 0),
-                '4-5 שעות': currentData.reduce((sum, d) => sum + (d.stay5 || 0), 0),
-                '5-6 שעות': currentData.reduce((sum, d) => sum + (d.stay6 || 0), 0),
-                '6+ שעות': currentData.reduce((sum, d) => sum + (d.stay724 || 0), 0)
-            };
-            
-            const labels = Object.keys(durationData);
-            const values = Object.values(durationData);
-            const total = values.reduce((sum, val) => sum + val, 0);
-            
-            if (charts.duration) charts.duration.destroy();
-            
-            charts.duration = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'כמות כניסות',
-                        data: values,
-                        backgroundColor: [
-                            'rgba(0, 122, 255, 0.8)',
-                            'rgba(88, 86, 214, 0.8)',
-                            'rgba(175, 82, 222, 0.8)',
-                            'rgba(255, 45, 85, 0.8)',
-                            'rgba(255, 159, 10, 0.8)',
-                            'rgba(48, 209, 88, 0.8)',
-                            'rgba(100, 210, 255, 0.8)',
-                            'rgba(191, 90, 242, 0.8)',
-                            'rgba(255, 214, 10, 0.8)',
-                            'rgba(162, 132, 94, 0.8)'
-                        ],
-                        borderRadius: 8,
-                        borderSkipped: false,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const value = context.raw;
-                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                    return `${value.toLocaleString()} כניסות (${percentage}%)`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    },
-                    onClick: function(event, elements) {
-                        if (elements.length > 0) {
-                            showDurationDetails(labels[elements[0].index], values[elements[0].index], total);
-                        }
-                    }
-                }
-            });
-        }
-
-        // הצגת פירוט זמני שהייה
-        function showDurationDetails(timeRange, count, total) {
-            const percentage = ((count / total) * 100).toFixed(1);
-            const avgDailyCount = count / [...new Set(currentData.map(d => d.report_date))].length;
-            
-            const detailsPanel = document.getElementById('durationDetails');
-            detailsPanel.innerHTML = `
-                <div style="text-align: center;">
-                    <h4 style="color: #007AFF; margin-bottom: 12px;">${timeRange}</h4>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-                        <div>
-                            <div style="font-size: 18px; font-weight: bold; color: #1d1d1f;">${count.toLocaleString()}</div>
-                            <div style="font-size: 12px; color: #8e8e93;">סה"כ כניסות</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 18px; font-weight: bold; color: #007AFF;">${percentage}%</div>
-                            <div style="font-size: 12px; color: #8e8e93;">מכלל הכניסות</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 18px; font-weight: bold; color: #30D158;">${Math.round(avgDailyCount)}</div>
-                            <div style="font-size: 12px; color: #8e8e93;">ממוצע יומי</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            detailsPanel.style.display = 'block';
-        }
-
-        // גרף מגמות הכנסות
-        function createRevenueChart() {
-            const ctx = document.getElementById('revenueChart').getContext('2d');
-            
-            const dailyData = {};
-            currentData.forEach(d => {
-                if (!dailyData[d.report_date]) {
-                    dailyData[d.report_date] = { revenue: 0, isWeekend: false };
-                }
-                dailyData[d.report_date].revenue += d.total_revenue_shekels || 0;
-                
-                // בדיקה אם זה סוף שבוע
-                const date = new Date(d.report_date);
-                const dayOfWeek = date.getDay();
-                dailyData[d.report_date].isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
-            });
-
-            const dates = Object.keys(dailyData).sort();
-            const revenues = dates.map(date => dailyData[date].revenue);
-            const colors = dates.map(date => dailyData[date].isWeekend ? 'rgba(255, 59, 48, 0.8)' : 'rgba(0, 122, 255, 0.8)');
-
-            if (charts.revenue) charts.revenue.destroy();
-
-            charts.revenue = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: dates,
-                    datasets: [{
-                        label: 'הכנסות יומיות',
-                        data: revenues,
-                        borderColor: 'rgba(0, 122, 255, 1)',
-                        backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                        pointBackgroundColor: colors,
-                        pointBorderColor: colors,
-                        pointRadius: 6,
-                        pointHoverRadius: 8,
-                        tension: 0.4,
-                        fill: true,
-                        borderWidth: 3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { 
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            cornerRadius: 8,
-                            callbacks: {
-                                title: function(context) {
-                                    return context[0].label;
-                                },
-                                label: function(context) {
-                                    return `הכנסות: ₪${context.raw.toLocaleString()}`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            },
-                            ticks: {
-                                callback: function(value) {
-                                    return '₪' + value.toLocaleString();
-                                }
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // גרף אמצעי תשלום
-        function createPaymentChart() {
-            const ctx = document.getElementById('paymentChart').getContext('2d');
-            
-            const totalCash = currentData.reduce((sum, d) => sum + (d.s_cash_shekels || 0), 0);
-            const totalCredit = currentData.reduce((sum, d) => sum + (d.s_credit_shekels || 0), 0);
-            const totalPango = currentData.reduce((sum, d) => sum + (d.s_pango_shekels || 0), 0);
-            const totalCelo = currentData.reduce((sum, d) => sum + (d.s_celo_shekels || 0), 0);
-
-            if (charts.payment) charts.payment.destroy();
-
-            charts.payment = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['מזומן', 'אשראי', 'פנגו', 'סלו'],
-                    datasets: [{
-                        data: [totalCash, totalCredit, totalPango, totalCelo],
-                        backgroundColor: [
-                            'rgba(0, 122, 255, 0.8)',
-                            'rgba(88, 86, 214, 0.8)', 
-                            'rgba(48, 209, 88, 0.8)',
-                            'rgba(175, 82, 222, 0.8)'
-                        ],
-                        borderWidth: 0,
-                        cutout: '60%'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { 
-                        legend: { 
-                            position: 'bottom',
-                            labels: {
-                                padding: 20,
-                                usePointStyle: true,
-                                generateLabels: function(chart) {
-                                    const data = chart.data;
-                                    if (data.labels.length && data.datasets.length) {
-                                        return data.labels.map((label, i) => {
-                                            const value = data.datasets[0].data[i];
-                                            const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
-                                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                            return {
-                                                text: `${label}: ₪${value.toLocaleString()} (${percentage}%)`,
-                                                fillStyle: data.datasets[0].backgroundColor[i],
-                                                hidden: false,
-                                                index: i
-                                            };
-                                        });
-                                    }
-                                    return [];
-                                }
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            cornerRadius: 8
-                        }
-                    },
-                    onClick: function(event, elements) {
-                        if (elements.length > 0) {
-                            const elementIndex = elements[0].index;
-                            const paymentTypes = ['מזומן', 'אשראי', 'פנגו', 'סלו'];
-                            const values = [totalCash, totalCredit, totalPango, totalCelo];
-                            showPaymentDetails(paymentTypes[elementIndex], values[elementIndex]);
-                        }
-                    }
-                }
-            });
-        }
-
-        // הצגת פירוט תשלומים
-        function showPaymentDetails(paymentType, amount) {
-            const total = [totalCash, totalCredit, totalPango, totalCelo].reduce((a, b) => a + b, 0);
-            const percentage = ((amount / total) * 100).toFixed(1);
-            const avgDaily = amount / [...new Set(currentData.map(d => d.report_date))].length;
-            
-            const detailsPanel = document.getElementById('paymentDetails');
-            detailsPanel.innerHTML = `
-                <div style="text-align: center;">
-                    <h4 style="color: #007AFF; margin-bottom: 12px;">תשלומי ${paymentType}</h4>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-                        <div>
-                            <div style="font-size: 18px; font-weight: bold; color: #1d1d1f;">₪${amount.toLocaleString()}</div>
-                            <div style="font-size: 12px; color: #8e8e93;">סה"כ סכום</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 18px; font-weight: bold; color: #007AFF;">${percentage}%</div>
-                            <div style="font-size: 12px; color: #8e8e93;">מכלל ההכנסות</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 18px; font-weight: bold; color: #30D158;">₪${Math.round(avgDaily).toLocaleString()}</div>
-                            <div style="font-size: 12px; color: #8e8e93;">ממוצע יומי</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            detailsPanel.style.display = 'block';
-        }
-
-        // גרף ניתוח תנועה
-        function createTrafficChart() {
-            const ctx = document.getElementById('trafficChart').getContext('2d');
-            
-            const dailyTraffic = {};
-            currentData.forEach(d => {
-                if (!dailyTraffic[d.report_date]) {
-                    dailyTraffic[d.report_date] = { entries: 0, exits: 0 };
-                }
-                dailyTraffic[d.report_date].entries += d.t_entry_tot || 0;
-                dailyTraffic[d.report_date].exits += d.t_exit_tot || 0;
-            });
-
-            const dates = Object.keys(dailyTraffic).sort();
-            const entries = dates.map(date => dailyTraffic[date].entries);
-            const exits = dates.map(date => dailyTraffic[date].exits);
-
-            if (charts.traffic) charts.traffic.destroy();
-
-            charts.traffic = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: dates,
-                    datasets: [
-                        {
-                            label: 'כניסות',
-                            data: entries,
-                            backgroundColor: 'rgba(0, 122, 255, 0.8)',
-                            borderRadius: 4,
-                            borderSkipped: false,
-                        },
-                        {
-                            label: 'יציאות', 
-                            data: exits,
-                            backgroundColor: 'rgba(88, 86, 214, 0.8)',
-                            borderRadius: 4,
-                            borderSkipped: false,
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { 
-                        legend: { 
-                            position: 'top',
-                            labels: {
-                                usePointStyle: true,
-                                padding: 20
-                            }
-                        }
-                    },
-                    scales: { 
-                        y: { 
-                            beginAtZero: true,
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // גרף השוואה שבועית
-        function createWeeklyChart() {
-            const ctx = document.getElementById('weeklyChart').getContext('2d');
-            
-            const weekdays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
-            const weeklyData = {};
-            
-            weekdays.forEach(day => {
-                weeklyData[day] = { revenue: 0, count: 0, isWeekend: day === 'שישי' || day === 'שבת' };
-            });
-
-            currentData.forEach(d => {
-                const date = new Date(d.report_date);
-                const dayName = weekdays[date.getDay()];
-                if (weeklyData[dayName]) {
-                    weeklyData[dayName].revenue += d.total_revenue_shekels || 0;
-                    weeklyData[dayName].count++;
-                }
-            });
-
-            const avgRevenues = weekdays.map(day => 
-                weeklyData[day].count > 0 ? weeklyData[day].revenue / weeklyData[day].count : 0
-            );
-            
-            const colors = weekdays.map(day => 
-                weeklyData[day].isWeekend ? 'rgba(255, 59, 48, 0.8)' : 'rgba(0, 122, 255, 0.8)'
-            );
-
-            if (charts.weekly) charts.weekly.destroy();
-
-            charts.weekly = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: weekdays,
-                    datasets: [{
-                        label: 'ממוצע הכנסות',
-                        data: avgRevenues,
-                        backgroundColor: colors,
-                        borderRadius: 8,
-                        borderSkipped: false,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            },
-                            ticks: {
-                                callback: function(value) {
-                                    return '₪' + value.toLocaleString();
-                                }
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // גרף יעילות מחסומים
-        function createEfficiencyChart() {
-            const ctx = document.getElementById('efficiencyChart').getContext('2d');
-            
-            const dailyEfficiency = {};
-            currentData.forEach(d => {
-                if (!dailyEfficiency[d.report_date]) {
-                    dailyEfficiency[d.report_date] = { barriers: 0, entries: 0 };
-                }
-                dailyEfficiency[d.report_date].barriers += d.t_open_b || 0;
-                dailyEfficiency[d.report_date].entries += d.t_entry_tot || 0;
-            });
-
-            const dates = Object.keys(dailyEfficiency).sort();
-            const efficiencyRates = dates.map(date => {
-                const data = dailyEfficiency[date];
-                return data.entries > 0 ? ((data.barriers / data.entries) * 100) : 0;
-            });
-
-            // צבע על פי יעילות - ירוק עד 110%, כתום עד 130%, אדום מעל
-            const colors = efficiencyRates.map(rate => {
-                if (rate <= 110) return 'rgba(48, 209, 88, 0.8)';
-                if (rate <= 130) return 'rgba(255, 214, 10, 0.8)';
-                return 'rgba(255, 59, 48, 0.8)';
-            });
-
-            if (charts.efficiency) charts.efficiency.destroy();
-
-            charts.efficiency = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: dates,
-                    datasets: [{
-                        label: 'יעילות מחסום (%)',
-                        data: efficiencyRates,
-                        borderColor: 'rgba(0, 122, 255, 1)',
-                        backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                        pointBackgroundColor: colors,
-                        pointBorderColor: colors,
-                        pointRadius: 6,
-                        pointHoverRadius: 8,
-                        tension: 0.3,
-                        fill: true,
-                        borderWidth: 3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { 
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            cornerRadius: 8,
-                            callbacks: {
-                                label: function(context) {
-                                    const efficiency = context.raw.toFixed(1);
-                                    let status = '✅ מצוין';
-                                    if (efficiency > 110) status = '⚠️ גבוה';
-                                    if (efficiency > 130) status = '🚨 חריג';
-                                    return `יעילות: ${efficiency}% ${status}`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            },
-                            ticks: {
-                                callback: function(value) {
-                                    return value + '%';
-                                }
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // עדכון התראות
-        function updateAlerts() {
-            const alerts = findTrends();
-            let html = '';
-            
-            if (alerts.length === 0) {
-                html = `
-                    <div class="alert positive">
-                        <div class="alert-icon">✅</div>
-                        <div class="alert-content">
-                            <div class="alert-title">המערכת פועלת בצורה תקינה</div>
-                            <div class="alert-details">לא זוהו שינויים משמעותיים או חריגות בנתונים</div>
-                        </div>
-                    </div>
-                `;
-            } else {
-                alerts.slice(0, 5).forEach(alert => {
-                    const isPositive = alert.change > 0;
-                    const alertClass = isPositive ? 'positive' : 'negative';
-                    const icon = isPositive ? '📈' : '📉';
-                    
-                    html += `
-                        <div class="alert ${alertClass}">
-                            <div class="alert-icon">${icon}</div>
-                            <div class="alert-content">
-                                <div class="alert-title">שינוי ב${alert.type}${isSingleParking ? '' : ' - ' + alert.parking}</div>
-                                <div class="alert-details">
-                                    ${alert.previousDate}: ${alert.previous.toLocaleString()} → 
-                                    ${alert.currentDate}: ${alert.current.toLocaleString()} 
-                                    (${alert.change > 0 ? '+' : ''}${alert.change.toFixed(1)}%)
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-            
-            document.getElementById('alertsContainer').innerHTML = html;
-        }
-
-        // פונקציה לזיהוי מגמות
-        function findTrends() {
-            const alerts = [];
-            const weeklyData = {};
-            
-            // קיבוץ לפי חניון ושבוע
-            currentData.forEach(d => {
-                const date = new Date(d.report_date);
-                const weekNumber = Math.floor(date.getTime() / (7 * 24 * 60 * 60 * 1000));
-                const parkingName = d.parking_name || 'חניון';
-                
-                if (!weeklyData[parkingName]) weeklyData[parkingName] = {};
-                if (!weeklyData[parkingName][weekNumber]) {
-                    weeklyData[parkingName][weekNumber] = {
-                        revenue: 0,
-                        barriers: 0,
-                        entries: 0,
-                        dates: []
-                    };
-                }
-                
-                weeklyData[parkingName][weekNumber].revenue += d.total_revenue_shekels || 0;
-                weeklyData[parkingName][weekNumber].barriers += d.t_open_b || 0;
-                weeklyData[parkingName][weekNumber].entries += d.t_entry_tot || 0;
-                weeklyData[parkingName][weekNumber].dates.push(d.report_date);
-            });
-            
-            // חיפוש מגמות
-            Object.keys(weeklyData).forEach(parkingName => {
-                const weeks = Object.keys(weeklyData[parkingName]).sort((a, b) => b - a);
-                
-                if (weeks.length >= 2) {
-                    const currentWeek = weeklyData[parkingName][weeks[0]];
-                    const previousWeek = weeklyData[parkingName][weeks[1]];
-                    
-                    // בדיקת שינוי בהכנסות
-                    if (previousWeek.revenue > 0) {
-                        const revenueChange = ((currentWeek.revenue - previousWeek.revenue) / previousWeek.revenue) * 100;
-                        if (Math.abs(revenueChange) >= 10) {
-                            alerts.push({
-                                type: 'הכנסות',
-                                parking: parkingName,
-                                change: revenueChange,
-                                current: currentWeek.revenue,
-                                previous: previousWeek.revenue,
-                                currentDate: `שבוע נוכחי`,
-                                previousDate: `שבוע קודם`
-                            });
-                        }
-                    }
-                    
-                    // בדיקת שינוי בכניסות
-                    if (previousWeek.entries > 0) {
-                        const entriesChange = ((currentWeek.entries - previousWeek.entries) / previousWeek.entries) * 100;
-                        if (Math.abs(entriesChange) >= 10) {
-                            alerts.push({
-                                type: 'כניסות',
-                                parking: parkingName,
-                                change: entriesChange,
-                                current: currentWeek.entries,
-                                previous: previousWeek.entries,
-                                currentDate: `שבוע נוכחי`,
-                                previousDate: `שבוע קודם`
-                            });
-                        }
-                    }
-                    
-                    // בדיקת יעילות מחסום חריגה
-                    if (currentWeek.entries > 0) {
-                        const efficiency = (currentWeek.barriers / currentWeek.entries) * 100;
-                        if (efficiency > 130) {
-                            alerts.push({
-                                type: 'יעילות מחסום',
-                                parking: parkingName,
-                                change: efficiency - 100,
-                                current: efficiency,
-                                previous: 100,
-                                currentDate: `יעילות נוכחית`,
-                                previousDate: `יעילות אידיאלית`
-                            });
-                        }
-                    }
-                }
-            });
-            
-            return alerts.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
-        }
-
-        // עדכון דירוג החניונים (רק למשתמשים עם מספר חניונים)
-        function updateRankings() {
-            if (isSingleParking) return;
-            
-            const parkingStats = {};
-            
-            currentData.forEach(d => {
-                const parkingName = d.parking_name || 'חניון לא מזוהה';
-                if (!parkingStats[parkingName]) {
-                    parkingStats[parkingName] = {
-                        revenue: 0,
-                        entries: 0,
-                        barriers: 0,
-                        casualEntries: 0,
-                        memberEntries: 0
-                    };
-                }
-                
-                parkingStats[parkingName].revenue += d.total_revenue_shekels || 0;
-                parkingStats[parkingName].entries += d.t_entry_tot || 0;
-                parkingStats[parkingName].barriers += d.t_open_b || 0;
-                parkingStats[parkingName].casualEntries += d.t_entry_s || 0;
-                parkingStats[parkingName].memberEntries += d.t_entry_p || 0;
-            });
-
-            const rankings = Object.entries(parkingStats)
-                .map(([name, stats]) => ({
-                    name: name,
-                    revenue: stats.revenue,
-                    entries: stats.entries,
-                    barriers: stats.barriers,
-                    efficiency: stats.entries > 0 ? (stats.barriers / stats.entries * 100).toFixed(1) : 0,
-                    memberPercent: stats.entries > 0 ? (stats.memberEntries / stats.entries * 100).toFixed(1) : 0,
-                    avgRevenuePerEntry: stats.entries > 0 ? (stats.revenue / stats.entries).toFixed(1) : 0
-                }))
-                .sort((a, b) => b.revenue - a.revenue);
-
-            let html = '';
-            rankings.forEach((parking, index) => {
-                let medal = '';
-                if (index === 0) medal = '🥇 ';
-                else if (index === 1) medal = '🥈 ';
-                else if (index === 2) medal = '🥉 ';
-                
-                const efficiencyColor = parking.efficiency > 130 ? '#FF3B30' : parking.efficiency > 110 ? '#FF9500' : '#30D158';
-                
-                html += `
-                    <div class="rank-item">
-                        <div class="rank-number">${index + 1}</div>
-                        <div class="rank-info">
-                            <div class="rank-name">${medal}${parking.name}</div>
-                            <div class="rank-details">
-                                ${parking.entries.toLocaleString()} כניסות • 
-                                ${parking.memberPercent}% מנויים • 
-                                יעילות: <span style="color: ${efficiencyColor}; font-weight: bold;">${parking.efficiency}%</span> • 
-                                ממוצע: ₪${parking.avgRevenuePerEntry}
-                            </div>
-                        </div>
-                        <div class="rank-value">
-                            ₪${parking.revenue.toLocaleString()}
-                            <div class="rank-subvalue">${parking.barriers.toLocaleString()} פתיחות</div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            document.getElementById('rankingsContainer').innerHTML = html;
-        }
-
-        // הגדרת event listeners
-        function setupEventListeners() {
-            // כפתורי טעינת נתונים
-            document.getElementById('loadDataBtn').addEventListener('click', loadParkingData);
-            document.getElementById('logoutBtn').addEventListener('click', logout);
-            
-            // כפתורי טווחים מהירים
-            document.querySelectorAll('.quick-range').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    setQuickRange(this.dataset.range);
-                });
-            });
-            
-            // כפתור חיפוש מתקדם
-            document.getElementById('investigateBtn').addEventListener('click', async function() {
-                if (!userData) {
-                    showError('❌ נתוני משתמש לא נטענו עדיין');
-                    return;
-                }
-                
+// File input handler
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    document.getElementById('uploadInfo').innerHTML = '<div class="loading"></div> טוען נתונים...';
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const content = e.target.result;
+        
+        Papa.parse(content, {
+            header: false,
+            skipEmptyLines: true,
+            encoding: 'windows-1255',
+            complete: function(results) {
                 try {
-                    showLoading(true);
-                    
-                    // חיפוש בטווח רחב מאוד (2 שנים)
-                    const endDate = new Date();
-                    const startDate = new Date(endDate.getFullYear() - 2, 0, 1);
-                    
-                    const params = new URLSearchParams({
-                        start_date: formatDateForAPI(startDate),
-                        end_date: formatDateForAPI(endDate)
-                    });
-                    
-                    const response = await fetch(`/api/parking-data?${params}`);
-                    const result = await response.json();
-                    
-                    if (result.success && result.data.length > 0) {
-                        // ניתוח התאריכים שנמצאו
-                        const dates = result.data.map(d => d.report_date).sort();
-                        const firstDate = dates[0];
-                        const lastDate = dates[dates.length - 1];
-                        
-                        // עדכון השדות עם הטווח שנמצא
-                        const firstDateObj = new Date(firstDate);
-                        const lastDateObj = new Date(lastDate);
-                        document.getElementById('startDate').value = formatDateForInput(firstDateObj);
-                        document.getElementById('endDate').value = formatDateForInput(lastDateObj);
-                        
-                        currentData = result.data;
-                        updateDashboard();
-                        
-                        showError(`🔍 נמצאו ${result.data.length} רשומות בטווח ${formatDateForInput(firstDateObj)} - ${formatDateForInput(lastDateObj)}`);
-                    } else {
-                        showError(`🚧 לא נמצאו נתונים עבור ${userData.parking_name}. פנה למנהל המערכת.`);
-                    }
-                    
+                    processData(results.data);
                 } catch (error) {
-                    showError('❌ שגיאה בחיפוש המתקדם: ' + error.message);
-                } finally {
-                    showLoading(false);
+                    console.error('Error:', error);
+                    document.getElementById('uploadInfo').textContent = '❌ שגיאה בטעינת הקובץ';
                 }
-            });
-            
-            // אימות תאריכים בזמן הקלדה
-            const startDateInput = document.getElementById('startDate');
-            const endDateInput = document.getElementById('endDate');
-            
-            [startDateInput, endDateInput].forEach(input => {
-                input.addEventListener('input', function() {
-                    // הוספת סלאשים אוטומטית
-                    let value = this.value.replace(/\D/g, '');
-                    
-                    if (value.length >= 2) {
-                        let day = value.substring(0, 2);
-                        if (parseInt(day) > 31) day = '31';
-                        value = day + '/' + value.substring(2);
-                    }
-                    if (value.length >= 5) {
-                        let month = value.substring(3, 5);
-                        if (parseInt(month) > 12) month = '12';
-                        value = value.substring(0, 3) + month + '/' + value.substring(5, 9);
-                    }
-                    
-                    this.value = value;
-                    
-                    // אינדיקטור ויזואלי
-                    if (value.length === 10) {
-                        const date = parseInputDate(value);
-                        if (date) {
-                            this.style.borderColor = '#30D158';
-                            this.style.backgroundColor = 'rgba(48, 209, 88, 0.05)';
-                        } else {
-                            this.style.borderColor = '#FF3B30';
-                            this.style.backgroundColor = 'rgba(255, 59, 48, 0.05)';
-                        }
-                    } else {
-                        this.style.borderColor = 'rgba(0, 0, 0, 0.1)';
-                        this.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
-                    }
-                });
+            }
+        });
+    };
+    reader.readAsText(file, 'windows-1255');
+});
+
+// Process CSV data
+function processData(rawData) {
+    console.log('Processing data:', rawData.length, 'rows');
+    data = [];
+    
+    // Skip header rows and process data
+    for (let i = 2; i < rawData.length; i++) {
+        const row = rawData[i];
+        if (!row || row.length < 40) continue;
+        
+        try {
+            const item = {
+                // Basic info
+                projectNumber: row[0] || '',
+                parking: row[6] || '',
+                date: row[4] || '',
                 
-                // טעינה עם Enter
-                input.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        loadParkingData();
-                    }
-                });
-            });
-        }
-
-        // הגדרת טווח תאריכים מהיר
-        function setQuickRange(range) {
-            const today = new Date();
-            let startDate, endDate;
-            
-            switch(range) {
-                case 'yesterday':
-                    startDate = endDate = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-                    break;
-                case 'month':
-                    endDate = today;
-                    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-                    break;
-                case 'lastmonth':
-                    endDate = new Date(today.getFullYear(), today.getMonth(), 0);
-                    startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-                    break;
-                default:
-                    return;
-            }
-            
-            document.getElementById('startDate').value = formatDateForInput(startDate);
-            document.getElementById('endDate').value = formatDateForInput(endDate);
-            
-            // טען נתונים אוטומטית
-            loadParkingData();
-        }
-
-        // פונקציות עזר
-        function showLoading(show) {
-            const loadingSection = document.getElementById('loadingSection');
-            const dashboardContent = document.getElementById('dashboardContent');
-            
-            if (show) {
-                loadingSection.classList.remove('hidden');
-                dashboardContent.classList.add('hidden');
-            } else {
-                loadingSection.classList.add('hidden');
-            }
-        }
-
-        function showError(message) {
-            const errorSection = document.getElementById('errorSection');
-            const dashboardContent = document.getElementById('dashboardContent');
-            
-            document.getElementById('errorMessage').innerHTML = message;
-            errorSection.classList.remove('hidden');
-            dashboardContent.classList.add('hidden');
-        }
-
-        function hideError() {
-            document.getElementById('errorSection').classList.add('hidden');
-        }
-
-        function logout() {
-            if (confirm('האם אתה בטוח שברצונך להתנתק?')) {
-                window.location.href = '/logout';
-            }
-        }
-
-        // אנימציות נוספות
-        document.addEventListener('DOMContentLoaded', function() {
-            // אנימציית הופעה חלקה לקלפי הסטטיסטיקה
-            const observerOptions = {
-                threshold: 0.1,
-                rootMargin: '0px 0px -50px 0px'
+                // Revenue data (convert to shekels from agorot)
+                cash: (parseFloat(row[7]) || 0) / 100,
+                credit: (parseFloat(row[8]) || 0) / 100,
+                pango: (parseFloat(row[10]) || 0) / 100,
+                cello: (parseFloat(row[11]) || 0) / 100,
+                
+                // Entry/Exit data
+                casualEntries: parseFloat(row[17]) || 0,
+                memberEntries: parseFloat(row[18]) || 0,
+                totalEntries: parseFloat(row[19]) || 0,
+                casualExits: parseFloat(row[20]) || 0,
+                memberExits: parseFloat(row[21]) || 0,
+                totalExits: parseFloat(row[22]) || 0,
+                appEntries: parseFloat(row[23]) || 0,
+                appExits: parseFloat(row[24]) || 0,
+                
+                // Barrier & Encoders
+                barrierOpenings: parseFloat(row[16]) || 0,
+                encoder1: parseFloat(row[12]) || 0,
+                encoder2: parseFloat(row[13]) || 0,
+                encoder3: parseFloat(row[14]) || 0,
+                encoderTotal: parseFloat(row[15]) || 0,
+                
+                // Stay duration
+                stay015: parseFloat(row[27]) || 0,
+                stay030: parseFloat(row[28]) || 0,
+                stay045: parseFloat(row[29]) || 0,
+                stay060: parseFloat(row[30]) || 0,
+                stay2: parseFloat(row[31]) || 0,
+                stay3: parseFloat(row[32]) || 0,
+                stay4: parseFloat(row[33]) || 0,
+                stay5: parseFloat(row[34]) || 0,
+                stay6: parseFloat(row[35]) || 0,
+                stay724: parseFloat(row[36]) || 0,
             };
-
-            const observer = new IntersectionObserver(function(entries) {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.style.opacity = '1';
-                        entry.target.style.transform = 'translateY(0)';
-                    }
-                });
-            }, observerOptions);
-
-            // התחלה עם אלמנטים מוסתרים
-            const animatedElements = document.querySelectorAll('.stat-card, .chart-card, .alerts-section, .rankings');
-            animatedElements.forEach(el => {
-                el.style.opacity = '0';
-                el.style.transform = 'translateY(20px)';
-                el.style.transition = 'all 0.6s ease';
-                observer.observe(el);
-            });
-        });
-
-        // פונקציה לעדכון זמן אמת (אופציונלי)
-        function startRealTimeUpdates() {
-            setInterval(async function() {
-                // רק אם אנחנו מציגים נתוני אתמול
-                const startDate = document.getElementById('startDate').value;
-                const endDate = document.getElementById('endDate').value;
-                const today = formatDateForInput(new Date());
-                const yesterday = formatDateForInput(new Date(Date.now() - 24 * 60 * 60 * 1000));
-                
-                if (startDate === yesterday && endDate === yesterday) {
-                    await loadParkingData();
-                }
-            }, 5 * 60 * 1000); // עדכון כל 5 דקות
+            
+            // Calculate total revenue
+            item.revenue = item.cash + item.credit + item.pango + item.cello;
+            
+            // Parse date
+            item.dateObj = parseDate(item.date);
+            item.weekday = getWeekday(item.date);
+            item.isWeekend = isWeekend(item.date);
+            
+            // Add to data if valid
+            if (item.parking && item.date) {
+                data.push(item);
+            }
+        } catch (e) {
+            console.warn('Error in row', i, e);
         }
+    }
+    
+    console.log('Processed data:', data.length, 'valid rows');
+    
+    // Check if single parking mode
+    const uniqueParkings = [...new Set(data.map(d => d.parking))];
+    isSingleParkingMode = uniqueParkings.length === 1;
+    
+    if (isSingleParkingMode) {
+        document.body.classList.add('single-parking-mode');
+    } else {
+        document.body.classList.remove('single-parking-mode');
+    }
+    
+    // Update UI
+    document.getElementById('uploadInfo').textContent = `✅ נטענו ${data.length} רשומות`;
+    updateDashboard();
+}
 
-        // הפעלת עדכונים בזמן אמת אחרי טעינה ראשונית
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(startRealTimeUpdates, 10000); // התחל אחרי 10 שניות
-        });
-    </script>
+// Parse date function
+function parseDate(dateStr) {
+    try {
+        const parts = dateStr.split('/');
+        return new Date(parts[2], parts[1] - 1, parts[0]);
+    } catch (e) {
+        return new Date();
+    }
+}
+
+// Get weekday
+function getWeekday(dateStr) {
+    try {
+        const parts = dateStr.split('/');
+        const date = new Date(parts[2], parts[1] - 1, parts[0]);
+        const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+        return days[date.getDay()];
+    } catch (e) {
+        return '';
+    }
+}
+
+// Check if weekend
+function isWeekend(dateStr) {
+    const day = getWeekday(dateStr);
+    return day === 'שישי' || day === 'שבת';
+}
+
+// Update dashboard
+function updateDashboard() {
+    updateDateInfo();
+    updateStats();
+    updateCharts();
+    updateAlerts();
+    
+    // Show dashboard with animation
+    const dashboard = document.getElementById('dashboard');
+    dashboard.style.display = 'block';
+    setTimeout(() => {
+        dashboard.style.opacity = '1';
+    }, 100);
+}
+
+// Update date info
+function updateDateInfo() {
+    const dates = data.map(d => d.date).filter(Boolean);
+    if (dates.length > 0) {
+        const minDate = dates.reduce((min, date) => date < min ? date : min);
+        const maxDate = dates.reduce((max, date) => date > max ? date : max);
+        const parkingName = isSingleParkingMode ? data[0].parking : 'כל החניונים';
+        document.getElementById('dateInfo').textContent = `${parkingName} | ${minDate} - ${maxDate}`;
+    }
+}
+
+// Update statistics cards
+function updateStats() {
+    const stats = calculateStats();
+    
+    const statsHTML = `
+        <div class="stat-card">
+            <div class="icon">💰</div>
+            <h3>סה"כ הכנסות</h3>
+            <div class="value">
+                ₪${stats.totalRevenue.toLocaleString()}
+            </div>
+            <div class="subtext">מכל אמצעי התשלום</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="icon">🚗</div>
+            <h3>סה"כ כניסות</h3>
+            <div class="value">
+                ${stats.totalEntries.toLocaleString()}
+            </div>
+            <div class="subtext">${stats.dailyAvgEntries.toLocaleString()} בממוצע ליום</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="icon">👤</div>
+            <h3>מזדמנים</h3>
+            <div class="value">
+                ${stats.casualPercent.toFixed(1)}%
+            </div>
+            <div class="subtext">${stats.totalCasual.toLocaleString()} כניסות</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="icon">⭐</div>
+            <h3>מנויים</h3>
+            <div class="value">
+                ${stats.memberPercent.toFixed(1)}%
+            </div>
+            <div class="subtext">${stats.totalMembers.toLocaleString()} כניסות</div>
+        </div>
+        
+        ${stats.totalApp > 0 ? `
+        <div class="stat-card">
+            <div class="icon">📱</div>
+            <h3>אפליקציה</h3>
+            <div class="value">
+                ${stats.appPercent.toFixed(1)}%
+            </div>
+            <div class="subtext">${stats.totalApp.toLocaleString()} כניסות</div>
+        </div>
+        ` : ''}
+        
+        <div class="stat-card">
+            <div class="icon">🚧</div>
+            <h3>פתיחות מחסום</h3>
+            <div class="value">
+                ${stats.totalBarrier.toLocaleString()}
+            </div>
+            <div class="subtext">${stats.barrierPercent.toFixed(1)}% מהכניסות</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="icon">💵</div>
+            <h3>מזומן</h3>
+            <div class="value">
+                ${stats.cashPercent.toFixed(1)}%
+            </div>
+            <div class="subtext">₪${stats.totalCash.toLocaleString()}</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="icon">💳</div>
+            <h3>אשראי</h3>
+            <div class="value">
+                ${stats.creditPercent.toFixed(1)}%
+            </div>
+            <div class="subtext">₪${stats.totalCredit.toLocaleString()}</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="icon">📲</div>
+            <h3>פנגו</h3>
+            <div class="value">
+                ${stats.pangoPercent.toFixed(1)}%
+            </div>
+            <div class="subtext">₪${stats.totalPango.toLocaleString()}</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="icon">📞</div>
+            <h3>סלו</h3>
+            <div class="value">
+                ${stats.celloPercent.toFixed(1)}%
+            </div>
+            <div class="subtext">₪${stats.totalCello.toLocaleString()}</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="icon">📊</div>
+            <h3>ממוצע יומי</h3>
+            <div class="value">
+                ₪${stats.dailyAvgRevenue.toLocaleString()}
+            </div>
+            <div class="subtext">הכנסה יומית ממוצעת</div>
+        </div>
+        
+        ${!isSingleParkingMode ? `
+        <div class="stat-card multi-parking-only">
+            <div class="icon">🏢</div>
+            <h3>חניונים פעילים</h3>
+            <div class="value">
+                ${stats.uniqueParkings}
+            </div>
+            <div class="subtext">מתוך רשת החניונים</div>
+        </div>
+        ` : ''}
+    `;
+    
+    document.getElementById('statsGrid').innerHTML = statsHTML;
+}
+
+// Calculate statistics
+function calculateStats() {
+    const totalRevenue = data.reduce((sum, d) => sum + d.revenue, 0);
+    const totalCash = data.reduce((sum, d) => sum + d.cash, 0);
+    const totalCredit = data.reduce((sum, d) => sum + d.credit, 0);
+    const totalPango = data.reduce((sum, d) => sum + d.pango, 0);
+    const totalCello = data.reduce((sum, d) => sum + d.cello, 0);
+    
+    const totalEntries = data.reduce((sum, d) => sum + d.totalEntries, 0);
+    const totalCasual = data.reduce((sum, d) => sum + d.casualEntries, 0);
+    const totalMembers = data.reduce((sum, d) => sum + d.memberEntries, 0);
+    const totalApp = data.reduce((sum, d) => sum + d.appEntries, 0);
+    
+    const totalBarrier = data.reduce((sum, d) => sum + d.barrierOpenings, 0);
+    
+    const uniqueDays = [...new Set(data.map(d => d.date))].length;
+    const uniqueParkings = [...new Set(data.map(d => d.parking))].length;
+    
+    return {
+        totalRevenue,
+        totalCash,
+        totalCredit,
+        totalPango,
+        totalCello,
+        totalEntries,
+        totalCasual,
+        totalMembers,
+        totalApp,
+        totalBarrier,
+        uniqueDays,
+        uniqueParkings,
+        
+        // Percentages
+        cashPercent: totalRevenue > 0 ? (totalCash / totalRevenue) * 100 : 0,
+        creditPercent: totalRevenue > 0 ? (totalCredit / totalRevenue) * 100 : 0,
+        pangoPercent: totalRevenue > 0 ? (totalPango / totalRevenue) * 100 : 0,
+        celloPercent: totalRevenue > 0 ? (totalCello / totalRevenue) * 100 : 0,
+        
+        casualPercent: totalEntries > 0 ? (totalCasual / totalEntries) * 100 : 0,
+        memberPercent: totalEntries > 0 ? (totalMembers / totalEntries) * 100 : 0,
+        appPercent: totalEntries > 0 ? (totalApp / totalEntries) * 100 : 0,
+        
+        barrierPercent: totalEntries > 0 ? (totalBarrier / totalEntries) * 100 : 0,
+        
+        // Averages
+        dailyAvgRevenue: uniqueDays > 0 ? Math.round(totalRevenue / uniqueDays) : 0,
+        dailyAvgEntries: uniqueDays > 0 ? Math.round(totalEntries / uniqueDays) : 0,
+    };
+}
+
+// Update all charts
+function updateCharts() {
+    createRevenueChart();
+    createPaymentChart();
+    createEntriesChart();
+    createDailyChart();
+    createStayDurationChart();
+    createBarrierChart();
+    updateEncodersInfo();
+    
+    if (!isSingleParkingMode) {
+        createParkingComparisonChart();
+        updateParkingRanking();
+    }
+}
+
+// Create revenue trends chart
+function createRevenueChart() {
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    
+    // Aggregate data by date
+    const dailyData = {};
+    data.forEach(d => {
+        if (!dailyData[d.date]) {
+            dailyData[d.date] = { revenue: 0, entries: 0 };
+        }
+        dailyData[d.date].revenue += d.revenue;
+        dailyData[d.date].entries += d.totalEntries;
+    });
+    
+    const dates = Object.keys(dailyData).sort();
+    const revenues = dates.map(date => dailyData[date].revenue);
+    const entries = dates.map(date => dailyData[date].entries);
+    
+    if (charts.revenue) charts.revenue.destroy();
+    
+    charts.revenue = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'הכנסות',
+                data: revenues,
+                borderColor: '#007AFF',
+                backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                tension: 0.4,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                yAxisID: 'y'
+            }, {
+                label: 'כניסות',
+                data: entries,
+                borderColor: '#5AC8FA',
+                backgroundColor: 'rgba(90, 200, 250, 0.1)',
+                tension: 0.4,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    titleColor: '#000',
+                    bodyColor: '#6C6C70',
+                    borderColor: '#E5E5EA',
+                    borderWidth: 1,
+                    cornerRadius: 12,
+                    padding: 12,
+                    displayColors: true,
+                    callbacks: {
+                        label: function(context) {
+                            if (context.datasetIndex === 0) {
+                                return `הכנסות: ₪${context.parsed.y.toLocaleString()}`;
+                            } else {
+                                return `כניסות: ${context.parsed.y.toLocaleString()}`;
+                            }
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    grid: {
+                        display: true,
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return '₪' + value.toLocaleString();
+                        }
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    grid: {
+                        display: false
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Create payment methods chart
+function createPaymentChart() {
+    const ctx = document.getElementById('paymentChart').getContext('2d');
+    
+    const totalCash = data.reduce((sum, d) => sum + d.cash, 0);
+    const totalCredit = data.reduce((sum, d) => sum + d.credit, 0);
+    const totalPango = data.reduce((sum, d) => sum + d.pango, 0);
+    const totalCello = data.reduce((sum, d) => sum + d.cello, 0);
+    
+    if (charts.payment) charts.payment.destroy();
+    
+    charts.payment = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['מזומן', 'אשראי', 'פנגו', 'סלו'],
+            datasets: [{
+                data: [totalCash, totalCredit, totalPango, totalCello],
+                backgroundColor: [
+                    '#007AFF',
+                    '#5AC8FA',
+                    '#AF52DE',
+                    '#FF9500'
+                ],
+                borderWidth: 3,
+                borderColor: '#FFFFFF'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        generateLabels: function(chart) {
+                            const data = chart.data;
+                            if (data.labels.length && data.datasets.length) {
+                                const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                return data.labels.map((label, i) => {
+                                    const value = data.datasets[0].data[i];
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return {
+                                        text: `${label}: ₪${Math.round(value).toLocaleString()} (${percentage}%)`,
+                                        fillStyle: data.datasets[0].backgroundColor[i],
+                                        strokeStyle: '#fff',
+                                        lineWidth: 2,
+                                        hidden: isNaN(value),
+                                        index: i
+                                    };
+                                });
+                            }
+                            return [];
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    titleColor: '#000',
+                    bodyColor: '#6C6C70',
+                    borderColor: '#E5E5EA',
+                    borderWidth: 1,
+                    cornerRadius: 12,
+                    padding: 12,
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return `${context.label}: ₪${Math.round(context.parsed).toLocaleString()} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Create entries chart
+function createEntriesChart() {
+    const ctx = document.getElementById('entriesChart').getContext('2d');
+    
+    const totalCasual = data.reduce((sum, d) => sum + d.casualEntries, 0);
+    const totalMembers = data.reduce((sum, d) => sum + d.memberEntries, 0);
+    const totalApp = data.reduce((sum, d) => sum + d.appEntries, 0);
+    
+    const chartData = {
+        labels: ['מזדמנים', 'מנויים'],
+        datasets: [{
+            data: [totalCasual, totalMembers],
+            backgroundColor: ['#34C759', '#007AFF'],
+            borderWidth: 3,
+            borderColor: '#FFFFFF'
+        }]
+    };
+    
+    if (totalApp > 0) {
+        chartData.labels.push('אפליקציה');
+        chartData.datasets[0].data.push(totalApp);
+        chartData.datasets[0].backgroundColor.push('#AF52DE');
+    }
+    
+    if (charts.entries) charts.entries.destroy();
+    
+    charts.entries = new Chart(ctx, {
+        type: 'pie',
+        data: chartData,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        generateLabels: function(chart) {
+                            const data = chart.data;
+                            if (data.labels.length && data.datasets.length) {
+                                const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                return data.labels.map((label, i) => {
+                                    const value = data.datasets[0].data[i];
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return {
+                                        text: `${label}: ${value.toLocaleString()} (${percentage}%)`,
+                                        fillStyle: data.datasets[0].backgroundColor[i],
+                                        strokeStyle: '#fff',
+                                        lineWidth: 2,
+                                        hidden: isNaN(value),
+                                        index: i
+                                    };
+                                });
+                            }
+                            return [];
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    titleColor: '#000',
+                    bodyColor: '#6C6C70',
+                    borderColor: '#E5E5EA',
+                    borderWidth: 1,
+                    cornerRadius: 12,
+                    padding: 12,
+                }
+            }
+        }
+    });
+}
+
+// Create daily comparison chart
+function createDailyChart() {
+    const ctx = document.getElementById('dailyChart').getContext('2d');
+    
+    const weekdays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+    const weeklyData = {};
+    
+    weekdays.forEach(day => {
+        weeklyData[day] = { revenue: 0, entries: 0, count: 0 };
+    });
+    
+    data.forEach(d => {
+        if (weeklyData[d.weekday]) {
+            weeklyData[d.weekday].revenue += d.revenue;
+            weeklyData[d.weekday].entries += d.totalEntries;
+            weeklyData[d.weekday].count++;
+        }
+    });
+    
+    const avgRevenues = weekdays.map(day => 
+        weeklyData[day].count > 0 ? weeklyData[day].revenue / weeklyData[day].count : 0
+    );
+    
+    const avgEntries = weekdays.map(day => 
+        weeklyData[day].count > 0 ? weeklyData[day].entries / weeklyData[day].count : 0
+    );
+    
+    if (charts.daily) charts.daily.destroy();
+    
+    charts.daily = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: weekdays,
+            datasets: [{
+                label: 'ממוצע הכנסות',
+                data: avgRevenues,
+                backgroundColor: '#007AFF',
+                borderRadius: 8,
+                yAxisID: 'y'
+            }, {
+                label: 'ממוצע כניסות',
+                data: avgEntries,
+                backgroundColor: '#5AC8FA',
+                borderRadius: 8,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    titleColor: '#000',
+                    bodyColor: '#6C6C70',
+                    borderColor: '#E5E5EA',
+                    borderWidth: 1,
+                    cornerRadius: 12,
+                    padding: 12,
+                    callbacks: {
+                        label: function(context) {
+                            if (context.datasetIndex === 0) {
+                                return `הכנסות: ₪${Math.round(context.parsed.y).toLocaleString()}`;
+                            } else {
+                                return `כניסות: ${Math.round(context.parsed.y).toLocaleString()}`;
+                            }
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    grid: {
+                        display: true,
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return '₪' + value.toLocaleString();
+                        }
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    grid: {
+                        display: false
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Create stay duration chart
+function createStayDurationChart() {
+    const ctx = document.getElementById('stayDurationChart').getContext('2d');
+    
+    // Calculate totals for each duration category
+    const durations = {
+        '0-15 דקות': data.reduce((sum, d) => sum + d.stay015, 0),
+        '15-30 דקות': data.reduce((sum, d) => sum + d.stay030, 0),
+        '30-45 דקות': data.reduce((sum, d) => sum + d.stay045, 0),
+        '45-60 דקות': data.reduce((sum, d) => sum + d.stay060, 0),
+        'עד 2 שעות': data.reduce((sum, d) => sum + d.stay2, 0),
+        'עד 3 שעות': data.reduce((sum, d) => sum + d.stay3, 0),
+        'עד 4 שעות': data.reduce((sum, d) => sum + d.stay4, 0),
+        'עד 5 שעות': data.reduce((sum, d) => sum + d.stay5, 0),
+        'עד 6 שעות': data.reduce((sum, d) => sum + d.stay6, 0),
+        '7-24 שעות': data.reduce((sum, d) => sum + d.stay724, 0),
+    };
+    
+    const labels = Object.keys(durations);
+    const values = Object.values(durations);
+    
+    // Create gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, '#007AFF');
+    gradient.addColorStop(1, '#5AC8FA');
+    
+    if (charts.stayDuration) charts.stayDuration.destroy();
+    
+    charts.stayDuration = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'מספר רכבים',
+                data: values,
+                backgroundColor: gradient,
+                borderRadius: 8,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    titleColor: '#000',
+                    bodyColor: '#6C6C70',
+                    borderColor: '#E5E5EA',
+                    borderWidth: 1,
+                    cornerRadius: 12,
+                    padding: 12,
+                    callbacks: {
+                        label: function(context) {
+                            const total = values.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed.y / total) * 100).toFixed(1);
+                            return `${context.parsed.y.toLocaleString()} רכבים (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        display: true,
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Create barrier chart
+function createBarrierChart() {
+    const ctx = document.getElementById('barrierChart').getContext('2d');
+    
+    // Aggregate barrier data by date
+    const dailyBarrier = {};
+    data.forEach(d => {
+        if (!dailyBarrier[d.date]) {
+            dailyBarrier[d.date] = 0;
+        }
+        dailyBarrier[d.date] += d.barrierOpenings;
+    });
+    
+    const dates = Object.keys(dailyBarrier).sort();
+    const barriers = dates.map(date => dailyBarrier[date]);
+    
+    if (charts.barrier) charts.barrier.destroy();
+    
+    charts.barrier = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'פתיחות מחסום',
+                data: barriers,
+                borderColor: '#FF3B30',
+                backgroundColor: 'rgba(255, 59, 48, 0.1)',
+                tension: 0.4,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    titleColor: '#000',
+                    bodyColor: '#6C6C70',
+                    borderColor: '#E5E5EA',
+                    borderWidth: 1,
+                    cornerRadius: 12,
+                    padding: 12,
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        display: true,
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Create parking comparison chart
+function createParkingComparisonChart() {
+    const ctx = document.getElementById('parkingComparisonChart').getContext('2d');
+    
+    // Aggregate data by parking
+    const parkingData = {};
+    data.forEach(d => {
+        if (!parkingData[d.parking]) {
+            parkingData[d.parking] = { revenue: 0, entries: 0 };
+        }
+        parkingData[d.parking].revenue += d.revenue;
+        parkingData[d.parking].entries += d.totalEntries;
+    });
+    
+    // Sort by revenue
+    const sortedParkings = Object.entries(parkingData)
+        .sort((a, b) => b[1].revenue - a[1].revenue)
+        .slice(0, 10); // Top 10
+    
+    const labels = sortedParkings.map(([name]) => name);
+    const revenues = sortedParkings.map(([, data]) => data.revenue);
+    const entries = sortedParkings.map(([, data]) => data.entries);
+    
+    if (charts.parkingComparison) charts.parkingComparison.destroy();
+    
+    charts.parkingComparison = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'הכנסות',
+                data: revenues,
+                backgroundColor: '#007AFF',
+                borderRadius: 8,
+                yAxisID: 'y'
+            }, {
+                label: 'כניסות',
+                data: entries,
+                backgroundColor: '#5AC8FA',
+                borderRadius: 8,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    titleColor: '#000',
+                    bodyColor: '#6C6C70',
+                    borderColor: '#E5E5EA',
+                    borderWidth: 1,
+                    cornerRadius: 12,
+                    padding: 12,
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    grid: {
+                        display: true,
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return '₪' + value.toLocaleString();
+                        }
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    grid: {
+                        display: false
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Update parking ranking
+function updateParkingRanking() {
+    // Calculate metrics for each parking
+    const parkingMetrics = {};
+    
+    data.forEach(d => {
+        if (!parkingMetrics[d.parking]) {
+            parkingMetrics[d.parking] = {
+                name: d.parking,
+                revenue: 0,
+                entries: 0,
+                days: new Set()
+            };
+        }
+        parkingMetrics[d.parking].revenue += d.revenue;
+        parkingMetrics[d.parking].entries += d.totalEntries;
+        parkingMetrics[d.parking].days.add(d.date);
+    });
+    
+    // Calculate averages and sort
+    const rankings = Object.values(parkingMetrics).map(parking => ({
+        name: parking.name,
+        totalRevenue: parking.revenue,
+        totalEntries: parking.entries,
+        avgDailyRevenue: parking.revenue / parking.days.size,
+        avgDailyEntries: parking.entries / parking.days.size,
+        activeDays: parking.days.size
+    })).sort((a, b) => b.totalRevenue - a.totalRevenue);
+    
+    // Create ranking HTML
+    let rankingHTML = '';
+    rankings.forEach((parking, index) => {
+        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+        
+        rankingHTML += `
+            <div class="ranking-item" style="
+                display: flex;
+                align-items: center;
+                padding: 20px;
+                margin-bottom: 12px;
+                background: ${index < 3 ? 'linear-gradient(135deg, rgba(0, 122, 255, 0.05) 0%, rgba(90, 200, 250, 0.05) 100%)' : 'var(--background)'};
+                border-radius: 12px;
+                transition: all 0.3s ease;
+            ">
+                <div style="
+                    font-size: 24px;
+                    font-weight: 700;
+                    margin-left: 20px;
+                    min-width: 40px;
+                ">
+                    ${medal}
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; font-size: 18px; margin-bottom: 8px;">
+                        ${parking.name}
+                    </div>
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap; color: var(--text-secondary); font-size: 14px;">
+                        <span>הכנסות: ₪${parking.totalRevenue.toLocaleString()}</span>
+                        <span>כניסות: ${parking.totalEntries.toLocaleString()}</span>
+                        <span>ממוצע יומי: ₪${Math.round(parking.avgDailyRevenue).toLocaleString()}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    document.getElementById('parkingRanking').innerHTML = rankingHTML;
+}
+
+// Update encoders info
+function updateEncodersInfo() {
+    const totalEncoder1 = data.reduce((sum, d) => sum + d.encoder1, 0);
+    const totalEncoder2 = data.reduce((sum, d) => sum + d.encoder2, 0);
+    const totalEncoder3 = data.reduce((sum, d) => sum + d.encoder3, 0);
+    const totalEncoders = data.reduce((sum, d) => sum + d.encoderTotal, 0);
+    
+    const encodersHTML = `
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+            <div style="
+                background: var(--background);
+                padding: 24px;
+                border-radius: 12px;
+                text-align: center;
+            ">
+                <div style="color: var(--text-secondary); font-size: 14px; margin-bottom: 8px;">
+                    מקודד 1
+                </div>
+                <div style="font-size: 28px; font-weight: 700; color: var(--primary);">
+                    ${totalEncoder1.toLocaleString()}
+                </div>
+            </div>
+            
+            <div style="
+                background: var(--background);
+                padding: 24px;
+                border-radius: 12px;
+                text-align: center;
+            ">
+                <div style="color: var(--text-secondary); font-size: 14px; margin-bottom: 8px;">
+                    מקודד 2
+                </div>
+                <div style="font-size: 28px; font-weight: 700; color: var(--primary);">
+                    ${totalEncoder2.toLocaleString()}
+                </div>
+            </div>
+            
+            <div style="
+                background: var(--background);
+                padding: 24px;
+                border-radius: 12px;
+                text-align: center;
+            ">
+                <div style="color: var(--text-secondary); font-size: 14px; margin-bottom: 8px;">
+                    מקודד 3
+                </div>
+                <div style="font-size: 28px; font-weight: 700; color: var(--primary);">
+                    ${totalEncoder3.toLocaleString()}
+                </div>
+            </div>
+            
+            <div style="
+                background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+                padding: 24px;
+                border-radius: 12px;
+                text-align: center;
+            ">
+                <div style="color: white; font-size: 14px; margin-bottom: 8px;">
+                    סה"כ מקודדים
+                </div>
+                <div style="font-size: 28px; font-weight: 700; color: white;">
+                    ${totalEncoders.toLocaleString()}
+                </div>
+            </div>
+        </div>
+        
+        <div style="
+            margin-top: 20px;
+            padding: 16px;
+            background: rgba(255, 159, 64, 0.1);
+            border-radius: 12px;
+            color: var(--warning);
+            font-size: 14px;
+            text-align: center;
+        ">
+            <strong>שים לב:</strong> נתוני המקודדים מוצגים לצפייה בלבד ואינם נכללים בסיכומים
+        </div>
+    `;
+    
+    document.getElementById('encodersInfo').innerHTML = encodersHTML;
+}
+
+// Update alerts
+function updateAlerts() {
+    const alerts = [];
+    
+    // Find significant changes
+    const recentDays = 7;
+    const dates = [...new Set(data.map(d => d.date))].sort().slice(-recentDays);
+    
+    if (dates.length >= 2) {
+        const lastDate = dates[dates.length - 1];
+        const prevDate = dates[dates.length - 2];
+        
+        const lastData = data.filter(d => d.date === lastDate);
+        const prevData = data.filter(d => d.date === prevDate);
+        
+        const lastRevenue = lastData.reduce((sum, d) => sum + d.revenue, 0);
+        const prevRevenue = prevData.reduce((sum, d) => sum + d.revenue, 0);
+        
+        const revenueChange = ((lastRevenue - prevRevenue) / prevRevenue) * 100;
+        
+        if (Math.abs(revenueChange) > 10) {
+            alerts.push({
+                type: revenueChange > 0 ? 'positive' : 'negative',
+                icon: revenueChange > 0 ? '📈' : '📉',
+                title: `שינוי של ${Math.abs(revenueChange).toFixed(1)}% בהכנסות`,
+                description: `ביום ${lastDate} לעומת ${prevDate}`
+            });
+        }
+    }
+    
+    // Check weekend performance
+    const weekendData = data.filter(d => d.isWeekend);
+    const weekdayData = data.filter(d => !d.isWeekend);
+    
+    if (weekendData.length > 0 && weekdayData.length > 0) {
+        const avgWeekendRevenue = weekendData.reduce((sum, d) => sum + d.revenue, 0) / weekendData.length;
+        const avgWeekdayRevenue = weekdayData.reduce((sum, d) => sum + d.revenue, 0) / weekdayData.length;
+        
+        const weekendDiff = ((avgWeekendRevenue - avgWeekdayRevenue) / avgWeekdayRevenue) * 100;
+        
+        if (Math.abs(weekendDiff) > 20) {
+            alerts.push({
+                type: weekendDiff > 0 ? 'positive' : 'negative',
+                icon: '📅',
+                title: `סופי שבוע ${weekendDiff > 0 ? 'חזקים' : 'חלשים'} ב-${Math.abs(weekendDiff).toFixed(1)}%`,
+                description: 'בהשוואה לימי חול'
+            });
+        }
+    }
+    
+    // Show alerts
+    if (alerts.length > 0) {
+        document.getElementById('alertsSection').style.display = 'block';
+        
+        const alertsHTML = alerts.map(alert => `
+            <div class="alert-item ${alert.type}">
+                <div class="alert-icon">${alert.icon}</div>
+                <div class="alert-content">
+                    <div class="alert-title">${alert.title}</div>
+                    <div class="alert-description">${alert.description}</div>
+                </div>
+            </div>
+        `).join('');
+        
+        document.getElementById('alertsContainer').innerHTML = alertsHTML;
+    } else {
+        document.getElementById('alertsSection').style.display = 'none';
+    }
+}
+
+// Initialize
+console.log('Dashboard ready!');
+</script>
+
 </body>
-</html>
+</html> 
