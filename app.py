@@ -409,6 +409,15 @@ def get_parking_data():
         # ביצוע השאילתה
         result = query.execute()
         
+        # קבלת מיפוי שמות החניונים מ-project_parking_mapping
+        parking_names_map = {}
+        try:
+            mapping_result = supabase.table('project_parking_mapping').select('project_number, parking_name').execute()
+            for mapping in mapping_result.data:
+                parking_names_map[mapping['project_number']] = mapping['parking_name']
+        except Exception as e:
+            print(f"Warning: Could not load parking names mapping: {str(e)}")
+        
         # עיבוד הנתונים
         processed_data = []
         for row in result.data:
@@ -418,16 +427,21 @@ def get_parking_data():
                 'parking_id': row.get('parking_id'),
                 'report_date': row.get('report_date'),
                 'project_number': row.get('project_number'),
+                'parking_name': parking_names_map.get(row.get('project_number'), '') or row.get('parking_name', ''),  # שם חניון מהמיפוי
                 'total_revenue_shekels': float(row.get('total_revenue_shekels', 0)),
                 'net_revenue_shekels': float(row.get('net_revenue_shekels', 0)),
                 's_cash_shekels': float(row.get('s_cash_shekels', 0)),
                 's_credit_shekels': float(row.get('s_credit_shekels', 0)),
                 's_pango_shekels': float(row.get('s_pango_shekels', 0)),
                 's_celo_shekels': float(row.get('s_celo_shekels', 0)),
+                's_encoder1': int(row.get('s_encoder1', 0)),  # הוסף מקודד 1
+                's_encoder2': int(row.get('s_encoder2', 0)),  # הוסף מקודד 2
+                's_encoder3': int(row.get('s_encoder3', 0)),  # הוסף מקודד 3
+                'sencodertot': int(row.get('sencodertot', 0)),  # הוסף סה"כ מקודדים
                 't_entry_tot': int(row.get('t_entry_tot', 0)),
                 't_exit_tot': int(row.get('t_exit_tot', 0)),
-                't_entry_s': int(row.get('t_entry_s', 0)),  # מנויים
-                't_entry_p': int(row.get('t_entry_p', 0)),  # מזדמנים
+                't_entry_s': int(row.get('t_entry_s', 0)),  # מזדמנים
+                't_entry_p': int(row.get('t_entry_p', 0)),  # מנויים
                 't_entry_ap': int(row.get('t_entry_ap', 0)),  # אפליקציה
                 't_open_b': int(row.get('t_open_b', 0)),  # פתיחות מחסום
                 'stay_015': int(row.get('stay_015', 0)),
