@@ -487,15 +487,6 @@
                     <span>📊</span>
                     <span>טען נתונים</span>
                 </button>
-                
-                <!-- CSV Upload Option (for Groups) -->
-                <div id="csvUploadSection" style="display: none;">
-                    <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="handleCSVFile(event)">
-                    <button class="load-btn" onclick="document.getElementById('csvFileInput').click()" style="background: linear-gradient(135deg, #5AC8FA 0%, #007AFF 100%); margin-right: 10px;">
-                        <span>📁</span>
-                        <span>טען מקובץ CSV</span>
-                    </button>
-                </div>
             </div>
             
             <!-- Quick Range Buttons -->
@@ -599,6 +590,7 @@
                             <span>🏢</span>
                             <span>השוואת חניונים</span>
                         </h2>
+                        <p style="margin: 0; font-size: 14px; color: var(--text-secondary); font-weight: 400;">לחץ על חניון לפירוט מלא</p>
                     </div>
                     <canvas id="parkingComparisonChart"></canvas>
                     
@@ -641,7 +633,7 @@
                         <span>זמני שהייה</span>
                     </h2>
                 </div>
-                <canvas id="stayDurationChart"></canvas>
+                <canvas id="stayDurationChart" style="max-height: 250px;"></canvas>
             </div>
             
             <!-- Barrier & Encoders Section -->
@@ -712,8 +704,7 @@ async function initializeDashboard() {
         // Show special message for group users
         if (isGroup) {
             console.log('Group user detected. Special handling may be needed.');
-            // Show CSV upload option for groups
-            document.getElementById('csvUploadSection').style.display = 'inline-block';
+            // CSV upload option removed per user request
         }
     } catch (error) {
         console.error('Initialization error:', error);
@@ -1142,7 +1133,7 @@ function updateStats() {
     const stats = calculateStats();
     
     const statsHTML = `
-        <div class="stat-card">
+        <div class="stat-card" data-stat-type="revenue">
             <div class="icon">💰</div>
             <h3>סה"כ הכנסות</h3>
             <div class="value">
@@ -1151,7 +1142,7 @@ function updateStats() {
             <div class="subtext">מכל אמצעי התשלום</div>
         </div>
         
-        <div class="stat-card">
+        <div class="stat-card" data-stat-type="entries">
             <div class="icon">🚗</div>
             <h3>סה"כ כניסות</h3>
             <div class="value">
@@ -1160,7 +1151,7 @@ function updateStats() {
             <div class="subtext">${stats.dailyAvgEntries.toLocaleString()} בממוצע ליום</div>
         </div>
         
-        <div class="stat-card">
+        <div class="stat-card" data-stat-type="casual">
             <div class="icon">👤</div>
             <h3>מזדמנים</h3>
             <div class="value">
@@ -1169,7 +1160,7 @@ function updateStats() {
             <div class="subtext">${stats.casualPercent.toFixed(1)}% מהכניסות</div>
         </div>
         
-        <div class="stat-card">
+        <div class="stat-card" data-stat-type="members">
             <div class="icon">⭐</div>
             <h3>מנויים</h3>
             <div class="value">
@@ -1179,7 +1170,7 @@ function updateStats() {
         </div>
         
         ${stats.totalApp > 0 ? `
-        <div class="stat-card">
+        <div class="stat-card" data-stat-type="app">
             <div class="icon">📱</div>
             <h3>אפליקציה</h3>
             <div class="value">
@@ -1189,7 +1180,7 @@ function updateStats() {
         </div>
         ` : ''}
         
-        <div class="stat-card">
+        <div class="stat-card" data-stat-type="barriers" ${isGroup && !isSingleParkingMode ? 'style="cursor: pointer;"' : ''}>
             <div class="icon">🚧</div>
             <h3>פתיחות מחסום</h3>
             <div class="value">
@@ -1198,7 +1189,7 @@ function updateStats() {
             <div class="subtext">${stats.barrierPercent.toFixed(1)}% מהכניסות</div>
         </div>
         
-        <div class="stat-card">
+        <div class="stat-card" data-stat-type="cash">
             <div class="icon">💵</div>
             <h3>מזומן</h3>
             <div class="value">
@@ -1207,7 +1198,7 @@ function updateStats() {
             <div class="subtext">${stats.cashPercent.toFixed(1)}% מההכנסות</div>
         </div>
         
-        <div class="stat-card">
+        <div class="stat-card" data-stat-type="credit">
             <div class="icon">💳</div>
             <h3>אשראי</h3>
             <div class="value">
@@ -1216,7 +1207,7 @@ function updateStats() {
             <div class="subtext">${stats.creditPercent.toFixed(1)}% מההכנסות</div>
         </div>
         
-        <div class="stat-card">
+        <div class="stat-card" data-stat-type="pango">
             <div class="icon">📲</div>
             <h3>פנגו</h3>
             <div class="value">
@@ -1225,7 +1216,7 @@ function updateStats() {
             <div class="subtext">${stats.pangoPercent.toFixed(1)}% מההכנסות</div>
         </div>
         
-        <div class="stat-card">
+        <div class="stat-card" data-stat-type="cello">
             <div class="icon">📞</div>
             <h3>סלו</h3>
             <div class="value">
@@ -1234,7 +1225,7 @@ function updateStats() {
             <div class="subtext">${stats.celloPercent.toFixed(1)}% מההכנסות</div>
         </div>
         
-        <div class="stat-card">
+        <div class="stat-card" data-stat-type="avg-revenue">
             <div class="icon">📊</div>
             <h3>ממוצע יומי</h3>
             <div class="value">
@@ -1244,7 +1235,7 @@ function updateStats() {
         </div>
         
         ${!isSingleParkingMode ? `
-        <div class="stat-card multi-parking-only">
+        <div class="stat-card multi-parking-only" data-stat-type="parkings">
             <div class="icon">🏢</div>
             <h3>חניונים פעילים</h3>
             <div class="value">
@@ -1256,6 +1247,11 @@ function updateStats() {
     `;
     
     document.getElementById('statsGrid').innerHTML = statsHTML;
+    
+    // Add hover functionality for group users
+    if (isGroup && !isSingleParkingMode) {
+        setupStatCardHovers();
+    }
 }
 
 // Calculate statistics
@@ -1849,7 +1845,19 @@ function createParkingComparisonChart() {
                 barriers: 0,
                 casual: 0,
                 members: 0,
-                app: 0
+                app: 0,
+                // Add stay duration totals
+                stay015: 0,
+                stay030: 0,
+                stay045: 0,
+                stay060: 0,
+                stay2: 0,
+                stay3: 0,
+                stay4: 0,
+                stay5: 0,
+                stay6: 0,
+                stay724: 0,
+                totalStays: 0
             };
         }
         parkingData[d.parking_name].revenue += d.total_revenue_shekels || 0;
@@ -1862,6 +1870,21 @@ function createParkingComparisonChart() {
         parkingData[d.parking_name].casual += d.t_entry_s || 0;
         parkingData[d.parking_name].members += d.t_entry_p || 0;
         parkingData[d.parking_name].app += d.t_entry_app || 0;
+        // Add stay duration data
+        parkingData[d.parking_name].stay015 += d.stay_015 || 0;
+        parkingData[d.parking_name].stay030 += d.stay_030 || 0;
+        parkingData[d.parking_name].stay045 += d.stay_045 || 0;
+        parkingData[d.parking_name].stay060 += d.stay_060 || 0;
+        parkingData[d.parking_name].stay2 += d.stay_2 || 0;
+        parkingData[d.parking_name].stay3 += d.stay_3 || 0;
+        parkingData[d.parking_name].stay4 += d.stay_4 || 0;
+        parkingData[d.parking_name].stay5 += d.stay_5 || 0;
+        parkingData[d.parking_name].stay6 += d.stay_6 || 0;
+        parkingData[d.parking_name].stay724 += d.stay_724 || 0;
+        // Calculate total stays - accumulate correctly
+        parkingData[d.parking_name].totalStays += (d.stay_015 || 0) + (d.stay_030 || 0) + (d.stay_045 || 0) + 
+            (d.stay_060 || 0) + (d.stay_2 || 0) + (d.stay_3 || 0) + (d.stay_4 || 0) + 
+            (d.stay_5 || 0) + (d.stay_6 || 0) + (d.stay_724 || 0);
     });
     
     // Sort by revenue
@@ -2420,6 +2443,67 @@ function showParkingDetails(parkingName, data) {
             <h4 style="font-size: 18px; font-weight: 600; margin-bottom: 20px;">מגמת הכנסות יומיות - ${parkingName}</h4>
             <canvas id="parkingTrendChart" style="max-height: 250px;"></canvas>
         </div>
+        
+        <!-- Stay Duration Details -->
+        <div style="margin-top: 30px;">
+            <h4 style="font-size: 18px; font-weight: 600; margin-bottom: 20px;">התפלגות זמני שהייה - ${parkingName}</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                ${data.stay015 > 0 ? `<div style="padding: 15px; background: var(--background); border-radius: 8px; text-align: center;">
+                    <div style="color: var(--text-secondary); font-size: 12px; margin-bottom: 5px;">0-15 דקות</div>
+                    <div style="font-weight: 600; font-size: 20px; color: var(--primary);">${data.stay015.toLocaleString()}</div>
+                    <div style="color: var(--text-secondary); font-size: 11px;">${data.totalStays > 0 ? ((data.stay015/data.totalStays)*100).toFixed(1) : 0}%</div>
+                </div>` : ''}
+                ${data.stay030 > 0 ? `<div style="padding: 15px; background: var(--background); border-radius: 8px; text-align: center;">
+                    <div style="color: var(--text-secondary); font-size: 12px; margin-bottom: 5px;">15-30 דקות</div>
+                    <div style="font-weight: 600; font-size: 20px; color: var(--primary);">${data.stay030.toLocaleString()}</div>
+                    <div style="color: var(--text-secondary); font-size: 11px;">${data.totalStays > 0 ? ((data.stay030/data.totalStays)*100).toFixed(1) : 0}%</div>
+                </div>` : ''}
+                ${data.stay045 > 0 ? `<div style="padding: 15px; background: var(--background); border-radius: 8px; text-align: center;">
+                    <div style="color: var(--text-secondary); font-size: 12px; margin-bottom: 5px;">30-45 דקות</div>
+                    <div style="font-weight: 600; font-size: 20px; color: var(--primary);">${data.stay045.toLocaleString()}</div>
+                    <div style="color: var(--text-secondary); font-size: 11px;">${data.totalStays > 0 ? ((data.stay045/data.totalStays)*100).toFixed(1) : 0}%</div>
+                </div>` : ''}
+                ${data.stay060 > 0 ? `<div style="padding: 15px; background: var(--background); border-radius: 8px; text-align: center;">
+                    <div style="color: var(--text-secondary); font-size: 12px; margin-bottom: 5px;">45-60 דקות</div>
+                    <div style="font-weight: 600; font-size: 20px; color: var(--primary);">${data.stay060.toLocaleString()}</div>
+                    <div style="color: var(--text-secondary); font-size: 11px;">${data.totalStays > 0 ? ((data.stay060/data.totalStays)*100).toFixed(1) : 0}%</div>
+                </div>` : ''}
+                ${data.stay2 > 0 ? `<div style="padding: 15px; background: var(--background); border-radius: 8px; text-align: center;">
+                    <div style="color: var(--text-secondary); font-size: 12px; margin-bottom: 5px;">עד 2 שעות</div>
+                    <div style="font-weight: 600; font-size: 20px; color: var(--primary);">${data.stay2.toLocaleString()}</div>
+                    <div style="color: var(--text-secondary); font-size: 11px;">${data.totalStays > 0 ? ((data.stay2/data.totalStays)*100).toFixed(1) : 0}%</div>
+                </div>` : ''}
+                ${data.stay3 > 0 ? `<div style="padding: 15px; background: var(--background); border-radius: 8px; text-align: center;">
+                    <div style="color: var(--text-secondary); font-size: 12px; margin-bottom: 5px;">עד 3 שעות</div>
+                    <div style="font-weight: 600; font-size: 20px; color: var(--primary);">${data.stay3.toLocaleString()}</div>
+                    <div style="color: var(--text-secondary); font-size: 11px;">${data.totalStays > 0 ? ((data.stay3/data.totalStays)*100).toFixed(1) : 0}%</div>
+                </div>` : ''}
+                ${data.stay4 > 0 ? `<div style="padding: 15px; background: var(--background); border-radius: 8px; text-align: center;">
+                    <div style="color: var(--text-secondary); font-size: 12px; margin-bottom: 5px;">עד 4 שעות</div>
+                    <div style="font-weight: 600; font-size: 20px; color: var(--primary);">${data.stay4.toLocaleString()}</div>
+                    <div style="color: var(--text-secondary); font-size: 11px;">${data.totalStays > 0 ? ((data.stay4/data.totalStays)*100).toFixed(1) : 0}%</div>
+                </div>` : ''}
+                ${data.stay5 > 0 ? `<div style="padding: 15px; background: var(--background); border-radius: 8px; text-align: center;">
+                    <div style="color: var(--text-secondary); font-size: 12px; margin-bottom: 5px;">עד 5 שעות</div>
+                    <div style="font-weight: 600; font-size: 20px; color: var(--primary);">${data.stay5.toLocaleString()}</div>
+                    <div style="color: var(--text-secondary); font-size: 11px;">${data.totalStays > 0 ? ((data.stay5/data.totalStays)*100).toFixed(1) : 0}%</div>
+                </div>` : ''}
+                ${data.stay6 > 0 ? `<div style="padding: 15px; background: var(--background); border-radius: 8px; text-align: center;">
+                    <div style="color: var(--text-secondary); font-size: 12px; margin-bottom: 5px;">עד 6 שעות</div>
+                    <div style="font-weight: 600; font-size: 20px; color: var(--primary);">${data.stay6.toLocaleString()}</div>
+                    <div style="color: var(--text-secondary); font-size: 11px;">${data.totalStays > 0 ? ((data.stay6/data.totalStays)*100).toFixed(1) : 0}%</div>
+                </div>` : ''}
+                ${data.stay724 > 0 ? `<div style="padding: 15px; background: var(--background); border-radius: 8px; text-align: center;">
+                    <div style="color: var(--text-secondary); font-size: 12px; margin-bottom: 5px;">7-24 שעות</div>
+                    <div style="font-weight: 600; font-size: 20px; color: var(--primary);">${data.stay724.toLocaleString()}</div>
+                    <div style="color: var(--text-secondary); font-size: 11px;">${data.totalStays > 0 ? ((data.stay724/data.totalStays)*100).toFixed(1) : 0}%</div>
+                </div>` : ''}
+            </div>
+            <div style="margin-top: 15px; padding: 15px; background: rgba(0, 122, 255, 0.1); border-radius: 8px; text-align: center;">
+                <div style="color: var(--primary); font-size: 14px;">סה"כ רכבים שחנו</div>
+                <div style="font-weight: 700; font-size: 24px; color: var(--primary);">${data.totalStays.toLocaleString()}</div>
+            </div>
+        </div>
     `;
     
     // Update content
@@ -2641,6 +2725,288 @@ function createParkingTrendChart(parkingName) {
 // Close parking details
 function closeParkingDetails() {
     document.getElementById('parkingDetailsSection').style.display = 'none';
+}
+
+// Setup stat card hover functionality
+function setupStatCardHovers() {
+    // Create tooltip element if it doesn't exist
+    let tooltip = document.getElementById('statTooltip');
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.id = 'statTooltip';
+        tooltip.style.cssText = `
+            position: absolute;
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid #E5E5EA;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 10000;
+            display: none;
+            max-width: 400px;
+            max-height: 500px;
+            overflow-y: auto;
+        `;
+        document.body.appendChild(tooltip);
+    }
+    
+    // Add hover handlers to all stat cards
+    const statCards = document.querySelectorAll('.stat-card[data-stat-type]');
+    statCards.forEach(card => {
+        const statType = card.getAttribute('data-stat-type');
+        
+        // Make all cards interactive for group users
+        if (isGroup && !isSingleParkingMode) {
+            card.style.cursor = 'pointer';
+            
+            card.addEventListener('mouseenter', (e) => {
+                showStatTooltip(e, statType);
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                hideStatTooltip();
+            });
+            
+            card.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showStatTooltip(e, statType, true);
+            });
+        }
+    });
+    
+    // Hide tooltip when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.stat-card') && !e.target.closest('#statTooltip')) {
+            hideStatTooltip();
+        }
+    });
+}
+
+// Show stat tooltip with parking details
+function showStatTooltip(event, statType, isClick = false) {
+    const tooltip = document.getElementById('statTooltip');
+    const card = event.currentTarget;
+    
+    // Calculate parking data
+    const parkingStats = {};
+    currentData.forEach(d => {
+        if (!parkingStats[d.parking_name]) {
+            parkingStats[d.parking_name] = {
+                revenue: 0,
+                entries: 0,
+                barriers: 0,
+                casual: 0,
+                members: 0,
+                app: 0,
+                cash: 0,
+                credit: 0,
+                pango: 0,
+                cello: 0
+            };
+        }
+        parkingStats[d.parking_name].revenue += d.total_revenue_shekels || 0;
+        parkingStats[d.parking_name].entries += d.t_entry_tot || 0;
+        parkingStats[d.parking_name].barriers += d.t_open_b || 0;
+        parkingStats[d.parking_name].casual += d.t_entry_s || 0;
+        parkingStats[d.parking_name].members += d.t_entry_p || 0;
+        parkingStats[d.parking_name].app += d.t_entry_app || 0;
+        parkingStats[d.parking_name].cash += d.s_cash || 0;
+        parkingStats[d.parking_name].credit += d.s_credit || 0;
+        parkingStats[d.parking_name].pango += d.s_pango || 0;
+        parkingStats[d.parking_name].cello += d.s_cello || 0;
+    });
+    
+    // Sort parkings by the relevant metric
+    let sortedParkings;
+    switch(statType) {
+        case 'revenue':
+            sortedParkings = Object.entries(parkingStats).sort((a, b) => b[1].revenue - a[1].revenue);
+            break;
+        case 'entries':
+            sortedParkings = Object.entries(parkingStats).sort((a, b) => b[1].entries - a[1].entries);
+            break;
+        case 'barriers':
+            sortedParkings = Object.entries(parkingStats).sort((a, b) => b[1].barriers - a[1].barriers);
+            break;
+        case 'casual':
+            sortedParkings = Object.entries(parkingStats).sort((a, b) => b[1].casual - a[1].casual);
+            break;
+        case 'members':
+            sortedParkings = Object.entries(parkingStats).sort((a, b) => b[1].members - a[1].members);
+            break;
+        case 'app':
+            sortedParkings = Object.entries(parkingStats).sort((a, b) => b[1].app - a[1].app);
+            break;
+        case 'cash':
+            sortedParkings = Object.entries(parkingStats).sort((a, b) => b[1].cash - a[1].cash);
+            break;
+        case 'credit':
+            sortedParkings = Object.entries(parkingStats).sort((a, b) => b[1].credit - a[1].credit);
+            break;
+        case 'pango':
+            sortedParkings = Object.entries(parkingStats).sort((a, b) => b[1].pango - a[1].pango);
+            break;
+        case 'cello':
+            sortedParkings = Object.entries(parkingStats).sort((a, b) => b[1].cello - a[1].cello);
+            break;
+        default:
+            sortedParkings = Object.entries(parkingStats).sort((a, b) => b[1].revenue - a[1].revenue);
+    }
+    
+    // Build tooltip content
+    let content = '<div style="font-weight: 600; font-size: 16px; margin-bottom: 12px; color: #1C1C1E;">';
+    switch(statType) {
+        case 'revenue':
+            content += 'הכנסות לפי חניון';
+            break;
+        case 'entries':
+            content += 'כניסות לפי חניון';
+            break;
+        case 'barriers':
+            content += 'פתיחות מחסום לפי חניון';
+            break;
+        case 'casual':
+            content += 'מזדמנים לפי חניון';
+            break;
+        case 'members':
+            content += 'מנויים לפי חניון';
+            break;
+        case 'app':
+            content += 'אפליקציה לפי חניון';
+            break;
+        case 'cash':
+            content += 'מזומן לפי חניון';
+            break;
+        case 'credit':
+            content += 'אשראי לפי חניון';
+            break;
+        case 'pango':
+            content += 'פנגו לפי חניון';
+            break;
+        case 'cello':
+            content += 'סלו לפי חניון';
+            break;
+        default:
+            content += 'פירוט לפי חניון';
+    }
+    content += '</div>';
+    
+    content += '<div style="max-height: 400px; overflow-y: auto;">';
+    sortedParkings.forEach(([parkingName, stats], index) => {
+        let value;
+        let percentage = 0;
+        let total;
+        
+        switch(statType) {
+            case 'revenue':
+                value = `₪${stats.revenue.toLocaleString()}`;
+                total = sortedParkings.reduce((sum, [, s]) => sum + s.revenue, 0);
+                percentage = total > 0 ? (stats.revenue / total * 100).toFixed(1) : 0;
+                break;
+            case 'entries':
+                value = stats.entries.toLocaleString();
+                total = sortedParkings.reduce((sum, [, s]) => sum + s.entries, 0);
+                percentage = total > 0 ? (stats.entries / total * 100).toFixed(1) : 0;
+                break;
+            case 'barriers':
+                value = stats.barriers.toLocaleString();
+                total = sortedParkings.reduce((sum, [, s]) => sum + s.barriers, 0);
+                percentage = total > 0 ? (stats.barriers / total * 100).toFixed(1) : 0;
+                break;
+            case 'casual':
+                value = stats.casual.toLocaleString();
+                total = sortedParkings.reduce((sum, [, s]) => sum + s.casual, 0);
+                percentage = total > 0 ? (stats.casual / total * 100).toFixed(1) : 0;
+                break;
+            case 'members':
+                value = stats.members.toLocaleString();
+                total = sortedParkings.reduce((sum, [, s]) => sum + s.members, 0);
+                percentage = total > 0 ? (stats.members / total * 100).toFixed(1) : 0;
+                break;
+            case 'app':
+                value = stats.app.toLocaleString();
+                total = sortedParkings.reduce((sum, [, s]) => sum + s.app, 0);
+                percentage = total > 0 ? (stats.app / total * 100).toFixed(1) : 0;
+                break;
+            case 'cash':
+                value = `₪${stats.cash.toLocaleString()}`;
+                total = sortedParkings.reduce((sum, [, s]) => sum + s.cash, 0);
+                percentage = total > 0 ? (stats.cash / total * 100).toFixed(1) : 0;
+                break;
+            case 'credit':
+                value = `₪${stats.credit.toLocaleString()}`;
+                total = sortedParkings.reduce((sum, [, s]) => sum + s.credit, 0);
+                percentage = total > 0 ? (stats.credit / total * 100).toFixed(1) : 0;
+                break;
+            case 'pango':
+                value = `₪${stats.pango.toLocaleString()}`;
+                total = sortedParkings.reduce((sum, [, s]) => sum + s.pango, 0);
+                percentage = total > 0 ? (stats.pango / total * 100).toFixed(1) : 0;
+                break;
+            case 'cello':
+                value = `₪${stats.cello.toLocaleString()}`;
+                total = sortedParkings.reduce((sum, [, s]) => sum + s.cello, 0);
+                percentage = total > 0 ? (stats.cello / total * 100).toFixed(1) : 0;
+                break;
+        }
+        
+        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+        
+        content += `
+            <div style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 12px;
+                margin: 4px 0;
+                background: ${index < 3 ? 'rgba(0, 122, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)'};
+                border-radius: 8px;
+                transition: background 0.2s;
+            " onmouseover="this.style.background='rgba(0, 122, 255, 0.1)'" onmouseout="this.style.background='${index < 3 ? 'rgba(0, 122, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)'}'">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    ${medal ? `<span style="font-size: 18px;">${medal}</span>` : `<span style="color: #8E8E93; font-size: 14px; min-width: 20px;">${index + 1}.</span>`}
+                    <span style="font-weight: 500; color: #1C1C1E;">${parkingName}</span>
+                </div>
+                <div style="text-align: left;">
+                    <div style="font-weight: 600; color: #007AFF;">${value}</div>
+                    <div style="font-size: 12px; color: #8E8E93;">${percentage}%</div>
+                </div>
+            </div>
+        `;
+    });
+    content += '</div>';
+    
+    tooltip.innerHTML = content;
+    
+    // Position tooltip
+    const rect = card.getBoundingClientRect();
+    const tooltipWidth = 350;
+    const tooltipHeight = 400;
+    
+    let left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
+    let top = rect.bottom + 10;
+    
+    // Adjust if goes off screen
+    if (left < 10) left = 10;
+    if (left + tooltipWidth > window.innerWidth - 10) left = window.innerWidth - tooltipWidth - 10;
+    if (top + tooltipHeight > window.innerHeight - 10) {
+        top = rect.top - tooltipHeight - 10;
+    }
+    
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+    tooltip.style.display = 'block';
+    
+    // Store click state
+    tooltip.setAttribute('data-clicked', isClick ? 'true' : 'false');
+}
+
+// Hide stat tooltip
+function hideStatTooltip() {
+    const tooltip = document.getElementById('statTooltip');
+    if (tooltip && tooltip.getAttribute('data-clicked') !== 'true') {
+        tooltip.style.display = 'none';
+    }
 }
 
 // Initialize
