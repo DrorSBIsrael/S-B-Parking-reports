@@ -465,8 +465,8 @@
             <div class="control-panel">
                 <!-- Parking Selector -->
                 <div class="control-group" id="parkingSelectorGroup" style="display: none;">
-                    <label class="control-label">בחר חניון</label>
-                    <select id="parkingSelector" class="control-select">
+                    <label class="control-label">חניון</label>
+                    <select id="parkingSelector" class="control-select" onchange="syncParkingSelectors(this.value)">
                         <option value="">טוען חניונים...</option>
                     </select>
                 </div>
@@ -480,6 +480,14 @@
                 <div class="control-group">
                     <label class="control-label">עד תאריך</label>
                     <input type="date" id="endDate" class="control-input">
+                </div>
+                
+                <!-- Parking Selector for Multiple Parkings -->
+                <div class="control-group" id="bottomParkingSelector" style="display: none;">
+                    <label class="control-label">חניון</label>
+                    <select id="bottomParkingSelect" class="control-input" onchange="syncParkingSelectors(this.value)">
+                        <option value="">כל החניונים</option>
+                    </select>
                 </div>
                 
                 <!-- Load Button -->
@@ -725,6 +733,13 @@ function formatDateForAPI(date) {
     return date.toISOString().split('T')[0];
 }
 
+// Format date for display (DD/MM/YYYY)
+function formatDateForDisplay(dateString) {
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+}
+
 // Load user info
 async function loadUserInfo() {
     try {
@@ -791,19 +806,28 @@ async function loadParkingList() {
             // Check if user has multiple parkings
             if (parkings.length > 1) {
                 document.getElementById('parkingSelectorGroup').style.display = 'block';
+                document.getElementById('bottomParkingSelector').style.display = 'block';
                 
-                // Add "all parkings" option
+                // Add "all parkings" option to both selectors
                 const allOption = document.createElement('option');
                 allOption.value = '';
                 allOption.textContent = isGroup ? `כל חניוני ${groupName}` : 'כל החניונים';
                 selector.appendChild(allOption);
                 
-                // Add individual parkings
+                const bottomSelector = document.getElementById('bottomParkingSelect');
+                bottomSelector.innerHTML = '';
+                const allOption2 = allOption.cloneNode(true);
+                bottomSelector.appendChild(allOption2);
+                
+                // Add individual parkings to both selectors
                 parkings.forEach(parking => {
                     const option = document.createElement('option');
                     option.value = parking.id;
                     option.textContent = parking.name;
                     selector.appendChild(option);
+                    
+                    const option2 = option.cloneNode(true);
+                    bottomSelector.appendChild(option2);
                 });
             } else if (parkings.length === 1) {
                 // Single parking mode
@@ -861,7 +885,9 @@ async function loadDataStandard(startDate, endDate) {
     });
     
     // Add parking filter if selected
-    const selectedParking = document.getElementById('parkingSelector').value;
+    const selectedParking = document.getElementById('bottomParkingSelect') && document.getElementById('bottomParkingSelect').value !== undefined 
+        ? document.getElementById('bottomParkingSelect').value 
+        : document.getElementById('parkingSelector').value;
     if (selectedParking) {
         params.append('parking_id', selectedParking);
     }
@@ -915,7 +941,9 @@ async function loadDataForGroup(startDate, endDate) {
         });
         
         // Add parking filter if selected
-        const selectedParking = document.getElementById('parkingSelector').value;
+        const selectedParking = document.getElementById('bottomParkingSelect') && document.getElementById('bottomParkingSelect').value !== undefined 
+            ? document.getElementById('bottomParkingSelect').value 
+            : document.getElementById('parkingSelector').value;
         if (selectedParking) {
             params.append('parking_id', selectedParking);
         }
@@ -1257,15 +1285,15 @@ function updateStats() {
 // Calculate statistics
 function calculateStats() {
     const totalRevenue = currentData.reduce((sum, d) => sum + (d.total_revenue_shekels || 0), 0);
-    const totalCash = currentData.reduce((sum, d) => sum + (d.s_cash_shekels || 0), 0);
-    const totalCredit = currentData.reduce((sum, d) => sum + (d.s_credit_shekels || 0), 0);
-    const totalPango = currentData.reduce((sum, d) => sum + (d.s_pango_shekels || 0), 0);
-    const totalCello = currentData.reduce((sum, d) => sum + (d.s_celo_shekels || 0), 0);
+    const totalCash = currentData.reduce((sum, d) => sum + (d.s_cash || 0), 0);
+    const totalCredit = currentData.reduce((sum, d) => sum + (d.s_credit || 0), 0);
+    const totalPango = currentData.reduce((sum, d) => sum + (d.s_pango || 0), 0);
+    const totalCello = currentData.reduce((sum, d) => sum + (d.s_cello || 0), 0);
     
     const totalEntries = currentData.reduce((sum, d) => sum + (d.t_entry_tot || 0), 0);
     const totalCasual = currentData.reduce((sum, d) => sum + (d.t_entry_s || 0), 0);
     const totalMembers = currentData.reduce((sum, d) => sum + (d.t_entry_p || 0), 0);
-    const totalApp = currentData.reduce((sum, d) => sum + (d.t_entry_ap || 0), 0);
+    const totalApp = currentData.reduce((sum, d) => sum + (d.t_entry_app || 0), 0);
     
     const totalBarrier = currentData.reduce((sum, d) => sum + (d.t_open_b || 0), 0);
     
@@ -1338,12 +1366,15 @@ function createRevenueChart() {
     const revenues = dates.map(date => dailyData[date].revenue);
     const entries = dates.map(date => dailyData[date].entries);
     
+    // Format dates for display
+    const formattedDates = dates.map(date => formatDateForDisplay(date));
+    
     if (charts.revenue) charts.revenue.destroy();
     
     charts.revenue = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: dates,
+            labels: formattedDates,
             datasets: [{
                 label: 'הכנסות',
                 data: revenues,
@@ -1431,10 +1462,10 @@ function createRevenueChart() {
 function createPaymentChart() {
     const ctx = document.getElementById('paymentChart').getContext('2d');
     
-    const totalCash = currentData.reduce((sum, d) => sum + (d.s_cash_shekels || 0), 0);
-    const totalCredit = currentData.reduce((sum, d) => sum + (d.s_credit_shekels || 0), 0);
-    const totalPango = currentData.reduce((sum, d) => sum + (d.s_pango_shekels || 0), 0);
-    const totalCello = currentData.reduce((sum, d) => sum + (d.s_celo_shekels || 0), 0);
+    const totalCash = currentData.reduce((sum, d) => sum + (d.s_cash || 0), 0);
+    const totalCredit = currentData.reduce((sum, d) => sum + (d.s_credit || 0), 0);
+    const totalPango = currentData.reduce((sum, d) => sum + (d.s_pango || 0), 0);
+    const totalCello = currentData.reduce((sum, d) => sum + (d.s_cello || 0), 0);
     
     if (charts.payment) charts.payment.destroy();
     
@@ -1509,7 +1540,7 @@ function createEntriesChart() {
     
     const totalCasual = currentData.reduce((sum, d) => sum + (d.t_entry_s || 0), 0);
     const totalMembers = currentData.reduce((sum, d) => sum + (d.t_entry_p || 0), 0);
-    const totalApp = currentData.reduce((sum, d) => sum + (d.t_entry_ap || 0), 0);
+    const totalApp = currentData.reduce((sum, d) => sum + (d.t_entry_app || 0), 0);
     
     const chartData = {
         labels: ['מזדמנים', 'מנויים'],
@@ -1777,12 +1808,15 @@ function createBarrierChart() {
     const dates = Object.keys(dailyBarrier).sort();
     const barriers = dates.map(date => dailyBarrier[date]);
     
+    // Format dates for display
+    const formattedDates = dates.map(date => formatDateForDisplay(date));
+    
     if (charts.barrier) charts.barrier.destroy();
     
     charts.barrier = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: dates,
+            labels: formattedDates,
             datasets: [{
                 label: 'פתיחות מחסום',
                 data: barriers,
@@ -2167,7 +2201,7 @@ function updateAlerts() {
                 type: revenueChange > 0 ? 'positive' : 'negative',
                 icon: revenueChange > 0 ? '📈' : '📉',
                 title: `שינוי של ${Math.abs(revenueChange).toFixed(1)}% בהכנסות`,
-                description: `ביום ${lastDate} לעומת ${prevDate}`
+                description: `ביום ${formatDateForDisplay(lastDate)} לעומת ${formatDateForDisplay(prevDate)}`
             });
         }
     }
@@ -2375,6 +2409,17 @@ function showParkingDetails(parkingName, data) {
             ">
                 <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">פתיחות מחסום</div>
                 <div style="font-size: 32px; font-weight: 700;">${data.barriers.toLocaleString()}</div>
+            </div>
+            
+            <!-- Average Revenue Card -->
+            <div style="
+                background: linear-gradient(135deg, #AF52DE 0%, #C969FF 100%);
+                padding: 24px;
+                border-radius: 12px;
+                color: white;
+            ">
+                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">הכנסה יומית ממוצעת</div>
+                <div style="font-size: 32px; font-weight: 700;">₪${Math.round(data.revenue / data.days.size).toLocaleString()}</div>
             </div>
         </div>
         
@@ -2657,6 +2702,9 @@ function createParkingTrendChart(parkingName) {
     const dates = Object.keys(dailyData).sort();
     const revenues = dates.map(date => dailyData[date]);
     
+    // Format dates for display
+    const formattedDates = dates.map(date => formatDateForDisplay(date));
+    
     // Create gradient
     const gradient = ctx.createLinearGradient(0, 0, 0, 200);
     gradient.addColorStop(0, 'rgba(0, 122, 255, 0.5)');
@@ -2665,7 +2713,7 @@ function createParkingTrendChart(parkingName) {
     new Chart(ctx, {
         type: 'line',
         data: {
-            labels: dates,
+            labels: formattedDates,
             datasets: [{
                 label: 'הכנסות יומיות',
                 data: revenues,
@@ -2755,8 +2803,8 @@ function setupStatCardHovers() {
     statCards.forEach(card => {
         const statType = card.getAttribute('data-stat-type');
         
-        // Make all cards interactive for group users
-        if (isGroup && !isSingleParkingMode) {
+        // Make all cards interactive for group users (except parkings)
+        if (isGroup && !isSingleParkingMode && statType !== 'parkings') {
             card.style.cursor = 'pointer';
             
             card.addEventListener('mouseenter', (e) => {
@@ -2801,7 +2849,8 @@ function showStatTooltip(event, statType, isClick = false) {
                 cash: 0,
                 credit: 0,
                 pango: 0,
-                cello: 0
+                cello: 0,
+                days: new Set()
             };
         }
         parkingStats[d.parking_name].revenue += d.total_revenue_shekels || 0;
@@ -2814,6 +2863,12 @@ function showStatTooltip(event, statType, isClick = false) {
         parkingStats[d.parking_name].credit += d.s_credit || 0;
         parkingStats[d.parking_name].pango += d.s_pango || 0;
         parkingStats[d.parking_name].cello += d.s_cello || 0;
+        parkingStats[d.parking_name].days.add(d.report_date);
+    });
+    
+    // Calculate average daily revenue for each parking
+    Object.keys(parkingStats).forEach(parking => {
+        parkingStats[parking].avgRevenue = parkingStats[parking].revenue / parkingStats[parking].days.size;
     });
     
     // Sort parkings by the relevant metric
@@ -2848,6 +2903,9 @@ function showStatTooltip(event, statType, isClick = false) {
             break;
         case 'cello':
             sortedParkings = Object.entries(parkingStats).sort((a, b) => b[1].cello - a[1].cello);
+            break;
+        case 'avg-revenue':
+            sortedParkings = Object.entries(parkingStats).sort((a, b) => b[1].avgRevenue - a[1].avgRevenue);
             break;
         default:
             sortedParkings = Object.entries(parkingStats).sort((a, b) => b[1].revenue - a[1].revenue);
@@ -2885,6 +2943,9 @@ function showStatTooltip(event, statType, isClick = false) {
             break;
         case 'cello':
             content += 'סלו לפי חניון';
+            break;
+        case 'avg-revenue':
+            content += 'ממוצע יומי לפי חניון';
             break;
         default:
             content += 'פירוט לפי חניון';
@@ -2947,6 +3008,11 @@ function showStatTooltip(event, statType, isClick = false) {
                 value = `₪${stats.cello.toLocaleString()}`;
                 total = sortedParkings.reduce((sum, [, s]) => sum + s.cello, 0);
                 percentage = total > 0 ? (stats.cello / total * 100).toFixed(1) : 0;
+                break;
+            case 'avg-revenue':
+                value = `₪${Math.round(stats.avgRevenue).toLocaleString()}`;
+                total = sortedParkings.reduce((sum, [, s]) => sum + s.avgRevenue, 0);
+                percentage = total > 0 ? (stats.avgRevenue / total * 100).toFixed(1) : 0;
                 break;
         }
         
@@ -3011,6 +3077,13 @@ function hideStatTooltip() {
 
 // Initialize
 console.log('Apple Dashboard ready!');
+
+// Sync parking selectors
+function syncParkingSelectors(value) {
+    // Update both selectors
+    document.getElementById('parkingSelector').value = value;
+    document.getElementById('bottomParkingSelect').value = value;
+}
 </script>
 
 </body>
