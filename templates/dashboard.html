@@ -463,14 +463,6 @@
             
             <!-- Control Panel -->
             <div class="control-panel">
-                <!-- Parking Selector -->
-                <div class="control-group" id="parkingSelectorGroup" style="display: none;">
-                    <label class="control-label">חניון</label>
-                    <select id="parkingSelector" class="control-select" onchange="syncParkingSelectors(this.value)">
-                        <option value="">טוען חניונים...</option>
-                    </select>
-                </div>
-                
                 <!-- Date Range -->
                 <div class="control-group">
                     <label class="control-label">מתאריך</label>
@@ -490,9 +482,9 @@
             </div>
             
             <!-- Parking Selector for Multiple Parkings -->
-            <div class="control-group" id="bottomParkingSelector" style="display: none; margin: 0 auto 20px; max-width: 300px;">
+            <div class="control-group" id="parkingSelectorGroup" style="display: none; margin: 0 auto 20px; max-width: 300px;">
                 <label class="control-label" style="text-align: center;">חניון</label>
-                <select id="bottomParkingSelect" class="control-input" onchange="syncParkingSelectors(this.value)" style="text-align: center;">
+                <select id="parkingSelector" class="control-input" style="text-align: center;">
                     <option value="">כל החניונים</option>
                 </select>
             </div>
@@ -816,38 +808,28 @@ async function loadParkingList() {
             if (parkings.length > 1 || (isGroup && parkings.length >= 1)) {
                 console.log('Multiple parkings detected:', parkings.length);
                 document.getElementById('parkingSelectorGroup').style.display = 'block';
-                document.getElementById('bottomParkingSelector').style.display = 'block';
-                console.log('Showing parking selectors');
+                console.log('Showing parking selector');
                 
-                // Add "all parkings" option to both selectors
+                // Add "all parkings" option
                 const allOption = document.createElement('option');
                 allOption.value = '';
                 allOption.textContent = isGroup ? `כל חניוני ${groupName}` : 'כל החניונים';
                 selector.appendChild(allOption);
                 
-                const bottomSelector = document.getElementById('bottomParkingSelect');
-                bottomSelector.innerHTML = '';
-                const allOption2 = allOption.cloneNode(true);
-                bottomSelector.appendChild(allOption2);
-                
-                // Add individual parkings to both selectors
+                // Add individual parkings
                 parkings.forEach(parking => {
                     const option = document.createElement('option');
                     option.value = parking.project_number;  // שינוי מ-id ל-project_number
                     option.textContent = parking.parking_name;  // שינוי מ-name ל-parking_name
                     selector.appendChild(option);
-                    
-                    const option2 = option.cloneNode(true);
-                    bottomSelector.appendChild(option2);
                 });
             } else if (parkings.length === 1) {
                 // Single parking mode or group with one parking
                 if (isGroup) {
                     // For group users - show selector even with one parking
                     document.getElementById('parkingSelectorGroup').style.display = 'block';
-                    document.getElementById('bottomParkingSelector').style.display = 'block';
                     
-                    // Add the single parking to selectors
+                    // Add the single parking to selector
                     const allOption = document.createElement('option');
                     allOption.value = '';
                     allOption.textContent = `כל חניוני ${groupName}`;
@@ -857,13 +839,6 @@ async function loadParkingList() {
                     option.value = parkings[0].project_number;
                     option.textContent = parkings[0].parking_name;
                     selector.appendChild(option);
-                    
-                    const bottomSelector = document.getElementById('bottomParkingSelect');
-                    bottomSelector.innerHTML = '';
-                    const allOption2 = allOption.cloneNode(true);
-                    bottomSelector.appendChild(allOption2);
-                    const option2 = option.cloneNode(true);
-                    bottomSelector.appendChild(option2);
                 } else {
                     // Regular single parking mode
                     isSingleParkingMode = true;
@@ -921,11 +896,13 @@ async function loadDataStandard(startDate, endDate) {
     });
     
     // Add parking filter if selected
-    const selectedParking = document.getElementById('bottomParkingSelect') && document.getElementById('bottomParkingSelect').value !== undefined 
-        ? document.getElementById('bottomParkingSelect').value 
-        : document.getElementById('parkingSelector').value;
+    const selectedParking = document.getElementById('parkingSelector').value;
+    console.log('Selected parking value:', selectedParking);
     if (selectedParking) {
         params.append('parking_id', selectedParking);
+        console.log('Filtering by parking_id:', selectedParking);
+    } else {
+        console.log('No parking selected - loading all parkings');
     }
     
     // Debug: Log request details
@@ -961,6 +938,13 @@ async function loadDataStandard(startDate, endDate) {
     currentData = result.data || [];
     console.log('Loaded data:', currentData.length, 'records');
     
+    // Debug: show unique parkings in the data
+    if (currentData.length > 0) {
+        const uniqueParkings = [...new Set(currentData.map(d => d.parking_name))];
+        console.log('Unique parkings in data:', uniqueParkings);
+        console.log('First few records:', currentData.slice(0, 3));
+    }
+    
     updateDashboard();
 }
 
@@ -977,11 +961,13 @@ async function loadDataForGroup(startDate, endDate) {
         });
         
         // Add parking filter if selected
-        const selectedParking = document.getElementById('bottomParkingSelect') && document.getElementById('bottomParkingSelect').value !== undefined 
-            ? document.getElementById('bottomParkingSelect').value 
-            : document.getElementById('parkingSelector').value;
+        const selectedParking = document.getElementById('parkingSelector').value;
+        console.log('Group mode - Selected parking value:', selectedParking);
         if (selectedParking) {
             params.append('parking_id', selectedParking);
+            console.log('Group mode - Filtering by parking_id:', selectedParking);
+        } else {
+            console.log('Group mode - No parking selected - loading all group parkings');
         }
         
         console.log('Group API Request (Approach 1 - Standard):', {
@@ -1015,6 +1001,11 @@ async function loadDataForGroup(startDate, endDate) {
             console.log('Loaded data:', currentData.length, 'records');
             
             if (currentData.length > 0) {
+                // Debug: show unique parkings in the data
+                const uniqueParkings = [...new Set(currentData.map(d => d.parking_name))];
+                console.log('Group data - Unique parkings:', uniqueParkings);
+                console.log('Group data - First few records:', currentData.slice(0, 3));
+                
                 updateDashboard();
                 return;
             }
@@ -1303,6 +1294,8 @@ function updateStats() {
 
 // Calculate statistics
 function calculateStats() {
+    console.log('Calculating stats for', currentData.length, 'records');
+    
     const totalRevenue = currentData.reduce((sum, d) => sum + (d.total_revenue_shekels || 0), 0);
     const totalCash = currentData.reduce((sum, d) => sum + (d.s_cash_shekels || 0), 0);
     const totalCredit = currentData.reduce((sum, d) => sum + (d.s_credit_shekels || 0), 0);
@@ -3149,12 +3142,7 @@ function hideStatTooltip() {
 // Initialize
 console.log('Apple Dashboard ready!');
 
-// Sync parking selectors
-function syncParkingSelectors(value) {
-    // Update both selectors
-    document.getElementById('parkingSelector').value = value;
-    document.getElementById('bottomParkingSelect').value = value;
-}
+
 </script>
 
 </body>
