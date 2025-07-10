@@ -791,6 +791,9 @@ async function loadParkingList() {
             const selector = document.getElementById('parkingSelector');
             selector.innerHTML = '';
             
+            console.log('Raw parkings from API:', result.parkings);
+            console.log('isGroup:', isGroup, 'groupName:', groupName);
+            
             // For groups, filter parkings by group name
             let parkings = result.parkings;
             if (isGroup && groupName) {
@@ -805,8 +808,10 @@ async function loadParkingList() {
             
             // Check if user has multiple parkings
             if (parkings.length > 1) {
+                console.log('Multiple parkings detected:', parkings.length);
                 document.getElementById('parkingSelectorGroup').style.display = 'block';
                 document.getElementById('bottomParkingSelector').style.display = 'block';
+                console.log('Showing parking selectors');
                 
                 // Add "all parkings" option to both selectors
                 const allOption = document.createElement('option');
@@ -1895,7 +1900,8 @@ function createParkingComparisonChart() {
                 stay5: 0,
                 stay6: 0,
                 stay724: 0,
-                totalStays: 0
+                totalStays: 0,
+                days: new Set()  // הוספת days
             };
         }
         parkingData[d.parking_name].revenue += d.total_revenue_shekels || 0;
@@ -1923,6 +1929,8 @@ function createParkingComparisonChart() {
         parkingData[d.parking_name].totalStays += (d.stay_015 || 0) + (d.stay_030 || 0) + (d.stay_045 || 0) + 
             (d.stay_060 || 0) + (d.stay_2 || 0) + (d.stay_3 || 0) + (d.stay_4 || 0) + 
             (d.stay_5 || 0) + (d.stay_6 || 0) + (d.stay_724 || 0);
+        // הוספת התאריך ל-days
+        parkingData[d.parking_name].days.add(d.report_date);
     });
     
     // Sort by revenue
@@ -1958,10 +1966,12 @@ function createParkingComparisonChart() {
             responsive: true,
             onClick: (event, elements) => {
                 // Handle click only for group users
+                console.log('Click detected. isGroup:', isGroup, 'elements:', elements.length);
                 if (isGroup && elements.length > 0) {
                     const index = elements[0].index;
                     const parkingName = labels[index];
                     const data = sortedParkings[index][1];
+                    console.log('Showing details for:', parkingName, data);
                     showParkingDetails(parkingName, data);
                 }
             },
@@ -2366,6 +2376,14 @@ async function tryLoadWithoutGroup() {
 
 // Show parking details (for group users)
 function showParkingDetails(parkingName, data) {
+    console.log('showParkingDetails called with:', { parkingName, data });
+    
+    // בדיקה שיש את כל הנתונים הנדרשים
+    if (!data.days || data.days.size === 0) {
+        console.error('Missing days data!');
+        data.days = new Set(['2024-01-01']); // ערך ברירת מחדל למניעת שגיאה
+    }
+    
     // Update title
     document.getElementById('parkingDetailsTitle').textContent = `פירוט נתונים - ${parkingName}`;
     
