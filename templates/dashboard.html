@@ -807,7 +807,7 @@ async function loadParkingList() {
             userParkings = parkings;
             
             // Check if user has multiple parkings
-            if (parkings.length > 1) {
+            if (parkings.length > 1 || (isGroup && parkings.length >= 1)) {
                 console.log('Multiple parkings detected:', parkings.length);
                 document.getElementById('parkingSelectorGroup').style.display = 'block';
                 document.getElementById('bottomParkingSelector').style.display = 'block';
@@ -835,9 +835,34 @@ async function loadParkingList() {
                     bottomSelector.appendChild(option2);
                 });
             } else if (parkings.length === 1) {
-                // Single parking mode
-                isSingleParkingMode = true;
-                document.body.classList.add('single-parking-mode');
+                // Single parking mode or group with one parking
+                if (isGroup) {
+                    // For group users - show selector even with one parking
+                    document.getElementById('parkingSelectorGroup').style.display = 'block';
+                    document.getElementById('bottomParkingSelector').style.display = 'block';
+                    
+                    // Add the single parking to selectors
+                    const allOption = document.createElement('option');
+                    allOption.value = '';
+                    allOption.textContent = `כל חניוני ${groupName}`;
+                    selector.appendChild(allOption);
+                    
+                    const option = document.createElement('option');
+                    option.value = parkings[0].id;
+                    option.textContent = parkings[0].name;
+                    selector.appendChild(option);
+                    
+                    const bottomSelector = document.getElementById('bottomParkingSelect');
+                    bottomSelector.innerHTML = '';
+                    const allOption2 = allOption.cloneNode(true);
+                    bottomSelector.appendChild(allOption2);
+                    const option2 = option.cloneNode(true);
+                    bottomSelector.appendChild(option2);
+                } else {
+                    // Regular single parking mode
+                    isSingleParkingMode = true;
+                    document.body.classList.add('single-parking-mode');
+                }
                 
                 // Update title with single parking name
                 document.getElementById('dashboardTitle').textContent = parkings[0].name;
@@ -2805,7 +2830,7 @@ function setupStatCardHovers() {
         tooltip = document.createElement('div');
         tooltip.id = 'statTooltip';
         tooltip.style.cssText = `
-            position: absolute;
+            position: fixed;
             background: rgba(255, 255, 255, 0.98);
             border: 1px solid #E5E5EA;
             border-radius: 12px;
@@ -2816,6 +2841,9 @@ function setupStatCardHovers() {
             max-width: 400px;
             max-height: 500px;
             overflow-y: auto;
+            opacity: 0;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            transform: translateY(5px);
         `;
         document.body.appendChild(tooltip);
     }
@@ -3069,21 +3097,41 @@ function showStatTooltip(event, statType, isClick = false) {
     // Position tooltip
     const rect = card.getBoundingClientRect();
     const tooltipWidth = 350;
-    const tooltipHeight = 400;
+    const tooltipHeight = Math.min(400, window.innerHeight * 0.8); // הגבלת גובה
     
+    // חישוב מיקום - מעל הכרטיס כברירת מחדל
     let left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
-    let top = rect.bottom + 10;
+    let top = rect.top - tooltipHeight - 10;
     
-    // Adjust if goes off screen
+    // אם אין מספיק מקום למעלה, הצג מתחת
+    if (top < 10) {
+        top = rect.bottom + 10;
+    }
+    
+    // וידוא שלא יוצא מגבולות המסך
     if (left < 10) left = 10;
-    if (left + tooltipWidth > window.innerWidth - 10) left = window.innerWidth - tooltipWidth - 10;
+    if (left + tooltipWidth > window.innerWidth - 10) {
+        left = window.innerWidth - tooltipWidth - 10;
+    }
+    
+    // וידוא שלא יוצא מתחתית המסך
     if (top + tooltipHeight > window.innerHeight - 10) {
-        top = rect.top - tooltipHeight - 10;
+        // אם אין מקום גם למטה, הצג מעל עם גלילה
+        top = Math.max(10, rect.top - tooltipHeight - 10);
+        tooltip.style.maxHeight = `${Math.min(tooltipHeight, rect.top - 20)}px`;
+        tooltip.style.overflowY = 'auto';
     }
     
     tooltip.style.left = `${left}px`;
     tooltip.style.top = `${top}px`;
+    tooltip.style.width = `${tooltipWidth}px`;
     tooltip.style.display = 'block';
+    
+    // הצגה עם אנימציה
+    setTimeout(() => {
+        tooltip.style.opacity = '1';
+        tooltip.style.transform = 'translateY(0)';
+    }, 10);
     
     // Store click state
     tooltip.setAttribute('data-clicked', isClick ? 'true' : 'false');
@@ -3093,7 +3141,11 @@ function showStatTooltip(event, statType, isClick = false) {
 function hideStatTooltip() {
     const tooltip = document.getElementById('statTooltip');
     if (tooltip && tooltip.getAttribute('data-clicked') !== 'true') {
-        tooltip.style.display = 'none';
+        tooltip.style.opacity = '0';
+        tooltip.style.transform = 'translateY(5px)';
+        setTimeout(() => {
+            tooltip.style.display = 'none';
+        }, 200);
     }
 }
 
