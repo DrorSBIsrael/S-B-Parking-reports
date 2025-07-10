@@ -482,19 +482,19 @@
                     <input type="date" id="endDate" class="control-input">
                 </div>
                 
-                <!-- Parking Selector for Multiple Parkings -->
-                <div class="control-group" id="bottomParkingSelector" style="display: none;">
-                    <label class="control-label">חניון</label>
-                    <select id="bottomParkingSelect" class="control-input" onchange="syncParkingSelectors(this.value)">
-                        <option value="">כל החניונים</option>
-                    </select>
-                </div>
-                
                 <!-- Load Button -->
                 <button class="load-btn" onclick="loadData()">
                     <span>📊</span>
                     <span>טען נתונים</span>
                 </button>
+            </div>
+            
+            <!-- Parking Selector for Multiple Parkings -->
+            <div class="control-group" id="bottomParkingSelector" style="display: none; margin: 0 auto 20px; max-width: 300px;">
+                <label class="control-label" style="text-align: center;">חניון</label>
+                <select id="bottomParkingSelect" class="control-input" onchange="syncParkingSelectors(this.value)" style="text-align: center;">
+                    <option value="">כל החניונים</option>
+                </select>
             </div>
             
             <!-- Quick Range Buttons -->
@@ -2984,8 +2984,13 @@ function showStatTooltip(event, statType, isClick = false) {
     }
     content += '</div>';
     
-    content += '<div style="max-height: 400px; overflow-y: auto;">';
-    sortedParkings.forEach(([parkingName, stats], index) => {
+    // Limit number of items shown to prevent overflow
+    const maxItems = 10;
+    const itemsToShow = sortedParkings.slice(0, maxItems);
+    const hasMore = sortedParkings.length > maxItems;
+    
+    content += '<div style="max-height: 350px; overflow-y: auto;">';
+    itemsToShow.forEach(([parkingName, stats], index) => {
         let value;
         let percentage = 0;
         let total;
@@ -3072,6 +3077,22 @@ function showStatTooltip(event, statType, isClick = false) {
             </div>
         `;
     });
+    
+    if (hasMore) {
+        content += `
+            <div style="
+                padding: 12px;
+                text-align: center;
+                color: #8E8E93;
+                font-size: 14px;
+                border-top: 1px solid #E5E5EA;
+                margin-top: 8px;
+            ">
+                ועוד ${sortedParkings.length - maxItems} חניונים...
+            </div>
+        `;
+    }
+    
     content += '</div>';
     
     tooltip.innerHTML = content;
@@ -3079,21 +3100,39 @@ function showStatTooltip(event, statType, isClick = false) {
     // Position tooltip
     const rect = card.getBoundingClientRect();
     const tooltipWidth = 350;
-    const tooltipHeight = 400;
+    
+    // Show tooltip first to get its actual height
+    tooltip.style.display = 'block';
+    tooltip.style.visibility = 'hidden';
+    tooltip.style.width = tooltipWidth + 'px';
+    
+    // Get actual tooltip height after content is rendered
+    const tooltipHeight = tooltip.offsetHeight;
     
     let left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
     let top = rect.bottom + 10;
     
-    // Adjust if goes off screen
+    // Adjust horizontal position if goes off screen
     if (left < 10) left = 10;
     if (left + tooltipWidth > window.innerWidth - 10) left = window.innerWidth - tooltipWidth - 10;
-    if (top + tooltipHeight > window.innerHeight - 10) {
+    
+    // Check if tooltip would go below viewport
+    const spaceBelow = window.innerHeight - rect.bottom - 20;
+    const spaceAbove = rect.top - 20;
+    
+    if (tooltipHeight > spaceBelow && spaceAbove > spaceBelow) {
+        // Show above if more space there
         top = rect.top - tooltipHeight - 10;
+    } else if (tooltipHeight > spaceBelow) {
+        // If still not enough space, limit height and show below
+        const maxHeight = Math.max(200, spaceBelow - 20);
+        tooltip.style.maxHeight = maxHeight + 'px';
+        tooltip.style.overflowY = 'auto';
     }
     
     tooltip.style.left = `${left}px`;
     tooltip.style.top = `${top}px`;
-    tooltip.style.display = 'block';
+    tooltip.style.visibility = 'visible';
     
     // Store click state
     tooltip.setAttribute('data-clicked', isClick ? 'true' : 'false');
