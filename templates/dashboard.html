@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>לוח בקרה - חניונים</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -483,8 +486,8 @@
             
             <!-- Parking Selector for Multiple Parkings -->
             <div class="control-group" id="parkingSelectorGroup" style="display: none; margin: 0 auto 20px; max-width: 300px;">
-                <label class="control-label" style="text-align: center;">חניון</label>
-                <select id="parkingSelector" class="control-input" style="text-align: center;">
+                <label class="control-label" style="text-align: center; font-size: 16px; color: var(--primary); font-weight: 600;">בחירת חניון ולחיצה על טעינת נתונים</label>
+                <select id="parkingSelector" class="control-input" style="text-align: center; font-weight: 500;">
                     <option value="">כל החניונים</option>
                 </select>
             </div>
@@ -684,6 +687,15 @@ document.addEventListener('DOMContentLoaded', function() {
 // Initialize dashboard
 async function initializeDashboard() {
     try {
+        // Debug: Clear any cached elements
+        console.log('=== INITIALIZING DASHBOARD ===');
+        console.log('Checking for duplicate parking selectors...');
+        const allSelectors = document.querySelectorAll('#parkingSelector, #bottomParkingSelect');
+        console.log('Found selectors:', allSelectors.length);
+        allSelectors.forEach((sel, idx) => {
+            console.log(`Selector ${idx + 1}:`, sel.id, sel.parentElement.id);
+        });
+        
         // Set default dates (last 30 days)
         const today = new Date();
         const thirtyDaysAgo = new Date(today);
@@ -1311,6 +1323,14 @@ function calculateStats() {
     
     const uniqueDays = [...new Set(currentData.map(d => d.report_date))].length;
     const uniqueParkings = [...new Set(currentData.map(d => d.parking_name))].length;
+    
+    console.log('Stats calculated:', {
+        totalRevenue,
+        totalEntries,
+        uniqueDays,
+        uniqueParkings,
+        parkingNames: [...new Set(currentData.map(d => d.parking_name))]
+    });
     
     return {
         totalRevenue,
