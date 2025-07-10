@@ -1137,6 +1137,10 @@ function updateDashboard() {
         return;
     }
     
+    // Debug: log first data item to see field names
+    console.log('Sample data item:', currentData[0]);
+    console.log('Available fields:', Object.keys(currentData[0]));
+    
     // Check if single parking mode
     const uniqueParkings = [...new Set(currentData.map(d => d.parking_name))];
     isSingleParkingMode = uniqueParkings.length === 1;
@@ -1285,15 +1289,15 @@ function updateStats() {
 // Calculate statistics
 function calculateStats() {
     const totalRevenue = currentData.reduce((sum, d) => sum + (d.total_revenue_shekels || 0), 0);
-    const totalCash = currentData.reduce((sum, d) => sum + (d.s_cash || 0), 0);
-    const totalCredit = currentData.reduce((sum, d) => sum + (d.s_credit || 0), 0);
-    const totalPango = currentData.reduce((sum, d) => sum + (d.s_pango || 0), 0);
-    const totalCello = currentData.reduce((sum, d) => sum + (d.s_cello || 0), 0);
+    const totalCash = currentData.reduce((sum, d) => sum + (d.s_cash_shekels || 0), 0);
+    const totalCredit = currentData.reduce((sum, d) => sum + (d.s_credit_shekels || 0), 0);
+    const totalPango = currentData.reduce((sum, d) => sum + (d.s_pango_shekels || 0), 0);
+    const totalCello = currentData.reduce((sum, d) => sum + (d.s_celo_shekels || 0), 0);
     
     const totalEntries = currentData.reduce((sum, d) => sum + (d.t_entry_tot || 0), 0);
     const totalCasual = currentData.reduce((sum, d) => sum + (d.t_entry_s || 0), 0);
     const totalMembers = currentData.reduce((sum, d) => sum + (d.t_entry_p || 0), 0);
-    const totalApp = currentData.reduce((sum, d) => sum + (d.t_entry_app || 0), 0);
+    const totalApp = currentData.reduce((sum, d) => sum + (d.t_entry_ap || 0), 0);
     
     const totalBarrier = currentData.reduce((sum, d) => sum + (d.t_open_b || 0), 0);
     
@@ -1462,10 +1466,10 @@ function createRevenueChart() {
 function createPaymentChart() {
     const ctx = document.getElementById('paymentChart').getContext('2d');
     
-    const totalCash = currentData.reduce((sum, d) => sum + (d.s_cash || 0), 0);
-    const totalCredit = currentData.reduce((sum, d) => sum + (d.s_credit || 0), 0);
-    const totalPango = currentData.reduce((sum, d) => sum + (d.s_pango || 0), 0);
-    const totalCello = currentData.reduce((sum, d) => sum + (d.s_cello || 0), 0);
+    const totalCash = currentData.reduce((sum, d) => sum + (d.s_cash_shekels || 0), 0);
+    const totalCredit = currentData.reduce((sum, d) => sum + (d.s_credit_shekels || 0), 0);
+    const totalPango = currentData.reduce((sum, d) => sum + (d.s_pango_shekels || 0), 0);
+    const totalCello = currentData.reduce((sum, d) => sum + (d.s_celo_shekels || 0), 0);
     
     if (charts.payment) charts.payment.destroy();
     
@@ -1540,7 +1544,7 @@ function createEntriesChart() {
     
     const totalCasual = currentData.reduce((sum, d) => sum + (d.t_entry_s || 0), 0);
     const totalMembers = currentData.reduce((sum, d) => sum + (d.t_entry_p || 0), 0);
-    const totalApp = currentData.reduce((sum, d) => sum + (d.t_entry_app || 0), 0);
+    const totalApp = currentData.reduce((sum, d) => sum + (d.t_entry_ap || 0), 0);
     
     const chartData = {
         labels: ['מזדמנים', 'מנויים'],
@@ -1896,14 +1900,14 @@ function createParkingComparisonChart() {
         }
         parkingData[d.parking_name].revenue += d.total_revenue_shekels || 0;
         parkingData[d.parking_name].entries += d.t_entry_tot || 0;
-        parkingData[d.parking_name].cash += d.s_cash || 0;
-        parkingData[d.parking_name].credit += d.s_credit || 0;
-        parkingData[d.parking_name].pango += d.s_pango || 0;
-        parkingData[d.parking_name].cello += d.s_cello || 0;
+        parkingData[d.parking_name].cash += d.s_cash_shekels || 0;
+        parkingData[d.parking_name].credit += d.s_credit_shekels || 0;
+        parkingData[d.parking_name].pango += d.s_pango_shekels || 0;
+        parkingData[d.parking_name].cello += d.s_celo_shekels || 0;
         parkingData[d.parking_name].barriers += d.t_open_b || 0;
         parkingData[d.parking_name].casual += d.t_entry_s || 0;
         parkingData[d.parking_name].members += d.t_entry_p || 0;
-        parkingData[d.parking_name].app += d.t_entry_app || 0;
+        parkingData[d.parking_name].app += d.t_entry_ap || 0;
         // Add stay duration data
         parkingData[d.parking_name].stay015 += d.stay_015 || 0;
         parkingData[d.parking_name].stay030 += d.stay_030 || 0;
@@ -2858,11 +2862,11 @@ function showStatTooltip(event, statType, isClick = false) {
         parkingStats[d.parking_name].barriers += d.t_open_b || 0;
         parkingStats[d.parking_name].casual += d.t_entry_s || 0;
         parkingStats[d.parking_name].members += d.t_entry_p || 0;
-        parkingStats[d.parking_name].app += d.t_entry_app || 0;
-        parkingStats[d.parking_name].cash += d.s_cash || 0;
-        parkingStats[d.parking_name].credit += d.s_credit || 0;
-        parkingStats[d.parking_name].pango += d.s_pango || 0;
-        parkingStats[d.parking_name].cello += d.s_cello || 0;
+        parkingStats[d.parking_name].app += d.t_entry_ap || 0;
+        parkingStats[d.parking_name].cash += d.s_cash_shekels || 0;
+        parkingStats[d.parking_name].credit += d.s_credit_shekels || 0;
+        parkingStats[d.parking_name].pango += d.s_pango_shekels || 0;
+        parkingStats[d.parking_name].cello += d.s_celo_shekels || 0;
         parkingStats[d.parking_name].days.add(d.report_date);
     });
     
