@@ -796,12 +796,18 @@ async function loadParkingList() {
             
             // For groups, filter parkings by group name
             let parkings = result.parkings;
+            // הסרנו את הסינון כי השרת כבר מחזיר רק את החניונים של הקבוצה
+            /*
             if (isGroup && groupName) {
                 // Filter parkings that belong to this group
                 parkings = result.parkings.filter(p => 
                     p.name && p.name.toLowerCase().includes(groupName.toLowerCase())
                 );
             }
+            */
+            
+            console.log('Parkings from API:', parkings);
+            console.log('Parkings count:', parkings.length);
             
             // Save parkings list
             userParkings = parkings;
@@ -827,8 +833,8 @@ async function loadParkingList() {
                 // Add individual parkings to both selectors
                 parkings.forEach(parking => {
                     const option = document.createElement('option');
-                    option.value = parking.id;
-                    option.textContent = parking.name;
+                    option.value = parking.project_number;  // שינוי מ-id ל-project_number
+                    option.textContent = parking.parking_name;  // שינוי מ-name ל-parking_name
                     selector.appendChild(option);
                     
                     const option2 = option.cloneNode(true);
@@ -848,8 +854,8 @@ async function loadParkingList() {
                     selector.appendChild(allOption);
                     
                     const option = document.createElement('option');
-                    option.value = parkings[0].id;
-                    option.textContent = parkings[0].name;
+                    option.value = parkings[0].project_number;
+                    option.textContent = parkings[0].parking_name;
                     selector.appendChild(option);
                     
                     const bottomSelector = document.getElementById('bottomParkingSelect');
@@ -865,7 +871,7 @@ async function loadParkingList() {
                 }
                 
                 // Update title with single parking name
-                document.getElementById('dashboardTitle').textContent = parkings[0].name;
+                document.getElementById('dashboardTitle').textContent = parkings[0].parking_name;
             } else {
                 // No parkings found
                 showError('לא נמצאו חניונים עבור משתמש זה');
@@ -1004,16 +1010,9 @@ async function loadDataForGroup(startDate, endDate) {
         if (!result.success && result.message && result.message.includes('רמת הרשאה')) {
             console.log('Permission error detected, will try alternative approaches');
         } else if (result.success && result.data) {
-            // If we got data, filter it for the group
-            if (groupName && !selectedParking) {
-                currentData = result.data.filter(d => 
-                    d.parking_name && d.parking_name.toLowerCase().includes(groupName.toLowerCase())
-                );
-                console.log(`Filtered data for group ${groupName}:`, currentData.length, 'records');
-            } else {
-                currentData = result.data;
-                console.log('Loaded data:', currentData.length, 'records');
-            }
+            // השרת כבר מסנן את הנתונים לפי הקבוצה, אז פשוט נשתמש בנתונים
+            currentData = result.data;
+            console.log('Loaded data:', currentData.length, 'records');
             
             if (currentData.length > 0) {
                 updateDashboard();
@@ -1042,25 +1041,11 @@ async function loadDataForGroup(startDate, endDate) {
         console.log('Minimal params response:', result);
         
         if (result.success && result.data && result.data.length > 0) {
-            // Got data! Now filter for the group
-            if (groupName) {
-                const filteredData = result.data.filter(d => 
-                    d.parking_name && d.parking_name.toLowerCase().includes(groupName.toLowerCase())
-                );
-                
-                if (filteredData.length > 0) {
-                    currentData = filteredData;
-                    console.log(`Successfully filtered ${currentData.length} records for group ${groupName}`);
-                    updateDashboard();
-                    return;
-                } else {
-                    // No data for this group - try to use all data
-                    console.log('No data found for group name, using all available data');
-                    currentData = result.data;
-                    updateDashboard();
-                    return;
-                }
-            }
+            // השרת כבר מסנן לפי הקבוצה
+            currentData = result.data;
+            console.log('Loaded data:', currentData.length, 'records');
+            updateDashboard();
+            return;
         }
     } catch (error) {
         console.error('Group approach 2 failed:', error);
@@ -1078,10 +1063,10 @@ async function loadDataForGroup(startDate, endDate) {
                     const params = new URLSearchParams({
                         start_date: startDate,
                         end_date: endDate,
-                        parking_id: parking.id
+                        parking_id: parking.project_number  // שינוי מ-id ל-project_number
                     });
                     
-                    console.log(`Loading data for parking: ${parking.name} (${parking.id})`);
+                    console.log(`Loading data for parking: ${parking.parking_name} (${parking.project_number})`);
                     
                     const response = await fetch(`/api/parking-data?${params}`);
                     const result = await response.json();
@@ -1090,7 +1075,7 @@ async function loadDataForGroup(startDate, endDate) {
                         allData = allData.concat(result.data);
                     }
                 } catch (error) {
-                    console.error(`Failed to load data for parking ${parking.name}:`, error);
+                    console.error(`Failed to load data for parking ${parking.parking_name}:`, error);
                 }
             }
             
@@ -2830,7 +2815,7 @@ function setupStatCardHovers() {
         tooltip = document.createElement('div');
         tooltip.id = 'statTooltip';
         tooltip.style.cssText = `
-            position: fixed;
+            position: absolute;
             background: rgba(255, 255, 255, 0.98);
             border: 1px solid #E5E5EA;
             border-radius: 12px;
@@ -2841,9 +2826,6 @@ function setupStatCardHovers() {
             max-width: 400px;
             max-height: 500px;
             overflow-y: auto;
-            opacity: 0;
-            transition: opacity 0.2s ease, transform 0.2s ease;
-            transform: translateY(5px);
         `;
         document.body.appendChild(tooltip);
     }
@@ -3097,41 +3079,21 @@ function showStatTooltip(event, statType, isClick = false) {
     // Position tooltip
     const rect = card.getBoundingClientRect();
     const tooltipWidth = 350;
-    const tooltipHeight = Math.min(400, window.innerHeight * 0.8); // הגבלת גובה
+    const tooltipHeight = 400;
     
-    // חישוב מיקום - מעל הכרטיס כברירת מחדל
     let left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
-    let top = rect.top - tooltipHeight - 10;
+    let top = rect.bottom + 10;
     
-    // אם אין מספיק מקום למעלה, הצג מתחת
-    if (top < 10) {
-        top = rect.bottom + 10;
-    }
-    
-    // וידוא שלא יוצא מגבולות המסך
+    // Adjust if goes off screen
     if (left < 10) left = 10;
-    if (left + tooltipWidth > window.innerWidth - 10) {
-        left = window.innerWidth - tooltipWidth - 10;
-    }
-    
-    // וידוא שלא יוצא מתחתית המסך
+    if (left + tooltipWidth > window.innerWidth - 10) left = window.innerWidth - tooltipWidth - 10;
     if (top + tooltipHeight > window.innerHeight - 10) {
-        // אם אין מקום גם למטה, הצג מעל עם גלילה
-        top = Math.max(10, rect.top - tooltipHeight - 10);
-        tooltip.style.maxHeight = `${Math.min(tooltipHeight, rect.top - 20)}px`;
-        tooltip.style.overflowY = 'auto';
+        top = rect.top - tooltipHeight - 10;
     }
     
     tooltip.style.left = `${left}px`;
     tooltip.style.top = `${top}px`;
-    tooltip.style.width = `${tooltipWidth}px`;
     tooltip.style.display = 'block';
-    
-    // הצגה עם אנימציה
-    setTimeout(() => {
-        tooltip.style.opacity = '1';
-        tooltip.style.transform = 'translateY(0)';
-    }, 10);
     
     // Store click state
     tooltip.setAttribute('data-clicked', isClick ? 'true' : 'false');
@@ -3141,11 +3103,7 @@ function showStatTooltip(event, statType, isClick = false) {
 function hideStatTooltip() {
     const tooltip = document.getElementById('statTooltip');
     if (tooltip && tooltip.getAttribute('data-clicked') !== 'true') {
-        tooltip.style.opacity = '0';
-        tooltip.style.transform = 'translateY(5px)';
-        setTimeout(() => {
-            tooltip.style.display = 'none';
-        }, 200);
+        tooltip.style.display = 'none';
     }
 }
 
