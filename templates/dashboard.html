@@ -2828,7 +2828,7 @@ function setupStatCardHovers() {
         tooltip = document.createElement('div');
         tooltip.id = 'statTooltip';
         tooltip.style.cssText = `
-            position: absolute;
+            position: fixed;
             background: rgba(255, 255, 255, 0.98);
             border: 1px solid #E5E5EA;
             border-radius: 12px;
@@ -2836,12 +2836,33 @@ function setupStatCardHovers() {
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
             z-index: 10000;
             display: none;
-            max-width: 400px;
-            max-height: 500px;
+            max-width: 380px;
+            max-height: 60vh;
             overflow-y: auto;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            opacity: 0;
+            transform: translateY(5px);
+            pointer-events: none;
         `;
         document.body.appendChild(tooltip);
     }
+    
+    // Keep track of hover timeout
+    let hoverTimeout = null;
+    let isTooltipHovered = false;
+    
+    // Allow hovering over the tooltip itself
+    tooltip.addEventListener('mouseenter', () => {
+        isTooltipHovered = true;
+        clearTimeout(hoverTimeout);
+    });
+    
+    tooltip.addEventListener('mouseleave', () => {
+        isTooltipHovered = false;
+        if (tooltip.getAttribute('data-clicked') !== 'true') {
+            hideStatTooltip();
+        }
+    });
     
     // Add hover handlers to all stat cards
     const statCards = document.querySelectorAll('.stat-card[data-stat-type]');
@@ -2853,11 +2874,18 @@ function setupStatCardHovers() {
             card.style.cursor = 'pointer';
             
             card.addEventListener('mouseenter', (e) => {
-                showStatTooltip(e, statType);
+                clearTimeout(hoverTimeout);
+                if (!document.getElementById('statTooltip').getAttribute('data-clicked')) {
+                    showStatTooltip(e, statType);
+                }
             });
             
             card.addEventListener('mouseleave', () => {
-                hideStatTooltip();
+                hoverTimeout = setTimeout(() => {
+                    if (!isTooltipHovered) {
+                        hideStatTooltip();
+                    }
+                }, 300);
             });
             
             card.addEventListener('click', (e) => {
@@ -2870,7 +2898,29 @@ function setupStatCardHovers() {
     // Hide tooltip when clicking outside
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.stat-card') && !e.target.closest('#statTooltip')) {
+            const tooltip = document.getElementById('statTooltip');
+            if (tooltip) {
+                tooltip.setAttribute('data-clicked', 'false');
+                hideStatTooltip();
+            }
+        }
+    });
+    
+    // Hide tooltip on scroll
+    window.addEventListener('scroll', () => {
+        if (!document.getElementById('statTooltip').getAttribute('data-clicked')) {
             hideStatTooltip();
+        }
+    }, { passive: true });
+    
+    // Hide tooltip on escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const tooltip = document.getElementById('statTooltip');
+            if (tooltip) {
+                tooltip.setAttribute('data-clicked', 'false');
+                hideStatTooltip();
+            }
         }
     });
 }
@@ -2998,11 +3048,11 @@ function showStatTooltip(event, statType, isClick = false) {
     content += '</div>';
     
     // Limit number of items shown to prevent overflow
-    const maxItems = 10;
+    const maxItems = 8;
     const itemsToShow = sortedParkings.slice(0, maxItems);
     const hasMore = sortedParkings.length > maxItems;
     
-    content += '<div style="max-height: 350px; overflow-y: auto;">';
+    content += '<div style="max-height: 280px; overflow-y: auto;">';
     itemsToShow.forEach(([parkingName, stats], index) => {
         let value;
         let percentage = 0;
@@ -3120,8 +3170,9 @@ function showStatTooltip(event, statType, isClick = false) {
     tooltip.style.width = tooltipWidth + 'px';
     
     // Get actual tooltip height after content is rendered
-    const tooltipHeight = tooltip.offsetHeight;
+    const tooltipHeight = Math.min(tooltip.offsetHeight, window.innerHeight * 0.6);
     
+    // Calculate position (fixed positioning uses viewport coordinates)
     let left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
     let top = rect.bottom + 10;
     
@@ -3129,23 +3180,36 @@ function showStatTooltip(event, statType, isClick = false) {
     if (left < 10) left = 10;
     if (left + tooltipWidth > window.innerWidth - 10) left = window.innerWidth - tooltipWidth - 10;
     
-    // Check if tooltip would go below viewport
+    // Check vertical space
     const spaceBelow = window.innerHeight - rect.bottom - 20;
     const spaceAbove = rect.top - 20;
     
-    if (tooltipHeight > spaceBelow && spaceAbove > spaceBelow) {
-        // Show above if more space there
+    // If not enough space below and more space above, show above
+    if (tooltipHeight > spaceBelow && spaceAbove > spaceBelow && spaceAbove > 100) {
         top = rect.top - tooltipHeight - 10;
-    } else if (tooltipHeight > spaceBelow) {
-        // If still not enough space, limit height and show below
-        const maxHeight = Math.max(200, spaceBelow - 20);
-        tooltip.style.maxHeight = maxHeight + 'px';
-        tooltip.style.overflowY = 'auto';
+        // Make sure it doesn't go off the top
+        if (top < 10) {
+            top = 10;
+            tooltip.style.maxHeight = `${rect.top - 20}px`;
+        }
+    } else {
+        // Show below, but limit height if needed
+        if (tooltipHeight > spaceBelow - 10) {
+            tooltip.style.maxHeight = `${spaceBelow - 10}px`;
+        }
     }
     
+    // Apply position
     tooltip.style.left = `${left}px`;
     tooltip.style.top = `${top}px`;
     tooltip.style.visibility = 'visible';
+    
+    // Trigger animation
+    requestAnimationFrame(() => {
+        tooltip.style.opacity = '1';
+        tooltip.style.transform = 'translateY(0)';
+        tooltip.style.pointerEvents = 'auto';
+    });
     
     // Store click state
     tooltip.setAttribute('data-clicked', isClick ? 'true' : 'false');
@@ -3155,7 +3219,15 @@ function showStatTooltip(event, statType, isClick = false) {
 function hideStatTooltip() {
     const tooltip = document.getElementById('statTooltip');
     if (tooltip && tooltip.getAttribute('data-clicked') !== 'true') {
-        tooltip.style.display = 'none';
+        tooltip.style.opacity = '0';
+        tooltip.style.transform = 'translateY(5px)';
+        tooltip.style.pointerEvents = 'none';
+        setTimeout(() => {
+            if (tooltip.style.opacity === '0') {
+                tooltip.style.display = 'none';
+                tooltip.style.maxHeight = '60vh'; // Reset max height
+            }
+        }, 200);
     }
 }
 
