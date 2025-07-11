@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html dir="rtl" lang="he">
 <head>
@@ -16,7 +15,7 @@
             --primary-light: #5AC8FA;
             --primary-dark: #0051D5;
             --success: #34C759;
-            --danger: #FB8C00;
+            --danger: #FF3B30;
             --warning: #FF9500;
             --purple: #AF52DE;
             --background: #F2F2F7;
@@ -97,7 +96,7 @@
             color: white;
             border: none;
             border-radius: var(--radius-small);
-            font-weight: 600;
+            font-weight: 500;
             cursor: pointer;
             transition: all 0.3s ease;
         }
@@ -106,7 +105,7 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 15px rgba(255, 59, 48, 0.3);
         }
-
+        
         /* Control Panel */
         .control-panel {
             display: flex;
@@ -133,7 +132,7 @@
             padding: 12px 16px;
             border: 2px solid var(--border);
             border-radius: var(--radius-small);
-            font-size: 20px;
+            font-size: 16px;
             font-family: inherit;
             background: var(--surface);
             transition: all 0.3s ease;
@@ -146,7 +145,7 @@
         }
         
         .load-btn {
-            padding: 20px 32px;
+            padding: 12px 32px;
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 20%);
             color: white;
             border: none;
@@ -194,6 +193,95 @@
             transform: translateY(-1px);
         }
         
+        /* View Mode Switcher */
+        .view-mode-switcher {
+            display: flex;
+            background: var(--background);
+            border-radius: var(--radius-small);
+            padding: 4px;
+            gap: 4px;
+        }
+        
+        .view-mode-btn {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            border-radius: calc(var(--radius-small) - 4px);
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        
+        .view-mode-btn.active {
+            background: var(--surface);
+            color: var(--primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .view-mode-btn:hover:not(.active) {
+            color: var(--primary);
+        }
+        
+        /* Date Navigation Buttons */
+        .date-nav-btn {
+            padding: 12px 16px;
+            border: none;
+            background: var(--primary);
+            color: white;
+            border-radius: var(--radius-small);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            font-weight: 600;
+            font-family: inherit;
+        }
+        
+        .date-nav-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 122, 255, 0.3);
+        }
+        
+        /* Quick Action Buttons */
+        .quick-action-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--radius-small);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: inherit;
+        }
+        
+        .quick-action-btn.today {
+            background: var(--purple);
+            color: white;
+        }
+        
+        .quick-action-btn.today:hover {
+            background: #9B42CA;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(175, 82, 222, 0.3);
+        }
+        
+        .quick-action-btn.yesterday {
+            background: var(--success);
+            color: white;
+        }
+        
+        .quick-action-btn.yesterday:hover {
+            background: #2DB553;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(52, 199, 89, 0.3);
+        }
+        
         /* Loading State */
         .loading-overlay {
             position: fixed;
@@ -222,6 +310,8 @@
             margin: 0 auto 16px;
         }
         
+        /* Logo SB 300dpi.tif */
+        
         .loading-text {
             font-size: 18px;
             color: var(--text-secondary);
@@ -246,6 +336,22 @@
             overflow: hidden;
         }
         
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+        
         .stat-card::after {
             content: '';
             position: absolute;
@@ -264,10 +370,10 @@
         }
         
         .stat-card .icon {
-            width: 48px;
-            height: 48px;
+            width: 50px;
+            height: 50px;
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            border-radius: var(--radius-small);
+            border-radius: 15px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -278,22 +384,46 @@
         
         .stat-card h3 {
             color: var(--text-secondary);
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 500;
             margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         .stat-card .value {
             font-size: 32px;
             font-weight: 700;
             color: var(--text-primary);
+            margin-bottom: 8px;
+            line-height: 1;
+        }
+        
+        .stat-card .change {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            font-weight: 600;
             margin-bottom: 4px;
+        }
+        
+        .stat-card .change.positive {
+            color: var(--success);
+        }
+        
+        .stat-card .change.negative {
+            color: var(--danger);
+        }
+        
+        .stat-card .change.neutral {
+            color: var(--text-secondary);
         }
         
         .stat-card .subtext {
             color: var(--text-tertiary);
-            font-size: 14px;
-            margin-top: 8px;
+            font-size: 13px;
+            margin-top: 4px;
         }
         
         /* Chart Sections */
@@ -325,6 +455,33 @@
             display: flex;
             align-items: center;
             gap: 12px;
+        }
+        
+        .chart-options {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chart-option-btn {
+            padding: 8px 16px;
+            border: 2px solid var(--border);
+            background: var(--surface);
+            border-radius: var(--radius-small);
+            font-size: 14px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: inherit;
+        }
+        
+        .chart-option-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1);
         }
         
         /* Charts Grid */
@@ -431,6 +588,78 @@
             .control-group { width: 100%; }
         }
         
+        /* Stay Duration Cards */
+        .stay-duration-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stay-duration-item {
+            background: var(--background);
+            padding: 20px;
+            border-radius: var(--radius-small);
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stay-duration-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .stay-duration-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 20px rgba(0, 122, 255, 0.2);
+        }
+        
+        .stay-duration-item:hover::before {
+            opacity: 1;
+        }
+        
+        .stay-duration-item:hover * {
+            color: white !important;
+            position: relative;
+        }
+        
+        .stay-duration-time {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        .stay-duration-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .stay-duration-percent {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-top: 4px;
+        }
+        
+        .stay-duration-total {
+            grid-column: span 2;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+        }
+        
+        .stay-duration-total * {
+            color: white !important;
+        }
+        
         /* Custom Scrollbar */
         ::-webkit-scrollbar {
             width: 8px;
@@ -456,17 +685,27 @@
         <!-- Header -->
         <div class="header">
             <div class="header-top">
-	<img src="https://raw.githubusercontent.com/DrorSBIsrael/S-B-Parking-reports/refs/heads/master/templates/Logo%20SB%20300dpi.jpg">
                 <h1>לוח בקרה - <span id="dashboardTitle">טוען...</span></h1>
                 <div class="user-info">
                     <span class="user-name" id="userName">טוען...</span>
                     <button class="logout-btn" onclick="logout()">
-                        התנתק
+                        יציאה
                     </button>
                 </div>
             </div>
+            
             <!-- Control Panel -->
             <div class="control-panel">
+                <!-- View Mode Switcher -->
+                <div class="view-mode-switcher">
+                    <button class="view-mode-btn active" data-mode="daily" onclick="setViewMode('daily')">יומי</button>
+                    <button class="view-mode-btn" data-mode="weekly" onclick="setViewMode('weekly')">שבועי</button>
+                    <button class="view-mode-btn" data-mode="monthly" onclick="setViewMode('monthly')">חודשי</button>
+                </div>
+                
+                <!-- Date Navigation -->
+                <button class="date-nav-btn" onclick="navigateDate(-1)">◀</button>
+                
                 <!-- Date Range -->
                 <div class="control-group">
                     <label class="control-label">מתאריך</label>
@@ -478,9 +717,22 @@
                     <input type="date" id="endDate" class="control-input">
                 </div>
                 
+                <button class="date-nav-btn" onclick="navigateDate(1)">▶</button>
+                
+                <!-- Quick Actions -->
+                <button class="quick-action-btn today" onclick="setQuickRange('today')">
+                    <span>📅</span>
+                    <span>היום</span>
+                </button>
+                
+                <button class="quick-action-btn yesterday" onclick="setQuickRange('yesterday')">
+                    <span>📆</span>
+                    <span>אתמול</span>
+                </button>
+                
                 <!-- Load Button -->
                 <button class="load-btn" onclick="loadData()">
-                    <span> </span>
+                    <span>📊</span>
                     <span>טען נתונים</span>
                 </button>
             </div>
@@ -493,15 +745,7 @@
                 </select>
             </div>
             
-            <!-- Quick Range Buttons -->
-            <div class="quick-ranges">
-                <button class="quick-btn" onclick="setQuickRange('yesterday')">אתמול</button>
-                <button class="quick-btn" onclick="setQuickRange('week')">השבוע</button>
-                <button class="quick-btn" onclick="setQuickRange('lastWeek')">שבוע שעבר</button>
-                <button class="quick-btn" onclick="setQuickRange('month')">החודש</button>
-                <button class="quick-btn" onclick="setQuickRange('lastMonth')">חודש שעבר</button>
-                <button class="quick-btn" onclick="setQuickRange('year')">השנה</button>
-            </div>
+
         </div>
         
         <!-- Loading Overlay -->
@@ -547,6 +791,12 @@
                             <span>📈</span>
                             <span>מגמת הכנסות</span>
                         </h2>
+                        <div class="chart-options">
+                            <button class="chart-option-btn" onclick="toggleChartType('revenue')">
+                                <span>🔄</span>
+                                <span>החלף סוג</span>
+                            </button>
+                        </div>
                     </div>
                     <canvas id="revenueChart"></canvas>
                 </div>
@@ -629,7 +879,7 @@
                 </div>
             </div>
             
-            <!-- Stay Duration Chart -->
+            <!-- Stay Duration Section -->
             <div class="chart-section">
                 <div class="chart-header">
                     <h2 class="chart-title">
@@ -637,7 +887,9 @@
                         <span>זמני שהייה</span>
                     </h2>
                 </div>
-                <canvas id="stayDurationChart" style="max-height: 250px;"></canvas>
+                <div class="stay-duration-grid" id="stayDurationGrid">
+                    <!-- Stay duration cards will be populated here -->
+                </div>
             </div>
             
             <!-- Barrier & Encoders Section -->
@@ -673,6 +925,8 @@ let isSingleParkingMode = false;
 let isGroup = false;
 let groupName = '';
 let userParkings = [];
+let currentViewMode = 'daily'; // Track current view mode
+let chartTypes = { revenue: 'line', entries: 'bar', daily: 'bar' }; // Track chart types
 
 // Chart.js default configuration
 Chart.defaults.font.family = "'Heebo', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -1182,117 +1436,118 @@ function updateDashboard() {
 // Update statistics cards
 function updateStats() {
     const stats = calculateStats();
+    const changes = calculateStatChanges(); // Calculate percentage changes
     
     const statsHTML = `
         <div class="stat-card" data-stat-type="revenue">
-            <div class="icon">💰</div>
+            <div class="icon" style="background: linear-gradient(135deg, #007AFF, #5AC8FA);">💰</div>
             <h3>סה"כ הכנסות</h3>
-            <div class="value">
-                ₪${stats.totalRevenue.toLocaleString()}
+            <div class="value">₪${stats.totalRevenue.toLocaleString()}</div>
+            ${changes.revenue !== null ? `
+            <div class="change ${changes.revenue >= 0 ? 'positive' : 'negative'}">
+                <span>${changes.revenue >= 0 ? '▲' : '▼'}</span>
+                <span>${Math.abs(changes.revenue).toFixed(1)}%</span>
             </div>
+            ` : '<div class="change neutral">ללא נתוני השוואה</div>'}
             <div class="subtext">מכל אמצעי התשלום</div>
         </div>
         
         <div class="stat-card" data-stat-type="entries">
-            <div class="icon">🚗</div>
+            <div class="icon" style="background: linear-gradient(135deg, #34C759, #30D158);">🚗</div>
             <h3>סה"כ כניסות</h3>
-            <div class="value">
-                ${stats.totalEntries.toLocaleString()}
+            <div class="value">${stats.totalEntries.toLocaleString()}</div>
+            ${changes.entries !== null ? `
+            <div class="change ${changes.entries >= 0 ? 'positive' : 'negative'}">
+                <span>${changes.entries >= 0 ? '▲' : '▼'}</span>
+                <span>${Math.abs(changes.entries).toFixed(1)}%</span>
             </div>
+            ` : '<div class="change neutral">ללא נתוני השוואה</div>'}
             <div class="subtext">${stats.dailyAvgEntries.toLocaleString()} בממוצע ליום</div>
         </div>
         
         <div class="stat-card" data-stat-type="casual">
-            <div class="icon">👤</div>
+            <div class="icon" style="background: linear-gradient(135deg, #5856D6, #6E6CE3);">👤</div>
             <h3>מזדמנים</h3>
-            <div class="value">
-                ${stats.totalCasual.toLocaleString()}
-            </div>
-            <div class="subtext">${stats.casualPercent.toFixed(1)}% מהכניסות</div>
+            <div class="value">${stats.totalCasual.toLocaleString()}</div>
+            <div class="change neutral">${stats.casualPercent.toFixed(1)}% מהכניסות</div>
+            <div class="subtext">כניסות ללא מנוי</div>
         </div>
         
         <div class="stat-card" data-stat-type="members">
-            <div class="icon">⭐</div>
+            <div class="icon" style="background: linear-gradient(135deg, #FF9500, #FF9F0A);">⭐</div>
             <h3>מנויים</h3>
-            <div class="value">
-                ${stats.totalMembers.toLocaleString()}
-            </div>
-            <div class="subtext">${stats.memberPercent.toFixed(1)}% מהכניסות</div>
+            <div class="value">${stats.totalMembers.toLocaleString()}</div>
+            <div class="change neutral">${stats.memberPercent.toFixed(1)}% מהכניסות</div>
+            <div class="subtext">כניסות עם מנוי</div>
         </div>
         
         ${stats.totalApp > 0 ? `
         <div class="stat-card" data-stat-type="app">
-            <div class="icon">📱</div>
+            <div class="icon" style="background: linear-gradient(135deg, #AF52DE, #C969FF);">📱</div>
             <h3>אפליקציה</h3>
-            <div class="value">
-                ${stats.totalApp.toLocaleString()}
-            </div>
-            <div class="subtext">${stats.appPercent.toFixed(1)}% מהכניסות</div>
+            <div class="value">${stats.totalApp.toLocaleString()}</div>
+            <div class="change neutral">${stats.appPercent.toFixed(1)}% מהכניסות</div>
+            <div class="subtext">כניסות דרך אפליקציה</div>
         </div>
         ` : ''}
         
         <div class="stat-card" data-stat-type="barriers" ${isGroup && !isSingleParkingMode ? 'style="cursor: pointer;"' : ''}>
-            <div class="icon">🚧</div>
+            <div class="icon" style="background: linear-gradient(135deg, #FF3B30, #FF6961);">🚧</div>
             <h3>פתיחות מחסום</h3>
-            <div class="value">
-                ${stats.totalBarrier.toLocaleString()}
+            <div class="value">${stats.totalBarrier.toLocaleString()}</div>
+            <div class="change ${stats.barrierPercent > 5 ? 'negative' : 'positive'}">
+                ${stats.barrierPercent.toFixed(1)}% מהכניסות
             </div>
-            <div class="subtext">${stats.barrierPercent.toFixed(1)}% מהכניסות</div>
+            <div class="subtext">${stats.barrierPerEntry.toFixed(2)} לכל כניסה</div>
         </div>
         
         <div class="stat-card" data-stat-type="cash">
-            <div class="icon">💵</div>
+            <div class="icon" style="background: linear-gradient(135deg, #30D158, #34C759);">💵</div>
             <h3>מזומן</h3>
-            <div class="value">
-                ₪${stats.totalCash.toLocaleString()}
-            </div>
-            <div class="subtext">${stats.cashPercent.toFixed(1)}% מההכנסות</div>
+            <div class="value">₪${stats.totalCash.toLocaleString()}</div>
+            <div class="change neutral">${stats.cashPercent.toFixed(1)}%</div>
+            <div class="subtext">מסך ההכנסות</div>
         </div>
         
         <div class="stat-card" data-stat-type="credit">
-            <div class="icon">💳</div>
+            <div class="icon" style="background: linear-gradient(135deg, #007AFF, #0051D5);">💳</div>
             <h3>אשראי</h3>
-            <div class="value">
-                ₪${stats.totalCredit.toLocaleString()}
-            </div>
-            <div class="subtext">${stats.creditPercent.toFixed(1)}% מההכנסות</div>
+            <div class="value">₪${stats.totalCredit.toLocaleString()}</div>
+            <div class="change neutral">${stats.creditPercent.toFixed(1)}%</div>
+            <div class="subtext">מסך ההכנסות</div>
         </div>
         
         <div class="stat-card" data-stat-type="pango">
-            <div class="icon">📲</div>
+            <div class="icon" style="background: linear-gradient(135deg, #5856D6, #AF52DE);">📲</div>
             <h3>פנגו</h3>
-            <div class="value">
-                ₪${stats.totalPango.toLocaleString()}
-            </div>
-            <div class="subtext">${stats.pangoPercent.toFixed(1)}% מההכנסות</div>
+            <div class="value">₪${stats.totalPango.toLocaleString()}</div>
+            <div class="change neutral">${stats.pangoPercent.toFixed(1)}%</div>
+            <div class="subtext">מסך ההכנסות</div>
         </div>
         
         <div class="stat-card" data-stat-type="cello">
-            <div class="icon">📞</div>
+            <div class="icon" style="background: linear-gradient(135deg, #FF9500, #FF3B30);">📞</div>
             <h3>סלו</h3>
-            <div class="value">
-                ₪${stats.totalCello.toLocaleString()}
-            </div>
-            <div class="subtext">${stats.celloPercent.toFixed(1)}% מההכנסות</div>
+            <div class="value">₪${stats.totalCello.toLocaleString()}</div>
+            <div class="change neutral">${stats.celloPercent.toFixed(1)}%</div>
+            <div class="subtext">מסך ההכנסות</div>
         </div>
         
         <div class="stat-card" data-stat-type="avg-revenue">
-            <div class="icon">📊</div>
+            <div class="icon" style="background: linear-gradient(135deg, #00C7BE, #30D158);">📊</div>
             <h3>ממוצע יומי</h3>
-            <div class="value">
-                ₪${stats.dailyAvgRevenue.toLocaleString()}
-            </div>
+            <div class="value">₪${stats.dailyAvgRevenue.toLocaleString()}</div>
+            <div class="change neutral">${stats.uniqueDays} ימים</div>
             <div class="subtext">הכנסה יומית ממוצעת</div>
         </div>
         
         ${!isSingleParkingMode ? `
         <div class="stat-card multi-parking-only" data-stat-type="parkings">
-            <div class="icon">🏢</div>
+            <div class="icon" style="background: linear-gradient(135deg, #FF3B30, #FF9500);">🏢</div>
             <h3>חניונים פעילים</h3>
-            <div class="value">
-                ${stats.uniqueParkings}
-            </div>
-            <div class="subtext">מתוך רשת החניונים</div>
+            <div class="value">${stats.uniqueParkings}</div>
+            <div class="change neutral">מתוך ${userParkings.length}</div>
+            <div class="subtext">חניונים ברשת</div>
         </div>
         ` : ''}
     `;
@@ -1358,10 +1613,50 @@ function calculateStats() {
         appPercent: totalEntries > 0 ? (totalApp / totalEntries) * 100 : 0,
         
         barrierPercent: totalEntries > 0 ? (totalBarrier / totalEntries) * 100 : 0,
+        barrierPerEntry: totalEntries > 0 ? totalBarrier / totalEntries : 0,
         
         // Averages
         dailyAvgRevenue: uniqueDays > 0 ? Math.round(totalRevenue / uniqueDays) : 0,
         dailyAvgEntries: uniqueDays > 0 ? Math.round(totalEntries / uniqueDays) : 0,
+    };
+}
+
+// Calculate percentage changes for statistics
+function calculateStatChanges() {
+    // This would compare with previous period data
+    // For now, return placeholder values
+    // In production, this would fetch and compare with historical data
+    
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    // Calculate if we have enough data for comparison
+    const dates = [...new Set(currentData.map(d => d.report_date))].sort();
+    if (dates.length < 2) {
+        return {
+            revenue: null,
+            entries: null,
+            barriers: null
+        };
+    }
+    
+    // Compare last date with previous date (simplified for demo)
+    const lastDate = dates[dates.length - 1];
+    const prevDate = dates[dates.length - 2];
+    
+    const lastData = currentData.filter(d => d.report_date === lastDate);
+    const prevData = currentData.filter(d => d.report_date === prevDate);
+    
+    const lastRevenue = lastData.reduce((sum, d) => sum + (d.total_revenue_shekels || 0), 0);
+    const prevRevenue = prevData.reduce((sum, d) => sum + (d.total_revenue_shekels || 0), 0);
+    
+    const lastEntries = lastData.reduce((sum, d) => sum + (d.t_entry_tot || 0), 0);
+    const prevEntries = prevData.reduce((sum, d) => sum + (d.t_entry_tot || 0), 0);
+    
+    return {
+        revenue: prevRevenue > 0 ? ((lastRevenue - prevRevenue) / prevRevenue) * 100 : null,
+        entries: prevEntries > 0 ? ((lastEntries - prevEntries) / prevEntries) * 100 : null,
+        barriers: null // Can be calculated similarly if needed
     };
 }
 
@@ -1371,7 +1666,7 @@ function updateCharts() {
     createPaymentChart();
     createEntriesChart();
     createDailyChart();
-    createStayDurationChart();
+    updateStayDuration();
     createBarrierChart();
     updateEncodersInfo();
     
@@ -1405,26 +1700,28 @@ function createRevenueChart() {
     if (charts.revenue) charts.revenue.destroy();
     
     charts.revenue = new Chart(ctx, {
-        type: 'line',
+        type: chartTypes.revenue || 'line',
         data: {
             labels: formattedDates,
             datasets: [{
                 label: 'הכנסות',
                 data: revenues,
                 borderColor: '#007AFF',
-                backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                backgroundColor: chartTypes.revenue === 'bar' ? 'rgba(0, 122, 255, 0.8)' : 'rgba(0, 122, 255, 0.1)',
                 tension: 0.4,
                 pointRadius: 4,
                 pointHoverRadius: 6,
+                borderRadius: chartTypes.revenue === 'bar' ? 8 : 0,
                 yAxisID: 'y'
             }, {
                 label: 'כניסות',
                 data: entries,
                 borderColor: '#5AC8FA',
-                backgroundColor: 'rgba(90, 200, 250, 0.1)',
+                backgroundColor: chartTypes.revenue === 'bar' ? 'rgba(90, 200, 250, 0.8)' : 'rgba(90, 200, 250, 0.1)',
                 tension: 0.4,
                 pointRadius: 4,
                 pointHoverRadius: 6,
+                borderRadius: chartTypes.revenue === 'bar' ? 8 : 0,
                 yAxisID: 'y1'
             }]
         },
@@ -1745,10 +2042,8 @@ function createDailyChart() {
     });
 }
 
-// Create stay duration chart
-function createStayDurationChart() {
-    const ctx = document.getElementById('stayDurationChart').getContext('2d');
-    
+// Update stay duration display
+function updateStayDuration() {
     // Calculate totals for each duration category
     const durations = {
         '0-15 דקות': currentData.reduce((sum, d) => sum + (d.stay_015 || 0), 0),
@@ -1763,66 +2058,41 @@ function createStayDurationChart() {
         '7-24 שעות': currentData.reduce((sum, d) => sum + (d.stay_724 || 0), 0),
     };
     
-    const labels = Object.keys(durations);
-    const values = Object.values(durations);
+    // Calculate total for percentages
+    const total = Object.values(durations).reduce((sum, val) => sum + val, 0);
     
-    // Create gradient
-    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-    gradient.addColorStop(0, '#007AFF');
-    gradient.addColorStop(1, '#5AC8FA');
+    // Calculate short stay total (0-60 minutes)
+    const shortStayTotal = durations['0-15 דקות'] + durations['15-30 דקות'] + 
+                         durations['30-45 דקות'] + durations['45-60 דקות'];
     
-    if (charts.stayDuration) charts.stayDuration.destroy();
+    // Generate HTML for duration cards
+    let html = '';
     
-    charts.stayDuration = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'מספר רכבים',
-                data: values,
-                backgroundColor: gradient,
-                borderRadius: 8,
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    titleColor: '#000',
-                    bodyColor: '#6C6C70',
-                    borderColor: '#E5E5EA',
-                    borderWidth: 1,
-                    cornerRadius: 12,
-                    padding: 12,
-                    callbacks: {
-                        label: function(context) {
-                            const total = values.reduce((a, b) => a + b, 0);
-                            const percentage = total > 0 ? ((context.parsed.y / total) * 100).toFixed(1) : 0;
-                            return `${context.parsed.y.toLocaleString()} רכבים (${percentage}%)`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: {
-                        display: true,
-                        color: 'rgba(0, 0, 0, 0.05)'
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false
-                    }
-                }
-            }
+    // Add individual duration cards
+    Object.entries(durations).forEach(([time, value]) => {
+        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+        if (value > 0 || ['0-15 דקות', '15-30 דקות', '30-45 דקות', '45-60 דקות'].includes(time)) {
+            html += `
+                <div class="stay-duration-item">
+                    <div class="stay-duration-time">${time}</div>
+                    <div class="stay-duration-value">${value.toLocaleString()}</div>
+                    <div class="stay-duration-percent">${percentage}%</div>
+                </div>
+            `;
         }
     });
+    
+    // Add total card for short stays
+    const shortStayPercent = total > 0 ? ((shortStayTotal / total) * 100).toFixed(1) : 0;
+    html += `
+        <div class="stay-duration-item stay-duration-total">
+            <div class="stay-duration-time">סה"כ 0-60 דקות</div>
+            <div class="stay-duration-value">${shortStayTotal.toLocaleString()}</div>
+            <div class="stay-duration-percent">${shortStayPercent}%</div>
+        </div>
+    `;
+    
+    document.getElementById('stayDurationGrid').innerHTML = html;
 }
 
 // Create barrier chart
@@ -2299,6 +2569,9 @@ function setQuickRange(range) {
     let startDate, endDate;
     
     switch(range) {
+        case 'today':
+            startDate = endDate = today;
+            break;
         case 'yesterday':
             startDate = endDate = new Date(today);
             startDate.setDate(startDate.getDate() - 1);
@@ -2332,6 +2605,73 @@ function setQuickRange(range) {
     document.getElementById('endDate').value = formatDateForInput(endDate);
     
     // Auto load data
+    loadData();
+}
+
+// Set view mode (daily/weekly/monthly)
+function setViewMode(mode) {
+    currentViewMode = mode;
+    
+    // Update button states
+    document.querySelectorAll('.view-mode-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.mode === mode) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Update date range based on mode
+    updateDateRangeForMode();
+}
+
+// Update date range based on current view mode
+function updateDateRangeForMode() {
+    const startDate = new Date(document.getElementById('startDate').value);
+    let endDate = new Date(startDate);
+    
+    switch(currentViewMode) {
+        case 'daily':
+            // Keep same date
+            break;
+        case 'weekly':
+            // Set to end of week (6 days later)
+            endDate.setDate(endDate.getDate() + 6);
+            break;
+        case 'monthly':
+            // Set to end of month
+            endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+            break;
+    }
+    
+    document.getElementById('endDate').value = formatDateForInput(endDate);
+    loadData();
+}
+
+// Navigate dates forward or backward
+function navigateDate(direction) {
+    const startDate = new Date(document.getElementById('startDate').value);
+    const endDate = new Date(document.getElementById('endDate').value);
+    
+    switch(currentViewMode) {
+        case 'daily':
+            startDate.setDate(startDate.getDate() + direction);
+            endDate.setDate(endDate.getDate() + direction);
+            break;
+        case 'weekly':
+            startDate.setDate(startDate.getDate() + (direction * 7));
+            endDate.setDate(endDate.getDate() + (direction * 7));
+            break;
+        case 'monthly':
+            startDate.setMonth(startDate.getMonth() + direction);
+            endDate.setMonth(endDate.getMonth() + direction);
+            // Adjust for month end
+            endDate = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0);
+            break;
+    }
+    
+    document.getElementById('startDate').value = formatDateForInput(startDate);
+    document.getElementById('endDate').value = formatDateForInput(endDate);
+    
     loadData();
 }
 
@@ -3229,6 +3569,29 @@ function hideStatTooltip() {
                 tooltip.style.maxHeight = '60vh'; // Reset max height
             }
         }, 200);
+    }
+}
+
+// Toggle chart type between line and bar
+function toggleChartType(chartName) {
+    // Toggle between line and bar
+    if (chartTypes[chartName] === 'line') {
+        chartTypes[chartName] = 'bar';
+    } else {
+        chartTypes[chartName] = 'line';
+    }
+    
+    // Recreate the specific chart
+    switch(chartName) {
+        case 'revenue':
+            createRevenueChart();
+            break;
+        case 'entries':
+            createEntriesChart();
+            break;
+        case 'daily':
+            createDailyChart();
+            break;
     }
 }
 
