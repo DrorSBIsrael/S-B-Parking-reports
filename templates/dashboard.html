@@ -625,8 +625,9 @@
         .stay-duration-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
+            gap: 20px;
             margin-top: 20px;
+            margin-bottom: 40px;
         }
         
         .stay-duration-item {
@@ -691,6 +692,11 @@
         
         .stay-duration-total * {
             color: white !important;
+        }
+        
+        .stay-060:hover {
+            border-color: var(--primary-dark) !important;
+            background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(0, 122, 255, 0.05)) !important;
         }
         
         /* Custom Scrollbar */
@@ -2221,12 +2227,18 @@ function createDailyChart() {
 
 // Update stay duration display
 function updateStayDuration() {
-    // Calculate totals for each duration category
+    // Calculate individual totals
+    const stay015 = currentData.reduce((sum, d) => sum + (d.stay_015 || 0), 0);
+    const stay030 = currentData.reduce((sum, d) => sum + (d.stay_030 || 0), 0);
+    const stay045 = currentData.reduce((sum, d) => sum + (d.stay_045 || 0), 0);
+    const stay060 = currentData.reduce((sum, d) => sum + (d.stay_060 || 0), 0);
+    
+    // Combined 0-60 minutes
+    const stay0to60 = stay015 + stay030 + stay045 + stay060;
+    
+    // Prepare durations for display (combining 0-60)
     const durations = {
-        '0-15 דקות': currentData.reduce((sum, d) => sum + (d.stay_015 || 0), 0),
-        '15-30 דקות': currentData.reduce((sum, d) => sum + (d.stay_030 || 0), 0),
-        '30-45 דקות': currentData.reduce((sum, d) => sum + (d.stay_045 || 0), 0),
-        '45-60 דקות': currentData.reduce((sum, d) => sum + (d.stay_060 || 0), 0),
+        '0-60 דקות': stay0to60,
         'עד 2 שעות': currentData.reduce((sum, d) => sum + (d.stay_2 || 0), 0),
         'עד 3 שעות': currentData.reduce((sum, d) => sum + (d.stay_3 || 0), 0),
         'עד 4 שעות': currentData.reduce((sum, d) => sum + (d.stay_4 || 0), 0),
@@ -2241,19 +2253,47 @@ function updateStayDuration() {
         document.getElementById('stayDurationChart').style.display = 'none';
         
         // Calculate total for percentages
-        const total = Object.values(durations).reduce((sum, val) => sum + val, 0);
-        
-        // Calculate short stay total (0-60 minutes)
-        const shortStayTotal = durations['0-15 דקות'] + durations['15-30 דקות'] + 
-                             durations['30-45 דקות'] + durations['45-60 דקות'];
+        const total = Object.values(durations).reduce((sum, val) => sum + val, 0) + stay015; // Include stay015 in total to avoid double counting
+        const actualTotal = Object.values(durations).reduce((sum, val) => sum + val, 0);
         
         // Generate HTML for duration cards
         let html = '';
         
-        // Add individual duration cards
+        // Add 0-60 minutes card with 0-15 highlight
+        const percentage060 = actualTotal > 0 ? ((stay0to60 / actualTotal) * 100).toFixed(1) : 0;
+        const percentage015 = actualTotal > 0 ? ((stay015 / actualTotal) * 100).toFixed(1) : 0;
+        const percentage015of60 = stay0to60 > 0 ? ((stay015 / stay0to60) * 100).toFixed(1) : 0;
+        
+        html += `
+            <div class="stay-duration-item stay-060" style="position: relative; overflow: visible; border: 2px solid var(--primary); background: linear-gradient(135deg, rgba(0, 122, 255, 0.05), rgba(0, 122, 255, 0.02));">
+                <div class="stay-duration-time" style="font-weight: 700; color: var(--primary);">0-60 דקות</div>
+                <div class="stay-duration-value" style="color: var(--primary);">${stay0to60.toLocaleString()}</div>
+                <div class="stay-duration-percent">${percentage060}%</div>
+                <div style="
+                    position: absolute;
+                    bottom: -38px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: rgba(255, 255, 255, 0.95);
+                    padding: 10px 16px;
+                    border-radius: 10px;
+                    font-size: 13px;
+                    color: var(--primary);
+                    white-space: nowrap;
+                    border: 2px solid rgba(0, 122, 255, 0.3);
+                    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.15);
+                    z-index: 10;
+                ">
+                    <strong style="font-size: 14px;">0-15 דקות:</strong> ${stay015.toLocaleString()} 
+                    <span style="color: var(--text-secondary);">(${percentage015of60}% מתוך 0-60)</span>
+                </div>
+            </div>
+        `;
+        
+        // Add other duration cards
         Object.entries(durations).forEach(([time, value]) => {
-            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-            if (value > 0 || ['0-15 דקות', '15-30 דקות', '30-45 דקות', '45-60 דקות'].includes(time)) {
+            if (time !== '0-60 דקות' && value > 0) {
+                const percentage = actualTotal > 0 ? ((value / actualTotal) * 100).toFixed(1) : 0;
                 html += `
                     <div class="stay-duration-item">
                         <div class="stay-duration-time">${time}</div>
@@ -2264,16 +2304,6 @@ function updateStayDuration() {
             }
         });
         
-        // Add total card for short stays
-        const shortStayPercent = total > 0 ? ((shortStayTotal / total) * 100).toFixed(1) : 0;
-        html += `
-            <div class="stay-duration-item stay-duration-total">
-                <div class="stay-duration-time">סה"כ 0-60 דקות</div>
-                <div class="stay-duration-value">${shortStayTotal.toLocaleString()}</div>
-                <div class="stay-duration-percent">${shortStayPercent}%</div>
-            </div>
-        `;
-        
         document.getElementById('stayDurationGrid').innerHTML = html;
         
     } else {
@@ -2281,18 +2311,29 @@ function updateStayDuration() {
         document.getElementById('stayDurationGrid').style.display = 'none';
         document.getElementById('stayDurationChart').style.display = 'block';
         
-        createStayDurationChart(durations, stayDurationViewMode);
+        createStayDurationChart(durations, stayDurationViewMode, stay015, stay0to60);
     }
 }
 
 // Create stay duration chart
-function createStayDurationChart(durations, chartType) {
+function createStayDurationChart(durations, chartType, stay015, stay0to60) {
     const ctx = document.getElementById('stayDurationChart').getContext('2d');
     
     // Filter out empty values for cleaner display
     const filteredData = Object.entries(durations).filter(([_, value]) => value > 0);
-    const labels = filteredData.map(([label, _]) => label);
-    const values = filteredData.map(([_, value]) => value);
+    let labels = filteredData.map(([label, _]) => label);
+    let values = filteredData.map(([_, value]) => value);
+    
+    // For bar chart, add special handling for 0-15 minutes
+    if (chartType === 'bar') {
+        // Find the index of 0-60 minutes
+        const index060 = labels.indexOf('0-60 דקות');
+        if (index060 !== -1) {
+            // Insert 0-15 minutes after 0-60 minutes
+            labels.splice(index060 + 1, 0, '(מתוכם 0-15 דקות)');
+            values.splice(index060 + 1, 0, stay015);
+        }
+    }
     
     if (charts.stayDuration) charts.stayDuration.destroy();
     
@@ -2304,15 +2345,22 @@ function createStayDurationChart(durations, chartType) {
                 label: 'מספר רכבים',
                 data: values,
                 backgroundColor: chartType === 'bar' ? 
-                    'rgba(0, 122, 255, 0.8)' :
+                    labels.map(label => label.includes('0-15') ? 'rgba(0, 122, 255, 0.4)' : 'rgba(0, 122, 255, 0.8)') :
                     [
                         '#007AFF', '#5AC8FA', '#34C759', '#FF9500', 
                         '#FF3B30', '#AF52DE', '#5856D6', '#FF2D55',
                         '#00C7BE', '#30D158', '#FFD60A', '#BF5AF2'
                     ],
-                borderWidth: chartType === 'pie' ? 2 : 0,
-                borderColor: '#fff',
-                borderRadius: chartType === 'bar' ? 8 : 0
+                borderWidth: chartType === 'bar' ? 
+                    labels.map(label => label.includes('0-15') ? 2 : 0) : 
+                    chartType === 'pie' ? 2 : 0,
+                borderColor: chartType === 'bar' ? 
+                    labels.map(label => label.includes('0-15') ? '#007AFF' : '#fff') : 
+                    '#fff',
+                borderRadius: chartType === 'bar' ? 8 : 0,
+                borderDash: chartType === 'bar' ? 
+                    labels.map(label => label.includes('0-15') ? [5, 5] : []) : 
+                    undefined
             }]
         },
         options: {
@@ -2331,8 +2379,16 @@ function createStayDurationChart(durations, chartType) {
                                 return data.labels.map((label, i) => {
                                     const value = data.datasets[0].data[i];
                                     const percentage = ((value / total) * 100).toFixed(1);
+                                    
+                                    // Special handling for 0-60 minutes in pie chart
+                                    let displayText = `${label}: ${value.toLocaleString()} (${percentage}%)`;
+                                    if (label === '0-60 דקות' && stay015 && stay0to60) {
+                                        const percentage015of60 = ((stay015 / stay0to60) * 100).toFixed(1);
+                                        displayText += ` | 0-15: ${stay015.toLocaleString()} (${percentage015of60}%)`;
+                                    }
+                                    
                                     return {
-                                        text: `${label}: ${value.toLocaleString()} (${percentage}%)`,
+                                        text: displayText,
                                         fillStyle: chartType === 'pie' ? 
                                             data.datasets[0].backgroundColor[i] : 
                                             data.datasets[0].backgroundColor,
@@ -2359,9 +2415,26 @@ function createStayDurationChart(durations, chartType) {
                         label: function(context) {
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
                             const percentage = ((context.parsed / total) * 100).toFixed(1);
-                            return chartType === 'bar' ?
-                                `${context.parsed.toLocaleString()} רכבים (${percentage}%)` :
-                                `${context.label}: ${context.parsed.toLocaleString()} (${percentage}%)`;
+                            
+                            // Special handling for 0-15 minutes
+                            if (context.label && context.label.includes('0-15')) {
+                                const of60Percent = stay0to60 > 0 ? ((stay015 / stay0to60) * 100).toFixed(1) : 0;
+                                return `0-15 דקות: ${context.parsed.toLocaleString()} רכבים (${of60Percent}% מתוך 0-60 דקות)`;
+                            }
+                            
+                            if (chartType === 'bar') {
+                                return `${context.parsed.toLocaleString()} רכבים (${percentage}%)`;
+                            } else {
+                                // Pie chart
+                                if (context.label === '0-60 דקות' && stay015 && stay0to60) {
+                                    const percentage015of60 = ((stay015 / stay0to60) * 100).toFixed(1);
+                                    return [
+                                        `${context.label}: ${context.parsed.toLocaleString()} (${percentage}%)`,
+                                        `מתוכם 0-15 דקות: ${stay015.toLocaleString()} (${percentage015of60}%)`
+                                    ];
+                                }
+                                return `${context.label}: ${context.parsed.toLocaleString()} (${percentage}%)`;
+                            }
                         }
                     }
                 }
@@ -3196,30 +3269,18 @@ function showParkingDetails(parkingName, data) {
             <canvas id="parkingTrendChart" style="max-height: 250px;"></canvas>
         </div>
         
-        <!-- Stay Duration Details -->
-        <div style="margin-top: 30px;">
-            <h4 style="font-size: 18px; font-weight: 600; margin-bottom: 20px;">התפלגות זמני שהייה - ${parkingName}</h4>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
-                ${data.stay015 > 0 ? `<div style="padding: 15px; background: var(--background); border-radius: 8px; text-align: center;">
-                    <div style="color: var(--text-secondary); font-size: 12px; margin-bottom: 5px;">0-15 דקות</div>
-                    <div style="font-weight: 600; font-size: 20px; color: var(--primary);">${data.stay015.toLocaleString()}</div>
-                    <div style="color: var(--text-secondary); font-size: 11px;">${data.totalStays > 0 ? ((data.stay015/data.totalStays)*100).toFixed(1) : 0}%</div>
-                </div>` : ''}
-                ${data.stay030 > 0 ? `<div style="padding: 15px; background: var(--background); border-radius: 8px; text-align: center;">
-                    <div style="color: var(--text-secondary); font-size: 12px; margin-bottom: 5px;">15-30 דקות</div>
-                    <div style="font-weight: 600; font-size: 20px; color: var(--primary);">${data.stay030.toLocaleString()}</div>
-                    <div style="color: var(--text-secondary); font-size: 11px;">${data.totalStays > 0 ? ((data.stay030/data.totalStays)*100).toFixed(1) : 0}%</div>
-                </div>` : ''}
-                ${data.stay045 > 0 ? `<div style="padding: 15px; background: var(--background); border-radius: 8px; text-align: center;">
-                    <div style="color: var(--text-secondary); font-size: 12px; margin-bottom: 5px;">30-45 דקות</div>
-                    <div style="font-weight: 600; font-size: 20px; color: var(--primary);">${data.stay045.toLocaleString()}</div>
-                    <div style="color: var(--text-secondary); font-size: 11px;">${data.totalStays > 0 ? ((data.stay045/data.totalStays)*100).toFixed(1) : 0}%</div>
-                </div>` : ''}
-                ${data.stay060 > 0 ? `<div style="padding: 15px; background: var(--background); border-radius: 8px; text-align: center;">
-                    <div style="color: var(--text-secondary); font-size: 12px; margin-bottom: 5px;">45-60 דקות</div>
-                    <div style="font-weight: 600; font-size: 20px; color: var(--primary);">${data.stay060.toLocaleString()}</div>
-                    <div style="color: var(--text-secondary); font-size: 11px;">${data.totalStays > 0 ? ((data.stay060/data.totalStays)*100).toFixed(1) : 0}%</div>
-                </div>` : ''}
+                    <!-- Stay Duration Details -->
+            <div style="margin-top: 30px;">
+                <h4 style="font-size: 18px; font-weight: 600; margin-bottom: 20px;">התפלגות זמני שהייה - ${parkingName}</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                    ${(data.stay015 + data.stay030 + data.stay045 + data.stay060) > 0 ? `<div style="padding: 15px; background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(0, 122, 255, 0.05)); border-radius: 8px; text-align: center; border: 2px solid var(--primary); position: relative;">
+                        <div style="color: var(--primary); font-size: 14px; margin-bottom: 5px; font-weight: 600;">0-60 דקות</div>
+                        <div style="font-weight: 700; font-size: 24px; color: var(--primary);">${(data.stay015 + data.stay030 + data.stay045 + data.stay060).toLocaleString()}</div>
+                        <div style="color: var(--text-secondary); font-size: 11px;">${data.totalStays > 0 ? (((data.stay015 + data.stay030 + data.stay045 + data.stay060)/data.totalStays)*100).toFixed(1) : 0}%</div>
+                        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0, 122, 255, 0.2); font-size: 12px; color: var(--primary);">
+                            <strong>0-15 דקות:</strong> ${data.stay015.toLocaleString()} (${(data.stay015 + data.stay030 + data.stay045 + data.stay060) > 0 ? ((data.stay015/(data.stay015 + data.stay030 + data.stay045 + data.stay060))*100).toFixed(1) : 0}%)
+                        </div>
+                    </div>` : ''}
                 ${data.stay2 > 0 ? `<div style="padding: 15px; background: var(--background); border-radius: 8px; text-align: center;">
                     <div style="color: var(--text-secondary); font-size: 12px; margin-bottom: 5px;">עד 2 שעות</div>
                     <div style="font-weight: 600; font-size: 20px; color: var(--primary);">${data.stay2.toLocaleString()}</div>
