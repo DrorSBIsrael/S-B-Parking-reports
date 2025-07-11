@@ -1065,8 +1065,29 @@ function formatDateForAPI(date) {
 // Format date for display (DD/MM/YYYY)
 function formatDateForDisplay(dateString) {
     if (!dateString) return '';
-    const [year, month, day] = dateString.split('-');
-    return `${day}/${month}/${year}`;
+    
+    // Check if already in DD/MM/YYYY format
+    if (dateString.includes('/')) {
+        return dateString;
+    }
+    
+    // Convert from YYYY-MM-DD to DD/MM/YYYY
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+        const [year, month, day] = parts;
+        return `${day}/${month}/${year}`;
+    }
+    
+    // If date is in any other format, try to parse it
+    const date = new Date(dateString);
+    if (!isNaN(date)) {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    }
+    
+    return dateString; // Return as is if cannot parse
 }
 
 // Load user info
@@ -1897,6 +1918,10 @@ function createRevenueChart() {
                     padding: 12,
                     displayColors: true,
                     callbacks: {
+                        title: function(tooltipItems) {
+                            // Ensure date is shown in DD/MM/YYYY format
+                            return tooltipItems[0].label;
+                        },
                         label: function(context) {
                             if (context.datasetIndex === 0) {
                                 return `הכנסות: ₪${context.parsed.y.toLocaleString()}`;
@@ -2182,6 +2207,10 @@ function createDailyChart() {
                     cornerRadius: 12,
                     padding: 12,
                     callbacks: {
+                        title: function(tooltipItems) {
+                            // Show the label as is (day name, week number, or month name)
+                            return tooltipItems[0].label;
+                        },
                         label: function(context) {
                             if (context.datasetIndex === 0) {
                                 return `הכנסות: ₪${Math.round(context.parsed.y).toLocaleString()}`;
@@ -2330,7 +2359,7 @@ function createStayDurationChart(durations, chartType, stay015, stay0to60) {
         const index060 = labels.indexOf('0-60 דקות');
         if (index060 !== -1) {
             // Insert 0-15 minutes after 0-60 minutes
-            labels.splice(index060 + 1, 0, '(מתוכם 0-15 דקות)');
+            labels.splice(index060 + 1, 0, '0-15 דקות (חלק מ-0-60)');
             values.splice(index060 + 1, 0, stay015);
         }
     }
@@ -2417,9 +2446,11 @@ function createStayDurationChart(durations, chartType, stay015, stay0to60) {
                             const percentage = ((context.parsed / total) * 100).toFixed(1);
                             
                             // Special handling for 0-15 minutes
-                            if (context.label && context.label.includes('0-15')) {
+                            if (context.label && (context.label.includes('0-15') || context.label.includes('חלק'))) {
+                                const actualTotal = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage015 = ((stay015 / actualTotal) * 100).toFixed(1);
                                 const of60Percent = stay0to60 > 0 ? ((stay015 / stay0to60) * 100).toFixed(1) : 0;
-                                return `0-15 דקות: ${context.parsed.toLocaleString()} רכבים (${of60Percent}% מתוך 0-60 דקות)`;
+                                return `0-15 דקות: ${context.parsed.toLocaleString()} רכבים (${percentage015}% מהסה"כ, ${of60Percent}% מתוך 0-60)`;
                             }
                             
                             if (chartType === 'bar') {
@@ -2530,6 +2561,15 @@ function createBarrierChart() {
                     borderWidth: 1,
                     cornerRadius: 12,
                     padding: 12,
+                    callbacks: {
+                        title: function(tooltipItems) {
+                            // Ensure date is shown in DD/MM/YYYY format
+                            return tooltipItems[0].label;
+                        },
+                        label: function(context) {
+                            return `פתיחות מחסום: ${context.parsed.y.toLocaleString()}`;
+                        }
+                    }
                 }
             },
             scales: {
@@ -2674,6 +2714,13 @@ function createParkingComparisonChart() {
                     cornerRadius: 12,
                     padding: 12,
                     callbacks: {
+                        label: function(context) {
+                            if (context.datasetIndex === 0) {
+                                return `הכנסות: ₪${context.parsed.y.toLocaleString()}`;
+                            } else {
+                                return `כניסות: ${context.parsed.y.toLocaleString()}`;
+                            }
+                        },
                         afterLabel: function(context) {
                             if (isGroup) {
                                 return 'לחץ לפירוט מלא';
@@ -3509,6 +3556,10 @@ function createParkingTrendChart(parkingName) {
                     cornerRadius: 12,
                     padding: 12,
                     callbacks: {
+                        title: function(tooltipItems) {
+                            // Ensure date is shown in DD/MM/YYYY format
+                            return tooltipItems[0].label;
+                        },
                         label: function(context) {
                             return `הכנסות: ₪${context.parsed.y.toLocaleString()}`;
                         }
