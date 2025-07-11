@@ -260,17 +260,6 @@
             font-family: inherit;
         }
         
-        .quick-action-btn.today {
-            background: var(--purple);
-            color: white;
-        }
-        
-        .quick-action-btn.today:hover {
-            background: #9B42CA;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(175, 82, 222, 0.3);
-        }
-        
         .quick-action-btn.yesterday {
             background: var(--success);
             color: white;
@@ -280,6 +269,50 @@
             background: #2DB553;
             transform: translateY(-2px);
             box-shadow: 0 4px 15px rgba(52, 199, 89, 0.3);
+        }
+        
+        .quick-action-btn.week {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .quick-action-btn.week:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 122, 255, 0.3);
+        }
+        
+        .quick-action-btn.lastweek {
+            background: var(--primary-light);
+            color: white;
+        }
+        
+        .quick-action-btn.lastweek:hover {
+            background: #4AB5E8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(90, 200, 250, 0.3);
+        }
+        
+        .quick-action-btn.month {
+            background: var(--purple);
+            color: white;
+        }
+        
+        .quick-action-btn.month:hover {
+            background: #9B42CA;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(175, 82, 222, 0.3);
+        }
+        
+        .quick-action-btn.lastmonth {
+            background: var(--warning);
+            color: white;
+        }
+        
+        .quick-action-btn.lastmonth:hover {
+            background: #E88300;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(255, 149, 0, 0.3);
         }
         
         /* Loading State */
@@ -720,14 +753,29 @@
                 <button class="date-nav-btn" onclick="navigateDate(1)">▶</button>
                 
                 <!-- Quick Actions -->
-                <button class="quick-action-btn today" onclick="setQuickRange('today')">
-                    <span>📅</span>
-                    <span>היום</span>
-                </button>
-                
                 <button class="quick-action-btn yesterday" onclick="setQuickRange('yesterday')">
                     <span>📆</span>
                     <span>אתמול</span>
+                </button>
+                
+                <button class="quick-action-btn week" onclick="setQuickRange('currentWeek')">
+                    <span>📅</span>
+                    <span>השבוע</span>
+                </button>
+                
+                <button class="quick-action-btn lastweek" onclick="setQuickRange('lastWeek')">
+                    <span>📆</span>
+                    <span>שבוע שעבר</span>
+                </button>
+                
+                <button class="quick-action-btn month" onclick="setQuickRange('currentMonth')">
+                    <span>📅</span>
+                    <span>החודש</span>
+                </button>
+                
+                <button class="quick-action-btn lastmonth" onclick="setQuickRange('lastMonth')">
+                    <span>📆</span>
+                    <span>חודש שעבר</span>
                 </button>
                 
                 <!-- Load Button -->
@@ -823,12 +871,12 @@
                     <canvas id="entriesChart"></canvas>
                 </div>
                 
-                <!-- Daily Comparison Chart -->
+                <!-- Period Comparison Chart -->
                 <div class="chart-section">
                     <div class="chart-header">
                         <h2 class="chart-title">
                             <span>📅</span>
-                            <span>השוואה יומית</span>
+                            <span id="comparisonTitle">השוואה יומית</span>
                         </h2>
                     </div>
                     <canvas id="dailyChart"></canvas>
@@ -886,10 +934,25 @@
                         <span>⏱️</span>
                         <span>זמני שהייה</span>
                     </h2>
+                    <div class="chart-options">
+                        <button class="chart-option-btn active" onclick="toggleStayDurationView('cards')">
+                            <span>🎯</span>
+                            <span>כרטיסים</span>
+                        </button>
+                        <button class="chart-option-btn" onclick="toggleStayDurationView('bar')">
+                            <span>📊</span>
+                            <span>עמודות</span>
+                        </button>
+                        <button class="chart-option-btn" onclick="toggleStayDurationView('pie')">
+                            <span>🥧</span>
+                            <span>עוגה</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="stay-duration-grid" id="stayDurationGrid">
                     <!-- Stay duration cards will be populated here -->
                 </div>
+                <canvas id="stayDurationChart" style="display: none; max-height: 350px;"></canvas>
             </div>
             
             <!-- Barrier & Encoders Section -->
@@ -927,6 +990,7 @@ let groupName = '';
 let userParkings = [];
 let currentViewMode = 'daily'; // Track current view mode
 let chartTypes = { revenue: 'line', entries: 'bar', daily: 'bar' }; // Track chart types
+let stayDurationViewMode = 'cards'; // Track stay duration view mode
 
 // Chart.js default configuration
 Chart.defaults.font.family = "'Heebo', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -1621,6 +1685,95 @@ function calculateStats() {
     };
 }
 
+// Helper function to get week key (format: YYYY-WW)
+function getWeekKey(dateString) {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    
+    // חישוב מספר השבוע בשנה
+    const firstDayOfYear = new Date(year, 0, 1);
+    const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+    const weekNumber = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+    
+    return `${year}-W${weekNumber.toString().padStart(2, '0')}`;
+}
+
+// Helper function to get month key (format: YYYY-MM)
+function getMonthKey(dateString) {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    return `${year}-${month}`;
+}
+
+// Group data by period (day/week/month)
+function groupDataByPeriod(data, mode) {
+    const grouped = {};
+    
+    data.forEach(d => {
+        let key;
+        switch(mode) {
+            case 'daily':
+                key = d.report_date;
+                break;
+            case 'weekly':
+                key = getWeekKey(d.report_date);
+                break;
+            case 'monthly':
+                key = getMonthKey(d.report_date);
+                break;
+            default:
+                key = d.report_date;
+        }
+        
+        if (!grouped[key]) {
+            grouped[key] = {
+                revenue: 0,
+                entries: 0,
+                exits: 0,
+                barriers: 0,
+                cash: 0,
+                credit: 0,
+                pango: 0,
+                cello: 0,
+                dates: []
+            };
+        }
+        
+        grouped[key].revenue += d.total_revenue_shekels || 0;
+        grouped[key].entries += d.t_entry_tot || 0;
+        grouped[key].exits += d.t_exit_tot || 0;
+        grouped[key].barriers += d.t_open_b || 0;
+        grouped[key].cash += d.s_cash_shekels || 0;
+        grouped[key].credit += d.s_credit_shekels || 0;
+        grouped[key].pango += d.s_pango_shekels || 0;
+        grouped[key].cello += d.s_celo_shekels || 0;
+        grouped[key].dates.push(d.report_date);
+    });
+    
+    return grouped;
+}
+
+// Format period label for display
+function formatPeriodLabel(key, mode) {
+    switch(mode) {
+        case 'daily':
+            return formatDateForDisplay(key);
+        case 'weekly':
+            // Format: W45-2024
+            const [year, week] = key.split('-W');
+            return `שבוע ${week}`;
+        case 'monthly':
+            // Format: 2024-11
+            const [yearM, month] = key.split('-');
+            const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 
+                              'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+            return monthNames[parseInt(month) - 1];
+        default:
+            return key;
+    }
+}
+
 // Calculate percentage changes for statistics
 function calculateStatChanges() {
     // This would compare with previous period data
@@ -1680,29 +1833,22 @@ function updateCharts() {
 function createRevenueChart() {
     const ctx = document.getElementById('revenueChart').getContext('2d');
     
-    // Aggregate data by date
-    const dailyData = {};
-    currentData.forEach(d => {
-        if (!dailyData[d.report_date]) {
-            dailyData[d.report_date] = { revenue: 0, entries: 0 };
-        }
-        dailyData[d.report_date].revenue += d.total_revenue_shekels || 0;
-        dailyData[d.report_date].entries += d.t_entry_tot || 0;
-    });
+    // Group data by selected period
+    const groupedData = groupDataByPeriod(currentData, currentViewMode);
     
-    const dates = Object.keys(dailyData).sort();
-    const revenues = dates.map(date => dailyData[date].revenue);
-    const entries = dates.map(date => dailyData[date].entries);
+    const periods = Object.keys(groupedData).sort();
+    const revenues = periods.map(period => groupedData[period].revenue);
+    const entries = periods.map(period => groupedData[period].entries);
     
-    // Format dates for display
-    const formattedDates = dates.map(date => formatDateForDisplay(date));
+    // Format labels for display
+    const formattedLabels = periods.map(period => formatPeriodLabel(period, currentViewMode));
     
     if (charts.revenue) charts.revenue.destroy();
     
     charts.revenue = new Chart(ctx, {
         type: chartTypes.revenue || 'line',
         data: {
-            labels: formattedDates,
+            labels: formattedLabels,
             datasets: [{
                 label: 'הכנסות',
                 data: revenues,
@@ -1935,49 +2081,80 @@ function createEntriesChart() {
     });
 }
 
-// Create daily comparison chart
+// Create daily/weekly/monthly comparison chart
 function createDailyChart() {
     const ctx = document.getElementById('dailyChart').getContext('2d');
     
-    const weekdays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
-    const weeklyData = {};
+    // Update title based on view mode
+    const titleElement = document.getElementById('comparisonTitle');
+    let labels, avgRevenues, avgEntries;
     
-    weekdays.forEach(day => {
-        weeklyData[day] = { revenue: 0, entries: 0, count: 0 };
-    });
-    
-    currentData.forEach(d => {
-        const date = new Date(d.report_date);
-        const dayName = weekdays[date.getDay()];
-        if (weeklyData[dayName]) {
-            weeklyData[dayName].revenue += d.total_revenue_shekels || 0;
-            weeklyData[dayName].entries += d.t_entry_tot || 0;
-            weeklyData[dayName].count++;
-        }
-    });
-    
-    const avgRevenues = weekdays.map(day => 
-        weeklyData[day].count > 0 ? weeklyData[day].revenue / weeklyData[day].count : 0
-    );
-    
-    const avgEntries = weekdays.map(day => 
-        weeklyData[day].count > 0 ? weeklyData[day].entries / weeklyData[day].count : 0
-    );
+    if (currentViewMode === 'daily') {
+        // Daily view - show days of week
+        titleElement.textContent = 'השוואה יומית';
+        
+        const weekdays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+        const weeklyData = {};
+        
+        weekdays.forEach(day => {
+            weeklyData[day] = { revenue: 0, entries: 0, count: 0 };
+        });
+        
+        currentData.forEach(d => {
+            const date = new Date(d.report_date);
+            const dayName = weekdays[date.getDay()];
+            if (weeklyData[dayName]) {
+                weeklyData[dayName].revenue += d.total_revenue_shekels || 0;
+                weeklyData[dayName].entries += d.t_entry_tot || 0;
+                weeklyData[dayName].count++;
+            }
+        });
+        
+        labels = weekdays;
+        avgRevenues = weekdays.map(day => 
+            weeklyData[day].count > 0 ? weeklyData[day].revenue / weeklyData[day].count : 0
+        );
+        avgEntries = weekdays.map(day => 
+            weeklyData[day].count > 0 ? weeklyData[day].entries / weeklyData[day].count : 0
+        );
+        
+    } else if (currentViewMode === 'weekly') {
+        // Weekly view - show week numbers
+        titleElement.textContent = 'השוואה שבועית';
+        
+        const groupedData = groupDataByPeriod(currentData, 'weekly');
+        const weeks = Object.keys(groupedData).sort();
+        
+        labels = weeks.map(week => formatPeriodLabel(week, 'weekly'));
+        avgRevenues = weeks.map(week => groupedData[week].revenue);
+        avgEntries = weeks.map(week => groupedData[week].entries);
+        
+    } else {
+        // Monthly view - show months
+        titleElement.textContent = 'השוואה חודשית';
+        
+        const groupedData = groupDataByPeriod(currentData, 'monthly');
+        const months = Object.keys(groupedData).sort();
+        
+        labels = months.map(month => formatPeriodLabel(month, 'monthly'));
+        avgRevenues = months.map(month => groupedData[month].revenue);
+        avgEntries = months.map(month => groupedData[month].entries);
+    }
     
     if (charts.daily) charts.daily.destroy();
     
     charts.daily = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: weekdays,
+            labels: labels,
             datasets: [{
-                label: 'ממוצע הכנסות',
+                label: currentViewMode === 'daily' ? 'ממוצע הכנסות' : 'סך הכנסות',
                 data: avgRevenues,
                 backgroundColor: '#007AFF',
                 borderRadius: 8,
                 yAxisID: 'y'
             }, {
-                label: 'ממוצע כניסות',
+                label: currentViewMode === 'daily' ? 'ממוצע כניסות' : 'סך כניסות',
                 data: avgEntries,
                 backgroundColor: '#5AC8FA',
                 borderRadius: 8,
@@ -2058,68 +2235,204 @@ function updateStayDuration() {
         '7-24 שעות': currentData.reduce((sum, d) => sum + (d.stay_724 || 0), 0),
     };
     
-    // Calculate total for percentages
-    const total = Object.values(durations).reduce((sum, val) => sum + val, 0);
+    if (stayDurationViewMode === 'cards') {
+        // Show cards view
+        document.getElementById('stayDurationGrid').style.display = 'grid';
+        document.getElementById('stayDurationChart').style.display = 'none';
+        
+        // Calculate total for percentages
+        const total = Object.values(durations).reduce((sum, val) => sum + val, 0);
+        
+        // Calculate short stay total (0-60 minutes)
+        const shortStayTotal = durations['0-15 דקות'] + durations['15-30 דקות'] + 
+                             durations['30-45 דקות'] + durations['45-60 דקות'];
+        
+        // Generate HTML for duration cards
+        let html = '';
+        
+        // Add individual duration cards
+        Object.entries(durations).forEach(([time, value]) => {
+            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+            if (value > 0 || ['0-15 דקות', '15-30 דקות', '30-45 דקות', '45-60 דקות'].includes(time)) {
+                html += `
+                    <div class="stay-duration-item">
+                        <div class="stay-duration-time">${time}</div>
+                        <div class="stay-duration-value">${value.toLocaleString()}</div>
+                        <div class="stay-duration-percent">${percentage}%</div>
+                    </div>
+                `;
+            }
+        });
+        
+        // Add total card for short stays
+        const shortStayPercent = total > 0 ? ((shortStayTotal / total) * 100).toFixed(1) : 0;
+        html += `
+            <div class="stay-duration-item stay-duration-total">
+                <div class="stay-duration-time">סה"כ 0-60 דקות</div>
+                <div class="stay-duration-value">${shortStayTotal.toLocaleString()}</div>
+                <div class="stay-duration-percent">${shortStayPercent}%</div>
+            </div>
+        `;
+        
+        document.getElementById('stayDurationGrid').innerHTML = html;
+        
+    } else {
+        // Show chart view
+        document.getElementById('stayDurationGrid').style.display = 'none';
+        document.getElementById('stayDurationChart').style.display = 'block';
+        
+        createStayDurationChart(durations, stayDurationViewMode);
+    }
+}
+
+// Create stay duration chart
+function createStayDurationChart(durations, chartType) {
+    const ctx = document.getElementById('stayDurationChart').getContext('2d');
     
-    // Calculate short stay total (0-60 minutes)
-    const shortStayTotal = durations['0-15 דקות'] + durations['15-30 דקות'] + 
-                         durations['30-45 דקות'] + durations['45-60 דקות'];
+    // Filter out empty values for cleaner display
+    const filteredData = Object.entries(durations).filter(([_, value]) => value > 0);
+    const labels = filteredData.map(([label, _]) => label);
+    const values = filteredData.map(([_, value]) => value);
     
-    // Generate HTML for duration cards
-    let html = '';
+    if (charts.stayDuration) charts.stayDuration.destroy();
     
-    // Add individual duration cards
-    Object.entries(durations).forEach(([time, value]) => {
-        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-        if (value > 0 || ['0-15 דקות', '15-30 דקות', '30-45 דקות', '45-60 דקות'].includes(time)) {
-            html += `
-                <div class="stay-duration-item">
-                    <div class="stay-duration-time">${time}</div>
-                    <div class="stay-duration-value">${value.toLocaleString()}</div>
-                    <div class="stay-duration-percent">${percentage}%</div>
-                </div>
-            `;
+    const chartConfig = {
+        type: chartType === 'bar' ? 'bar' : 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'מספר רכבים',
+                data: values,
+                backgroundColor: chartType === 'bar' ? 
+                    'rgba(0, 122, 255, 0.8)' :
+                    [
+                        '#007AFF', '#5AC8FA', '#34C759', '#FF9500', 
+                        '#FF3B30', '#AF52DE', '#5856D6', '#FF2D55',
+                        '#00C7BE', '#30D158', '#FFD60A', '#BF5AF2'
+                    ],
+                borderWidth: chartType === 'pie' ? 2 : 0,
+                borderColor: '#fff',
+                borderRadius: chartType === 'bar' ? 8 : 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: chartType === 'pie',
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        generateLabels: function(chart) {
+                            const data = chart.data;
+                            if (data.labels.length && data.datasets.length) {
+                                const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                return data.labels.map((label, i) => {
+                                    const value = data.datasets[0].data[i];
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return {
+                                        text: `${label}: ${value.toLocaleString()} (${percentage}%)`,
+                                        fillStyle: chartType === 'pie' ? 
+                                            data.datasets[0].backgroundColor[i] : 
+                                            data.datasets[0].backgroundColor,
+                                        strokeStyle: '#fff',
+                                        lineWidth: 2,
+                                        hidden: isNaN(value),
+                                        index: i
+                                    };
+                                });
+                            }
+                            return [];
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    titleColor: '#000',
+                    bodyColor: '#6C6C70',
+                    borderColor: '#E5E5EA',
+                    borderWidth: 1,
+                    cornerRadius: 12,
+                    padding: 12,
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return chartType === 'bar' ?
+                                `${context.parsed.toLocaleString()} רכבים (${percentage}%)` :
+                                `${context.label}: ${context.parsed.toLocaleString()} (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            scales: chartType === 'bar' ? {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        display: true,
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                }
+            } : {}
         }
+    };
+    
+    charts.stayDuration = new Chart(ctx, chartConfig);
+}
+
+// Toggle stay duration view
+function toggleStayDurationView(viewType) {
+    stayDurationViewMode = viewType;
+    
+    // Update button states
+    document.querySelectorAll('.chart-section:has(#stayDurationGrid) .chart-option-btn').forEach(btn => {
+        btn.classList.remove('active');
     });
     
-    // Add total card for short stays
-    const shortStayPercent = total > 0 ? ((shortStayTotal / total) * 100).toFixed(1) : 0;
-    html += `
-        <div class="stay-duration-item stay-duration-total">
-            <div class="stay-duration-time">סה"כ 0-60 דקות</div>
-            <div class="stay-duration-value">${shortStayTotal.toLocaleString()}</div>
-            <div class="stay-duration-percent">${shortStayPercent}%</div>
-        </div>
-    `;
+    // Set active button
+    const activeBtn = Array.from(document.querySelectorAll('.chart-section:has(#stayDurationGrid) .chart-option-btn'))
+        .find(btn => {
+            if (viewType === 'cards' && btn.textContent.includes('כרטיסים')) return true;
+            if (viewType === 'bar' && btn.textContent.includes('עמודות')) return true;
+            if (viewType === 'pie' && btn.textContent.includes('עוגה')) return true;
+            return false;
+        });
     
-    document.getElementById('stayDurationGrid').innerHTML = html;
+    if (activeBtn) activeBtn.classList.add('active');
+    
+    // Update display
+    updateStayDuration();
 }
 
 // Create barrier chart
 function createBarrierChart() {
     const ctx = document.getElementById('barrierChart').getContext('2d');
     
-    // Aggregate barrier data by date
-    const dailyBarrier = {};
-    currentData.forEach(d => {
-        if (!dailyBarrier[d.report_date]) {
-            dailyBarrier[d.report_date] = 0;
-        }
-        dailyBarrier[d.report_date] += d.t_open_b || 0;
-    });
+    // Group data by selected period
+    const groupedData = groupDataByPeriod(currentData, currentViewMode);
     
-    const dates = Object.keys(dailyBarrier).sort();
-    const barriers = dates.map(date => dailyBarrier[date]);
+    const periods = Object.keys(groupedData).sort();
+    const barriers = periods.map(period => groupedData[period].barriers);
     
-    // Format dates for display
-    const formattedDates = dates.map(date => formatDateForDisplay(date));
+    // Format labels for display
+    const formattedLabels = periods.map(period => formatPeriodLabel(period, currentViewMode));
     
     if (charts.barrier) charts.barrier.destroy();
     
     charts.barrier = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: formattedDates,
+            labels: formattedLabels,
             datasets: [{
                 label: 'פתיחות מחסום',
                 data: barriers,
@@ -2569,29 +2882,32 @@ function setQuickRange(range) {
     let startDate, endDate;
     
     switch(range) {
-        case 'today':
-            startDate = endDate = today;
-            break;
         case 'yesterday':
             startDate = endDate = new Date(today);
             startDate.setDate(startDate.getDate() - 1);
             break;
-        case 'week':
+        case 'currentWeek':
+            // השבוע הנוכחי - מיום ראשון עד היום (או עד שבת אם היום שבת)
             endDate = today;
             startDate = new Date(today);
+            // חזור ליום ראשון (0 = ראשון בישראל)
             startDate.setDate(startDate.getDate() - today.getDay());
             break;
         case 'lastWeek':
-            endDate = new Date(today);
-            endDate.setDate(endDate.getDate() - today.getDay() - 1);
-            startDate = new Date(endDate);
+            // שבוע שעבר - מראשון עד שבת
+            const lastSaturday = new Date(today);
+            lastSaturday.setDate(lastSaturday.getDate() - today.getDay() - 1);
+            endDate = lastSaturday;
+            startDate = new Date(lastSaturday);
             startDate.setDate(startDate.getDate() - 6);
             break;
-        case 'month':
+        case 'currentMonth':
+            // החודש הנוכחי - מה-1 עד היום
             endDate = today;
             startDate = new Date(today.getFullYear(), today.getMonth(), 1);
             break;
         case 'lastMonth':
+            // חודש שעבר - מה-1 עד סוף החודש
             endDate = new Date(today.getFullYear(), today.getMonth(), 0);
             startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
             break;
@@ -2622,6 +2938,11 @@ function setViewMode(mode) {
     
     // Update date range based on mode
     updateDateRangeForMode();
+    
+    // If we have data, update the charts to reflect the new view mode
+    if (currentData.length > 0) {
+        updateCharts();
+    }
 }
 
 // Update date range based on current view mode
