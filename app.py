@@ -25,7 +25,7 @@ print("🔥 WORKING VERSION - NOW WITH EMAIL AND SECURITY!")
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'
 
-EMAIL_CHECK_INTERVAL = 30  # בדיקה כל 5 דקות
+EMAIL_CHECK_INTERVAL = 30  # בדיקה כל 30 דקות
 PROCESSED_EMAILS_LIMIT = 100  # מקסימום מיילים לזכור
 processed_email_ids = []  # רשימה לזכור מיילים שכבר עובדו
 
