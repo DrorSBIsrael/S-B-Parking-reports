@@ -648,208 +648,39 @@ def process_single_email(mail, email_id):
             pass
         return False
 
-# בדיקת התקנות ומשתנים
-def verify_email_system():
-    """בדיקת התקינות של מערכת המיילים"""
-    print("🔧 Verifying email system configuration...")
-    
-    # בדיקת משתני סביבה
-    gmail_user = os.environ.get('GMAIL_USERNAME')
-    gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
-    
-    print(f"📧 Gmail Username: {'✅ SET' if gmail_user else '❌ MISSING'}")
-    print(f"🔑 Gmail Password: {'✅ SET' if gmail_password else '❌ MISSING'}")
-    
-    if not gmail_user or not gmail_password:
-        print("⚠️ WARNING: Gmail credentials missing! Email monitoring will not work.")
-        return False
-    
-    # בדיקת ספריות
-    try:
-        import imaplib
-        import schedule
-        print("📚 Required libraries: ✅ Available")
-    except ImportError as e:
-        print(f"❌ Missing library: {e}")
-        return False
-    
-    # בדיקת חיבור IMAP (מהיר)
-    try:
-        mail = imaplib.IMAP4_SSL('imap.gmail.com', timeout=10)
-        mail.login(gmail_user, gmail_password)
-        mail.logout()
-        print("🌐 Gmail IMAP connection: ✅ SUCCESS")
-        return True
-    except Exception as e:
-        print(f"❌ Gmail IMAP connection failed: {str(e)}")
-        return False
-
-def start_email_monitoring_with_logs(app):
-    """הפעלת מעקב מיילים עם לוגים מפורטים - תוקן עבור Flask"""
-    try:
-        print("🚀 Starting email monitoring system...")
-        
-        # בדיקת תקינות המערכת
-        if not verify_email_system():
-            print("❌ Email system verification failed. Monitoring will not start.")
-            return
-        
-        # הגדרת התזמון עם לוגים
-        def scheduled_check():
-            with app.app_context():  # חשוב! - צריך להוסיף את זה
-                print(f"⏰ Scheduled email check triggered at {datetime.now()}")
-                check_for_new_emails()
-        
-        # תזמון בדיקה כל 5 דקות
-        schedule.every(EMAIL_CHECK_INTERVAL).minutes.do(scheduled_check)
-        print(f"⏰ Email checks scheduled every {EMAIL_CHECK_INTERVAL} minutes")
-        
-        # לולאת מעקב עם לוגים
-        def monitoring_loop():
-            print("🔄 Email monitoring loop started")
-            check_count = 0
-            
-            while True:
-                try:
-                    schedule.run_pending()
-                    time.sleep(60)  # בדיקה כל דקה
-                    
-                    check_count += 1
-                    if check_count % 5 == 0:  # לוג כל 5 דקות
-                        print(f"💓 Email monitoring alive - {check_count} minutes running")
-                        
-                except KeyboardInterrupt:
-                    print("\n🛑 Email monitoring stopped by user")
-                    break
-                except Exception as e:
-                    print(f"❌ Email monitoring error: {str(e)}")
-                    print("⏳ Retrying in 5 minutes...")
-                    time.sleep(300)
-        
-        # הרצת הלולאה ברקע
-        monitor_thread = threading.Thread(target=monitoring_loop, daemon=True)
-        monitor_thread.start()
-        
-        print("✅ Email monitoring started successfully in background")
-        
-        # בדיקה ראשונית מיידית
-        print("🚀 Running initial email check...")
-        
-        def initial_check():
-            with app.app_context():  # חשוב! - גם כאן
-                check_for_new_emails()
-        
-        threading.Thread(target=initial_check, daemon=True).start()
-        
-    except Exception as e:
-        print(f"❌ Failed to start email monitoring: {str(e)}")
-
-def start_background_email_monitoring(app):
-    """נקודת כניסה להפעלת מעקב מיילים ברקע - תוקן עבור Flask"""
-    try:
-        print("📧 Initializing background email monitoring...")
-        
-        # השהיה קטנה לוודא שהשרת מוכן
-        def delayed_start():
-            time.sleep(5)  # חכה 5 שניות
-            start_email_monitoring_with_logs(app)
-        
-        startup_thread = threading.Thread(target=delayed_start, daemon=True)
-        startup_thread.start()
-        
-        print("📧 Background email monitoring initialization started")
-        
-    except Exception as e:
-        print(f"❌ Background email monitoring initialization failed: {str(e)}")
-
-# תעדכן גם את הפונקציה הזו:
-@app.route('/api/test-email-system', methods=['GET'])
-def test_email_system():
-    """API לבדיקת מערכת המיילים"""
-    try:
-        print("🧪 Manual email system test initiated")
-        
-        # בדיקת תקינות
-        system_ok = verify_email_system()
-        
-        if system_ok:
-            # בדיקת מיילים מיידית עם app context
-            def test_check():
-                with app.app_context():
-                    check_for_new_emails()
-            
-            threading.Thread(target=test_check, daemon=True).start()
-            
-            return jsonify({
-                'success': True, 
-                'message': 'Email system test completed successfully. Check server logs for details.'
-            })
-        else:
-            return jsonify({
-                'success': False, 
-                'message': 'Email system test failed. Check server logs for details.'
-            })
-            
-    except Exception as e:
-        print(f"❌ Email system test error: {str(e)}")
-        return jsonify({
-            'success': False, 
-            'message': f'Test error: {str(e)}'
-        })
-
-# הוספת לוגים מפורטים לפונקציית בדיקת מיילים
 def check_for_new_emails():
-    """בדיקת מיילים חדשים - עם לוגים מפורטים"""
+    """בדיקת מיילים חדשים"""
     global processed_email_ids
     
-    print(f"\n🔍 ===== EMAIL CHECK STARTED at {datetime.now()} =====")
-    
-    # בדיקת משתני סביבה
-    gmail_user = os.environ.get('GMAIL_USERNAME')
-    gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
-    
-    if not gmail_user or not gmail_password:
-        print("❌ Missing Gmail credentials - skipping email check")
-        return
-    
-    print(f"📧 Gmail user: {gmail_user}")
-    print(f"🔑 Gmail password: {'***' if gmail_password else 'MISSING'}")
+    print(f"\n🔍 Checking for new emails at {datetime.now()}")
     
     mail = connect_to_gmail_imap()
     if not mail:
-        print("❌ Failed to connect to Gmail IMAP")
         return
     
     try:
-        print("📂 Selecting inbox...")
         mail.select('inbox')
         
         since_date = (datetime.now() - timedelta(days=1)).strftime('%d-%b-%Y')
         search_criteria = f'(SINCE {since_date} HAS-ATTACHMENT)'
         
-        print(f"🔍 Search criteria: {search_criteria}")
-        
         _, message_ids = mail.search(None, search_criteria)
         
         if not message_ids[0]:
-            print("📭 No emails with attachments found")
-            print(f"📊 Processed emails cache: {len(processed_email_ids)} emails")
+            print("📭 No new emails with attachments found")
             mail.logout()
             return
         
         email_ids = message_ids[0].split()
-        print(f"📧 Found {len(email_ids)} emails with attachments")
-        
         new_emails = 0
         
         for email_id in email_ids:
             email_id_str = email_id.decode()
             
             if email_id_str in processed_email_ids:
-                print(f"⏭️ Skipping already processed email: {email_id_str}")
                 continue
             
-            print(f"\n🆕 Processing new email ID: {email_id_str}")
+            print(f"\n🆕 Found new email ID: {email_id_str}")
             
             success = process_single_email(mail, email_id)
             
@@ -858,24 +689,42 @@ def check_for_new_emails():
             
             if len(processed_email_ids) > PROCESSED_EMAILS_LIMIT:
                 processed_email_ids = processed_email_ids[-PROCESSED_EMAILS_LIMIT:]
-                print(f"🧹 Cleaned processed emails cache, now: {len(processed_email_ids)}")
             
             time.sleep(2)
         
-        print(f"✅ Email check completed: {new_emails} new emails processed")
-        print(f"📊 Total emails in cache: {len(processed_email_ids)}")
+        print(f"✅ Processed {new_emails} new emails")
         
     except Exception as e:
-        print(f"❌ Error in email check: {str(e)}")
+        print(f"❌ Error checking emails: {str(e)}")
     
     finally:
         try:
             mail.logout()
-            print("🔓 Gmail connection closed")
         except:
             pass
-        
-        print(f"===== EMAIL CHECK ENDED at {datetime.now()} =====\n")
+
+def start_email_monitoring():
+    """הפעלת מעקב מיילים"""
+    print("🚀 Starting email monitoring system...")
+    
+    schedule.every(EMAIL_CHECK_INTERVAL).minutes.do(check_for_new_emails)
+    
+    while True:
+        try:
+            schedule.run_pending()
+            time.sleep(60)
+        except KeyboardInterrupt:
+            print("\n🛑 Email monitoring stopped by user")
+            break
+        except Exception as e:
+            print(f"❌ Email monitoring error: {str(e)}")
+            time.sleep(300)
+
+def start_background_email_monitoring():
+    """הפעלת מעקב מיילים ברקע"""
+    email_thread = threading.Thread(target=start_email_monitoring, daemon=True)
+    email_thread.start()
+    print("📧 Email monitoring started in background")
 
 # ======================== נקודות קצה (Routes) ========================
 
@@ -1260,19 +1109,8 @@ def logout():
 
 # הפעלה אוטומטית כשהאפליקציה מתחילה
 if __name__ == '__main__':
-    print("🚀 S&B Parking Application Starting...")
-    print(f"🕐 Current time: {datetime.now()}")
+    # הפעלת מעקב מיילים ברקע
+    start_background_email_monitoring()
     
-    # בדיקת מערכת המיילים
-    print("\n🔧 Pre-flight email system check...")
-    email_system_ready = verify_email_system()
-    
-    if email_system_ready:
-        print("✅ Email system ready - starting background monitoring")
-        start_background_email_monitoring(app)  # העביר את app כפרמטר
-    else:
-        print("⚠️ Email system not ready - monitoring disabled")
-        print("💡 You can still use manual email checks via API")
-    
-    print("\n🌐 Starting Flask web server...")
+    # הפעלת השרת
     app.run(debug=True)
