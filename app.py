@@ -6,6 +6,8 @@ import random
 import string
 import re
 import html
+
+# תוספות חדשות למערכת המיילים
 import imaplib
 import email
 import csv
@@ -16,23 +18,22 @@ import schedule
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
-import pandas as pd
 import smtplib
 
-
-print("🔥 WORKING VERSION - NOW WITH EMAIL AND SECURITY!")
+print("🔥 WORKING VERSION - NOW WITH EMAIL AND AUTOMATION!")
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'
-
-EMAIL_CHECK_INTERVAL = 30  # בדיקה כל 30 דקות
-PROCESSED_EMAILS_LIMIT = 100  # מקסימום מיילים לזכור
-processed_email_ids = []  # רשימה לזכור מיילים שכבר עובדו
 
 # Supabase configuration
 SUPABASE_URL = os.environ.get('SUPABASE_URL')
 SUPABASE_KEY = os.environ.get('SUPABASE_ANON_KEY')
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# הגדרות מיילים אוטומטיים
+EMAIL_CHECK_INTERVAL = 5  # בדיקה כל 5 דקות
+PROCESSED_EMAILS_LIMIT = 100  # מקסימום מיילים לזכור
+processed_email_ids = []  # רשימה לזכור מיילים שכבר עובדו
 
 # הגדרות מייל עם Gmail + Environment Variables
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
@@ -253,6 +254,481 @@ def verify_code_from_database(email, code):
         print(f"❌ Database verification failed: {str(e)}")
         return False
 
+# ======================== פונקציות מעקב מיילים ========================
+
+def connect_to_gmail_imap():
+    """התחברות ל-Gmail IMAP"""
+    try:
+        mail = imaplib.IMAP4_SSL('imap.gmail.com')
+        
+        gmail_user = os.environ.get('GMAIL_USERNAME')
+        gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
+        
+        if not gmail_user or not gmail_password:
+            print("❌ Missing Gmail credentials in environment variables")
+            return None
+            
+        mail.login(gmail_user, gmail_password)
+        print(f"✅ Connected to Gmail: {gmail_user}")
+        
+        return mail
+        
+    except Exception as e:
+        print(f"❌ Gmail IMAP connection failed: {str(e)}")
+        return None
+
+def download_csv_from_email(msg):
+    """הורדת קובץ CSV מהמייל"""
+    csv_files = []
+    
+    try:
+        for part in msg.walk():
+            if part.get_content_disposition() == 'attachment':
+                filename = part.get_filename()
+                
+                if filename and (filename.lower().endswith('.csv') or filename.lower().endswith('.txt')):
+                    file_data = part.get_payload(decode=True)
+                    
+                    if file_data:
+                        csv_files.append({
+                            'filename': filename,
+                            'data': file_data.decode('utf-8-sig', errors='ignore')
+                        })
+                        
+                        print(f"📎 Found CSV attachment: {filename}")
+        
+        return csv_files
+        
+    except Exception as e:
+        print(f"❌ Error downloading CSV: {str(e)}")
+        return []
+
+def parse_csv_content(csv_content):
+    """פרסור תוכן CSV ללא pandas - עם CSV רגיל"""
+    try:
+        # יצירת reader מהתוכן
+        csv_reader = csv.DictReader(io.StringIO(csv_content))
+        
+        # המרה לרשימה
+        rows = list(csv_reader)
+        
+        print(f"📊 CSV parsed: {len(rows)} rows")
+        
+        if len(rows) > 0:
+            columns = list(rows[0].keys())
+            print(f"📊 Columns found: {columns}")
+        
+        # בדיקת עמודות נדרשות
+        required_columns = ['ProjectNumber', 'TTCRET', 'SCASH', 'SCREDIT']
+        
+        if len(rows) > 0:
+            missing_columns = [col for col in required_columns if col not in rows[0]]
+            
+            if missing_columns:
+                print(f"⚠️ Missing required columns: {missing_columns}")
+                return None
+        
+        return rows
+        
+    except Exception as e:
+        print(f"❌ CSV parsing error: {str(e)}")
+        return None
+
+def convert_to_csv_import_format(csv_rows):
+    """המרה לפורמט csv_import_shekels - ללא pandas"""
+    converted_rows = []
+    
+    for index, row in enumerate(csv_rows):
+        try:
+            # המרת תאריך
+            date_str = str(row.get('TTCRET', '')).strip()
+            if '/' in date_str:
+                parts = date_str.split('/')
+                if len(parts) == 3:
+                    day, month, year = parts
+                    formatted_date = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+                else:
+                    formatted_date = date_str
+            else:
+                formatted_date = date_str
+                
+            # המרת נתוני כסף מאגורות לשקלים - בטוח יותר
+            def safe_int(value, default=0):
+                try:
+                    if value is None or value == '':
+                        return default
+                    return int(float(str(value)))
+                except (ValueError, TypeError):
+                    return default
+            
+            cash_agorot = safe_int(row.get('SCASH'))
+            credit_agorot = safe_int(row.get('SCREDIT'))
+            pango_agorot = safe_int(row.get('SPANGO'))
+            celo_agorot = safe_int(row.get('SCELO'))
+            
+            cash_shekels = round(cash_agorot / 100, 2)
+            credit_shekels = round(credit_agorot / 100, 2)
+            pango_shekels = round(pango_agorot / 100, 2)
+            celo_shekels = round(celo_agorot / 100, 2)
+            
+            converted_row = {
+                'project_number': str(row.get('ProjectNumber', '')),
+                'l_global_ref': safe_int(row.get('LGLOBALREF')),
+                's_computer': safe_int(row.get('SCOMPUTER')),
+                's_shift_id': safe_int(row.get('SSHIFTID')),
+                'report_start_time': str(row.get('TTCRET', '')),
+                'report_end_time': str(row.get('TTENDT', '')),
+                'report_date': formatted_date,
+                'ctext': str(row.get('CTEXT', '')),
+                
+                # כסף בשקלים
+                's_cash_shekels': cash_shekels,
+                's_credit_shekels': credit_shekels,
+                's_pango_shekels': pango_shekels,
+                's_celo_shekels': celo_shekels,
+                'total_revenue_shekels': cash_shekels + credit_shekels + pango_shekels + celo_shekels,
+                'net_revenue_shekels': cash_shekels + credit_shekels + pango_shekels + celo_shekels,
+                
+                # כסף באגורות (גיבוי)
+                's_cash_agorot': cash_agorot,
+                's_credit_agorot': credit_agorot,
+                's_pango_agorot': pango_agorot,
+                's_celo_agorot': celo_agorot,
+                'stot_cacr': safe_int(row.get('STOTCACR')),
+                's_exp_agorot': safe_int(row.get('SEXP')),
+                
+                # מקודדים
+                's_encoder1': safe_int(row.get('SENCODER1')),
+                's_encoder2': safe_int(row.get('SENCODER2')),
+                's_encoder3': safe_int(row.get('SENCODER3')),
+                'sencodertot': safe_int(row.get('SENCODERTOT')),
+                
+                # תנועה
+                't_open_b': safe_int(row.get('TOPENB')),
+                't_entry_s': safe_int(row.get('TENTRYS')),
+                't_entry_p': safe_int(row.get('TENTRYP')),
+                't_entry_tot': safe_int(row.get('TENTRYTOT')),
+                't_exit_s': safe_int(row.get('TEEITS')),
+                't_exit_p': safe_int(row.get('TEEITP')),
+                't_exit_tot': safe_int(row.get('TEEITTOT')),
+                't_entry_ap': safe_int(row.get('TENTRYAP')),
+                't_exit_ap': safe_int(row.get('TEEITAP')),
+                
+                # זמני שהייה
+                'tsper1': safe_int(row.get('TSPER1')),
+                'tsper2': safe_int(row.get('TSPER2')),
+                'stay_015': safe_int(row.get('STAY015')),
+                'stay_030': safe_int(row.get('STAY030')),
+                'stay_045': safe_int(row.get('STAY045')),
+                'stay_060': safe_int(row.get('STAY060')),
+                'stay_2': safe_int(row.get('STAY2')),
+                'stay_3': safe_int(row.get('STAY3')),
+                'stay_4': safe_int(row.get('STAY4')),
+                'stay_5': safe_int(row.get('STAY5')),
+                'stay_6': safe_int(row.get('STAY6')),
+                'stay_724': safe_int(row.get('STAY724')),
+                'tsper3': safe_int(row.get('TSPER3')),
+                'tsper4': safe_int(row.get('TSPER4')),
+                'tsper5': safe_int(row.get('TSPER5')),
+                'tsper6': safe_int(row.get('TSPER6')),
+                
+                # מטא-דטה
+                'created_at': datetime.now().isoformat(),
+                'uploaded_by': 'email_automation'
+            }
+            
+            converted_rows.append(converted_row)
+            
+        except Exception as e:
+            print(f"❌ Error converting row {index}: {str(e)}")
+            print(f"   Row data: {row}")
+            continue
+    
+    return converted_rows
+
+def insert_to_csv_import_shekels(converted_data):
+    """הכנסה לטבלת csv_import_shekels (שלב ביניים)"""
+    try:
+        # מחיקת נתונים ישנים
+        supabase.table('csv_import_shekels').delete().neq('id', 0).execute()
+        
+        batch_size = 500
+        total_inserted = 0
+        
+        for i in range(0, len(converted_data), batch_size):
+            batch = converted_data[i:i + batch_size]
+            
+            result = supabase.table('csv_import_shekels').insert(batch).execute()
+            
+            if result.data:
+                total_inserted += len(result.data)
+                print(f"✅ Inserted to csv_import_shekels: batch {i//batch_size + 1}, {len(result.data)} rows")
+        
+        print(f"✅ Total inserted to csv_import_shekels: {total_inserted} rows")
+        return total_inserted
+        
+    except Exception as e:
+        print(f"❌ Error inserting to csv_import_shekels: {str(e)}")
+        return 0
+
+def transfer_to_parking_data():
+    """העברה מ csv_import_shekels ל parking_data"""
+    try:
+        csv_data = supabase.table('csv_import_shekels').select('*').execute()
+        
+        if not csv_data.data:
+            print("⚠️ No data in csv_import_shekels to transfer")
+            return 0
+        
+        result = supabase.table('parking_data').insert(csv_data.data).execute()
+        
+        if result.data:
+            transferred_count = len(result.data)
+            print(f"✅ Transferred {transferred_count} rows to parking_data")
+            
+            # מחיקה אחרי העברה מוצלחת
+            supabase.table('csv_import_shekels').delete().neq('id', 0).execute()
+            print("🧹 Cleaned csv_import_shekels table")
+            
+            return transferred_count
+        else:
+            print("❌ Failed to transfer data to parking_data")
+            return 0
+            
+    except Exception as e:
+        print(f"❌ Error transferring to parking_data: {str(e)}")
+        return 0
+
+def send_success_notification(sender_email, processed_files, total_rows):
+    """שליחת התראת הצלחה"""
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = os.environ.get('GMAIL_USERNAME')
+        msg['To'] = sender_email
+        msg['Subject'] = '✅ קבצי הנתונים עובדו בהצלחה - S&B Parking'
+        
+        files_list = '\n'.join([f"• {file['name']} - {file['rows']} שורות" for file in processed_files])
+        
+        body = f"""
+שלום,
+
+קבצי הנתונים שלך עובדו בהצלחה במערכת S&B Parking:
+
+{files_list}
+
+סה"כ שורות שנוספו: {total_rows}
+
+הנתונים זמינים כעת בדשבורד.
+
+תודה,
+מערכת S&B Parking (אוטומטית)
+        """
+        
+        msg.attach(MIMEText(body, 'plain', 'utf-8'))
+        
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(os.environ.get('GMAIL_USERNAME'), os.environ.get('GMAIL_APP_PASSWORD'))
+        server.send_message(msg)
+        server.quit()
+        
+        print(f"📧 Success notification sent to {sender_email}")
+        
+    except Exception as e:
+        print(f"❌ Failed to send notification: {str(e)}")
+
+def send_error_notification(sender_email, error_message):
+    """שליחת התראת שגיאה"""
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = os.environ.get('GMAIL_USERNAME')
+        msg['To'] = sender_email
+        msg['Subject'] = '❌ שגיאה בעיבוד קבצי הנתונים - S&B Parking'
+        
+        body = f"""
+שלום,
+
+התרחשה שגיאה בעיבוד קבצי הנתונים שלך:
+
+{error_message}
+
+אנא בדוק את הקובץ ונסה שוב, או פנה לתמיכה.
+
+מערכת S&B Parking (אוטומטית)
+        """
+        
+        msg.attach(MIMEText(body, 'plain', 'utf-8'))
+        
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(os.environ.get('GMAIL_USERNAME'), os.environ.get('GMAIL_APP_PASSWORD'))
+        server.send_message(msg)
+        server.quit()
+        
+        print(f"📧 Error notification sent to {sender_email}")
+        
+    except Exception as e:
+        print(f"❌ Failed to send error notification: {str(e)}")
+
+def process_single_email(mail, email_id):
+    """עיבוד מייל יחיד - עדכון ללא pandas"""
+    try:
+        _, msg_data = mail.fetch(email_id, '(RFC822)')
+        email_body = msg_data[0][1]
+        email_message = email.message_from_bytes(email_body)
+        
+        sender = email_message['From']
+        subject = email_message['Subject'] or ''
+        date = email_message['Date'] or ''
+        
+        print(f"\n📧 Processing email from: {sender}")
+        print(f"   Subject: {subject}")
+        print(f"   Date: {date}")
+        
+        csv_files = download_csv_from_email(email_message)
+        
+        if not csv_files:
+            print("⚠️ No CSV files found in email")
+            return False
+        
+        all_converted_data = []
+        processed_files = []
+        
+        for csv_file in csv_files:
+            print(f"\n🔄 Processing file: {csv_file['filename']}")
+            
+            # פרסור CSV (עכשיו מחזיר רשימה במקום DataFrame)
+            csv_rows = parse_csv_content(csv_file['data'])
+            if csv_rows is None:
+                continue
+            
+            # המרה לפורמט שלנו
+            converted_data = convert_to_csv_import_format(csv_rows)
+            if not converted_data:
+                continue
+            
+            all_converted_data.extend(converted_data)
+            processed_files.append({
+                'name': csv_file['filename'],
+                'rows': len(converted_data)
+            })
+            
+            print(f"✅ File {csv_file['filename']}: {len(converted_data)} rows converted")
+        
+        if not all_converted_data:
+            error_msg = "לא נמצאו נתונים תקינים בקבצים המצורפים"
+            send_error_notification(sender, error_msg)
+            return False
+        
+        # הכנסה לטבלת הביניים
+        inserted_count = insert_to_csv_import_shekels(all_converted_data)
+        if inserted_count == 0:
+            error_msg = "שגיאה בהכנסת הנתונים לטבלת הביניים"
+            send_error_notification(sender, error_msg)
+            return False
+        
+        # העברה לטבלה הסופית
+        transferred_count = transfer_to_parking_data()
+        if transferred_count == 0:
+            error_msg = "שגיאה בהעברת הנתונים לטבלה הסופית"
+            send_error_notification(sender, error_msg)
+            return False
+        
+        # שליחת התראת הצלחה
+        send_success_notification(sender, processed_files, transferred_count)
+        
+        print(f"🎉 Email processed successfully: {transferred_count} rows added")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error processing email: {str(e)}")
+        try:
+            sender = email_message['From'] if 'email_message' in locals() else 'unknown'
+            send_error_notification(sender, f"שגיאה טכנית: {str(e)}")
+        except:
+            pass
+        return False
+
+def check_for_new_emails():
+    """בדיקת מיילים חדשים"""
+    global processed_email_ids
+    
+    print(f"\n🔍 Checking for new emails at {datetime.now()}")
+    
+    mail = connect_to_gmail_imap()
+    if not mail:
+        return
+    
+    try:
+        mail.select('inbox')
+        
+        since_date = (datetime.now() - timedelta(days=1)).strftime('%d-%b-%Y')
+        search_criteria = f'(SINCE {since_date} HAS-ATTACHMENT)'
+        
+        _, message_ids = mail.search(None, search_criteria)
+        
+        if not message_ids[0]:
+            print("📭 No new emails with attachments found")
+            mail.logout()
+            return
+        
+        email_ids = message_ids[0].split()
+        new_emails = 0
+        
+        for email_id in email_ids:
+            email_id_str = email_id.decode()
+            
+            if email_id_str in processed_email_ids:
+                continue
+            
+            print(f"\n🆕 Found new email ID: {email_id_str}")
+            
+            success = process_single_email(mail, email_id)
+            
+            processed_email_ids.append(email_id_str)
+            new_emails += 1
+            
+            if len(processed_email_ids) > PROCESSED_EMAILS_LIMIT:
+                processed_email_ids = processed_email_ids[-PROCESSED_EMAILS_LIMIT:]
+            
+            time.sleep(2)
+        
+        print(f"✅ Processed {new_emails} new emails")
+        
+    except Exception as e:
+        print(f"❌ Error checking emails: {str(e)}")
+    
+    finally:
+        try:
+            mail.logout()
+        except:
+            pass
+
+def start_email_monitoring():
+    """הפעלת מעקב מיילים"""
+    print("🚀 Starting email monitoring system...")
+    
+    schedule.every(EMAIL_CHECK_INTERVAL).minutes.do(check_for_new_emails)
+    
+    while True:
+        try:
+            schedule.run_pending()
+            time.sleep(60)
+        except KeyboardInterrupt:
+            print("\n🛑 Email monitoring stopped by user")
+            break
+        except Exception as e:
+            print(f"❌ Email monitoring error: {str(e)}")
+            time.sleep(300)
+
+def start_background_email_monitoring():
+    """הפעלת מעקב מיילים ברקע"""
+    email_thread = threading.Thread(target=start_email_monitoring, daemon=True)
+    email_thread.start()
+    print("📧 Email monitoring started in background")
+
+# ======================== נקודות קצה (Routes) ========================
+
 @app.route('/')
 def index():
     return redirect(url_for('login_page'))
@@ -266,8 +742,6 @@ def verify_page():
     if 'pending_email' not in session:
         return redirect(url_for('login_page'))
     return render_template('verify.html')
-
-# הוסף את הקוד הזה לקובץ app.py שלך
 
 @app.route('/dashboard')
 def dashboard():
@@ -486,6 +960,30 @@ def get_parking_data():
         print(f"❌ Error getting parking data: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני חניון'})
 
+@app.route('/api/check-emails-now', methods=['POST'])
+def manual_email_check():
+    """API לבדיקת מיילים ידנית"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        email = session['user_email']
+        user_result = supabase.table('user_parkings').select('role, access_level').eq('email', email).execute()
+        
+        if not user_result.data:
+            return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
+        
+        user_data = user_result.data[0]
+        if user_data.get('role') != 'admin' and user_data.get('access_level') != 'group_manager':
+            return jsonify({'success': False, 'message': 'אין הרשאה לבדיקת מיילים'})
+        
+        threading.Thread(target=check_for_new_emails, daemon=True).start()
+        
+        return jsonify({'success': True, 'message': 'בדיקת מיילים החלה ברקע'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
 # הוסף גם פונקציה לבדיקת תקפות תאריך
 def validate_date_format(date_string):
     """בדיקת תקפות פורמט תאריך YYYY-MM-DD"""
@@ -609,472 +1107,7 @@ def logout():
     session.clear()
     return redirect(url_for('login_page'))
 
-# ======================== פונקציות מעקב מיילים ========================
-
-def connect_to_gmail_imap():
-    """התחברות ל-Gmail IMAP"""
-    try:
-        mail = imaplib.IMAP4_SSL('imap.gmail.com')
-        
-        gmail_user = os.environ.get('GMAIL_USERNAME')
-        gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
-        
-        if not gmail_user or not gmail_password:
-            print("❌ Missing Gmail credentials in environment variables")
-            return None
-            
-        mail.login(gmail_user, gmail_password)
-        print(f"✅ Connected to Gmail: {gmail_user}")
-        
-        return mail
-        
-    except Exception as e:
-        print(f"❌ Gmail IMAP connection failed: {str(e)}")
-        return None
-
-def download_csv_from_email(msg):
-    """הורדת קובץ CSV מהמייל"""
-    csv_files = []
-    
-    try:
-        for part in msg.walk():
-            if part.get_content_disposition() == 'attachment':
-                filename = part.get_filename()
-                
-                if filename and (filename.lower().endswith('.csv') or filename.lower().endswith('.txt')):
-                    file_data = part.get_payload(decode=True)
-                    
-                    if file_data:
-                        csv_files.append({
-                            'filename': filename,
-                            'data': file_data.decode('utf-8-sig', errors='ignore')
-                        })
-                        
-                        print(f"📎 Found CSV attachment: {filename}")
-        
-        return csv_files
-        
-    except Exception as e:
-        print(f"❌ Error downloading CSV: {str(e)}")
-        return []
-
-def parse_csv_content(csv_content):
-    """פרסור תוכן CSV לפורמט שלנו"""
-    try:
-        df = pd.read_csv(io.StringIO(csv_content))
-        
-        print(f"📊 CSV parsed: {len(df)} rows, columns: {list(df.columns)}")
-        
-        required_columns = ['ProjectNumber', 'TTCRET', 'SCASH', 'SCREDIT']
-        missing_columns = [col for col in required_columns if col not in df.columns]
-        
-        if missing_columns:
-            print(f"⚠️ Missing required columns: {missing_columns}")
-            return None
-            
-        return df
-        
-    except Exception as e:
-        print(f"❌ CSV parsing error: {str(e)}")
-        return None
-
-def convert_to_csv_import_format(df):
-    """המרה לפורמט csv_import_shekels"""
-    converted_rows = []
-    
-    for index, row in df.iterrows():
-        try:
-            # המרת תאריך
-            date_str = str(row.get('TTCRET', '')).strip()
-            if '/' in date_str:
-                parts = date_str.split('/')
-                if len(parts) == 3:
-                    day, month, year = parts
-                    formatted_date = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
-                else:
-                    formatted_date = date_str
-            else:
-                formatted_date = date_str
-                
-            # המרת נתוני כסף מאגורות לשקלים
-            cash_agorot = int(row.get('SCASH', 0) or 0)
-            credit_agorot = int(row.get('SCREDIT', 0) or 0)
-            pango_agorot = int(row.get('SPANGO', 0) or 0)
-            celo_agorot = int(row.get('SCELO', 0) or 0)
-            
-            cash_shekels = round(cash_agorot / 100, 2)
-            credit_shekels = round(credit_agorot / 100, 2)
-            pango_shekels = round(pango_agorot / 100, 2)
-            celo_shekels = round(celo_agorot / 100, 2)
-            
-            converted_row = {
-                'project_number': str(row.get('ProjectNumber', '')),
-                'l_global_ref': int(row.get('LGLOBALREF', 0) or 0),
-                's_computer': int(row.get('SCOMPUTER', 0) or 0),
-                's_shift_id': int(row.get('SSHIFTID', 0) or 0),
-                'report_start_time': str(row.get('TTCRET', '')),
-                'report_end_time': str(row.get('TTENDT', '')),
-                'report_date': formatted_date,
-                'ctext': str(row.get('CTEXT', '')),
-                
-                's_cash_shekels': cash_shekels,
-                's_credit_shekels': credit_shekels,
-                's_pango_shekels': pango_shekels,
-                's_celo_shekels': celo_shekels,
-                'total_revenue_shekels': cash_shekels + credit_shekels + pango_shekels + celo_shekels,
-                'net_revenue_shekels': cash_shekels + credit_shekels + pango_shekels + celo_shekels,
-                
-                's_encoder1': int(row.get('SENCODER1', 0) or 0),
-                's_encoder2': int(row.get('SENCODER2', 0) or 0),
-                's_encoder3': int(row.get('SENCODER3', 0) or 0),
-                'sencodertot': int(row.get('SENCODERTOT', 0) or 0),
-                't_open_b': int(row.get('TOPENB', 0) or 0),
-                't_entry_s': int(row.get('TENTRYS', 0) or 0),
-                't_entry_p': int(row.get('TENTRYP', 0) or 0),
-                't_entry_tot': int(row.get('TENTRYTOT', 0) or 0),
-                't_exit_s': int(row.get('TEEITS', 0) or 0),
-                't_exit_p': int(row.get('TEEITP', 0) or 0),
-                't_exit_tot': int(row.get('TEEITTOT', 0) or 0),
-                't_entry_ap': int(row.get('TENTRYAP', 0) or 0),
-                't_exit_ap': int(row.get('TEEITAP', 0) or 0),
-                
-                'stay_015': int(row.get('STAY015', 0) or 0),
-                'stay_030': int(row.get('STAY030', 0) or 0),
-                'stay_045': int(row.get('STAY045', 0) or 0),
-                'stay_060': int(row.get('STAY060', 0) or 0),
-                'stay_2': int(row.get('STAY2', 0) or 0),
-                'stay_3': int(row.get('STAY3', 0) or 0),
-                'stay_4': int(row.get('STAY4', 0) or 0),
-                'stay_5': int(row.get('STAY5', 0) or 0),
-                'stay_6': int(row.get('STAY6', 0) or 0),
-                'stay_724': int(row.get('STAY724', 0) or 0),
-                
-                'tsper1': int(row.get('TSPER1', 0) or 0),
-                'tsper2': int(row.get('TSPER2', 0) or 0),
-                'tsper3': int(row.get('TSPER3', 0) or 0),
-                'tsper4': int(row.get('TSPER4', 0) or 0),
-                'tsper5': int(row.get('TSPER5', 0) or 0),
-                'tsper6': int(row.get('TSPER6', 0) or 0),
-                's_cash_agorot': cash_agorot,
-                's_credit_agorot': credit_agorot,
-                's_pango_agorot': pango_agorot,
-                's_celo_agorot': celo_agorot,
-                'stot_cacr': int(row.get('STOTCACR', 0) or 0),
-                's_exp_agorot': int(row.get('SEXP', 0) or 0),
-                
-                'created_at': datetime.now().isoformat(),
-                'uploaded_by': 'email_automation'
-            }
-            
-            converted_rows.append(converted_row)
-            
-        except Exception as e:
-            print(f"❌ Error converting row {index}: {str(e)}")
-            continue
-    
-    return converted_rows
-
-def insert_to_csv_import_shekels(converted_data):
-    """הכנסה לטבלת csv_import_shekels (שלב ביניים)"""
-    try:
-        # מחיקת נתונים ישנים
-        supabase.table('csv_import_shekels').delete().neq('id', 0).execute()
-        
-        batch_size = 500
-        total_inserted = 0
-        
-        for i in range(0, len(converted_data), batch_size):
-            batch = converted_data[i:i + batch_size]
-            
-            result = supabase.table('csv_import_shekels').insert(batch).execute()
-            
-            if result.data:
-                total_inserted += len(result.data)
-                print(f"✅ Inserted to csv_import_shekels: batch {i//batch_size + 1}, {len(result.data)} rows")
-        
-        print(f"✅ Total inserted to csv_import_shekels: {total_inserted} rows")
-        return total_inserted
-        
-    except Exception as e:
-        print(f"❌ Error inserting to csv_import_shekels: {str(e)}")
-        return 0
-
-def transfer_to_parking_data():
-    """העברה מ csv_import_shekels ל parking_data"""
-    try:
-        csv_data = supabase.table('csv_import_shekels').select('*').execute()
-        
-        if not csv_data.data:
-            print("⚠️ No data in csv_import_shekels to transfer")
-            return 0
-        
-        result = supabase.table('parking_data').insert(csv_data.data).execute()
-        
-        if result.data:
-            transferred_count = len(result.data)
-            print(f"✅ Transferred {transferred_count} rows to parking_data")
-            
-            # מחיקה אחרי העברה מוצלחת
-            supabase.table('csv_import_shekels').delete().neq('id', 0).execute()
-            print("🧹 Cleaned csv_import_shekels table")
-            
-            return transferred_count
-        else:
-            print("❌ Failed to transfer data to parking_data")
-            return 0
-            
-    except Exception as e:
-        print(f"❌ Error transferring to parking_data: {str(e)}")
-        return 0
-
-def send_success_notification(sender_email, processed_files, total_rows):
-    """שליחת התראת הצלחה"""
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = os.environ.get('GMAIL_USERNAME')
-        msg['To'] = sender_email
-        msg['Subject'] = '✅ קבצי הנתונים עובדו בהצלחה - S&B Parking'
-        
-        files_list = '\n'.join([f"• {file['name']} - {file['rows']} שורות" for file in processed_files])
-        
-        body = f"""
-שלום,
-
-קבצי הנתונים שלך עובדו בהצלחה במערכת S&B Parking:
-
-{files_list}
-
-סה"כ שורות שנוספו: {total_rows}
-
-הנתונים זמינים כעת בדשבורד.
-
-תודה,
-מערכת S&B Parking (אוטומטית)
-        """
-        
-        msg.attach(MIMEText(body, 'plain', 'utf-8'))
-        
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(os.environ.get('GMAIL_USERNAME'), os.environ.get('GMAIL_APP_PASSWORD'))
-        server.send_message(msg)
-        server.quit()
-        
-        print(f"📧 Success notification sent to {sender_email}")
-        
-    except Exception as e:
-        print(f"❌ Failed to send notification: {str(e)}")
-
-def send_error_notification(sender_email, error_message):
-    """שליחת התראת שגיאה"""
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = os.environ.get('GMAIL_USERNAME')
-        msg['To'] = sender_email
-        msg['Subject'] = '❌ שגיאה בעיבוד קבצי הנתונים - S&B Parking'
-        
-        body = f"""
-שלום,
-
-התרחשה שגיאה בעיבוד קבצי הנתונים שלך:
-
-{error_message}
-
-אנא בדוק את הקובץ ונסה שוב, או פנה לתמיכה.
-
-מערכת S&B Parking (אוטומטית)
-        """
-        
-        msg.attach(MIMEText(body, 'plain', 'utf-8'))
-        
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(os.environ.get('GMAIL_USERNAME'), os.environ.get('GMAIL_APP_PASSWORD'))
-        server.send_message(msg)
-        server.quit()
-        
-        print(f"📧 Error notification sent to {sender_email}")
-        
-    except Exception as e:
-        print(f"❌ Failed to send error notification: {str(e)}")
-
-def process_single_email(mail, email_id):
-    """עיבוד מייל יחיד"""
-    try:
-        _, msg_data = mail.fetch(email_id, '(RFC822)')
-        email_body = msg_data[0][1]
-        email_message = email.message_from_bytes(email_body)
-        
-        sender = email_message['From']
-        subject = email_message['Subject'] or ''
-        date = email_message['Date'] or ''
-        
-        print(f"\n📧 Processing email from: {sender}")
-        print(f"   Subject: {subject}")
-        print(f"   Date: {date}")
-        
-        csv_files = download_csv_from_email(email_message)
-        
-        if not csv_files:
-            print("⚠️ No CSV files found in email")
-            return False
-        
-        all_converted_data = []
-        processed_files = []
-        
-        for csv_file in csv_files:
-            print(f"\n🔄 Processing file: {csv_file['filename']}")
-            
-            df = parse_csv_content(csv_file['data'])
-            if df is None:
-                continue
-            
-            converted_data = convert_to_csv_import_format(df)
-            if not converted_data:
-                continue
-            
-            all_converted_data.extend(converted_data)
-            processed_files.append({
-                'name': csv_file['filename'],
-                'rows': len(converted_data)
-            })
-            
-            print(f"✅ File {csv_file['filename']}: {len(converted_data)} rows converted")
-        
-        if not all_converted_data:
-            error_msg = "לא נמצאו נתונים תקינים בקבצים המצורפים"
-            send_error_notification(sender, error_msg)
-            return False
-        
-        inserted_count = insert_to_csv_import_shekels(all_converted_data)
-        if inserted_count == 0:
-            error_msg = "שגיאה בהכנסת הנתונים לטבלת הביניים"
-            send_error_notification(sender, error_msg)
-            return False
-        
-        transferred_count = transfer_to_parking_data()
-        if transferred_count == 0:
-            error_msg = "שגיאה בהעברת הנתונים לטבלה הסופית"
-            send_error_notification(sender, error_msg)
-            return False
-        
-        send_success_notification(sender, processed_files, transferred_count)
-        
-        print(f"🎉 Email processed successfully: {transferred_count} rows added")
-        return True
-        
-    except Exception as e:
-        print(f"❌ Error processing email: {str(e)}")
-        try:
-            sender = email_message['From'] if 'email_message' in locals() else 'unknown'
-            send_error_notification(sender, f"שגיאה טכנית: {str(e)}")
-        except:
-            pass
-        return False
-
-def check_for_new_emails():
-    """בדיקת מיילים חדשים"""
-    global processed_email_ids
-    
-    print(f"\n🔍 Checking for new emails at {datetime.now()}")
-    
-    mail = connect_to_gmail_imap()
-    if not mail:
-        return
-    
-    try:
-        mail.select('inbox')
-        
-        since_date = (datetime.now() - timedelta(days=1)).strftime('%d-%b-%Y')
-        search_criteria = f'(SINCE {since_date} HAS-ATTACHMENT)'
-        
-        _, message_ids = mail.search(None, search_criteria)
-        
-        if not message_ids[0]:
-            print("📭 No new emails with attachments found")
-            mail.logout()
-            return
-        
-        email_ids = message_ids[0].split()
-        new_emails = 0
-        
-        for email_id in email_ids:
-            email_id_str = email_id.decode()
-            
-            if email_id_str in processed_email_ids:
-                continue
-            
-            print(f"\n🆕 Found new email ID: {email_id_str}")
-            
-            success = process_single_email(mail, email_id)
-            
-            processed_email_ids.append(email_id_str)
-            new_emails += 1
-            
-            if len(processed_email_ids) > PROCESSED_EMAILS_LIMIT:
-                processed_email_ids = processed_email_ids[-PROCESSED_EMAILS_LIMIT:]
-            
-            time.sleep(2)
-        
-        print(f"✅ Processed {new_emails} new emails")
-        
-    except Exception as e:
-        print(f"❌ Error checking emails: {str(e)}")
-    
-    finally:
-        try:
-            mail.logout()
-        except:
-            pass
-
-def start_email_monitoring():
-    """הפעלת מעקב מיילים"""
-    print("🚀 Starting email monitoring system...")
-    
-    schedule.every(EMAIL_CHECK_INTERVAL).minutes.do(check_for_new_emails)
-    
-    while True:
-        try:
-            schedule.run_pending()
-            time.sleep(60)
-        except KeyboardInterrupt:
-            print("\n🛑 Email monitoring stopped by user")
-            break
-        except Exception as e:
-            print(f"❌ Email monitoring error: {str(e)}")
-            time.sleep(300)
-
-def start_background_email_monitoring():
-    """הפעלת מעקב מיילים ברקע"""
-    email_thread = threading.Thread(target=start_email_monitoring, daemon=True)
-    email_thread.start()
-    print("📧 Email monitoring started in background")
-
-@app.route('/api/check-emails-now', methods=['POST'])
-def manual_email_check():
-    """API לבדיקת מיילים ידנית"""
-    try:
-        if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
-        
-        email = session['user_email']
-        user_result = supabase.table('user_parkings').select('role, access_level').eq('email', email).execute()
-        
-        if not user_result.data:
-            return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
-        
-        user_data = user_result.data[0]
-        if user_data.get('role') != 'admin' and user_data.get('access_level') != 'group_manager':
-            return jsonify({'success': False, 'message': 'אין הרשאה לבדיקת מיילים'})
-        
-        threading.Thread(target=check_for_new_emails, daemon=True).start()
-        
-        return jsonify({'success': True, 'message': 'בדיקת מיילים החלה ברקע'})
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
-
-# החלף את הסוף של הקובץ ב:
+# הפעלה אוטומטית כשהאפליקציה מתחילה
 if __name__ == '__main__':
     # הפעלת מעקב מיילים ברקע
     start_background_email_monitoring()
