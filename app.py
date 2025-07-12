@@ -1021,48 +1021,45 @@ def login():
         
         print(f"🔑 Login attempt: {validated_username}")
         
-        # בדיקת נתוני משתמש ישירה (במקום RPC שגורם לבעיה)
-        try:
-            user_result = supabase.table('user_parkings').select('email, password').eq('username', validated_username).execute()
-            
-            print(f"🔐 User lookup result: found {len(user_result.data) if user_result.data else 0} users")
+        # שימוש ב-RPC function שעובדת (חזרנו לקוד המקורי שעבד)
+        auth_result = supabase.rpc('user_login', {
+            'p_username': validated_username,
+            'p_password': validated_password
+        }).execute()
+        
+        print(f"🔐 Auth result: {auth_result.data}")
+        
+        # בדיקה נכונה של התוצאה
+        if auth_result.data is True:
+            # Get user email עם פרמטרים בטוחים
+            user_result = supabase.table('user_parkings').select('email').eq('username', validated_username).execute()
             
             if user_result.data and len(user_result.data) > 0:
-                user_data = user_result.data[0]
-                stored_password = user_data.get('password')
-                email = user_data.get('email')
+                email = user_result.data[0]['email']
+                print(f"✅ Email found: {email}")
                 
-                # בדיקת סיסמה (פשוטה - אם יש הצפנה בטבלה, נצטרך להתאים)
-                if stored_password == validated_password:
-                    print(f"✅ Password match for user: {validated_username}")
+                # יצירת קוד אימות חדש
+                verification_code = generate_verification_code()
+                print(f"🎯 Generated code: {verification_code}")
+                
+                # שמירה במסד נתונים
+                if store_verification_code(email, verification_code):
+                    # שליחת מייל
+                    print(f"🚀 Attempting to send email to {email}...")
+                    email_sent = send_verification_email(email, verification_code)
+                    print(f"📧 Email send result: {email_sent}")
                     
-                    # יצירת קוד אימות חדש
-                    verification_code = generate_verification_code()
-                    print(f"🎯 Generated code: {verification_code}")
-                    
-                    # שמירה במסד נתונים
-                    if store_verification_code(email, verification_code):
-                        # שליחת מייל
-                        print(f"🚀 Attempting to send email to {email}...")
-                        email_sent = send_verification_email(email, verification_code)
-                        print(f"📧 Email send result: {email_sent}")
-                        
-                        # שמירה ב-session
-                        session['pending_email'] = email
-                        print(f"📧 Code ready for {email}: {verification_code}")
-                        return jsonify({'success': True, 'redirect': '/verify'})
-                    else:
-                        return jsonify({'success': False, 'message': 'שגיאה בשמירת הקוד'})
+                    # שמירה ב-session
+                    session['pending_email'] = email
+                    print(f"📧 Code ready for {email}: {verification_code}")
+                    return jsonify({'success': True, 'redirect': '/verify'})
                 else:
-                    print(f"❌ Password mismatch for user: {validated_username}")
-                    return jsonify({'success': False, 'message': 'שם משתמש או סיסמה שגויים'})
+                    return jsonify({'success': False, 'message': 'שגיאה בשמירת הקוד'})
             else:
-                print(f"❌ User not found: {validated_username}")
-                return jsonify({'success': False, 'message': 'שם משתמש או סיסמה שגויים'})
-                
-        except Exception as auth_error:
-            print(f"❌ Authentication error: {str(auth_error)}")
-            return jsonify({'success': False, 'message': 'שגיאה בבדיקת נתונים'})
+                return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
+        else:
+            print(f"❌ Authentication failed for: {validated_username}")
+            return jsonify({'success': False, 'message': 'שם משתמש או סיסמה שגויים'})
             
     except Exception as e:
         print(f"❌ Login error: {str(e)}")
