@@ -5,14 +5,6 @@ import os
 import random
 import string
 import re
-import html# בתחילת app.py, אחרי השורות הקיימות:
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
-from flask_mail import Mail, Message
-from supabase import create_client, Client
-import os
-import random
-import string
-import re
 import html
 import imaplib
 import email
