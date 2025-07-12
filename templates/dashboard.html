@@ -109,9 +109,8 @@
         /* Control Panel */
         .control-panel {
             display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-            align-items: flex-end;
+            flex-direction: column;
+            gap: 0;
         }
         
         .control-group {
@@ -723,72 +722,87 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <div class="header-top">
+                    <div class="header-top">
+            <div style="display: flex; align-items: center; gap: 20px;">
                 <h1>לוח בקרה - <span id="dashboardTitle">טוען...</span></h1>
-                <div class="user-info">
-                    <span class="user-name" id="userName">טוען...</span>
-                    <button class="logout-btn" onclick="logout()">
-                        יציאה
+                <img src="https://raw.githubusercontent.com/DrorSBIsrael/S-B-Parking-reports/refs/heads/master/templates/Logo%20SB%20300dpi.jpg" 
+                     alt="Logo" 
+                     style="height: 60px; width: auto; object-fit: contain;">
+            </div>
+        </div>
+            
+            <!-- Control Panel -->
+            <div class="control-panel">
+                <!-- First Row -->
+                <div style="display: flex; gap: 20px; width: 100%; align-items: flex-end; flex-wrap: wrap;">
+                    <!-- View Mode Switcher -->
+                    <div class="view-mode-switcher">
+                        <button class="view-mode-btn active" data-mode="daily" onclick="setViewMode('daily')">יומי</button>
+                        <button class="view-mode-btn" data-mode="weekly" onclick="setViewMode('weekly')">שבועי</button>
+                        <button class="view-mode-btn" data-mode="monthly" onclick="setViewMode('monthly')">חודשי</button>
+                    </div>
+                    
+                    <!-- Date Navigation -->
+                    <button class="date-nav-btn" onclick="navigateDate(-1)">◀</button>
+                    
+                    <!-- Date Range -->
+                    <div class="control-group">
+                        <label class="control-label">מתאריך</label>
+                        <input type="date" id="startDate" class="control-input">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label class="control-label">עד תאריך</label>
+                        <input type="date" id="endDate" class="control-input">
+                    </div>
+                    
+                    <button class="date-nav-btn" onclick="navigateDate(1)">▶</button>
+                    
+                    <!-- Load Button -->
+                    <button class="load-btn" onclick="loadData()">
+                        <span>📊</span>
+                        <span>טען נתונים</span>
+                    </button>
+                    
+                    <!-- Logout Button -->
+                    <button class="logout-btn" onclick="logout()" style="background: #000; margin-right: 20px;">
+                        התנתק
+                    </button>
+                </div>
+                
+                <!-- Second Row - Quick Actions -->
+                <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+                    <button class="quick-action-btn yesterday" onclick="setQuickRange('yesterday')">
+                        <span>📆</span>
+                        <span>אתמול</span>
+                    </button>
+                    
+                    <button class="quick-action-btn week" onclick="setQuickRange('currentWeek')">
+                        <span>📅</span>
+                        <span>השבוע</span>
+                    </button>
+                    
+                    <button class="quick-action-btn lastweek" onclick="setQuickRange('lastWeek')">
+                        <span>📆</span>
+                        <span>שבוע שעבר</span>
+                    </button>
+                    
+                    <button class="quick-action-btn month" onclick="setQuickRange('currentMonth')">
+                        <span>📅</span>
+                        <span>החודש</span>
+                    </button>
+                    
+                    <button class="quick-action-btn lastmonth" onclick="setQuickRange('lastMonth')">
+                        <span>📆</span>
+                        <span>חודש שעבר</span>
                     </button>
                 </div>
             </div>
             
-            <!-- Control Panel -->
-            <div class="control-panel">
-                <!-- View Mode Switcher -->
-                <div class="view-mode-switcher">
-                    <button class="view-mode-btn active" data-mode="daily" onclick="setViewMode('daily')">יומי</button>
-                    <button class="view-mode-btn" data-mode="weekly" onclick="setViewMode('weekly')">שבועי</button>
-                    <button class="view-mode-btn" data-mode="monthly" onclick="setViewMode('monthly')">חודשי</button>
-                </div>
-                
-                <!-- Date Navigation -->
-                <button class="date-nav-btn" onclick="navigateDate(-1)">◀</button>
-                
-                <!-- Date Range -->
-                <div class="control-group">
-                    <label class="control-label">מתאריך</label>
-                    <input type="date" id="startDate" class="control-input">
-                </div>
-                
-                <div class="control-group">
-                    <label class="control-label">עד תאריך</label>
-                    <input type="date" id="endDate" class="control-input">
-                </div>
-                
-                <button class="date-nav-btn" onclick="navigateDate(1)">▶</button>
-                
-                <!-- Quick Actions -->
-                <button class="quick-action-btn yesterday" onclick="setQuickRange('yesterday')">
-                    <span>📆</span>
-                    <span>אתמול</span>
-                </button>
-                
-                <button class="quick-action-btn week" onclick="setQuickRange('currentWeek')">
-                    <span>📅</span>
-                    <span>השבוע</span>
-                </button>
-                
-                <button class="quick-action-btn lastweek" onclick="setQuickRange('lastWeek')">
-                    <span>📆</span>
-                    <span>שבוע שעבר</span>
-                </button>
-                
-                <button class="quick-action-btn month" onclick="setQuickRange('currentMonth')">
-                    <span>📅</span>
-                    <span>החודש</span>
-                </button>
-                
-                <button class="quick-action-btn lastmonth" onclick="setQuickRange('lastMonth')">
-                    <span>📆</span>
-                    <span>חודש שעבר</span>
-                </button>
-                
-                <!-- Load Button -->
-                <button class="load-btn" onclick="loadData()">
-                    <span>📊</span>
-                    <span>טען נתונים</span>
-                </button>
+            <!-- User Info -->
+            <div style="margin-top: 15px; padding: 10px 0; color: var(--text-secondary); font-size: 14px;">
+                <span>משתמש מחובר: </span>
+                <span id="userName" style="font-weight: 600;">טוען...</span>
             </div>
             
             <!-- Parking Selector for Multiple Parkings -->
@@ -1007,7 +1021,76 @@ Chart.defaults.plugins.legend.labels.padding = 20;
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     initializeDashboard();
+    
+    // Fix date picker display format to DD/MM/YYYY
+    fixDatePickerFormat();
 });
+
+// Fix date picker format
+function fixDatePickerFormat() {
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    
+    dateInputs.forEach(input => {
+        // Check if already processed
+        if (input.hasAttribute('data-date-fixed')) {
+            // Just update the text input if it exists
+            const textInput = input.nextSibling;
+            if (textInput && textInput.type === 'text' && input.value) {
+                textInput.value = formatDateForDisplay(input.value);
+            }
+            return;
+        }
+        
+        // Mark as processed
+        input.setAttribute('data-date-fixed', 'true');
+        
+        // Create text input once
+        if (input.value) {
+            const formattedDate = formatDateForDisplay(input.value);
+            
+            // Create a text input to show formatted date
+            const textInput = document.createElement('input');
+            textInput.type = 'text';
+            textInput.value = formattedDate;
+            textInput.className = input.className;
+            textInput.style.cssText = input.style.cssText;
+            textInput.readOnly = true;
+            textInput.style.cursor = 'pointer';
+            textInput.style.backgroundColor = '#fff';
+            
+            // Hide original date input
+            input.style.display = 'none';
+            
+            // Insert text input after date input
+            input.parentNode.insertBefore(textInput, input.nextSibling);
+            
+            // Click on text input opens date picker
+            textInput.addEventListener('click', () => {
+                input.style.display = 'block';
+                input.focus();
+                input.click();
+                textInput.style.display = 'none';
+            });
+            
+            // When date picker loses focus, show text input again
+            input.addEventListener('blur', () => {
+                setTimeout(() => {
+                    input.style.display = 'none';
+                    textInput.style.display = 'block';
+                    textInput.value = formatDateForDisplay(input.value);
+                }, 200);
+            });
+        }
+        
+        // Add change listener
+        input.addEventListener('change', function() {
+            const textInput = this.nextSibling;
+            if (textInput && textInput.type === 'text' && this.value) {
+                textInput.value = formatDateForDisplay(this.value);
+            }
+        });
+    });
+}
 
 // Initialize dashboard
 async function initializeDashboard() {
@@ -1028,6 +1111,11 @@ async function initializeDashboard() {
         
         document.getElementById('endDate').value = formatDateForInput(today);
         document.getElementById('startDate').value = formatDateForInput(thirtyDaysAgo);
+        
+        // Fix date picker display after setting initial dates
+        setTimeout(() => {
+            fixDatePickerFormat();
+        }, 100);
         
         // Load user info
         await loadUserInfo();
@@ -2454,7 +2542,7 @@ function createStayDurationChart(durations, chartType, stay015, stay0to60) {
                             }
                             
                             if (chartType === 'bar') {
-                                return `${context.parsed.toLocaleString()} רכבים (${percentage}%)`;
+                                return `${context.parsed.y ? context.parsed.y.toLocaleString() : context.parsed.toLocaleString()} רכבים (${percentage}%)`;
                             } else {
                                 // Pie chart
                                 if (context.label === '0-60 דקות' && stay015 && stay0to60) {
@@ -3040,6 +3128,9 @@ function setQuickRange(range) {
     document.getElementById('startDate').value = formatDateForInput(startDate);
     document.getElementById('endDate').value = formatDateForInput(endDate);
     
+    // Fix date picker display
+    fixDatePickerFormat();
+    
     // Auto load data
     loadData();
 }
@@ -3085,6 +3176,10 @@ function updateDateRangeForMode() {
     }
     
     document.getElementById('endDate').value = formatDateForInput(endDate);
+    
+    // Fix date picker display
+    fixDatePickerFormat();
+    
     loadData();
 }
 
@@ -3112,6 +3207,9 @@ function navigateDate(direction) {
     
     document.getElementById('startDate').value = formatDateForInput(startDate);
     document.getElementById('endDate').value = formatDateForInput(endDate);
+    
+    // Fix date picker display
+    fixDatePickerFormat();
     
     loadData();
 }
