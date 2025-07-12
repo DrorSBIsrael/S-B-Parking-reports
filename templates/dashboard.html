@@ -763,15 +763,10 @@
                         <span>📊</span>
                         <span>טען נתונים</span>
                     </button>
-                    
-                    <!-- Logout Button -->
-                    <button class="logout-btn" onclick="logout()" style="background: #000; margin-right: 20px;">
-                        התנתק
-                    </button>
                 </div>
                 
                 <!-- Second Row - Quick Actions -->
-                <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+                <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; align-items: center;">
                     <button class="quick-action-btn yesterday" onclick="setQuickRange('yesterday')">
                         <span>📆</span>
                         <span>אתמול</span>
@@ -796,6 +791,18 @@
                         <span>📆</span>
                         <span>חודש שעבר</span>
                     </button>
+                    
+                    <!-- Parking Selector -->
+                    <div id="parkingSelectorGroup" style="display: none; margin-right: 20px;">
+                        <select id="parkingSelector" class="control-input" style="text-align: center; font-weight: 500; min-width: 200px;">
+                            <option value="">כל החניונים</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Logout Button moved here -->
+                    <button class="logout-btn" onclick="logout()" style="background: #000; margin-right: auto;">
+                        התנתק
+                    </button>
                 </div>
             </div>
             
@@ -803,14 +810,6 @@
             <div style="margin-top: 15px; padding: 10px 0; color: var(--text-secondary); font-size: 14px;">
                 <span>משתמש מחובר: </span>
                 <span id="userName" style="font-weight: 600;">טוען...</span>
-            </div>
-            
-            <!-- Parking Selector for Multiple Parkings -->
-            <div class="control-group" id="parkingSelectorGroup" style="display: none; margin: 0 auto 20px; max-width: 300px;">
-                <label class="control-label" style="text-align: center; font-size: 16px; color: var(--primary); font-weight: 600;">בחירת חניון ולחיצה על טעינת נתונים</label>
-                <select id="parkingSelector" class="control-input" style="text-align: center; font-weight: 500;">
-                    <option value="">כל החניונים</option>
-                </select>
             </div>
             
 
@@ -1021,9 +1020,6 @@ Chart.defaults.plugins.legend.labels.padding = 20;
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     initializeDashboard();
-    
-    // Fix date picker display format to DD/MM/YYYY
-    fixDatePickerFormat();
 });
 
 // Fix date picker format
@@ -1031,63 +1027,45 @@ function fixDatePickerFormat() {
     const dateInputs = document.querySelectorAll('input[type="date"]');
     
     dateInputs.forEach(input => {
-        // Check if already processed
-        if (input.hasAttribute('data-date-fixed')) {
-            // Just update the text input if it exists
-            const textInput = input.nextSibling;
-            if (textInput && textInput.type === 'text' && input.value) {
-                textInput.value = formatDateForDisplay(input.value);
+        // Skip if already has a display input
+        if (input.nextSibling && input.nextSibling.classList && input.nextSibling.classList.contains('date-display')) {
+            // Update existing display
+            if (input.value) {
+                input.nextSibling.value = formatDateForDisplay(input.value);
             }
             return;
         }
         
-        // Mark as processed
-        input.setAttribute('data-date-fixed', 'true');
+        // Create display input
+        const displayInput = document.createElement('input');
+        displayInput.type = 'text';
+        displayInput.className = input.className + ' date-display';
+        displayInput.style.cssText = input.style.cssText;
+        displayInput.readOnly = true;
+        displayInput.style.cursor = 'pointer';
+        displayInput.placeholder = 'DD/MM/YYYY';
         
-        // Create text input once
         if (input.value) {
-            const formattedDate = formatDateForDisplay(input.value);
-            
-            // Create a text input to show formatted date
-            const textInput = document.createElement('input');
-            textInput.type = 'text';
-            textInput.value = formattedDate;
-            textInput.className = input.className;
-            textInput.style.cssText = input.style.cssText;
-            textInput.readOnly = true;
-            textInput.style.cursor = 'pointer';
-            textInput.style.backgroundColor = '#fff';
-            
-            // Hide original date input
-            input.style.display = 'none';
-            
-            // Insert text input after date input
-            input.parentNode.insertBefore(textInput, input.nextSibling);
-            
-            // Click on text input opens date picker
-            textInput.addEventListener('click', () => {
-                input.style.display = 'block';
-                input.focus();
-                input.click();
-                textInput.style.display = 'none';
-            });
-            
-            // When date picker loses focus, show text input again
-            input.addEventListener('blur', () => {
-                setTimeout(() => {
-                    input.style.display = 'none';
-                    textInput.style.display = 'block';
-                    textInput.value = formatDateForDisplay(input.value);
-                }, 200);
-            });
+            displayInput.value = formatDateForDisplay(input.value);
         }
         
-        // Add change listener
-        input.addEventListener('change', function() {
-            const textInput = this.nextSibling;
-            if (textInput && textInput.type === 'text' && this.value) {
-                textInput.value = formatDateForDisplay(this.value);
-            }
+        // Hide the original date input
+        input.style.position = 'absolute';
+        input.style.opacity = '0';
+        input.style.pointerEvents = 'none';
+        input.style.width = displayInput.style.width || '100%';
+        
+        // Insert display input after original
+        input.parentNode.insertBefore(displayInput, input.nextSibling);
+        
+        // Click handler
+        displayInput.addEventListener('click', () => {
+            input.showPicker ? input.showPicker() : input.click();
+        });
+        
+        // Update display when date changes
+        input.addEventListener('change', () => {
+            displayInput.value = input.value ? formatDateForDisplay(input.value) : '';
         });
     });
 }
@@ -1112,11 +1090,6 @@ async function initializeDashboard() {
         document.getElementById('endDate').value = formatDateForInput(today);
         document.getElementById('startDate').value = formatDateForInput(thirtyDaysAgo);
         
-        // Fix date picker display after setting initial dates
-        setTimeout(() => {
-            fixDatePickerFormat();
-        }, 100);
-        
         // Load user info
         await loadUserInfo();
         
@@ -1125,6 +1098,11 @@ async function initializeDashboard() {
         
         // Load initial data
         await loadData();
+        
+        // Fix date picker display after everything is loaded
+        setTimeout(() => {
+            fixDatePickerFormat();
+        }, 500);
         
         // Show special message for group users
         if (isGroup) {
@@ -2119,7 +2097,7 @@ function createPaymentChart() {
                     callbacks: {
                         label: function(context) {
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : '0';
                             return `${context.label}: ₪${Math.round(context.parsed).toLocaleString()} (${percentage}%)`;
                         }
                     }
@@ -2377,9 +2355,9 @@ function updateStayDuration() {
         let html = '';
         
         // Add 0-60 minutes card with 0-15 highlight
-        const percentage060 = actualTotal > 0 ? ((stay0to60 / actualTotal) * 100).toFixed(1) : 0;
-        const percentage015 = actualTotal > 0 ? ((stay015 / actualTotal) * 100).toFixed(1) : 0;
-        const percentage015of60 = stay0to60 > 0 ? ((stay015 / stay0to60) * 100).toFixed(1) : 0;
+        const percentage060 = actualTotal > 0 ? ((stay0to60 / actualTotal) * 100).toFixed(1) : '0';
+        const percentage015 = actualTotal > 0 ? ((stay015 / actualTotal) * 100).toFixed(1) : '0';
+        const percentage015of60 = stay0to60 > 0 ? ((stay015 / stay0to60) * 100).toFixed(1) : '0';
         
         html += `
             <div class="stay-duration-item stay-060" style="position: relative; overflow: visible; border: 2px solid var(--primary); background: linear-gradient(135deg, rgba(0, 122, 255, 0.05), rgba(0, 122, 255, 0.02));">
@@ -2410,7 +2388,7 @@ function updateStayDuration() {
         // Add other duration cards
         Object.entries(durations).forEach(([time, value]) => {
             if (time !== '0-60 דקות' && value > 0) {
-                const percentage = actualTotal > 0 ? ((value / actualTotal) * 100).toFixed(1) : 0;
+                const percentage = actualTotal > 0 ? ((value / actualTotal) * 100).toFixed(1) : '0';
                 html += `
                     <div class="stay-duration-item">
                         <div class="stay-duration-time">${time}</div>
@@ -2495,13 +2473,13 @@ function createStayDurationChart(durations, chartType, stay015, stay0to60) {
                                 const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
                                 return data.labels.map((label, i) => {
                                     const value = data.datasets[0].data[i];
-                                    const percentage = ((value / total) * 100).toFixed(1);
-                                    
-                                    // Special handling for 0-60 minutes in pie chart
-                                    let displayText = `${label}: ${value.toLocaleString()} (${percentage}%)`;
-                                    if (label === '0-60 דקות' && stay015 && stay0to60) {
-                                        const percentage015of60 = ((stay015 / stay0to60) * 100).toFixed(1);
-                                        displayText += ` | 0-15: ${stay015.toLocaleString()} (${percentage015of60}%)`;
+                                                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
+                                
+                                // Special handling for 0-60 minutes in pie chart
+                                let displayText = `${label}: ${value.toLocaleString()} (${percentage}%)`;
+                                if (label === '0-60 דקות' && stay015 && stay0to60) {
+                                    const percentage015of60 = stay0to60 > 0 ? ((stay015 / stay0to60) * 100).toFixed(1) : '0';
+                                    displayText += ` | 0-15: ${stay015.toLocaleString()} (${percentage015of60}%)`;
                                     }
                                     
                                     return {
@@ -2531,13 +2509,13 @@ function createStayDurationChart(durations, chartType, stay015, stay0to60) {
                     callbacks: {
                         label: function(context) {
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : '0';
                             
                             // Special handling for 0-15 minutes
                             if (context.label && (context.label.includes('0-15') || context.label.includes('חלק'))) {
                                 const actualTotal = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage015 = ((stay015 / actualTotal) * 100).toFixed(1);
-                                const of60Percent = stay0to60 > 0 ? ((stay015 / stay0to60) * 100).toFixed(1) : 0;
+                                const percentage015 = actualTotal > 0 ? ((stay015 / actualTotal) * 100).toFixed(1) : '0';
+                                const of60Percent = stay0to60 > 0 ? ((stay015 / stay0to60) * 100).toFixed(1) : '0';
                                 return `0-15 דקות: ${context.parsed.toLocaleString()} רכבים (${percentage015}% מהסה"כ, ${of60Percent}% מתוך 0-60)`;
                             }
                             
@@ -2546,7 +2524,7 @@ function createStayDurationChart(durations, chartType, stay015, stay0to60) {
                             } else {
                                 // Pie chart
                                 if (context.label === '0-60 דקות' && stay015 && stay0to60) {
-                                    const percentage015of60 = ((stay015 / stay0to60) * 100).toFixed(1);
+                                    const percentage015of60 = stay0to60 > 0 ? ((stay015 / stay0to60) * 100).toFixed(1) : '0';
                                     return [
                                         `${context.label}: ${context.parsed.toLocaleString()} (${percentage}%)`,
                                         `מתוכם 0-15 דקות: ${stay015.toLocaleString()} (${percentage015of60}%)`
