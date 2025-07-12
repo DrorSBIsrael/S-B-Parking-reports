@@ -684,8 +684,8 @@ def verify_email_system():
         print(f"❌ Gmail IMAP connection failed: {str(e)}")
         return False
 
-def start_email_monitoring_with_logs():
-    """הפעלת מעקב מיילים עם לוגים מפורטים"""
+def start_email_monitoring_with_logs(app):
+    """הפעלת מעקב מיילים עם לוגים מפורטים - תוקן עבור Flask"""
     try:
         print("🚀 Starting email monitoring system...")
         
@@ -696,8 +696,9 @@ def start_email_monitoring_with_logs():
         
         # הגדרת התזמון עם לוגים
         def scheduled_check():
-            print(f"⏰ Scheduled email check triggered at {datetime.now()}")
-            check_for_new_emails()
+            with app.app_context():  # חשוב! - צריך להוסיף את זה
+                print(f"⏰ Scheduled email check triggered at {datetime.now()}")
+                check_for_new_emails()
         
         # תזמון בדיקה כל 5 דקות
         schedule.every(EMAIL_CHECK_INTERVAL).minutes.do(scheduled_check)
@@ -733,20 +734,25 @@ def start_email_monitoring_with_logs():
         
         # בדיקה ראשונית מיידית
         print("🚀 Running initial email check...")
-        threading.Thread(target=check_for_new_emails, daemon=True).start()
+        
+        def initial_check():
+            with app.app_context():  # חשוב! - גם כאן
+                check_for_new_emails()
+        
+        threading.Thread(target=initial_check, daemon=True).start()
         
     except Exception as e:
         print(f"❌ Failed to start email monitoring: {str(e)}")
 
-def start_background_email_monitoring():
-    """נקודת כניסה להפעלת מעקב מיילים ברקע"""
+def start_background_email_monitoring(app):
+    """נקודת כניסה להפעלת מעקב מיילים ברקע - תוקן עבור Flask"""
     try:
         print("📧 Initializing background email monitoring...")
         
         # השהיה קטנה לוודא שהשרת מוכן
         def delayed_start():
             time.sleep(5)  # חכה 5 שניות
-            start_email_monitoring_with_logs()
+            start_email_monitoring_with_logs(app)
         
         startup_thread = threading.Thread(target=delayed_start, daemon=True)
         startup_thread.start()
@@ -756,7 +762,7 @@ def start_background_email_monitoring():
     except Exception as e:
         print(f"❌ Background email monitoring initialization failed: {str(e)}")
 
-# בדיקה ידנית מיידית (לדיבוג)
+# תעדכן גם את הפונקציה הזו:
 @app.route('/api/test-email-system', methods=['GET'])
 def test_email_system():
     """API לבדיקת מערכת המיילים"""
@@ -767,8 +773,13 @@ def test_email_system():
         system_ok = verify_email_system()
         
         if system_ok:
-            # בדיקת מיילים מיידית
-            threading.Thread(target=check_for_new_emails, daemon=True).start()
+            # בדיקת מיילים מיידית עם app context
+            def test_check():
+                with app.app_context():
+                    check_for_new_emails()
+            
+            threading.Thread(target=test_check, daemon=True).start()
+            
             return jsonify({
                 'success': True, 
                 'message': 'Email system test completed successfully. Check server logs for details.'
@@ -1258,7 +1269,7 @@ if __name__ == '__main__':
     
     if email_system_ready:
         print("✅ Email system ready - starting background monitoring")
-        start_background_email_monitoring()
+        start_background_email_monitoring(app)  # העביר את app כפרמטר
     else:
         print("⚠️ Email system not ready - monitoring disabled")
         print("💡 You can still use manual email checks via API")
