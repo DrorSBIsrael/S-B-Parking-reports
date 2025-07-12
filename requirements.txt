@@ -15,7 +15,7 @@ click==8.1.7
 blinker==1.6.3
 pandas==2.0.3
 schedule==1.2.0
-python-email-validator==2.0.0
+email-validator==2.0.0
 imapclient
 pandas
 apscheduler
