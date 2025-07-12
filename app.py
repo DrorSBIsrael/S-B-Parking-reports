@@ -1,5 +1,12 @@
-# הוסף את השורות האלה בלבד לתחילת הקובץ שלך (אחרי ה-imports הקיימים):
-
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask_mail import Mail, Message
+from supabase import create_client, Client
+import os
+import random
+import string
+import re
+import html
+from datetime import datetime, timedelta
 try:
     import imaplib
     import email
@@ -17,14 +24,261 @@ except ImportError as e:
     EMAIL_MONITORING_AVAILABLE = False
     print(f"⚠️ Email monitoring not available: {e}")
 
-# הוסף אחרי ההגדרות הקיימות:
+# הגדרות מיילים אוטומטיים - להוסיף אחרי ההגדרות הקיימות:
 if EMAIL_MONITORING_AVAILABLE:
     EMAIL_CHECK_INTERVAL = 5  # בדיקה כל 5 דקות
     PROCESSED_EMAILS_LIMIT = 100  # מקסימום מיילים לזכור
     processed_email_ids = []  # רשימה לזכור מיילים שכבר עובדו
 
-# הוסף את הפונקציות האלה לפני ה-routes:
+print("🚀 S&B Parking Application Starting...")
 
+app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
+
+# Supabase configuration
+SUPABASE_URL = os.environ.get('SUPABASE_URL')
+SUPABASE_KEY = os.environ.get('SUPABASE_ANON_KEY')
+
+print(f"🔍 Supabase URL: {'✅ SET' if SUPABASE_URL else '❌ MISSING'}")
+print(f"🔍 Supabase KEY: {'✅ SET' if SUPABASE_KEY else '❌ MISSING'}")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    print("❌ CRITICAL: Supabase credentials missing!")
+    print("⚠️ Starting anyway to show error page...")
+    supabase = None
+else:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        print("✅ Supabase connection established")
+    except Exception as e:
+        print(f"❌ Supabase connection failed: {e}")
+        supabase = None
+
+# הגדרות מייל עם Gmail + Environment Variables
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
+app.config['MAIL_USERNAME'] = os.environ.get('GMAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('GMAIL_APP_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('GMAIL_USERNAME')
+app.config['MAIL_SUPPRESS_SEND'] = False
+app.config['MAIL_DEBUG'] = True
+
+print(f"📧 Gmail Username: {'✅ SET' if app.config['MAIL_USERNAME'] else '❌ MISSING'}")
+print(f"🔑 Gmail Password: {'✅ SET' if app.config['MAIL_PASSWORD'] else '❌ MISSING'}")
+
+try:
+    mail = Mail(app)
+    print("✅ Mail system initialized")
+except Exception as e:
+    print(f"⚠️ Mail system initialization failed: {e}")
+    mail = None
+
+# הגנות אבטחה
+def validate_input(input_text, input_type="general"):
+    """אימות קלט מפני SQL Injection ותקיפות אחרות"""
+    
+    if not input_text:
+        return False, "שדה ריק"
+    
+    # הגנה בסיסית - הסרת תווים מסוכנים
+    input_text = html.escape(input_text.strip())
+    
+    # רשימת מילים מסוכנות (SQL Injection)
+    dangerous_words = [
+        'select', 'insert', 'update', 'delete', 'drop', 'create', 'alter',
+        'union', 'join', 'exec', 'execute', 'script', 'declare', 'cast',
+        'convert', 'begin', 'end', 'if', 'else', 'while', 'waitfor',
+        'shutdown', 'sp_', 'xp_', 'cmdshell', 'openrowset', 'opendatasource'
+    ]
+    
+    # בדיקת מילים מסוכנות
+    lower_input = input_text.lower()
+    for word in dangerous_words:
+        if word in lower_input:
+            print(f"🚨 Security threat detected: '{word}' in input")
+            return False, f"קלט לא חוקי - מכיל מילה אסורה: {word}"
+    
+    # בדיקת תווים מסוכנים
+    dangerous_chars = ["'", '"', ';', '--', '/*', '*/', '<', '>', '&', '|', '`']
+    for char in dangerous_chars:
+        if char in input_text:
+            print(f"🚨 Security threat detected: '{char}' character in input")
+            return False, f"קלט לא חוקי - מכיל תו אסור: {char}"
+    
+    # אימות לפי סוג הקלט
+    if input_type == "username":
+        if not re.match(r'^[a-zA-Z0-9._]+$', input_text):
+            return False, "שם משתמש יכול להכיל רק אותיות באנגלית, מספרים, נקודה וקו תחתון"
+        if len(input_text) < 3 or len(input_text) > 50:
+            return False, "שם משתמש חייב להיות בין 3-50 תווים"
+    
+    elif input_type == "password":
+        if len(input_text) < 4 or len(input_text) > 100:
+            return False, "סיסמה חייבת להיות בין 4-100 תווים"
+    
+    elif input_type == "email":
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, input_text):
+            return False, "כתובת אימייל לא תקינה"
+    
+    elif input_type == "verification_code":
+        if not re.match(r'^[0-9]{6}$', input_text):
+            return False, "קוד אימות חייב להיות 6 ספרות בלבד"
+    
+    return True, input_text
+
+def rate_limit_check(identifier, max_attempts=5, time_window=300):
+    """בדיקת הגבלת קצב - מונע התקפות brute force"""
+    print(f"🔍 Rate limit check for: {identifier}")
+    return True
+
+def generate_verification_code():
+    """יצירת קוד אימות של 6 ספרות"""
+    return ''.join(random.choices(string.digits, k=6))
+
+def store_verification_code(email, code):
+    """שמירת קוד אימות בטבלת user_parkings הקיימת"""
+    if not supabase:
+        print("❌ Supabase not available")
+        return False
+        
+    try:
+        # אימות אימייל לפני שמירה
+        is_valid, validated_email = validate_input(email, "email")
+        if not is_valid:
+            print(f"❌ Invalid email format: {email}")
+            return False
+        
+        # חישוב זמן תפוגה (10 דקות מעכשיו)
+        expires_at = datetime.now() + timedelta(minutes=10)
+        expires_str = expires_at.strftime('%Y-%m-%d %H:%M:%S')
+        
+        print(f"🔄 Updating user_parkings for {validated_email} with code {code}")
+        
+        # שימוש ב-Supabase עם פרמטרים בטוחים
+        result = supabase.table('user_parkings').update({
+            'verification_code': code,
+            'code_expires_at': expires_str
+        }).eq('email', validated_email).execute()
+        
+        print(f"✅ Update result: {result.data}")
+        print(f"✅ Code saved: {code} expires at {expires_str}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Failed to save code: {str(e)}")
+        return False
+
+def send_verification_email(email, code):
+    """שליחת מייל עם Gmail + App Password מ-Environment Variables"""
+    
+    if not mail:
+        print(f"❌ Mail system not available")
+        print(f"📱 BACKUP CODE for {email}: {code}")
+        return False
+    
+    # אימות אימייל
+    is_valid, validated_email = validate_input(email, "email")
+    if not is_valid:
+        print(f"❌ Invalid email format: {email}")
+        return False
+    
+    # בדיקה שיש נתונים
+    if not app.config['MAIL_USERNAME'] or not app.config['MAIL_PASSWORD']:
+        print(f"❌ Gmail credentials missing in environment variables")
+        print(f"📱 BACKUP CODE for {validated_email}: {code}")
+        return False
+    
+    try:
+        print(f"🚀 Starting Gmail send to {validated_email}...")
+        
+        msg = Message(
+            subject='קוד אימות - S&B Parking',
+            recipients=[validated_email],
+            html=f"""
+            <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">
+                <h2 style="color: #667eea;">שיידט את בכמן ישראל</h2>
+                <h3>קוד האימות שלך:</h3>
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+                    <span style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px;">{code}</span>
+                </div>
+                <p>הקוד תקף ל-10 דקות בלבד.</p>
+                <p>אם לא ביקשת קוד זה, התעלם מהודעה זו.</p>
+                <hr>
+                <p style="color: #666; font-size: 12px;">S&B Parking - מערכת דוחות חניות</p>
+            </div>
+            """,
+            sender=app.config['MAIL_USERNAME']
+        )
+        
+        print(f"🔄 Sending via Gmail...")
+        mail.send(msg)
+        
+        print(f"✅ Gmail email sent successfully to {validated_email}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Gmail error: {str(e)}")
+        print(f"📱 BACKUP CODE for {validated_email}: {code}")
+        return False
+
+def verify_code_from_database(email, code):
+    """בדיקת קוד אימות מטבלת user_parkings"""
+    if not supabase:
+        print("❌ Supabase not available")
+        return False
+        
+    try:
+        # אימות קלט
+        is_valid_email, validated_email = validate_input(email, "email")
+        is_valid_code, validated_code = validate_input(code, "verification_code")
+        
+        if not is_valid_email:
+            print(f"❌ Invalid email format: {email}")
+            return False
+            
+        if not is_valid_code:
+            print(f"❌ Invalid code format: {code}")
+            return False
+        
+        # חיפוש משתמש עם הקוד
+        result = supabase.table('user_parkings').select('verification_code, code_expires_at').eq('email', validated_email).execute()
+        
+        if not result.data:
+            print(f"❌ No user found for {validated_email}")
+            return False
+            
+        user_data = result.data[0]
+        stored_code = user_data.get('verification_code')
+        expires_at_str = user_data.get('code_expires_at')
+        
+        print(f"🔍 Code verification attempt for {validated_email}")
+        
+        if not stored_code or stored_code != validated_code:
+            print(f"❌ Code mismatch")
+            return False
+            
+        # בדיקת תוקף
+        if expires_at_str:
+            expires_at = datetime.fromisoformat(expires_at_str.replace('Z', '').replace('+00:00', ''))
+            if datetime.now() > expires_at:
+                print(f"❌ Code expired")
+                return False
+        
+        # מחיקת הקוד אחרי שימוש מוצלח
+        supabase.table('user_parkings').update({
+            'verification_code': None,
+            'code_expires_at': None
+        }).eq('email', validated_email).execute()
+        
+        print(f"✅ Code verified and cleared for {validated_email}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Database verification failed: {str(e)}")
+        return False
 def connect_to_gmail_imap():
     """התחברות ל-Gmail IMAP"""
     if not EMAIL_MONITORING_AVAILABLE:
@@ -76,9 +330,12 @@ def download_csv_from_email(msg):
         return []
 
 def parse_csv_content(csv_content):
-    """פרסור תוכן CSV"""
+    """פרסור תוכן CSV ללא pandas - עם CSV רגיל"""
     try:
+        # יצירת reader מהתוכן
         csv_reader = csv.DictReader(io.StringIO(csv_content))
+        
+        # המרה לרשימה
         rows = list(csv_reader)
         
         print(f"📊 CSV parsed: {len(rows)} rows")
@@ -87,6 +344,7 @@ def parse_csv_content(csv_content):
             columns = list(rows[0].keys())
             print(f"📊 Columns found: {columns}")
         
+        # בדיקת עמודות נדרשות
         required_columns = ['ProjectNumber', 'TTCRET', 'SCASH', 'SCREDIT']
         
         if len(rows) > 0:
@@ -103,7 +361,7 @@ def parse_csv_content(csv_content):
         return None
 
 def convert_to_csv_import_format(csv_rows):
-    """המרה לפורמט מסד הנתונים"""
+    """המרה לפורמט csv_import_shekels - ללא pandas"""
     converted_rows = []
     
     for index, row in enumerate(csv_rows):
@@ -120,6 +378,7 @@ def convert_to_csv_import_format(csv_rows):
             else:
                 formatted_date = date_str
                 
+            # המרת נתוני כסף מאגורות לשקלים - בטוח יותר
             def safe_int(value, default=0):
                 try:
                     if value is None or value == '':
@@ -156,7 +415,7 @@ def convert_to_csv_import_format(csv_rows):
                 'total_revenue_shekels': cash_shekels + credit_shekels + pango_shekels + celo_shekels,
                 'net_revenue_shekels': cash_shekels + credit_shekels + pango_shekels + celo_shekels,
                 
-                # כסף באגורות
+                # כסף באגורות (גיבוי)
                 's_cash_agorot': cash_agorot,
                 's_credit_agorot': credit_agorot,
                 's_pango_agorot': pango_agorot,
@@ -208,17 +467,19 @@ def convert_to_csv_import_format(csv_rows):
             
         except Exception as e:
             print(f"❌ Error converting row {index}: {str(e)}")
+            print(f"   Row data: {row}")
             continue
     
     return converted_rows
 
 def insert_to_csv_import_shekels(converted_data):
-    """הכנסה לטבלת csv_import_shekels"""
+    """הכנסה לטבלת csv_import_shekels (שלב ביניים)"""
     if not supabase:
         print("❌ Supabase not available")
         return 0
         
     try:
+        # מחיקת נתונים ישנים
         supabase.table('csv_import_shekels').delete().neq('id', 0).execute()
         
         batch_size = 500
@@ -259,6 +520,7 @@ def transfer_to_parking_data():
             transferred_count = len(result.data)
             print(f"✅ Transferred {transferred_count} rows to parking_data")
             
+            # מחיקה אחרי העברה מוצלחת
             supabase.table('csv_import_shekels').delete().neq('id', 0).execute()
             print("🧹 Cleaned csv_import_shekels table")
             
@@ -349,7 +611,7 @@ def send_error_notification(sender_email, error_message):
         print(f"❌ Failed to send error notification: {str(e)}")
 
 def process_single_email(mail, email_id):
-    """עיבוד מייל יחיד"""
+    """עיבוד מייל יחיד - עדכון ללא pandas"""
     try:
         _, msg_data = mail.fetch(email_id, '(RFC822)')
         email_body = msg_data[0][1]
@@ -375,10 +637,12 @@ def process_single_email(mail, email_id):
         for csv_file in csv_files:
             print(f"\n🔄 Processing file: {csv_file['filename']}")
             
+            # פרסור CSV (עכשיו מחזיר רשימה במקום DataFrame)
             csv_rows = parse_csv_content(csv_file['data'])
             if csv_rows is None:
                 continue
             
+            # המרה לפורמט שלנו
             converted_data = convert_to_csv_import_format(csv_rows)
             if not converted_data:
                 continue
@@ -396,18 +660,21 @@ def process_single_email(mail, email_id):
             send_error_notification(sender, error_msg)
             return False
         
+        # הכנסה לטבלת הביניים
         inserted_count = insert_to_csv_import_shekels(all_converted_data)
         if inserted_count == 0:
             error_msg = "שגיאה בהכנסת הנתונים לטבלת הביניים"
             send_error_notification(sender, error_msg)
             return False
         
+        # העברה לטבלה הסופית
         transferred_count = transfer_to_parking_data()
         if transferred_count == 0:
             error_msg = "שגיאה בהעברת הנתונים לטבלה הסופית"
             send_error_notification(sender, error_msg)
             return False
         
+        # שליחת התראת הצלחה
         send_success_notification(sender, processed_files, transferred_count)
         
         print(f"🎉 Email processed successfully: {transferred_count} rows added")
@@ -430,6 +697,7 @@ def verify_email_system():
         
     print("🔧 Verifying email system configuration...")
     
+    # בדיקת משתני סביבה
     gmail_user = os.environ.get('GMAIL_USERNAME')
     gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
     
@@ -440,6 +708,7 @@ def verify_email_system():
         print("⚠️ WARNING: Gmail credentials missing! Email monitoring will not work.")
         return False
     
+    # בדיקת חיבור IMAP (מהיר)
     try:
         mail = imaplib.IMAP4_SSL('imap.gmail.com', timeout=10)
         mail.login(gmail_user, gmail_password)
@@ -450,8 +719,91 @@ def verify_email_system():
         print(f"❌ Gmail IMAP connection failed: {str(e)}")
         return False
 
+def start_email_monitoring_with_logs():
+    """הפעלת מעקב מיילים עם לוגים מפורטים"""
+    if not EMAIL_MONITORING_AVAILABLE:
+        print("⚠️ Email monitoring not available - libraries missing")
+        return
+        
+    try:
+        print("🚀 Starting email monitoring system...")
+        
+        # בדיקת תקינות המערכת
+        if not verify_email_system():
+            print("❌ Email system verification failed. Monitoring will not start.")
+            return
+        
+        def scheduled_check():
+            with app.app_context():
+                print(f"⏰ Scheduled email check triggered at {datetime.now()}")
+                check_for_new_emails()
+        
+        # תזמון בדיקה כל 5 דקות
+        schedule.every(EMAIL_CHECK_INTERVAL).minutes.do(scheduled_check)
+        print(f"⏰ Email checks scheduled every {EMAIL_CHECK_INTERVAL} minutes")
+        
+        def monitoring_loop():
+            print("🔄 Email monitoring loop started")
+            check_count = 0
+            
+            while True:
+                try:
+                    schedule.run_pending()
+                    time.sleep(60)
+                    
+                    check_count += 1
+                    if check_count % 5 == 0:
+                        print(f"💓 Email monitoring alive - {check_count} minutes running")
+                        
+                except KeyboardInterrupt:
+                    print("\n🛑 Email monitoring stopped by user")
+                    break
+                except Exception as e:
+                    print(f"❌ Email monitoring error: {str(e)}")
+                    print("⏳ Retrying in 5 minutes...")
+                    time.sleep(300)
+        
+        # הרצת הלולאה ברקע
+        monitor_thread = threading.Thread(target=monitoring_loop, daemon=True)
+        monitor_thread.start()
+        
+        print("✅ Email monitoring started successfully in background")
+        
+        # בדיקה ראשונית מיידית
+        print("🚀 Running initial email check...")
+        
+        def initial_check():
+            with app.app_context():
+                check_for_new_emails()
+        
+        threading.Thread(target=initial_check, daemon=True).start()
+        
+    except Exception as e:
+        print(f"❌ Failed to start email monitoring: {str(e)}")
+
+def start_background_email_monitoring():
+    """נקודת כניסה להפעלת מעקב מיילים ברקע"""
+    if not EMAIL_MONITORING_AVAILABLE:
+        print("⚠️ Email monitoring not available - libraries missing")
+        return
+        
+    try:
+        print("📧 Initializing background email monitoring...")
+        
+        def delayed_start():
+            time.sleep(5)
+            start_email_monitoring_with_logs()
+        
+        startup_thread = threading.Thread(target=delayed_start, daemon=True)
+        startup_thread.start()
+        
+        print("📧 Background email monitoring initialization started")
+        
+    except Exception as e:
+        print(f"❌ Background email monitoring initialization failed: {str(e)}")
+
 def check_for_new_emails():
-    """בדיקת מיילים חדשים"""
+    """בדיקת מיילים חדשים - עם לוגים מפורטים"""
     global processed_email_ids
     
     if not EMAIL_MONITORING_AVAILABLE:
@@ -460,6 +812,7 @@ def check_for_new_emails():
     
     print(f"\n🔍 ===== EMAIL CHECK STARTED at {datetime.now()} =====")
     
+    # בדיקת משתני סביבה
     gmail_user = os.environ.get('GMAIL_USERNAME')
     gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
     
@@ -479,6 +832,7 @@ def check_for_new_emails():
         print("📂 Selecting inbox...")
         mail.select('inbox')
         
+# תיקון התאריך - פורמט נכון עבור IMAP
         since_date = (datetime.now() - timedelta(days=1)).strftime('%d-%b-%Y')
         search_criteria = f'(SINCE "{since_date}" SUBJECT "parking" OR SUBJECT "report" OR SUBJECT "data")'
         
@@ -532,86 +886,7 @@ def check_for_new_emails():
         
         print(f"===== EMAIL CHECK ENDED at {datetime.now()} =====\n")
 
-def start_email_monitoring_with_logs():
-    """הפעלת מעקב מיילים עם לוגים"""
-    if not EMAIL_MONITORING_AVAILABLE:
-        print("⚠️ Email monitoring not available - libraries missing")
-        return
-        
-    try:
-        print("🚀 Starting email monitoring system...")
-        
-        if not verify_email_system():
-            print("❌ Email system verification failed. Monitoring will not start.")
-            return
-        
-        def scheduled_check():
-            with app.app_context():
-                print(f"⏰ Scheduled email check triggered at {datetime.now()}")
-                check_for_new_emails()
-        
-        schedule.every(EMAIL_CHECK_INTERVAL).minutes.do(scheduled_check)
-        print(f"⏰ Email checks scheduled every {EMAIL_CHECK_INTERVAL} minutes")
-        
-        def monitoring_loop():
-            print("🔄 Email monitoring loop started")
-            check_count = 0
-            
-            while True:
-                try:
-                    schedule.run_pending()
-                    time.sleep(60)
-                    
-                    check_count += 1
-                    if check_count % 5 == 0:
-                        print(f"💓 Email monitoring alive - {check_count} minutes running")
-                        
-                except KeyboardInterrupt:
-                    print("\n🛑 Email monitoring stopped by user")
-                    break
-                except Exception as e:
-                    print(f"❌ Email monitoring error: {str(e)}")
-                    print("⏳ Retrying in 5 minutes...")
-                    time.sleep(300)
-        
-        monitor_thread = threading.Thread(target=monitoring_loop, daemon=True)
-        monitor_thread.start()
-        
-        print("✅ Email monitoring started successfully in background")
-        
-        print("🚀 Running initial email check...")
-        
-        def initial_check():
-            with app.app_context():
-                check_for_new_emails()
-        
-        threading.Thread(target=initial_check, daemon=True).start()
-        
-    except Exception as e:
-        print(f"❌ Failed to start email monitoring: {str(e)}")
-
-def start_background_email_monitoring():
-    """נקודת כניסה להפעלת מעקב מיילים ברקע"""
-    if not EMAIL_MONITORING_AVAILABLE:
-        print("⚠️ Email monitoring not available - libraries missing")
-        return
-        
-    try:
-        print("📧 Initializing background email monitoring...")
-        
-        def delayed_start():
-            time.sleep(5)
-            start_email_monitoring_with_logs()
-        
-        startup_thread = threading.Thread(target=delayed_start, daemon=True)
-        startup_thread.start()
-        
-        print("📧 Background email monitoring initialization started")
-        
-    except Exception as e:
-        print(f"❌ Background email monitoring initialization failed: {str(e)}")
-
-# הוסף את ה-route החדש הזה בין ה-routes הקיימים:
+# הוסף את ה-API endpoint החדש הזה אחרי ה-endpoints הקיימים:
 
 @app.route('/api/test-email-system', methods=['GET'])
 def test_email_system():
@@ -625,6 +900,7 @@ def test_email_system():
             
         print("🧪 Manual email system test initiated")
         
+        # בדיקת תקינות
         system_ok = verify_email_system()
         
         if system_ok:
@@ -650,10 +926,249 @@ def test_email_system():
             'success': False, 
             'message': f'Test error: {str(e)}'
         })
+# ======================== נקודות קצה (Routes) ========================
 
-# עדכן את הפונקציה manual_email_check הקיימת שלך עם הקוד הזה:
-# (החלף את התוכן של הפונקציה בלבד, לא את ה-@app.route)
+@app.route('/')
+def index():
+    return redirect(url_for('login_page'))
 
+@app.route('/login')
+def login_page():
+    return render_template('login.html')
+
+@app.route('/verify')
+def verify_page():
+    if 'pending_email' not in session:
+        return redirect(url_for('login_page'))
+    return render_template('verify.html')
+
+@app.route('/dashboard')
+def dashboard():
+    """דף הדשבורד הראשי"""
+    if 'user_email' not in session:
+        return redirect(url_for('login_page'))
+    return render_template('dashboard.html')
+
+@app.route('/api/user-info', methods=['GET'])
+def get_user_info():
+    """קבלת נתוני המשתמש המחובר"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        if not supabase:
+            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+        
+        email = session['user_email']
+        
+        # קבלת נתוני המשתמש
+        user_result = supabase.table('user_parkings').select(
+            'username, email, role, project_number, parking_name, company_type, access_level'
+        ).eq('email', email).execute()
+        
+        if not user_result.data:
+            return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
+        
+        user_data = user_result.data[0]
+        
+        return jsonify({
+            'success': True,
+            'user': user_data
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting user info: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני משתמש'})
+
+@app.route('/api/user-parkings', methods=['GET'])
+def get_user_parkings():
+    """קבלת רשימת החניונים עבור מנהל קבוצה"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        if not supabase:
+            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+        
+        email = session['user_email']
+        
+        # בדיקת הרשאות משתמש
+        user_result = supabase.table('user_parkings').select(
+            'access_level, company_type'
+        ).eq('email', email).execute()
+        
+        if not user_result.data:
+            return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
+        
+        user_data = user_result.data[0]
+        
+        if user_data['access_level'] != 'group_manager' and user_data['access_level'] != 'group_access':
+            return jsonify({'success': False, 'message': 'אין הרשאה לצפייה בחניונים מרובים'})
+        
+        # קבלת כל החניונים של החברה
+        parkings_result = supabase.table('user_parkings').select(
+            'project_number, parking_name'
+        ).eq('company_type', user_data['company_type']).execute()
+        
+        # הסרת כפילויות
+        unique_parkings = {}
+        for parking in parkings_result.data:
+            if parking['project_number'] not in unique_parkings:
+                unique_parkings[parking['project_number']] = parking
+        
+        parkings_list = list(unique_parkings.values())
+        
+        return jsonify({
+            'success': True,
+            'parkings': parkings_list
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting user parkings: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה בקבלת רשימת חניונים'})
+
+@app.route('/api/parking-data', methods=['GET'])
+def get_parking_data():
+    """קבלת נתוני החניון לפי תאריכים והרשאות"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        if not supabase:
+            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+        
+        # קבלת פרמטרים
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        parking_id = request.args.get('parking_id')  # אופציונלי - למנהלי קבוצה
+        
+        if not start_date or not end_date:
+            return jsonify({'success': False, 'message': 'חסרים תאריכים'})
+        
+        # אימות תאריכים
+        is_valid_start, validated_start = validate_input(start_date, "general")
+        is_valid_end, validated_end = validate_input(end_date, "general")
+        
+        if not is_valid_start or not is_valid_end:
+            return jsonify({'success': False, 'message': 'תאריכים לא תקינים'})
+        
+        email = session['user_email']
+        
+        # קבלת נתוני המשתמש
+        user_result = supabase.table('user_parkings').select(
+            'access_level, project_number, company_type'
+        ).eq('email', email).execute()
+        
+        if not user_result.data:
+            return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
+        
+        user_data = user_result.data[0]
+        
+        # בניית שאילתה בהתאם להרשאות
+        query = supabase.table('parking_data').select('*')
+        
+        # הגבלת תאריכים
+        query = query.gte('report_date', validated_start).lte('report_date', validated_end)
+        
+        # הגבלת חניונים לפי הרשאות
+        if user_data['access_level'] == 'single_parking':
+            # משתמש חניון בודד - רק החניון שלו
+            query = query.eq('project_number', user_data['project_number'])
+            
+        elif user_data['access_level'] == 'group_manager' or user_data['access_level'] == 'group_access':
+            # מנהל קבוצה או משתמש קבוצה
+            if parking_id:
+                # אימות שהחניון שייך לחברה שלו
+                parking_check = supabase.table('user_parkings').select('project_number').eq(
+                    'project_number', parking_id
+                ).eq('company_type', user_data['company_type']).execute()
+                
+                if not parking_check.data:
+                    return jsonify({'success': False, 'message': 'אין הרשאה לחניון זה'})
+                
+                query = query.eq('project_number', parking_id)
+            else:
+                # כל החניונים של החברה
+                company_parkings = supabase.table('user_parkings').select('project_number').eq(
+                    'company_type', user_data['company_type']
+                ).execute()
+                
+                parking_numbers = [p['project_number'] for p in company_parkings.data]
+                
+                if parking_numbers:
+                    query = query.in_('project_number', parking_numbers)
+                else:
+                    return jsonify({'success': True, 'data': []})
+        else:
+            return jsonify({'success': False, 'message': 'רמת הרשאה לא מוכרת'})
+        
+        # הגבלת כמות התוצאות (אבטחה)
+        query = query.limit(10000)
+        
+        # ביצוע השאילתה
+        result = query.execute()
+        
+        # קבלת מיפוי שמות החניונים מ-project_parking_mapping
+        parking_names_map = {}
+        try:
+            mapping_result = supabase.table('project_parking_mapping').select('project_number, parking_name').execute()
+            for mapping in mapping_result.data:
+                parking_names_map[mapping['project_number']] = mapping['parking_name']
+        except Exception as e:
+            print(f"Warning: Could not load parking names mapping: {str(e)}")
+        
+        # עיבוד הנתונים
+        processed_data = []
+        for row in result.data:
+            # וידוא שכל השדות הנדרשים קיימים
+            processed_row = {
+                'id': row.get('id'),
+                'parking_id': row.get('parking_id'),
+                'report_date': row.get('report_date'),
+                'project_number': row.get('project_number'),
+                'parking_name': parking_names_map.get(row.get('project_number'), '') or row.get('parking_name', ''),  # שם חניון מהמיפוי
+                'total_revenue_shekels': float(row.get('total_revenue_shekels', 0)),
+                'net_revenue_shekels': float(row.get('net_revenue_shekels', 0)),
+                's_cash_shekels': float(row.get('s_cash_shekels', 0)),
+                's_credit_shekels': float(row.get('s_credit_shekels', 0)),
+                's_pango_shekels': float(row.get('s_pango_shekels', 0)),
+                's_celo_shekels': float(row.get('s_celo_shekels', 0)),
+                's_encoder1': int(row.get('s_encoder1', 0)),  # הוסף מקודד 1
+                's_encoder2': int(row.get('s_encoder2', 0)),  # הוסף מקודד 2
+                's_encoder3': int(row.get('s_encoder3', 0)),  # הוסף מקודד 3
+                'sencodertot': int(row.get('sencodertot', 0)),  # הוסף סה"כ מקודדים
+                't_entry_tot': int(row.get('t_entry_tot', 0)),
+                't_exit_tot': int(row.get('t_exit_tot', 0)),
+                't_entry_s': int(row.get('t_entry_s', 0)),  # מזדמנים
+                't_entry_p': int(row.get('t_entry_p', 0)),  # מנויים
+                't_entry_ap': int(row.get('t_entry_ap', 0)),  # אפליקציה
+                't_open_b': int(row.get('t_open_b', 0)),  # פתיחות מחסום
+                'stay_015': int(row.get('stay_015', 0)),
+                'stay_030': int(row.get('stay_030', 0)),
+                'stay_045': int(row.get('stay_045', 0)),
+                'stay_060': int(row.get('stay_060', 0)),
+                'stay_2': int(row.get('stay_2', 0)),
+                'stay_3': int(row.get('stay_3', 0)),
+                'stay_4': int(row.get('stay_4', 0)),
+                'stay_5': int(row.get('stay_5', 0)),
+                'stay_6': int(row.get('stay_6', 0)),
+                'stay_724': int(row.get('stay_724', 0))
+            }
+            processed_data.append(processed_row)
+        
+        print(f"✅ Retrieved {len(processed_data)} parking records for user {email}")
+        
+        return jsonify({
+            'success': True,
+            'data': processed_data,
+            'total_records': len(processed_data)
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting parking data: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני חניון'})
+
+@app.route('/api/check-emails-now', methods=['POST'])
 def manual_email_check():
     """API לבדיקת מיילים ידנית"""
     try:
@@ -687,8 +1202,133 @@ def manual_email_check():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
-# עדכן את if __name__ == '__main__': לכלול את זה:
+# הוסף גם פונקציה לבדיקת תקפות תאריך
+def validate_date_format(date_string):
+    """בדיקת תקפות פורמט תאריך YYYY-MM-DD"""
+    try:
+        datetime.strptime(date_string, '%Y-%m-%d')
+        return True
+    except ValueError:
+        return False
 
+@app.route('/api/login', methods=['POST'])
+def login():
+    try:
+        if not supabase:
+            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+            
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        password = data.get('password', '').strip()
+        
+        # אימות קלט
+        is_valid_username, validated_username = validate_input(username, "username")
+        is_valid_password, validated_password = validate_input(password, "password")
+        
+        if not is_valid_username:
+            print(f"🚨 Invalid username attempt: {username}")
+            return jsonify({'success': False, 'message': 'שם משתמש לא תקין'})
+        
+        if not is_valid_password:
+            print(f"🚨 Invalid password attempt from user: {validated_username}")
+            return jsonify({'success': False, 'message': 'סיסמה לא תקינה'})
+        
+        print(f"🔑 Login attempt: {validated_username}")
+        
+        # שימוש ב-RPC function
+        auth_result = supabase.rpc('user_login', {
+            'p_username': validated_username,
+            'p_password': validated_password
+        }).execute()
+        
+        print(f"🔐 Auth result: {auth_result.data}")
+        
+        if auth_result.data is True:
+            # Get user email
+            user_result = supabase.table('user_parkings').select('email').eq('username', validated_username).execute()
+            
+            if user_result.data and len(user_result.data) > 0:
+                email = user_result.data[0]['email']
+                print(f"✅ Email found: {email}")
+                
+                # יצירת קוד אימות חדש
+                verification_code = generate_verification_code()
+                print(f"🎯 Generated code: {verification_code}")
+                
+                # שמירה במסד נתונים
+                if store_verification_code(email, verification_code):
+                    # שליחת מייל
+                    print(f"🚀 Attempting to send email to {email}...")
+                    email_sent = send_verification_email(email, verification_code)
+                    print(f"📧 Email send result: {email_sent}")
+                    
+                    # שמירה ב-session
+                    session['pending_email'] = email
+                    print(f"📧 Code ready for {email}: {verification_code}")
+                    return jsonify({'success': True, 'redirect': '/verify'})
+                else:
+                    return jsonify({'success': False, 'message': 'שגיאה בשמירת הקוד'})
+            else:
+                return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
+        else:
+            print(f"❌ Authentication failed for: {validated_username}")
+            return jsonify({'success': False, 'message': 'שם משתמש או סיסמה שגויים'})
+            
+    except Exception as e:
+        print(f"❌ Login error: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
+
+@app.route('/api/verify-code', methods=['POST'])
+def verify_code():
+    try:
+        if not supabase:
+            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+            
+        data = request.get_json()
+        code = data.get('code', '').strip()
+        email = session.get('pending_email')
+        
+        # אימות קוד
+        is_valid_code, validated_code = validate_input(code, "verification_code")
+        if not is_valid_code:
+            print(f"🚨 Invalid verification code format: {code}")
+            return jsonify({'success': False, 'message': 'קוד לא תקין'})
+        
+        if not email:
+            print(f"🚨 No pending email in session")
+            return jsonify({'success': False, 'message': 'אין בקשה לאימות'})
+        
+        print(f"🔍 Verify attempt: code={validated_code}, email={email}")
+        
+        # בדיקת הקוד מהמסד נתונים
+        if verify_code_from_database(email, validated_code):
+            session['user_email'] = email
+            session.pop('pending_email', None)
+            print(f"✅ SUCCESS - Redirecting to dashboard")
+            return jsonify({'success': True, 'redirect': '/dashboard'})
+        else:
+            print(f"❌ FAILED - Invalid or expired code")
+            return jsonify({'success': False, 'message': 'קוד שגוי או פג תוקף'})
+            
+    except Exception as e:
+        print(f"❌ Verify error: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login_page'))
+
+# Error handlers
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({'error': 'Page not found'}), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({'error': 'Internal server error'}), 500
+
+# הפעלה אוטומטית כשהאפליקציה מתחילה
 if __name__ == '__main__':
     print("\n🔧 Pre-flight email system check...")
     
@@ -714,7 +1354,6 @@ if __name__ == '__main__':
     
     app.run(host='0.0.0.0', port=port, debug=debug_mode)
 else:
-    # אם זה לא הקובץ הראשי (למשל Gunicorn), הפעל את המעקב
     if EMAIL_MONITORING_AVAILABLE:
         print("📧 Initializing email monitoring for production...")
         start_background_email_monitoring()
