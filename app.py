@@ -803,7 +803,7 @@ def start_background_email_monitoring():
         print(f"❌ Background email monitoring initialization failed: {str(e)}")
 
 def check_for_new_emails():
-    """בדיקת מיילים חדשים - עם לוגים מפורטים"""
+    """בדיקת מיילים חדשים - גרסה מתוקנת"""
     global processed_email_ids
     
     if not EMAIL_MONITORING_AVAILABLE:
@@ -832,7 +832,7 @@ def check_for_new_emails():
         print("📂 Selecting inbox...")
         mail.select('inbox')
         
-# תיקון התאריך ושאילתה - פורמט פשוט עבור Gmail IMAP
+        # תיקון פשוט - רק חיפוש מיילים מהיום האחרון
         since_date = (datetime.now() - timedelta(days=1)).strftime('%d-%b-%Y')
         search_criteria = f'SINCE {since_date}'
         
@@ -841,13 +841,13 @@ def check_for_new_emails():
         _, message_ids = mail.search(None, search_criteria)
         
         if not message_ids[0]:
-            print("📭 No relevant emails found")
+            print("📭 No emails found from yesterday")
             print(f"📊 Processed emails cache: {len(processed_email_ids)} emails")
             mail.logout()
             return
         
         email_ids = message_ids[0].split()
-        print(f"📧 Found {len(email_ids)} relevant emails")
+        print(f"📧 Found {len(email_ids)} emails from yesterday")
         
         new_emails = 0
         
@@ -885,8 +885,6 @@ def check_for_new_emails():
             pass
         
         print(f"===== EMAIL CHECK ENDED at {datetime.now()} =====\n")
-
-# הוסף את ה-API endpoint החדש הזה אחרי ה-endpoints הקיימים:
 
 @app.route('/api/test-email-system', methods=['GET'])
 def test_email_system():
