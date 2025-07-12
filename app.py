@@ -6,7 +6,6 @@ import random
 import string
 import re
 import html
-
 # תוספות חדשות למערכת המיילים
 import imaplib
 import email
