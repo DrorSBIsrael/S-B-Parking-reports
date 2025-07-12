@@ -832,11 +832,11 @@ def check_for_new_emails():
         print("📂 Selecting inbox...")
         mail.select('inbox')
         
-        # תיקון התאריך - פורמט נכון עבור IMAP
-        since_date = (datetime.now() - timedelta(days=1)).strftime('%d-%b-%Y')
-        search_criteria = f'(SINCE "{since_date}" SUBJECT "parking" OR SUBJECT "report" OR SUBJECT "נתונים")'
-        
-        print(f"🔍 Search criteria: {search_criteria}")
+# תיקון התאריך - פורמט נכון עבור IMAP
+since_date = (datetime.now() - timedelta(days=1)).strftime('%d-%b-%Y')
+search_criteria = f'(SINCE "{since_date}" HAS-ATTACHMENT)'
+
+print(f"🔍 Search criteria: {search_criteria}")
         
         _, message_ids = mail.search(None, search_criteria)
         
