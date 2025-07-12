@@ -832,9 +832,9 @@ def check_for_new_emails():
         print("📂 Selecting inbox...")
         mail.select('inbox')
         
-# תיקון התאריך - פורמט נכון עבור IMAP
+# תיקון התאריך ושאילתה - פורמט פשוט עבור Gmail IMAP
         since_date = (datetime.now() - timedelta(days=1)).strftime('%d-%b-%Y')
-        search_criteria = f'(SINCE "{since_date}" SUBJECT "parking" OR SUBJECT "report" OR SUBJECT "data")'
+        search_criteria = f'SINCE {since_date}'
         
         print(f"🔍 Search criteria: {search_criteria}")
         
