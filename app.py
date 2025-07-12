@@ -1279,7 +1279,6 @@ def login():
         return jsonify({'success': False, 'message': 'שגיאה במערכת'})
 
 @app.route('/api/verify-code', methods=['POST'])
-
 def verify_code():
     try:
         if not supabase:
