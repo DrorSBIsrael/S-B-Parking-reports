@@ -1036,35 +1036,49 @@ function fixDatePickerFormat() {
             return;
         }
         
+        // Create wrapper div
+        const wrapper = document.createElement('div');
+        wrapper.style.position = 'relative';
+        wrapper.style.display = 'inline-block';
+        wrapper.style.width = '100%';
+        
+        // Move input into wrapper
+        input.parentNode.insertBefore(wrapper, input);
+        wrapper.appendChild(input);
+        
         // Create display input
         const displayInput = document.createElement('input');
         displayInput.type = 'text';
         displayInput.className = input.className + ' date-display';
-        displayInput.style.cssText = input.style.cssText;
         displayInput.readOnly = true;
         displayInput.style.cursor = 'pointer';
         displayInput.placeholder = 'DD/MM/YYYY';
+        displayInput.style.position = 'absolute';
+        displayInput.style.top = '0';
+        displayInput.style.left = '0';
+        displayInput.style.width = '100%';
+        displayInput.style.height = '100%';
+        displayInput.style.background = 'white';
         
         if (input.value) {
             displayInput.value = formatDateForDisplay(input.value);
         }
         
-        // Hide the original date input
-        input.style.position = 'absolute';
+        // Make original input transparent but clickable
         input.style.opacity = '0';
-        input.style.pointerEvents = 'none';
-        input.style.width = displayInput.style.width || '100%';
+        input.style.position = 'relative';
+        input.style.zIndex = '2';
         
-        // Insert display input after original
-        input.parentNode.insertBefore(displayInput, input.nextSibling);
-        
-        // Click handler
-        displayInput.addEventListener('click', () => {
-            input.showPicker ? input.showPicker() : input.click();
-        });
+        // Insert display input
+        wrapper.appendChild(displayInput);
         
         // Update display when date changes
         input.addEventListener('change', () => {
+            displayInput.value = input.value ? formatDateForDisplay(input.value) : '';
+        });
+        
+        // Also handle input event for better responsiveness
+        input.addEventListener('input', () => {
             displayInput.value = input.value ? formatDateForDisplay(input.value) : '';
         });
     });
@@ -2508,29 +2522,37 @@ function createStayDurationChart(durations, chartType, stay015, stay0to60) {
                     padding: 12,
                     callbacks: {
                         label: function(context) {
+                            // Get the actual value based on chart type
+                            let value;
+                            if (chartType === 'bar') {
+                                value = context.parsed.y;
+                            } else {
+                                value = context.parsed;
+                            }
+                            
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : '0';
+                            const percentage = total > 0 && value ? ((value / total) * 100).toFixed(1) : '0';
                             
                             // Special handling for 0-15 minutes
                             if (context.label && (context.label.includes('0-15') || context.label.includes('חלק'))) {
                                 const actualTotal = context.dataset.data.reduce((a, b) => a + b, 0);
                                 const percentage015 = actualTotal > 0 ? ((stay015 / actualTotal) * 100).toFixed(1) : '0';
                                 const of60Percent = stay0to60 > 0 ? ((stay015 / stay0to60) * 100).toFixed(1) : '0';
-                                return `0-15 דקות: ${context.parsed.toLocaleString()} רכבים (${percentage015}% מהסה"כ, ${of60Percent}% מתוך 0-60)`;
+                                return `0-15 דקות: ${value.toLocaleString()} רכבים (${percentage015}% מהסה"כ, ${of60Percent}% מתוך 0-60)`;
                             }
                             
                             if (chartType === 'bar') {
-                                return `${context.parsed.y ? context.parsed.y.toLocaleString() : context.parsed.toLocaleString()} רכבים (${percentage}%)`;
+                                return `${value.toLocaleString()} רכבים (${percentage}%)`;
                             } else {
                                 // Pie chart
                                 if (context.label === '0-60 דקות' && stay015 && stay0to60) {
                                     const percentage015of60 = stay0to60 > 0 ? ((stay015 / stay0to60) * 100).toFixed(1) : '0';
                                     return [
-                                        `${context.label}: ${context.parsed.toLocaleString()} (${percentage}%)`,
+                                        `${context.label}: ${value.toLocaleString()} (${percentage}%)`,
                                         `מתוכם 0-15 דקות: ${stay015.toLocaleString()} (${percentage015of60}%)`
                                     ];
                                 }
-                                return `${context.label}: ${context.parsed.toLocaleString()} (${percentage}%)`;
+                                return `${context.label}: ${value.toLocaleString()} (${percentage}%)`;
                             }
                         }
                     }
