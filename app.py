@@ -522,14 +522,19 @@ def convert_to_csv_import_format(csv_rows):
     return converted_rows
 
 def insert_to_csv_import_shekels(converted_data):
-    """הכנסה לטבלת csv_import_shekels (שלב ביניים)"""
+    """הכנסה לטבלת csv_import_shekels (שלב ביניים) - מתוקן"""
     if not supabase:
         print("❌ Supabase not available")
         return 0
         
     try:
-        # מחיקת נתונים ישנים
-        supabase.table('csv_import_shekels').delete().neq('id', 0).execute()
+        # מחיקת נתונים ישנים - תיקון לטבלה ללא עמודת id
+        try:
+            # ניסיון מחיקה בטוח
+            supabase.table('csv_import_shekels').delete().neq('created_at', '1900-01-01').execute()
+            print("🧹 Cleaned old data from csv_import_shekels")
+        except Exception as cleanup_error:
+            print(f"⚠️ Skipping cleanup - continuing anyway: {str(cleanup_error)}")
         
         batch_size = 500
         total_inserted = 0
@@ -537,11 +542,19 @@ def insert_to_csv_import_shekels(converted_data):
         for i in range(0, len(converted_data), batch_size):
             batch = converted_data[i:i + batch_size]
             
-            result = supabase.table('csv_import_shekels').insert(batch).execute()
-            
-            if result.data:
-                total_inserted += len(result.data)
-                print(f"✅ Inserted to csv_import_shekels: batch {i//batch_size + 1}, {len(result.data)} rows")
+            try:
+                result = supabase.table('csv_import_shekels').insert(batch).execute()
+                
+                if result.data:
+                    total_inserted += len(result.data)
+                    print(f"✅ Inserted to csv_import_shekels: batch {i//batch_size + 1}, {len(result.data)} rows")
+                else:
+                    print(f"⚠️ Batch {i//batch_size + 1} returned no data")
+                    
+            except Exception as batch_error:
+                print(f"❌ Error inserting batch {i//batch_size + 1}: {str(batch_error)}")
+                # אם יש שגיאה בהכנסה, ננסה להמשיך עם ה-batch הבא
+                continue
         
         print(f"✅ Total inserted to csv_import_shekels: {total_inserted} rows")
         return total_inserted
