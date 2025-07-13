@@ -456,7 +456,7 @@ def convert_to_csv_import_format(csv_rows):
                 'report_start_time': str(row.get('TTCRET', '')),
                 'report_end_time': str(row.get('TTENDT', '')),
                 'report_date': formatted_date,
-                'ctext': str(row.get('CTEXT', '')),
+                'ctext': str(row.get('CTEXT', '') or '').strip(),
                 
                 # כסף באגורות - הערכים הנכונים!
                 's_cash_agorot': cash_agorot,
