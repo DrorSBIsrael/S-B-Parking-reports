@@ -441,10 +441,10 @@ def convert_to_csv_import_format(csv_rows):
             pango_agorot = safe_int(row.get('SPANGO'))
             celo_agorot = safe_int(row.get('SCELO'))
             
-            cash_shekels = round(cash_agorot / 100, 2)
-            credit_shekels = round(credit_agorot / 100, 2)
-            pango_shekels = round(pango_agorot / 100, 2)
-            celo_shekels = round(celo_agorot / 100, 2)
+            cash_shekels = round(cash_agorot , 2)
+            credit_shekels = round(credit_agorot , 2)
+            pango_shekels = round(pango_agorot , 2)
+            celo_shekels = round(celo_agorot , 2)
             
             converted_row = {
                 'project_number': str(row.get('ProjectNumber', '')),
