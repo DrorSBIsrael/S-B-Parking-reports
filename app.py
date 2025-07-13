@@ -522,73 +522,224 @@ def convert_to_csv_import_format(csv_rows):
     return converted_rows
 
 def insert_to_csv_import_shekels(converted_data):
-    """הכנסה לטבלת csv_import_shekels (שלב ביניים) - מתוקן"""
+    """הכנסה לטבלת csv_import_shekels (שלב ביניים) - גרסה מתוקנת"""
     if not supabase:
         print("❌ Supabase not available")
         return 0
         
     try:
-        # מחיקת נתונים ישנים - תיקון לטבלה ללא עמודת id
-        try:
-            # ניסיון מחיקה בטוח
-            supabase.table('csv_import_shekels').delete().neq('created_at', '1900-01-01').execute()
-            print("🧹 Cleaned old data from csv_import_shekels")
-        except Exception as cleanup_error:
-            print(f"⚠️ Skipping cleanup - continuing anyway: {str(cleanup_error)}")
+        print(f"🔄 Preparing to insert {len(converted_data)} rows to csv_import_shekels")
         
-        batch_size = 500
+        # מחיקת נתונים ישנים מהטבלה
+        try:
+            print("🧹 Clearing old data from csv_import_shekels...")
+            delete_result = supabase.table('csv_import_shekels').delete().gt('id', 0).execute()
+            print("✅ Old data cleared successfully")
+        except Exception as e:
+            print(f"⚠️ Could not clear old data: {str(e)}")
+            # ממשיכים גם אם המחיקה נכשלה
+        
+        # ניקוי הנתונים - הסרת שדות שלא צריכים ווידוא תקינות
+        cleaned_data = []
+        
+        for i, row in enumerate(converted_data):
+            try:
+                # יצירת שורה נקייה עם הכל הערכים הנדרשים
+                cleaned_row = {
+                    'project_number': str(row.get('project_number', '')).strip(),
+                    'l_global_ref': int(row.get('l_global_ref', 0)),
+                    's_computer': int(row.get('s_computer', 0)),
+                    's_shift_id': int(row.get('s_shift_id', 0)),
+                    'report_start_time': str(row.get('report_start_time', '')).strip(),
+                    'report_end_time': str(row.get('report_end_time', '')).strip(),
+                    'report_date': str(row.get('report_date', '')).strip(),
+                    'ctext': str(row.get('ctext', '')).strip(),
+                    
+                    # כסף בשקלים
+                    's_cash_shekels': float(row.get('s_cash_shekels', 0)),
+                    's_credit_shekels': float(row.get('s_credit_shekels', 0)),
+                    's_pango_shekels': float(row.get('s_pango_shekels', 0)),
+                    's_celo_shekels': float(row.get('s_celo_shekels', 0)),
+                    'total_revenue_shekels': float(row.get('total_revenue_shekels', 0)),
+                    'net_revenue_shekels': float(row.get('net_revenue_shekels', 0)),
+                    
+                    # כסף באגורות
+                    's_cash_agorot': int(row.get('s_cash_agorot', 0)),
+                    's_credit_agorot': int(row.get('s_credit_agorot', 0)),
+                    's_pango_agorot': int(row.get('s_pango_agorot', 0)),
+                    's_celo_agorot': int(row.get('s_celo_agorot', 0)),
+                    'stot_cacr': int(row.get('stot_cacr', 0)),
+                    's_exp_agorot': int(row.get('s_exp_agorot', 0)),
+                    
+                    # מקודדים
+                    's_encoder1': int(row.get('s_encoder1', 0)),
+                    's_encoder2': int(row.get('s_encoder2', 0)),
+                    's_encoder3': int(row.get('s_encoder3', 0)),
+                    'sencodertot': int(row.get('sencodertot', 0)),
+                    
+                    # תנועה
+                    't_open_b': int(row.get('t_open_b', 0)),
+                    't_entry_s': int(row.get('t_entry_s', 0)),
+                    't_entry_p': int(row.get('t_entry_p', 0)),
+                    't_entry_tot': int(row.get('t_entry_tot', 0)),
+                    't_exit_s': int(row.get('t_exit_s', 0)),
+                    't_exit_p': int(row.get('t_exit_p', 0)),
+                    't_exit_tot': int(row.get('t_exit_tot', 0)),
+                    't_entry_ap': int(row.get('t_entry_ap', 0)),
+                    't_exit_ap': int(row.get('t_exit_ap', 0)),
+                    
+                    # זמני שהייה
+                    'tsper1': int(row.get('tsper1', 0)),
+                    'tsper2': int(row.get('tsper2', 0)),
+                    'stay_015': int(row.get('stay_015', 0)),
+                    'stay_030': int(row.get('stay_030', 0)),
+                    'stay_045': int(row.get('stay_045', 0)),
+                    'stay_060': int(row.get('stay_060', 0)),
+                    'stay_2': int(row.get('stay_2', 0)),
+                    'stay_3': int(row.get('stay_3', 0)),
+                    'stay_4': int(row.get('stay_4', 0)),
+                    'stay_5': int(row.get('stay_5', 0)),
+                    'stay_6': int(row.get('stay_6', 0)),
+                    'stay_724': int(row.get('stay_724', 0)),
+                    'tsper3': int(row.get('tsper3', 0)),
+                    'tsper4': int(row.get('tsper4', 0)),
+                    'tsper5': int(row.get('tsper5', 0)),
+                    'tsper6': int(row.get('tsper6', 0)),
+                    
+                    # מטא-דטה (created_at ו-uploaded_by יווצרו אוטומטית)
+                }
+                
+                cleaned_data.append(cleaned_row)
+                
+            except Exception as row_error:
+                print(f"❌ Error cleaning row {i}: {str(row_error)}")
+                print(f"   Problematic row: {row}")
+                continue
+        
+        if not cleaned_data:
+            print("❌ No valid data after cleaning")
+            return 0
+            
+        print(f"✅ Cleaned {len(cleaned_data)} rows successfully")
+        
+        # הכנסת הנתונים בקבוצות
+        batch_size = 200
         total_inserted = 0
         
-        for i in range(0, len(converted_data), batch_size):
-            batch = converted_data[i:i + batch_size]
+        for i in range(0, len(cleaned_data), batch_size):
+            batch = cleaned_data[i:i + batch_size]
+            batch_num = i // batch_size + 1
             
             try:
+                print(f"🔄 Inserting batch {batch_num}: {len(batch)} rows")
+                
                 result = supabase.table('csv_import_shekels').insert(batch).execute()
                 
                 if result.data:
-                    total_inserted += len(result.data)
-                    print(f"✅ Inserted to csv_import_shekels: batch {i//batch_size + 1}, {len(result.data)} rows")
+                    batch_count = len(result.data)
+                    total_inserted += batch_count
+                    print(f"✅ Batch {batch_num} inserted successfully: {batch_count} rows")
                 else:
-                    print(f"⚠️ Batch {i//batch_size + 1} returned no data")
+                    print(f"⚠️ Batch {batch_num} returned no data")
                     
             except Exception as batch_error:
-                print(f"❌ Error inserting batch {i//batch_size + 1}: {str(batch_error)}")
-                # אם יש שגיאה בהכנסה, ננסה להמשיך עם ה-batch הבא
-                continue
+                print(f"❌ Error in batch {batch_num}: {str(batch_error)}")
+                
+                # אם הקבוצה נכשלה, ננסה שורה אחת בכל פעם
+                print(f"🔄 Trying individual rows for batch {batch_num}...")
+                for j, single_row in enumerate(batch):
+                    try:
+                        single_result = supabase.table('csv_import_shekels').insert([single_row]).execute()
+                        if single_result.data:
+                            total_inserted += 1
+                            if j % 10 == 0:  # הדפסה כל 10 שורות
+                                print(f"   ✅ Row {i+j+1} inserted")
+                    except Exception as single_error:
+                        print(f"   ❌ Row {i+j+1} failed: {str(single_error)}")
+                        # בדיקה אם זו שגיאת מבנה חמורה
+                        if "column" in str(single_error).lower() and "does not exist" in str(single_error).lower():
+                            print(f"   🚨 CRITICAL: Column structure error - stopping batch")
+                            break
         
-        print(f"✅ Total inserted to csv_import_shekels: {total_inserted} rows")
+        print(f"✅ Total inserted to csv_import_shekels: {total_inserted} rows out of {len(converted_data)}")
         return total_inserted
         
     except Exception as e:
-        print(f"❌ Error inserting to csv_import_shekels: {str(e)}")
+        print(f"❌ General error inserting to csv_import_shekels: {str(e)}")
         return 0
 
 def transfer_to_parking_data():
-    """העברה מ csv_import_shekels ל parking_data"""
+    """העברה מ csv_import_shekels ל parking_data - גרסה מתוקנת"""
     if not supabase:
         print("❌ Supabase not available")
         return 0
         
     try:
-        csv_data = supabase.table('csv_import_shekels').select('*').execute()
+        print("🔄 Starting transfer from csv_import_shekels to parking_data...")
         
-        if not csv_data.data:
+        # קבלת כל הנתונים מטבלת הביניים
+        csv_result = supabase.table('csv_import_shekels').select('*').execute()
+        
+        if not csv_result.data:
             print("⚠️ No data in csv_import_shekels to transfer")
             return 0
         
-        result = supabase.table('parking_data').insert(csv_data.data).execute()
+        print(f"📊 Found {len(csv_result.data)} rows in csv_import_shekels")
         
-        if result.data:
-            transferred_count = len(result.data)
-            print(f"✅ Transferred {transferred_count} rows to parking_data")
+        # עיבוד הנתונים להעברה
+        transfer_data = []
+        for row in csv_result.data:
+            # יצירת שורה חדשה ללא העמודה id (כי parking_data תיצור id חדש)
+            transfer_row = {k: v for k, v in row.items() if k != 'id'}
+            transfer_data.append(transfer_row)
+        
+        # העברה לטבלת parking_data בקבוצות
+        batch_size = 200
+        total_transferred = 0
+        
+        for i in range(0, len(transfer_data), batch_size):
+            batch = transfer_data[i:i + batch_size]
+            batch_num = i // batch_size + 1
             
-            # מחיקה אחרי העברה מוצלחת
-            supabase.table('csv_import_shekels').delete().neq('id', 0).execute()
-            print("🧹 Cleaned csv_import_shekels table")
+            try:
+                print(f"🔄 Transferring batch {batch_num}: {len(batch)} rows")
+                
+                result = supabase.table('parking_data').insert(batch).execute()
+                
+                if result.data:
+                    batch_count = len(result.data)
+                    total_transferred += batch_count
+                    print(f"✅ Batch {batch_num} transferred successfully: {batch_count} rows")
+                else:
+                    print(f"⚠️ Batch {batch_num} returned no data")
+                    
+            except Exception as batch_error:
+                print(f"❌ Error transferring batch {batch_num}: {str(batch_error)}")
+                
+                # ניסיון שורה אחת בכל פעם
+                print(f"🔄 Trying individual rows for batch {batch_num}...")
+                for j, single_row in enumerate(batch):
+                    try:
+                        single_result = supabase.table('parking_data').insert([single_row]).execute()
+                        if single_result.data:
+                            total_transferred += 1
+                    except Exception as single_error:
+                        print(f"   ❌ Row {i+j+1} transfer failed: {str(single_error)}")
+        
+        if total_transferred > 0:
+            print(f"✅ Transfer completed: {total_transferred} rows moved to parking_data")
             
-            return transferred_count
+            # מחיקת הנתונים מטבלת הביניים אחרי העברה מוצלחת
+            try:
+                print("🧹 Cleaning csv_import_shekels after successful transfer...")
+                delete_result = supabase.table('csv_import_shekels').delete().gt('id', 0).execute()
+                print("✅ csv_import_shekels cleaned successfully")
+            except Exception as cleanup_error:
+                print(f"⚠️ Could not clean csv_import_shekels: {str(cleanup_error)}")
+            
+            return total_transferred
         else:
-            print("❌ Failed to transfer data to parking_data")
+            print("❌ No data was transferred to parking_data")
             return 0
             
     except Exception as e:
