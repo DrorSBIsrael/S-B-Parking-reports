@@ -669,7 +669,7 @@ def insert_to_csv_import_shekels(converted_data):
         return 0
 
 def transfer_to_parking_data():
-    """העברה מ csv_import_shekels ל parking_data - גרסה מתוקנת"""
+    """העברה מ csv_import_shekels ל parking_data - גרסה מתוקנת ללא שדות שלא קיימים"""
     if not supabase:
         print("❌ Supabase not available")
         return 0
@@ -686,15 +686,45 @@ def transfer_to_parking_data():
         
         print(f"📊 Found {len(csv_result.data)} rows in csv_import_shekels")
         
-        # עיבוד הנתונים להעברה
+        # רשימת השדות שקיימים ב-parking_data (ללא uploaded_by וללא id)
+        allowed_fields = [
+            'project_number', 'l_global_ref', 's_computer', 's_shift_id',
+            'report_start_time', 'report_end_time', 'report_date', 'ctext',
+            's_cash_shekels', 's_credit_shekels', 's_pango_shekels', 's_celo_shekels',
+            'total_revenue_shekels', 'net_revenue_shekels',
+            's_cash_agorot', 's_credit_agorot', 's_pango_agorot', 's_celo_agorot',
+            'stot_cacr', 's_exp_agorot',
+            's_encoder1', 's_encoder2', 's_encoder3', 'sencodertot',
+            't_open_b', 't_entry_s', 't_entry_p', 't_entry_tot',
+            't_exit_s', 't_exit_p', 't_exit_tot', 't_entry_ap', 't_exit_ap',
+            'tsper1', 'tsper2', 'stay_015', 'stay_030', 'stay_045', 'stay_060',
+            'stay_2', 'stay_3', 'stay_4', 'stay_5', 'stay_6', 'stay_724',
+            'tsper3', 'tsper4', 'tsper5', 'tsper6', 'created_at'
+        ]
+        
+        # עיבוד הנתונים להעברה - ניקוי שדות שלא קיימים
         transfer_data = []
         for row in csv_result.data:
-            # יצירת שורה חדשה ללא העמודה id (כי parking_data תיצור id חדש)
-            transfer_row = {k: v for k, v in row.items() if k != 'id'}
-            transfer_data.append(transfer_row)
+            # יצירת שורה חדשה רק עם השדות המותרים
+            transfer_row = {}
+            for field in allowed_fields:
+                if field in row and row[field] is not None:
+                    transfer_row[field] = row[field]
+            
+            # וידוא שיש לפחות project_number
+            if 'project_number' in transfer_row:
+                transfer_data.append(transfer_row)
+            else:
+                print(f"⚠️ Skipping row without project_number: {row}")
         
-        # העברה לטבלת parking_data בקבוצות
-        batch_size = 200
+        if not transfer_data:
+            print("❌ No valid data to transfer after filtering")
+            return 0
+            
+        print(f"✅ Prepared {len(transfer_data)} rows for transfer")
+        
+        # העברה לטבלת parking_data בקבוצות קטנות
+        batch_size = 50  # גודל קבוצה קטן יותר
         total_transferred = 0
         
         for i in range(0, len(transfer_data), batch_size):
@@ -703,6 +733,10 @@ def transfer_to_parking_data():
             
             try:
                 print(f"🔄 Transferring batch {batch_num}: {len(batch)} rows")
+                
+                # הדפסת דוגמה מהנתונים בקבוצה הראשונה
+                if i == 0 and batch:
+                    print(f"📋 Sample transfer data keys: {list(batch[0].keys())}")
                 
                 result = supabase.table('parking_data').insert(batch).execute()
                 
@@ -716,15 +750,23 @@ def transfer_to_parking_data():
             except Exception as batch_error:
                 print(f"❌ Error transferring batch {batch_num}: {str(batch_error)}")
                 
-                # ניסיון שורה אחת בכל פעם
+                # ניסיון שורה אחת בכל פעם כדי לזהות את הבעיה
                 print(f"🔄 Trying individual rows for batch {batch_num}...")
                 for j, single_row in enumerate(batch):
                     try:
                         single_result = supabase.table('parking_data').insert([single_row]).execute()
                         if single_result.data:
                             total_transferred += 1
+                            if j % 5 == 0:  # הדפסה כל 5 שורות
+                                print(f"   ✅ Row {i+j+1} transferred")
                     except Exception as single_error:
                         print(f"   ❌ Row {i+j+1} transfer failed: {str(single_error)}")
+                        
+                        # בדיקה אם זו שגיאת עמודה
+                        if "column" in str(single_error).lower():
+                            print(f"   🚨 Column error - problematic row data: {single_row}")
+                            print(f"   🛑 Stopping batch due to column structure issue")
+                            break
         
         if total_transferred > 0:
             print(f"✅ Transfer completed: {total_transferred} rows moved to parking_data")
