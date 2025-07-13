@@ -324,9 +324,15 @@ def download_csv_from_email(msg):
                     file_data = part.get_payload(decode=True)
                     
                     if file_data:
+                        # תיקון הבעיה כאן
+                        if isinstance(file_data, bytes):
+                            data_content = file_data.decode('utf-8-sig', errors='ignore')
+                        else:
+                            data_content = str(file_data)
+                        
                         csv_files.append({
                             'filename': filename,
-                            'data': file_data.decode('utf-8-sig', errors='ignore')
+                            'data': data_content
                         })
                         
                         print(f"📎 Found CSV attachment: {filename}")
@@ -338,34 +344,69 @@ def download_csv_from_email(msg):
         return []
 
 def parse_csv_content(csv_content):
-    """פרסור תוכן CSV ללא pandas - עם CSV רגיל"""
+    """פרסור CSV פשוט ובטוח"""
     try:
-        # יצירת reader מהתוכן
-        csv_reader = csv.DictReader(io.StringIO(csv_content))
+        print(f"🔍 Input type: {type(csv_content)}")
         
-        # המרה לרשימה
-        rows = list(csv_reader)
+        # וידוא שיש לנו string
+        if isinstance(csv_content, bytes):
+            # זה bytes - נמיר לstring
+            for encoding in ['cp1252', 'windows-1252', 'utf-8']:
+                try:
+                    if isinstance(csv_content, bytes):
+                        csv_content = csv_content.decode(encoding)
+                        print(f"✅ Decoded with {encoding}")
+                        break
+                except:
+                    continue
         
-        print(f"📊 CSV parsed: {len(rows)} rows")
+        # אם זה לא string, נמיר
+        if not isinstance(csv_content, str):
+            csv_content = str(csv_content)
         
-        if len(rows) > 0:
-            columns = list(rows[0].keys())
-            print(f"📊 Columns found: {columns}")
+        print(f"📋 Content length: {len(csv_content)}")
         
-        # בדיקת עמודות נדרשות
-        required_columns = ['ProjectNumber', 'TTCRET', 'SCASH', 'SCREDIT']
+        # ניקוי בסיסי
+        csv_content = csv_content.strip()
+        if not csv_content:
+            print("❌ Empty content")
+            return None
         
-        if len(rows) > 0:
-            missing_columns = [col for col in required_columns if col not in rows[0]]
+        # הדפסת השורה הראשונה
+        first_line = csv_content.split('\n')[0]
+        print(f"📄 First line: {repr(first_line)}")
+        
+        # ניסיון פרסור פשוט
+        try:
+            reader = csv.DictReader(io.StringIO(csv_content))
+            rows = list(reader)
+            print(f"📊 Parsed {len(rows)} rows with comma delimiter")
             
-            if missing_columns:
-                print(f"⚠️ Missing required columns: {missing_columns}")
-                return None
+            if rows:
+                columns = list(rows[0].keys())
+                print(f"📋 Columns: {columns}")
+                return rows
+        except Exception as e:
+            print(f"❌ Comma parsing failed: {e}")
         
-        return rows
+        # ניסיון עם נקודה-פסיק
+        try:
+            reader = csv.DictReader(io.StringIO(csv_content), delimiter=';')
+            rows = list(reader)
+            print(f"📊 Parsed {len(rows)} rows with semicolon delimiter")
+            
+            if rows:
+                columns = list(rows[0].keys())
+                print(f"📋 Columns: {columns}")
+                return rows
+        except Exception as e:
+            print(f"❌ Semicolon parsing failed: {e}")
+        
+        print("❌ Could not parse CSV")
+        return None
         
     except Exception as e:
-        print(f"❌ CSV parsing error: {str(e)}")
+        print(f"❌ General error: {e}")
         return None
 
 def convert_to_csv_import_format(csv_rows):
@@ -906,7 +947,7 @@ def check_for_new_emails():
         processed_successfully = 0
         
         for email_id in email_ids:
-            email_id_str = email_id.decode()
+            email_id_str = email_id.decode() if isinstance(email_id, bytes) else str(email_id)
             
             if email_id_str in processed_email_ids:
                 print(f"⏭️ Skipping already processed email: {email_id_str}")
