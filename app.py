@@ -665,7 +665,7 @@ def insert_to_csv_import_shekels(converted_data):
         return 0
 
 def transfer_to_parking_data():
-    """העברה מ csv_import_shekels ל parking_data - תיקון סופי"""
+    """העברה מ csv_import_shekels ל parking_data - עם בדיקת כפילויות"""
     if not supabase:
         print("❌ Supabase not available")
         return 0
@@ -694,12 +694,32 @@ def transfer_to_parking_data():
             except:
                 return None
         
+        # פונקציה לבדיקה אם רשומה כבר קיימת
+        def record_exists(parking_id, report_date, s_shift_id):
+            try:
+                if not supabase or not parking_id:
+                    return False
+                result = supabase.table('parking_data').select('id').eq('parking_id', parking_id).eq('report_date', report_date).eq('s_shift_id', s_shift_id).execute()
+                return len(result.data) > 0
+            except:
+                return False
+        
         # עיבוד הנתונים להעברה
         transfer_data = []
+        skipped_duplicates = 0
+        
         for row in csv_result.data:
             try:
                 project_number = int(row.get('project_number', 0))
                 parking_id = get_parking_id(project_number)
+                report_date = str(row.get('report_date', ''))
+                s_shift_id = int(row.get('s_shift_id', 0))
+                
+                # בדיקה אם הרשומה כבר קיימת
+                if record_exists(parking_id, report_date, s_shift_id):
+                    print(f"⏭️ Skipping duplicate: parking_id={parking_id}, date={report_date}, shift={s_shift_id}")
+                    skipped_duplicates += 1
+                    continue
                 
                 # תיקון c_text
                 ctext_value = str(row.get('ctext', '')).strip()
@@ -711,15 +731,15 @@ def transfer_to_parking_data():
                     # מטא-דטה עם parking_id
                     'parking_id': parking_id,
                     'project_number': project_number,
-                    'report_date': str(row.get('report_date', '')),
+                    'report_date': report_date,
                     'report_start_time': str(row.get('report_start_time', '')),
                     'report_end_time': str(row.get('report_end_time', '')),
                     
                     # פרטי מערכת
                     'l_global_ref': int(row.get('l_global_ref', 0)),
                     's_computer': int(row.get('s_computer', 0)),
-                    's_shift_id': int(row.get('s_shift_id', 0)),
-                    'c_text': ctext_value,  # c_text מתוקן
+                    's_shift_id': s_shift_id,
+                    'c_text': ctext_value,
                     
                     # כסף באגורות
                     's_cash_agorot': int(row.get('s_cash_agorot', 0)),
@@ -772,21 +792,31 @@ def transfer_to_parking_data():
                 # וידוא שיש project_number
                 if transfer_row['project_number'] > 0:
                     transfer_data.append(transfer_row)
-                    print(f"✅ Prepared row: project {project_number}, parking_id: {parking_id}, c_text: '{ctext_value}'")
+                    print(f"✅ New record: project {project_number}, parking_id: {parking_id}, date: {report_date}")
                     
             except Exception as row_error:
                 print(f"❌ Error processing row: {str(row_error)}")
                 continue
         
-        if not transfer_data:
-            print("❌ No valid data to transfer")
-            return 0
-            
-        print(f"✅ Prepared {len(transfer_data)} rows for transfer")
+        # דוח סיכום
+        print(f"📊 Summary: {len(transfer_data)} new records, {skipped_duplicates} duplicates skipped")
         
-        # הכנסה יחידה לטבלת parking_data (לא בקבוצות כדי למנוע כפילויות)
+        if not transfer_data:
+            print("⚠️ No new data to transfer (all were duplicates)")
+            
+            # מחיקת הנתונים מטבלת הביניים גם אם הם כפילויות
+            try:
+                print("🧹 Cleaning csv_import_shekels...")
+                delete_result = supabase.table('csv_import_shekels').delete().gt('id', 0).execute()
+                print("✅ csv_import_shekels cleaned successfully")
+            except Exception as cleanup_error:
+                print(f"⚠️ Could not clean csv_import_shekels: {str(cleanup_error)}")
+            
+            return 0
+        
+        # הכנסה לטבלת parking_data
         try:
-            print(f"🔄 Transferring all {len(transfer_data)} rows at once...")
+            print(f"🔄 Transferring {len(transfer_data)} new rows...")
             
             result = supabase.table('parking_data').insert(transfer_data).execute()
             
