@@ -665,7 +665,7 @@ def insert_to_csv_import_shekels(converted_data):
         return 0
 
 def transfer_to_parking_data():
-    """העברה מ csv_import_shekels ל parking_data - ללא עמודות מחושבות"""
+    """העברה מ csv_import_shekels ל parking_data - תיקון סופי"""
     if not supabase:
         print("❌ Supabase not available")
         return 0
@@ -682,14 +682,35 @@ def transfer_to_parking_data():
         
         print(f"📊 Found {len(csv_result.data)} rows in csv_import_shekels")
         
+        # פונקציה לקבלת parking_id
+        def get_parking_id(project_number):
+            try:
+                if not supabase:
+                    return None
+                result = supabase.table('project_parking_mapping').select('parking_id').eq('project_number', str(project_number)).execute()
+                if result.data and len(result.data) > 0:
+                    return result.data[0]['parking_id']
+                return None
+            except:
+                return None
+        
         # עיבוד הנתונים להעברה
         transfer_data = []
         for row in csv_result.data:
             try:
-                # יצירת שורה חדשה עם מיפוי השדות הנכון
+                project_number = int(row.get('project_number', 0))
+                parking_id = get_parking_id(project_number)
+                
+                # תיקון c_text
+                ctext_value = str(row.get('ctext', '')).strip()
+                if ctext_value in ["' '", "'  '", "''", ""]:
+                    ctext_value = ""
+                
+                # יצירת שורה חדשה
                 transfer_row = {
-                    # מטא-דטה
-                    'project_number': int(row.get('project_number', 0)),
+                    # מטא-דטה עם parking_id
+                    'parking_id': parking_id,
+                    'project_number': project_number,
                     'report_date': str(row.get('report_date', '')),
                     'report_start_time': str(row.get('report_start_time', '')),
                     'report_end_time': str(row.get('report_end_time', '')),
@@ -698,9 +719,9 @@ def transfer_to_parking_data():
                     'l_global_ref': int(row.get('l_global_ref', 0)),
                     's_computer': int(row.get('s_computer', 0)),
                     's_shift_id': int(row.get('s_shift_id', 0)),
-                    'c_text': str(row.get('ctext', '')).strip(),  # מיפוי מ-ctext ל-c_text
+                    'c_text': ctext_value,  # c_text מתוקן
                     
-                    # כסף באגורות (ללא חלוקה ב-100!)
+                    # כסף באגורות
                     's_cash_agorot': int(row.get('s_cash_agorot', 0)),
                     's_credit_agorot': int(row.get('s_credit_agorot', 0)),
                     's_pango_agorot': int(row.get('s_pango_agorot', 0)),
@@ -712,7 +733,7 @@ def transfer_to_parking_data():
                     's_encoder1': int(row.get('s_encoder1', 0)),
                     's_encoder2': int(row.get('s_encoder2', 0)),
                     's_encoder3': int(row.get('s_encoder3', 0)),
-                    's_encoder_tot': int(row.get('sencodertot', 0)),  # מיפוי מ-sencodertot ל-s_encoder_tot
+                    's_encoder_tot': int(row.get('sencodertot', 0)),
                     
                     # תנועה
                     't_open_b': int(row.get('t_open_b', 0)),
@@ -725,13 +746,13 @@ def transfer_to_parking_data():
                     't_exit_tot': int(row.get('t_exit_tot', 0)),
                     't_exit_ap': int(row.get('t_exit_ap', 0)),
                     
-                    # זמני שהייה (מיפוי שמות עמודות)
-                    'ts_per1': int(row.get('tsper1', 0)),  # מיפוי מ-tsper1 ל-ts_per1
-                    'ts_per2': int(row.get('tsper2', 0)),  # מיפוי מ-tsper2 ל-ts_per2
-                    'ts_per3': int(row.get('tsper3', 0)),  # מיפוי מ-tsper3 ל-ts_per3
-                    'ts_per4': int(row.get('tsper4', 0)),  # מיפוי מ-tsper4 ל-ts_per4
-                    'ts_per5': int(row.get('tsper5', 0)),  # מיפוי מ-tsper5 ל-ts_per5
-                    'ts_per6': int(row.get('tsper6', 0)),  # מיפוי מ-tsper6 ל-ts_per6
+                    # זמני שהייה
+                    'ts_per1': int(row.get('tsper1', 0)),
+                    'ts_per2': int(row.get('tsper2', 0)),
+                    'ts_per3': int(row.get('tsper3', 0)),
+                    'ts_per4': int(row.get('tsper4', 0)),
+                    'ts_per5': int(row.get('tsper5', 0)),
+                    'ts_per6': int(row.get('tsper6', 0)),
                     'stay_015': int(row.get('stay_015', 0)),
                     'stay_030': int(row.get('stay_030', 0)),
                     'stay_045': int(row.get('stay_045', 0)),
@@ -743,67 +764,51 @@ def transfer_to_parking_data():
                     'stay_6': int(row.get('stay_6', 0)),
                     'stay_724': int(row.get('stay_724', 0)),
                     
-                    # מטא-דטה נוספת
+                    # מטא-דטה
                     'data_source': 'email_automation',
-                    'imported_at': datetime.now().isoformat(),
-                    'created_at': datetime.now().isoformat()
+                    'imported_at': datetime.now().isoformat()
                 }
                 
                 # וידוא שיש project_number
                 if transfer_row['project_number'] > 0:
                     transfer_data.append(transfer_row)
-                    print(f"✅ Prepared row for project {transfer_row['project_number']}")
-                else:
-                    print(f"⚠️ Skipping row without valid project_number")
+                    print(f"✅ Prepared row: project {project_number}, parking_id: {parking_id}, c_text: '{ctext_value}'")
                     
             except Exception as row_error:
                 print(f"❌ Error processing row: {str(row_error)}")
                 continue
         
         if not transfer_data:
-            print("❌ No valid data to transfer after processing")
+            print("❌ No valid data to transfer")
             return 0
             
         print(f"✅ Prepared {len(transfer_data)} rows for transfer")
         
-        # העברה לטבלת parking_data בקבוצות קטנות
-        batch_size = 10
-        total_transferred = 0
-        
-        for i in range(0, len(transfer_data), batch_size):
-            batch = transfer_data[i:i + batch_size]
-            batch_num = i // batch_size + 1
+        # הכנסה יחידה לטבלת parking_data (לא בקבוצות כדי למנוע כפילויות)
+        try:
+            print(f"🔄 Transferring all {len(transfer_data)} rows at once...")
             
-            try:
-                print(f"🔄 Transferring batch {batch_num}: {len(batch)} rows")
+            result = supabase.table('parking_data').insert(transfer_data).execute()
+            
+            if result.data:
+                transferred_count = len(result.data)
+                print(f"✅ Successfully transferred: {transferred_count} rows")
                 
-                result = supabase.table('parking_data').insert(batch).execute()
+                # מחיקת הנתונים מטבלת הביניים אחרי העברה מוצלחת
+                try:
+                    print("🧹 Cleaning csv_import_shekels...")
+                    delete_result = supabase.table('csv_import_shekels').delete().gt('id', 0).execute()
+                    print("✅ csv_import_shekels cleaned successfully")
+                except Exception as cleanup_error:
+                    print(f"⚠️ Could not clean csv_import_shekels: {str(cleanup_error)}")
                 
-                if result.data:
-                    batch_count = len(result.data)
-                    total_transferred += batch_count
-                    print(f"✅ Batch {batch_num} transferred successfully: {batch_count} rows")
-                else:
-                    print(f"⚠️ Batch {batch_num} returned no data")
-                    
-            except Exception as batch_error:
-                print(f"❌ Error transferring batch {batch_num}: {str(batch_error)}")
-                continue
-        
-        if total_transferred > 0:
-            print(f"✅ Transfer completed: {total_transferred} rows moved to parking_data")
-            
-            # מחיקת הנתונים מטבלת הביניים אחרי העברה מוצלחת
-            try:
-                print("🧹 Cleaning csv_import_shekels after successful transfer...")
-                delete_result = supabase.table('csv_import_shekels').delete().gt('id', 0).execute()
-                print("✅ csv_import_shekels cleaned successfully")
-            except Exception as cleanup_error:
-                print(f"⚠️ Could not clean csv_import_shekels: {str(cleanup_error)}")
-            
-            return total_transferred
-        else:
-            print("❌ No data was transferred to parking_data")
+                return transferred_count
+            else:
+                print("❌ No data was returned from insert")
+                return 0
+                
+        except Exception as insert_error:
+            print(f"❌ Error inserting data: {str(insert_error)}")
             return 0
             
     except Exception as e:
