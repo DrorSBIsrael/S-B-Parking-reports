@@ -669,7 +669,7 @@ def insert_to_csv_import_shekels(converted_data):
         return 0
 
 def transfer_to_parking_data():
-    """העברה מ csv_import_shekels ל parking_data - גרסה מתוקנת ללא שדות שלא קיימים"""
+    """העברה מ csv_import_shekels ל parking_data - ללא עמודות מחושבות"""
     if not supabase:
         print("❌ Supabase not available")
         return 0
@@ -686,23 +686,43 @@ def transfer_to_parking_data():
         
         print(f"📊 Found {len(csv_result.data)} rows in csv_import_shekels")
         
-        # רשימת השדות שקיימים ב-parking_data (ללא uploaded_by וללא id)
+        # רשימת השדות שמותר להכניס (ללא עמודות מחושבות ולא id)
+        # עמודות הכסף בשקלים הן מחושבות - רק אגורות
         allowed_fields = [
             'project_number', 'l_global_ref', 's_computer', 's_shift_id',
             'report_start_time', 'report_end_time', 'report_date', 'ctext',
-            's_cash_shekels', 's_credit_shekels', 's_pango_shekels', 's_celo_shekels',
-            'total_revenue_shekels', 'net_revenue_shekels',
+            
+            # רק אגורות - השקלים מחושבים אוטומטית
             's_cash_agorot', 's_credit_agorot', 's_pango_agorot', 's_celo_agorot',
             'stot_cacr', 's_exp_agorot',
+            
+            # מקודדים
             's_encoder1', 's_encoder2', 's_encoder3', 'sencodertot',
+            
+            # תנועה
             't_open_b', 't_entry_s', 't_entry_p', 't_entry_tot',
             't_exit_s', 't_exit_p', 't_exit_tot', 't_entry_ap', 't_exit_ap',
+            
+            # זמני שהייה
             'tsper1', 'tsper2', 'stay_015', 'stay_030', 'stay_045', 'stay_060',
             'stay_2', 'stay_3', 'stay_4', 'stay_5', 'stay_6', 'stay_724',
-            'tsper3', 'tsper4', 'tsper5', 'tsper6', 'created_at'
+            'tsper3', 'tsper4', 'tsper5', 'tsper6',
+            
+            # מטא-דטה
+            'created_at'
         ]
         
-        # עיבוד הנתונים להעברה - ניקוי שדות שלא קיימים
+        # עמודות מחושבות שאסור להכניס
+        excluded_fields = [
+            'id',  # auto-generated
+            's_cash_shekels', 's_credit_shekels', 's_pango_shekels', 's_celo_shekels',  # generated from agorot
+            'total_revenue_shekels', 'net_revenue_shekels',  # generated columns
+            'uploaded_by'  # doesn't exist in parking_data
+        ]
+        
+        print(f"📋 Using {len(allowed_fields)} allowed fields (excluding {len(excluded_fields)} generated/invalid fields)")
+        
+        # עיבוד הנתונים להעברה
         transfer_data = []
         for row in csv_result.data:
             # יצירת שורה חדשה רק עם השדות המותרים
@@ -711,11 +731,11 @@ def transfer_to_parking_data():
                 if field in row and row[field] is not None:
                     transfer_row[field] = row[field]
             
-            # וידוא שיש לפחות project_number
-            if 'project_number' in transfer_row:
+            # וידוא שיש לפחות project_number ו-cash_agorot
+            if 'project_number' in transfer_row and 's_cash_agorot' in transfer_row:
                 transfer_data.append(transfer_row)
             else:
-                print(f"⚠️ Skipping row without project_number: {row}")
+                print(f"⚠️ Skipping row without required fields: {row.get('project_number', 'NO_PROJECT')}")
         
         if not transfer_data:
             print("❌ No valid data to transfer after filtering")
@@ -724,7 +744,7 @@ def transfer_to_parking_data():
         print(f"✅ Prepared {len(transfer_data)} rows for transfer")
         
         # העברה לטבלת parking_data בקבוצות קטנות
-        batch_size = 50  # גודל קבוצה קטן יותר
+        batch_size = 20  # גודל קבוצה קטן כדי לזהות בעיות מהר
         total_transferred = 0
         
         for i in range(0, len(transfer_data), batch_size):
@@ -736,7 +756,9 @@ def transfer_to_parking_data():
                 
                 # הדפסת דוגמה מהנתונים בקבוצה הראשונה
                 if i == 0 and batch:
-                    print(f"📋 Sample transfer data keys: {list(batch[0].keys())}")
+                    sample_keys = list(batch[0].keys())
+                    print(f"📋 Sample transfer data keys: {sample_keys}")
+                    print(f"🚫 Excluded fields: {excluded_fields}")
                 
                 result = supabase.table('parking_data').insert(batch).execute()
                 
@@ -750,7 +772,13 @@ def transfer_to_parking_data():
             except Exception as batch_error:
                 print(f"❌ Error transferring batch {batch_num}: {str(batch_error)}")
                 
-                # ניסיון שורה אחת בכל פעם כדי לזהות את הבעיה
+                # בדיקה אם זו עדיין שגיאת עמודה מחושבת
+                if "generated column" in str(batch_error).lower():
+                    print(f"🚨 GENERATED COLUMN ERROR: {str(batch_error)}")
+                    print(f"💡 Need to exclude more generated columns from transfer")
+                    break  # עצור הכל - צריך לתקן את רשימת השדות
+                
+                # ניסיון שורה אחת בכל פעם
                 print(f"🔄 Trying individual rows for batch {batch_num}...")
                 for j, single_row in enumerate(batch):
                     try:
@@ -762,10 +790,9 @@ def transfer_to_parking_data():
                     except Exception as single_error:
                         print(f"   ❌ Row {i+j+1} transfer failed: {str(single_error)}")
                         
-                        # בדיקה אם זו שגיאת עמודה
-                        if "column" in str(single_error).lower():
-                            print(f"   🚨 Column error - problematic row data: {single_row}")
-                            print(f"   🛑 Stopping batch due to column structure issue")
+                        # אם זו שגיאת עמודה מחושבת, עצור
+                        if "generated column" in str(single_error).lower():
+                            print(f"   🚨 Generated column error in row - stopping")
                             break
         
         if total_transferred > 0:
