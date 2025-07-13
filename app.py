@@ -665,7 +665,7 @@ def insert_to_csv_import_shekels(converted_data):
         return 0
 
 def transfer_to_parking_data():
-    """העברה מ csv_import_shekels ל parking_data - עם בדיקת כפילויות"""
+    """העברה מ csv_import_shekels ל parking_data - תיקון בדיקת כפילויות"""
     if not supabase:
         print("❌ Supabase not available")
         return 0
@@ -691,22 +691,16 @@ def transfer_to_parking_data():
                 if result.data and len(result.data) > 0:
                     return result.data[0]['parking_id']
                 return None
-            except:
+            except Exception as e:
+                print(f"❌ Error getting parking_id: {str(e)}")
                 return None
-        
-        # פונקציה לבדיקה אם רשומה כבר קיימת
-        def record_exists(parking_id, report_date, s_shift_id):
-            try:
-                if not supabase or not parking_id:
-                    return False
-                result = supabase.table('parking_data').select('id').eq('parking_id', parking_id).eq('report_date', report_date).eq('s_shift_id', s_shift_id).execute()
-                return len(result.data) > 0
-            except:
-                return False
         
         # עיבוד הנתונים להעברה
         transfer_data = []
         skipped_duplicates = 0
+        
+        # שימוש ב-SET כדי למנוע כפילויות בתוך הקובץ עצמו
+        processed_records = set()
         
         for row in csv_result.data:
             try:
@@ -715,11 +709,30 @@ def transfer_to_parking_data():
                 report_date = str(row.get('report_date', ''))
                 s_shift_id = int(row.get('s_shift_id', 0))
                 
-                # בדיקה אם הרשומה כבר קיימת
-                if record_exists(parking_id, report_date, s_shift_id):
-                    print(f"⏭️ Skipping duplicate: parking_id={parking_id}, date={report_date}, shift={s_shift_id}")
+                # יצירת מפתח ייחודי לבדיקה
+                record_key = f"{parking_id}_{report_date}_{s_shift_id}"
+                
+                # בדיקה אם כבר עיבדנו רשומה זהה בקובץ הנוכחי
+                if record_key in processed_records:
+                    print(f"⏭️ Skipping duplicate within file: {record_key}")
                     skipped_duplicates += 1
                     continue
+                
+                # בדיקה אם הרשומה כבר קיימת בבסיס הנתונים
+                try:
+                    if parking_id:  # רק אם יש parking_id
+                        existing_check = supabase.table('parking_data').select('id').eq('parking_id', parking_id).eq('report_date', report_date).eq('s_shift_id', s_shift_id).limit(1).execute()
+                        
+                        if existing_check.data and len(existing_check.data) > 0:
+                            print(f"⏭️ Skipping existing record in DB: parking_id={parking_id}, date={report_date}, shift={s_shift_id}")
+                            skipped_duplicates += 1
+                            continue
+                except Exception as check_error:
+                    print(f"⚠️ Error checking for duplicates: {str(check_error)}")
+                    # אם יש שגיאה בבדיקה, ממשיכים (יתכן שזה לא קיים)
+                
+                # הוספה ל-SET של הרשומות המעובדות
+                processed_records.add(record_key)
                 
                 # תיקון c_text
                 ctext_value = str(row.get('ctext', '')).strip()
@@ -728,34 +741,25 @@ def transfer_to_parking_data():
                 
                 # יצירת שורה חדשה
                 transfer_row = {
-                    # מטא-דטה עם parking_id
                     'parking_id': parking_id,
                     'project_number': project_number,
                     'report_date': report_date,
                     'report_start_time': str(row.get('report_start_time', '')),
                     'report_end_time': str(row.get('report_end_time', '')),
-                    
-                    # פרטי מערכת
                     'l_global_ref': int(row.get('l_global_ref', 0)),
                     's_computer': int(row.get('s_computer', 0)),
                     's_shift_id': s_shift_id,
                     'c_text': ctext_value,
-                    
-                    # כסף באגורות
                     's_cash_agorot': int(row.get('s_cash_agorot', 0)),
                     's_credit_agorot': int(row.get('s_credit_agorot', 0)),
                     's_pango_agorot': int(row.get('s_pango_agorot', 0)),
                     's_celo_agorot': int(row.get('s_celo_agorot', 0)),
                     's_exp_agorot': int(row.get('s_exp_agorot', 0)),
                     'stot_cacr': int(row.get('stot_cacr', 0)),
-                    
-                    # מקודדים
                     's_encoder1': int(row.get('s_encoder1', 0)),
                     's_encoder2': int(row.get('s_encoder2', 0)),
                     's_encoder3': int(row.get('s_encoder3', 0)),
                     's_encoder_tot': int(row.get('sencodertot', 0)),
-                    
-                    # תנועה
                     't_open_b': int(row.get('t_open_b', 0)),
                     't_entry_s': int(row.get('t_entry_s', 0)),
                     't_entry_p': int(row.get('t_entry_p', 0)),
@@ -765,8 +769,6 @@ def transfer_to_parking_data():
                     't_exit_p': int(row.get('t_exit_p', 0)),
                     't_exit_tot': int(row.get('t_exit_tot', 0)),
                     't_exit_ap': int(row.get('t_exit_ap', 0)),
-                    
-                    # זמני שהייה
                     'ts_per1': int(row.get('tsper1', 0)),
                     'ts_per2': int(row.get('tsper2', 0)),
                     'ts_per3': int(row.get('tsper3', 0)),
@@ -783,28 +785,25 @@ def transfer_to_parking_data():
                     'stay_5': int(row.get('stay_5', 0)),
                     'stay_6': int(row.get('stay_6', 0)),
                     'stay_724': int(row.get('stay_724', 0)),
-                    
-                    # מטא-דטה
                     'data_source': 'email_automation',
                     'imported_at': datetime.now().isoformat()
                 }
                 
-                # וידוא שיש project_number
                 if transfer_row['project_number'] > 0:
                     transfer_data.append(transfer_row)
-                    print(f"✅ New record: project {project_number}, parking_id: {parking_id}, date: {report_date}")
+                    print(f"✅ Added to transfer: project {project_number}, parking_id: {parking_id}")
                     
             except Exception as row_error:
                 print(f"❌ Error processing row: {str(row_error)}")
                 continue
         
         # דוח סיכום
-        print(f"📊 Summary: {len(transfer_data)} new records, {skipped_duplicates} duplicates skipped")
+        print(f"📊 Summary: {len(transfer_data)} new records to transfer, {skipped_duplicates} duplicates skipped")
         
         if not transfer_data:
             print("⚠️ No new data to transfer (all were duplicates)")
             
-            # מחיקת הנתונים מטבלת הביניים גם אם הם כפילויות
+            # מחיקת csv_import_shekels גם אם הכל כפילויות
             try:
                 print("🧹 Cleaning csv_import_shekels...")
                 delete_result = supabase.table('csv_import_shekels').delete().gt('id', 0).execute()
@@ -824,7 +823,7 @@ def transfer_to_parking_data():
                 transferred_count = len(result.data)
                 print(f"✅ Successfully transferred: {transferred_count} rows")
                 
-                # מחיקת הנתונים מטבלת הביניים אחרי העברה מוצלחת
+                # מחיקת csv_import_shekels אחרי הצלחה
                 try:
                     print("🧹 Cleaning csv_import_shekels...")
                     delete_result = supabase.table('csv_import_shekels').delete().gt('id', 0).execute()
