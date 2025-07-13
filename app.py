@@ -410,7 +410,7 @@ def parse_csv_content(csv_content):
         return None
 
 def convert_to_csv_import_format(csv_rows):
-    """המרה לפורמט csv_import_shekels - ללא pandas"""
+    """המרה לפורמט csv_import_shekels - עם סכומים נכונים באגורות"""
     converted_rows = []
     
     for index, row in enumerate(csv_rows):
@@ -427,7 +427,7 @@ def convert_to_csv_import_format(csv_rows):
             else:
                 formatted_date = date_str
                 
-            # המרת נתוני כסף מאגורות לשקלים - בטוח יותר
+            # המרת נתוני כסף - הערכים כבר באגורות, לא צריך לחלק!
             def safe_int(value, default=0):
                 try:
                     if value is None or value == '':
@@ -436,15 +436,17 @@ def convert_to_csv_import_format(csv_rows):
                 except (ValueError, TypeError):
                     return default
             
+            # הערכים כבר באגורות - לא צריך חישובים!
             cash_agorot = safe_int(row.get('SCASH'))
             credit_agorot = safe_int(row.get('SCREDIT'))
             pango_agorot = safe_int(row.get('SPANGO'))
             celo_agorot = safe_int(row.get('SCELO'))
             
-            cash_shekels = round(cash_agorot , 2)
-            credit_shekels = round(credit_agorot , 2)
-            pango_shekels = round(pango_agorot , 2)
-            celo_shekels = round(celo_agorot , 2)
+            # חישוב שקלים לתצוגה בלבד (אבל לא נשמור אותם)
+            cash_shekels = round(cash_agorot / 100, 2)
+            credit_shekels = round(credit_agorot / 100, 2)
+            pango_shekels = round(pango_agorot / 100, 2)
+            celo_shekels = round(celo_agorot / 100, 2)
             
             converted_row = {
                 'project_number': str(row.get('ProjectNumber', '')),
@@ -456,15 +458,7 @@ def convert_to_csv_import_format(csv_rows):
                 'report_date': formatted_date,
                 'ctext': str(row.get('CTEXT', '')),
                 
-                # כסף בשקלים
-                's_cash_shekels': cash_shekels,
-                's_credit_shekels': credit_shekels,
-                's_pango_shekels': pango_shekels,
-                's_celo_shekels': celo_shekels,
-                'total_revenue_shekels': cash_shekels + credit_shekels + pango_shekels + celo_shekels,
-                'net_revenue_shekels': cash_shekels + credit_shekels + pango_shekels + celo_shekels,
-                
-                # כסף באגורות (גיבוי)
+                # כסף באגורות - הערכים הנכונים!
                 's_cash_agorot': cash_agorot,
                 's_credit_agorot': credit_agorot,
                 's_pango_agorot': pango_agorot,
@@ -513,6 +507,8 @@ def convert_to_csv_import_format(csv_rows):
             }
             
             converted_rows.append(converted_row)
+            
+            print(f"✅ Row {index+1}: project {converted_row['project_number']}, cash: {cash_agorot} agorot ({cash_shekels} shekels)")
             
         except Exception as e:
             print(f"❌ Error converting row {index}: {str(e)}")
@@ -686,65 +682,92 @@ def transfer_to_parking_data():
         
         print(f"📊 Found {len(csv_result.data)} rows in csv_import_shekels")
         
-        # רשימת השדות שמותר להכניס (ללא עמודות מחושבות ולא id)
-        # עמודות הכסף בשקלים הן מחושבות - רק אגורות
-        allowed_fields = [
-            'project_number', 'l_global_ref', 's_computer', 's_shift_id',
-            'report_start_time', 'report_end_time', 'report_date', 'ctext',
-            
-            # רק אגורות - השקלים מחושבים אוטומטית
-            's_cash_agorot', 's_credit_agorot', 's_pango_agorot', 's_celo_agorot',
-            'stot_cacr', 's_exp_agorot',
-            
-            # מקודדים
-            's_encoder1', 's_encoder2', 's_encoder3', 'sencodertot',
-            
-            # תנועה
-            't_open_b', 't_entry_s', 't_entry_p', 't_entry_tot',
-            't_exit_s', 't_exit_p', 't_exit_tot', 't_entry_ap', 't_exit_ap',
-            
-            # זמני שהייה
-            'tsper1', 'tsper2', 'stay_015', 'stay_030', 'stay_045', 'stay_060',
-            'stay_2', 'stay_3', 'stay_4', 'stay_5', 'stay_6', 'stay_724',
-            'tsper3', 'tsper4', 'tsper5', 'tsper6',
-            
-            # מטא-דטה
-            'created_at'
-        ]
-        
-        # עמודות מחושבות שאסור להכניס
-        excluded_fields = [
-            'id',  # auto-generated
-            's_cash_shekels', 's_credit_shekels', 's_pango_shekels', 's_celo_shekels',  # generated from agorot
-            'total_revenue_shekels', 'net_revenue_shekels',  # generated columns
-            'uploaded_by'  # doesn't exist in parking_data
-        ]
-        
-        print(f"📋 Using {len(allowed_fields)} allowed fields (excluding {len(excluded_fields)} generated/invalid fields)")
-        
         # עיבוד הנתונים להעברה
         transfer_data = []
         for row in csv_result.data:
-            # יצירת שורה חדשה רק עם השדות המותרים
-            transfer_row = {}
-            for field in allowed_fields:
-                if field in row and row[field] is not None:
-                    transfer_row[field] = row[field]
-            
-            # וידוא שיש לפחות project_number ו-cash_agorot
-            if 'project_number' in transfer_row and 's_cash_agorot' in transfer_row:
-                transfer_data.append(transfer_row)
-            else:
-                print(f"⚠️ Skipping row without required fields: {row.get('project_number', 'NO_PROJECT')}")
+            try:
+                # יצירת שורה חדשה עם מיפוי השדות הנכון
+                transfer_row = {
+                    # מטא-דטה
+                    'project_number': int(row.get('project_number', 0)),
+                    'report_date': str(row.get('report_date', '')),
+                    'report_start_time': str(row.get('report_start_time', '')),
+                    'report_end_time': str(row.get('report_end_time', '')),
+                    
+                    # פרטי מערכת
+                    'l_global_ref': int(row.get('l_global_ref', 0)),
+                    's_computer': int(row.get('s_computer', 0)),
+                    's_shift_id': int(row.get('s_shift_id', 0)),
+                    'c_text': str(row.get('ctext', '')).strip(),  # מיפוי מ-ctext ל-c_text
+                    
+                    # כסף באגורות (ללא חלוקה ב-100!)
+                    's_cash_agorot': int(row.get('s_cash_agorot', 0)),
+                    's_credit_agorot': int(row.get('s_credit_agorot', 0)),
+                    's_pango_agorot': int(row.get('s_pango_agorot', 0)),
+                    's_celo_agorot': int(row.get('s_celo_agorot', 0)),
+                    's_exp_agorot': int(row.get('s_exp_agorot', 0)),
+                    'stot_cacr': int(row.get('stot_cacr', 0)),
+                    
+                    # מקודדים
+                    's_encoder1': int(row.get('s_encoder1', 0)),
+                    's_encoder2': int(row.get('s_encoder2', 0)),
+                    's_encoder3': int(row.get('s_encoder3', 0)),
+                    's_encoder_tot': int(row.get('sencodertot', 0)),  # מיפוי מ-sencodertot ל-s_encoder_tot
+                    
+                    # תנועה
+                    't_open_b': int(row.get('t_open_b', 0)),
+                    't_entry_s': int(row.get('t_entry_s', 0)),
+                    't_entry_p': int(row.get('t_entry_p', 0)),
+                    't_entry_tot': int(row.get('t_entry_tot', 0)),
+                    't_entry_ap': int(row.get('t_entry_ap', 0)),
+                    't_exit_s': int(row.get('t_exit_s', 0)),
+                    't_exit_p': int(row.get('t_exit_p', 0)),
+                    't_exit_tot': int(row.get('t_exit_tot', 0)),
+                    't_exit_ap': int(row.get('t_exit_ap', 0)),
+                    
+                    # זמני שהייה (מיפוי שמות עמודות)
+                    'ts_per1': int(row.get('tsper1', 0)),  # מיפוי מ-tsper1 ל-ts_per1
+                    'ts_per2': int(row.get('tsper2', 0)),  # מיפוי מ-tsper2 ל-ts_per2
+                    'ts_per3': int(row.get('tsper3', 0)),  # מיפוי מ-tsper3 ל-ts_per3
+                    'ts_per4': int(row.get('tsper4', 0)),  # מיפוי מ-tsper4 ל-ts_per4
+                    'ts_per5': int(row.get('tsper5', 0)),  # מיפוי מ-tsper5 ל-ts_per5
+                    'ts_per6': int(row.get('tsper6', 0)),  # מיפוי מ-tsper6 ל-ts_per6
+                    'stay_015': int(row.get('stay_015', 0)),
+                    'stay_030': int(row.get('stay_030', 0)),
+                    'stay_045': int(row.get('stay_045', 0)),
+                    'stay_060': int(row.get('stay_060', 0)),
+                    'stay_2': int(row.get('stay_2', 0)),
+                    'stay_3': int(row.get('stay_3', 0)),
+                    'stay_4': int(row.get('stay_4', 0)),
+                    'stay_5': int(row.get('stay_5', 0)),
+                    'stay_6': int(row.get('stay_6', 0)),
+                    'stay_724': int(row.get('stay_724', 0)),
+                    
+                    # מטא-דטה נוספת
+                    'data_source': 'email_automation',
+                    'imported_at': datetime.now().isoformat(),
+                    'created_at': datetime.now().isoformat()
+                }
+                
+                # וידוא שיש project_number
+                if transfer_row['project_number'] > 0:
+                    transfer_data.append(transfer_row)
+                    print(f"✅ Prepared row for project {transfer_row['project_number']}")
+                else:
+                    print(f"⚠️ Skipping row without valid project_number")
+                    
+            except Exception as row_error:
+                print(f"❌ Error processing row: {str(row_error)}")
+                continue
         
         if not transfer_data:
-            print("❌ No valid data to transfer after filtering")
+            print("❌ No valid data to transfer after processing")
             return 0
             
         print(f"✅ Prepared {len(transfer_data)} rows for transfer")
         
         # העברה לטבלת parking_data בקבוצות קטנות
-        batch_size = 20  # גודל קבוצה קטן כדי לזהות בעיות מהר
+        batch_size = 10
         total_transferred = 0
         
         for i in range(0, len(transfer_data), batch_size):
@@ -753,12 +776,6 @@ def transfer_to_parking_data():
             
             try:
                 print(f"🔄 Transferring batch {batch_num}: {len(batch)} rows")
-                
-                # הדפסת דוגמה מהנתונים בקבוצה הראשונה
-                if i == 0 and batch:
-                    sample_keys = list(batch[0].keys())
-                    print(f"📋 Sample transfer data keys: {sample_keys}")
-                    print(f"🚫 Excluded fields: {excluded_fields}")
                 
                 result = supabase.table('parking_data').insert(batch).execute()
                 
@@ -771,29 +788,7 @@ def transfer_to_parking_data():
                     
             except Exception as batch_error:
                 print(f"❌ Error transferring batch {batch_num}: {str(batch_error)}")
-                
-                # בדיקה אם זו עדיין שגיאת עמודה מחושבת
-                if "generated column" in str(batch_error).lower():
-                    print(f"🚨 GENERATED COLUMN ERROR: {str(batch_error)}")
-                    print(f"💡 Need to exclude more generated columns from transfer")
-                    break  # עצור הכל - צריך לתקן את רשימת השדות
-                
-                # ניסיון שורה אחת בכל פעם
-                print(f"🔄 Trying individual rows for batch {batch_num}...")
-                for j, single_row in enumerate(batch):
-                    try:
-                        single_result = supabase.table('parking_data').insert([single_row]).execute()
-                        if single_result.data:
-                            total_transferred += 1
-                            if j % 5 == 0:  # הדפסה כל 5 שורות
-                                print(f"   ✅ Row {i+j+1} transferred")
-                    except Exception as single_error:
-                        print(f"   ❌ Row {i+j+1} transfer failed: {str(single_error)}")
-                        
-                        # אם זו שגיאת עמודה מחושבת, עצור
-                        if "generated column" in str(single_error).lower():
-                            print(f"   🚨 Generated column error in row - stopping")
-                            break
+                continue
         
         if total_transferred > 0:
             print(f"✅ Transfer completed: {total_transferred} rows moved to parking_data")
