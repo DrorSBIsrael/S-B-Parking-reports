@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_mail import Mail, Message
-from supabase import create_client, Client
+from supabase.client import create_client, Client
 import os
 import random
 import string
@@ -14,7 +14,6 @@ try:
     import io
     import threading
     import time
-    import schedule
     from email.mime.text import MIMEText
     from email.mime.multipart import MIMEMultipart
     import smtplib
@@ -29,6 +28,14 @@ if EMAIL_MONITORING_AVAILABLE:
     EMAIL_CHECK_INTERVAL = 5  # בדיקה כל 5 דקות
     PROCESSED_EMAILS_LIMIT = 100  # מקסימום מיילים לזכור
     processed_email_ids = []  # רשימה לזכור מיילים שכבר עובדו
+
+# רשימת שולחים מורשים לשליחת קבצי נתונים
+AUTHORIZED_SENDERS = [
+    'Dror@sbparking.co.il',
+    'dror@sbparking.co.il',  # case insensitive
+    'Report@sbparking.co.il',
+    'report@sbparking.co.il'  # case insensitive
+]
 
 print("🚀 S&B Parking Application Starting...")
 
@@ -290,6 +297,7 @@ def connect_to_gmail_imap():
         gmail_user = os.environ.get('GMAIL_USERNAME')
         gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
         
+        # תיקון type checking - וידוא שהמשתנים לא None
         if not gmail_user or not gmail_password:
             print("❌ Missing Gmail credentials in environment variables")
             return None
@@ -534,13 +542,22 @@ def transfer_to_parking_data():
         return 0
 
 def send_success_notification(sender_email, processed_files, total_rows):
-    """שליחת התראת הצלחה"""
+    """שליחת התראת הצלחה עם type checking מתוקן"""
     if not EMAIL_MONITORING_AVAILABLE:
         return
         
     try:
         msg = MIMEMultipart()
-        msg['From'] = os.environ.get('GMAIL_USERNAME')
+        
+        # תיקון type checking - וידוא שהמשתנים לא None
+        gmail_user = os.environ.get('GMAIL_USERNAME')
+        gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
+        
+        if not gmail_user or not gmail_password:
+            print("❌ Missing Gmail credentials for notification")
+            return
+            
+        msg['From'] = gmail_user
         msg['To'] = sender_email
         msg['Subject'] = '✅ קבצי הנתונים עובדו בהצלחה - S&B Parking'
         
@@ -565,7 +582,7 @@ def send_success_notification(sender_email, processed_files, total_rows):
         
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
-        server.login(os.environ.get('GMAIL_USERNAME'), os.environ.get('GMAIL_APP_PASSWORD'))
+        server.login(gmail_user, gmail_password)
         server.send_message(msg)
         server.quit()
         
@@ -575,13 +592,22 @@ def send_success_notification(sender_email, processed_files, total_rows):
         print(f"❌ Failed to send notification: {str(e)}")
 
 def send_error_notification(sender_email, error_message):
-    """שליחת התראת שגיאה"""
+    """שליחת התראת שגיאה עם type checking מתוקן"""
     if not EMAIL_MONITORING_AVAILABLE:
         return
         
     try:
         msg = MIMEMultipart()
-        msg['From'] = os.environ.get('GMAIL_USERNAME')
+        
+        # תיקון type checking - וידוא שהמשתנים לא None
+        gmail_user = os.environ.get('GMAIL_USERNAME')
+        gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
+        
+        if not gmail_user or not gmail_password:
+            print("❌ Missing Gmail credentials for error notification")
+            return
+            
+        msg['From'] = gmail_user
         msg['To'] = sender_email
         msg['Subject'] = '❌ שגיאה בעיבוד קבצי הנתונים - S&B Parking'
         
@@ -601,7 +627,7 @@ def send_error_notification(sender_email, error_message):
         
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
-        server.login(os.environ.get('GMAIL_USERNAME'), os.environ.get('GMAIL_APP_PASSWORD'))
+        server.login(gmail_user, gmail_password)
         server.send_message(msg)
         server.quit()
         
@@ -611,7 +637,7 @@ def send_error_notification(sender_email, error_message):
         print(f"❌ Failed to send error notification: {str(e)}")
 
 def process_single_email(mail, email_id):
-    """עיבוד מייל יחיד - עדכון ללא pandas"""
+    """עיבוד מייל יחיד - עם בדיקת שולח מורשה"""
     try:
         _, msg_data = mail.fetch(email_id, '(RFC822)')
         email_body = msg_data[0][1]
@@ -624,6 +650,15 @@ def process_single_email(mail, email_id):
         print(f"\n📧 Processing email from: {sender}")
         print(f"   Subject: {subject}")
         print(f"   Date: {date}")
+        
+        # בדיקת שולח מורשה
+        if not is_authorized_sender(sender):
+            print(f"🚫 UNAUTHORIZED SENDER: {sender}")
+            print(f"✅ Authorized senders: {AUTHORIZED_SENDERS}")
+            print(f"⏭️ Skipping email from unauthorized sender")
+            return False
+        
+        print(f"✅ AUTHORIZED SENDER: {sender}")
         
         csv_files = download_csv_from_email(email_message)
         
@@ -720,7 +755,7 @@ def verify_email_system():
         return False
 
 def start_email_monitoring_with_logs():
-    """הפעלת מעקב מיילים עם לוגים מפורטים"""
+    """הפעלת מעקב מיילים עם לוגים מפורטים - ללא schedule"""
     if not EMAIL_MONITORING_AVAILABLE:
         print("⚠️ Email monitoring not available - libraries missing")
         return
@@ -733,27 +768,23 @@ def start_email_monitoring_with_logs():
             print("❌ Email system verification failed. Monitoring will not start.")
             return
         
-        def scheduled_check():
-            with app.app_context():
-                print(f"⏰ Scheduled email check triggered at {datetime.now()}")
-                check_for_new_emails()
-        
-        # תזמון בדיקה כל 5 דקות
-        schedule.every(EMAIL_CHECK_INTERVAL).minutes.do(scheduled_check)
-        print(f"⏰ Email checks scheduled every {EMAIL_CHECK_INTERVAL} minutes")
-        
         def monitoring_loop():
             print("🔄 Email monitoring loop started")
             check_count = 0
             
             while True:
                 try:
-                    schedule.run_pending()
-                    time.sleep(60)
+                    # בדיקת מיילים כל 5 דקות (300 שניות)
+                    with app.app_context():
+                        print(f"⏰ Email check triggered at {datetime.now()}")
+                        check_for_new_emails()
+                    
+                    # המתנה של 5 דקות
+                    time.sleep(300)  # 300 שניות = 5 דקות
                     
                     check_count += 1
-                    if check_count % 5 == 0:
-                        print(f"💓 Email monitoring alive - {check_count} minutes running")
+                    if check_count % 6 == 0:  # כל 30 דקות (6 * 5 דקות)
+                        print(f"💓 Email monitoring alive - {check_count * 5} minutes running")
                         
                 except KeyboardInterrupt:
                     print("\n🛑 Email monitoring stopped by user")
@@ -761,13 +792,14 @@ def start_email_monitoring_with_logs():
                 except Exception as e:
                     print(f"❌ Email monitoring error: {str(e)}")
                     print("⏳ Retrying in 5 minutes...")
-                    time.sleep(300)
+                    time.sleep(300)  # 5 דקות המתנה לפני ניסיון חוזר
         
         # הרצת הלולאה ברקע
         monitor_thread = threading.Thread(target=monitoring_loop, daemon=True)
         monitor_thread.start()
         
         print("✅ Email monitoring started successfully in background")
+        print(f"⏰ Email checks scheduled every {EMAIL_CHECK_INTERVAL} minutes")
         
         # בדיקה ראשונית מיידית
         print("🚀 Running initial email check...")
@@ -784,7 +816,7 @@ def start_email_monitoring_with_logs():
 def start_background_email_monitoring():
     """נקודת כניסה להפעלת מעקב מיילים ברקע"""
     if not EMAIL_MONITORING_AVAILABLE:
-        print("⚠️ Email monitoring not available - libraries missing")
+        print("⚠️ Email monitoring not available - missing libraries")
         return
         
     try:
@@ -801,6 +833,27 @@ def start_background_email_monitoring():
         
     except Exception as e:
         print(f"❌ Background email monitoring initialization failed: {str(e)}")
+
+def is_authorized_sender(sender_email):
+    """בדיקה אם השולח מורשה לשלוח קבצי נתונים"""
+    if not sender_email:
+        return False
+    
+    # ניקוי כתובת המייל מתגים נוספים
+    sender_clean = sender_email.strip().lower()
+    
+    # חילוץ כתובת המייל מפורמט "Name <email@domain.com>"
+    if '<' in sender_clean and '>' in sender_clean:
+        start = sender_clean.find('<') + 1
+        end = sender_clean.find('>')
+        sender_clean = sender_clean[start:end].strip()
+    
+    # בדיקה מול רשימת השולחים המורשים
+    for authorized in AUTHORIZED_SENDERS:
+        if sender_clean == authorized.lower():
+            return True
+    
+    return False
 
 def check_for_new_emails():
     """בדיקת מיילים חדשים - גרסה מתוקנת"""
@@ -850,6 +903,7 @@ def check_for_new_emails():
         print(f"📧 Found {len(email_ids)} emails from yesterday")
         
         new_emails = 0
+        processed_successfully = 0
         
         for email_id in email_ids:
             email_id_str = email_id.decode()
@@ -860,19 +914,34 @@ def check_for_new_emails():
             
             print(f"\n🆕 Processing new email ID: {email_id_str}")
             
+            # עיבוד המייל
             success = process_single_email(mail, email_id)
             
+            # הוספה לרשימה רק אחרי עיבוד (להימנע מעיבוד חוזר)
             processed_email_ids.append(email_id_str)
             new_emails += 1
             
+            # ספירת הצלחות בלבד
+            if success:
+                processed_successfully += 1
+                print(f"✅ Email {email_id_str} processed successfully")
+            else:
+                print(f"⚠️ Email {email_id_str} was rejected or failed")
+            
+            # ניקוי cache אם יש יותר מדי מיילים
             if len(processed_email_ids) > PROCESSED_EMAILS_LIMIT:
                 processed_email_ids = processed_email_ids[-PROCESSED_EMAILS_LIMIT:]
                 print(f"🧹 Cleaned processed emails cache, now: {len(processed_email_ids)}")
             
+            # המתנה קצרה בין מיילים
             time.sleep(2)
         
-        print(f"✅ Email check completed: {new_emails} new emails processed")
-        print(f"📊 Total emails in cache: {len(processed_email_ids)}")
+        # סיכום מפורט
+        print(f"✅ Email check completed:")
+        print(f"   📧 New emails checked: {new_emails}")
+        print(f"   🎉 Successfully processed: {processed_successfully}")
+        print(f"   🚫 Rejected/Failed: {new_emails - processed_successfully}")
+        print(f"   📊 Total emails in cache: {len(processed_email_ids)}")
         
     except Exception as e:
         print(f"❌ Error in email check: {str(e)}")
