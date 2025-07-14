@@ -146,41 +146,42 @@
         /* Date picker icon positioning fix */
         input[type="date"] {
             position: relative;
-            padding-left: 40px !important;
+            padding-left: 36px !important;
             direction: ltr;
             text-align: right;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            background-color: var(--surface);
-        }
-        
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            position: absolute;
-            right: auto;
-            left: 10px;
-            opacity: 1;
-            cursor: pointer;
-            z-index: 1;
-            width: 24px;
-            height: 24px;
-            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23007AFF'%3E%3Cpath d='M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z'/%3E%3C/svg%3E") center no-repeat;
+            background-color: white;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%230051D5' d='M4.5 0a.5.5 0 0 1 .5.5V2h10V.5a.5.5 0 0 1 1 0V2h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h2V.5a.5.5 0 0 1 .5-.5zM2 5v13h16V5H2z'/%3E%3Cpath fill='%230051D5' d='M6 8h2v2H6V8zm3 0h2v2H9V8zm3 0h2v2h-2V8zM6 11h2v2H6v-2zm3 0h2v2H9v-2zm3 0h2v2h-2v-2zM6 14h2v2H6v-2zm3 0h2v2H9v-2z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: 8px center;
             background-size: 20px 20px;
+            transition: background-position 0.2s ease;
         }
         
-        input[type="date"]::-webkit-calendar-picker-indicator:hover {
-            opacity: 0.8;
+        /* Hover effect for the date input */
+        input[type="date"]:hover {
+            background-position: 6px center;
         }
         
-        /* Firefox date picker icon fix */
-        input[type="date"]::-moz-calendar-picker-indicator {
-            position: absolute;
-            right: auto;
-            left: 10px;
-            opacity: 1;
+        /* Style the native calendar picker */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            position: absolute !important;
+            left: 6px !important;
             cursor: pointer;
             width: 24px;
             height: 24px;
+            opacity: 0.01 !important; /* Almost invisible but still clickable */
+            z-index: 2;
+        }
+        
+        /* Firefox support */
+        input[type="date"]::-moz-calendar-picker-indicator {
+            position: absolute !important;
+            left: 6px !important;
+            cursor: pointer;
+            width: 24px;
+            height: 24px;
+            opacity: 0.01 !important;
+            z-index: 2;
         }
         
         .load-btn {
@@ -1740,7 +1741,7 @@ function updateStats() {
             </div>
             ` : '<div class="change neutral">ללא נתוני השוואה</div>'}
             <div class="subtext">מכל אמצעי התשלום</div>
-            ${stats.totalTsper3 > 0 ? `<div class="tsper3-line">₪${stats.totalTsper3.toLocaleString()}</div>` : ''}
+            <div class="tsper3-line">₪${(stats.totalTsper3 || 0).toLocaleString()}</div>
         </div>
         
         <div class="stat-card" data-stat-type="entries">
@@ -1754,7 +1755,7 @@ function updateStats() {
             </div>
             ` : '<div class="change neutral">ללא נתוני השוואה</div>'}
             <div class="subtext">${stats.dailyAvgEntries.toLocaleString()} בממוצע ליום</div>
-            ${stats.totalExits > 0 ? `<div class="exit-line">יציאות: ${stats.totalExits.toLocaleString()}</div>` : ''}
+            <div class="exit-line">יציאות: ${(stats.totalExits || 0).toLocaleString()}</div>
         </div>
         
         <div class="stat-card" data-stat-type="casual">
@@ -1763,7 +1764,7 @@ function updateStats() {
             <div class="value">${stats.totalCasual.toLocaleString()}</div>
             <div class="change neutral">${stats.casualPercent.toFixed(1)}% מהכניסות</div>
             <div class="subtext">כניסות ללא מנוי</div>
-            ${stats.totalExitsCasual > 0 ? `<div class="exit-line">יציאות: ${stats.totalExitsCasual.toLocaleString()}</div>` : ''}
+            <div class="exit-line">יציאות: ${(stats.totalExitsCasual || 0).toLocaleString()}</div>
         </div>
         
         <div class="stat-card" data-stat-type="members">
@@ -1772,7 +1773,7 @@ function updateStats() {
             <div class="value">${stats.totalMembers.toLocaleString()}</div>
             <div class="change neutral">${stats.memberPercent.toFixed(1)}% מהכניסות</div>
             <div class="subtext">כניסות עם מנוי</div>
-            ${stats.totalExitsMembers > 0 ? `<div class="exit-line">יציאות: ${stats.totalExitsMembers.toLocaleString()}</div>` : ''}
+            <div class="exit-line">יציאות: ${(stats.totalExitsMembers || 0).toLocaleString()}</div>
         </div>
         
         ${stats.totalApp > 0 ? `
@@ -1873,6 +1874,14 @@ function calculateStats() {
     const totalExits = currentData.reduce((sum, d) => sum + (d.t_exit_tot || 0), 0);
     const totalExitsCasual = currentData.reduce((sum, d) => sum + (d.t_exit_s || 0), 0);
     const totalExitsMembers = currentData.reduce((sum, d) => sum + (d.t_exit_p || 0), 0);
+    
+    // Debug log for exits
+    console.log('Exit data:', {
+        totalExits,
+        totalExitsCasual,
+        totalExitsMembers,
+        sampleData: currentData[0]
+    });
     
     // Add tsper3 data
     const totalTsper3 = currentData.reduce((sum, d) => sum + (d.tsper3 || 0), 0);
