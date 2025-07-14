@@ -665,7 +665,7 @@ def insert_to_csv_import_shekels(converted_data):
         return 0
 
 def transfer_to_parking_data():
-    """העברה מ csv_import_shekels ל parking_data - תיקון בדיקת כפילויות"""
+    """העברה מ csv_import_shekels ל parking_data - ללא בדיקת כפילויות (זמנית)"""
     if not supabase:
         print("❌ Supabase not available")
         return 0
@@ -697,42 +697,11 @@ def transfer_to_parking_data():
         
         # עיבוד הנתונים להעברה
         transfer_data = []
-        skipped_duplicates = 0
-        
-        # שימוש ב-SET כדי למנוע כפילויות בתוך הקובץ עצמו
-        processed_records = set()
         
         for row in csv_result.data:
             try:
                 project_number = int(row.get('project_number', 0))
                 parking_id = get_parking_id(project_number)
-                report_date = str(row.get('report_date', ''))
-                s_shift_id = int(row.get('s_shift_id', 0))
-                
-                # יצירת מפתח ייחודי לבדיקה
-                record_key = f"{parking_id}_{report_date}_{s_shift_id}"
-                
-                # בדיקה אם כבר עיבדנו רשומה זהה בקובץ הנוכחי
-                if record_key in processed_records:
-                    print(f"⏭️ Skipping duplicate within file: {record_key}")
-                    skipped_duplicates += 1
-                    continue
-                
-                # בדיקה אם הרשומה כבר קיימת בבסיס הנתונים
-                try:
-                    if parking_id:  # רק אם יש parking_id
-                        existing_check = supabase.table('parking_data').select('id').eq('parking_id', parking_id).eq('report_date', report_date).eq('s_shift_id', s_shift_id).limit(1).execute()
-                        
-                        if existing_check.data and len(existing_check.data) > 0:
-                            print(f"⏭️ Skipping existing record in DB: parking_id={parking_id}, date={report_date}, shift={s_shift_id}")
-                            skipped_duplicates += 1
-                            continue
-                except Exception as check_error:
-                    print(f"⚠️ Error checking for duplicates: {str(check_error)}")
-                    # אם יש שגיאה בבדיקה, ממשיכים (יתכן שזה לא קיים)
-                
-                # הוספה ל-SET של הרשומות המעובדות
-                processed_records.add(record_key)
                 
                 # תיקון c_text
                 ctext_value = str(row.get('ctext', '')).strip()
@@ -743,12 +712,12 @@ def transfer_to_parking_data():
                 transfer_row = {
                     'parking_id': parking_id,
                     'project_number': project_number,
-                    'report_date': report_date,
+                    'report_date': str(row.get('report_date', '')),
                     'report_start_time': str(row.get('report_start_time', '')),
                     'report_end_time': str(row.get('report_end_time', '')),
                     'l_global_ref': int(row.get('l_global_ref', 0)),
                     's_computer': int(row.get('s_computer', 0)),
-                    's_shift_id': s_shift_id,
+                    's_shift_id': int(row.get('s_shift_id', 0)),
                     'c_text': ctext_value,
                     's_cash_agorot': int(row.get('s_cash_agorot', 0)),
                     's_credit_agorot': int(row.get('s_credit_agorot', 0)),
@@ -791,33 +760,21 @@ def transfer_to_parking_data():
                 
                 if transfer_row['project_number'] > 0:
                     transfer_data.append(transfer_row)
-                    print(f"✅ Added to transfer: project {project_number}, parking_id: {parking_id}")
+                    print(f"✅ Prepared for transfer: project {project_number}, parking_id: {parking_id}")
                     
             except Exception as row_error:
                 print(f"❌ Error processing row: {str(row_error)}")
                 continue
         
-        # דוח סיכום
-        print(f"📊 Summary: {len(transfer_data)} new records to transfer, {skipped_duplicates} duplicates skipped")
-        
         if not transfer_data:
-            print("⚠️ No new data to transfer (all were duplicates)")
-            
-            # מחיקת csv_import_shekels גם אם הכל כפילויות
-            try:
-                print("🧹 Cleaning csv_import_shekels...")
-                delete_result = supabase.table('csv_import_shekels').delete().gt('id', 0).execute()
-                print("✅ csv_import_shekels cleaned successfully")
-            except Exception as cleanup_error:
-                print(f"⚠️ Could not clean csv_import_shekels: {str(cleanup_error)}")
-            
+            print("❌ No valid data to transfer")
             return 0
-        
-        # הכנסה לטבלת parking_data
-        try:
-            print(f"🔄 Transferring {len(transfer_data)} new rows...")
             
-            result = supabase.table('parking_data').insert(transfer_data).execute()
+        print(f"🔄 Transferring {len(transfer_data)} rows...")
+        
+        # הכנסה לטבלת parking_data - ננסה עם upsert במקום insert
+        try:
+            result = supabase.table('parking_data').upsert(transfer_data).execute()
             
             if result.data:
                 transferred_count = len(result.data)
@@ -833,12 +790,23 @@ def transfer_to_parking_data():
                 
                 return transferred_count
             else:
-                print("❌ No data was returned from insert")
+                print("❌ No data was returned from upsert")
                 return 0
                 
         except Exception as insert_error:
             print(f"❌ Error inserting data: {str(insert_error)}")
-            return 0
+            # אם upsert נכשל, ננסה insert רגיל
+            try:
+                print("🔄 Trying regular insert...")
+                result = supabase.table('parking_data').insert(transfer_data).execute()
+                if result.data:
+                    transferred_count = len(result.data)
+                    print(f"✅ Successfully inserted: {transferred_count} rows")
+                    return transferred_count
+                return 0
+            except Exception as insert_error2:
+                print(f"❌ Both upsert and insert failed: {str(insert_error2)}")
+                return 0
             
     except Exception as e:
         print(f"❌ Error transferring to parking_data: {str(e)}")
