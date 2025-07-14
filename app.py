@@ -312,7 +312,7 @@ def connect_to_gmail_imap():
         return None
 
 def download_csv_from_email(msg):
-    """הורדת קובץ CSV מהמייל"""
+    """הורדת קובץ CSV מהמייל - שמירת bytes מקוריים לזיהוי קידוד"""
     csv_files = []
     
     try:
@@ -324,18 +324,13 @@ def download_csv_from_email(msg):
                     file_data = part.get_payload(decode=True)
                     
                     if file_data:
-                        # תיקון הבעיה כאן
-                        if isinstance(file_data, bytes):
-                            data_content = file_data.decode('utf-8-sig', errors='ignore')
-                        else:
-                            data_content = str(file_data)
-                        
+                        # שמירת הבייטים המקוריים - לא נמיר לstring כאן!
                         csv_files.append({
                             'filename': filename,
-                            'data': data_content
+                            'data': file_data  # נשאיר את זה כ-bytes
                         })
                         
-                        print(f"📎 Found CSV attachment: {filename}")
+                        print(f"📎 Found CSV attachment: {filename} ({len(file_data)} bytes)")
         
         return csv_files
         
@@ -344,39 +339,67 @@ def download_csv_from_email(msg):
         return []
 
 def parse_csv_content(csv_content):
-    """פרסור CSV פשוט ובטוח"""
+    """פרסור CSV עם זיהוי קידוד אוטומטי לעברית"""
     try:
         print(f"🔍 Input type: {type(csv_content)}")
         
-        # וידוא שיש לנו string
+        # אם זה bytes, ננסה קידודים שונים
         if isinstance(csv_content, bytes):
-            # זה bytes - נמיר לstring
-            for encoding in ['cp1252', 'windows-1252', 'utf-8']:
+            # רשימת קידודים לניסיון - העברית קודם
+            encodings_to_try = [
+                'windows-1255',  # עברית ANSI
+                'cp1255',        # עברית
+                'utf-8-sig',     # UTF-8 עם BOM
+                'utf-8',         # UTF-8 רגיל
+                'iso-8859-8',    # עברית ISO
+                'cp1252',        # Western European
+                'latin1'         # fallback
+            ]
+            
+            decoded_content = None
+            used_encoding = None
+            
+            for encoding in encodings_to_try:
                 try:
-                    if isinstance(csv_content, bytes):
-                        csv_content = csv_content.decode(encoding)
-                        print(f"✅ Decoded with {encoding}")
-                        break
-                except:
+                    decoded_content = csv_content.decode(encoding)
+                    used_encoding = encoding
+                    print(f"✅ Successfully decoded with {encoding}")
+                    break
+                except UnicodeDecodeError:
+                    print(f"❌ Failed to decode with {encoding}")
                     continue
+            
+            if decoded_content is None:
+                print("❌ Could not decode with any encoding - using latin1 as fallback")
+                decoded_content = csv_content.decode('latin1', errors='ignore')
+                used_encoding = 'latin1'
+            
+            csv_content = decoded_content
+        else:
+            used_encoding = 'already_string'
         
         # אם זה לא string, נמיר
         if not isinstance(csv_content, str):
             csv_content = str(csv_content)
         
         print(f"📋 Content length: {len(csv_content)}")
+        print(f"🔤 Used encoding: {used_encoding}")
         
         # ניקוי בסיסי
         csv_content = csv_content.strip()
         if not csv_content:
-            print("❌ Empty content")
+            print("❌ Empty content after decoding")
             return None
         
-        # הדפסת השורה הראשונה
+        # הדפסת השורה הראשונה כדי לבדוק עברית
         first_line = csv_content.split('\n')[0]
         print(f"📄 First line: {repr(first_line)}")
         
-        # ניסיון פרסור פשוט
+        # אם יש עברית בשורה הראשונה, נדווח על כך
+        if any('\u0590' <= char <= '\u05FF' for char in first_line):
+            print("🇮🇱 Hebrew characters detected in header")
+        
+        # ניסיון פרסור פשוט עם פסיק
         try:
             reader = csv.DictReader(io.StringIO(csv_content))
             rows = list(reader)
@@ -385,6 +408,14 @@ def parse_csv_content(csv_content):
             if rows:
                 columns = list(rows[0].keys())
                 print(f"📋 Columns: {columns}")
+                
+                # בדיקה אם יש עברית בנתונים
+                for i, row in enumerate(rows[:3]):  # בדיקת 3 שורות ראשונות
+                    for key, value in row.items():
+                        if value and any('\u0590' <= char <= '\u05FF' for char in str(value)):
+                            print(f"🇮🇱 Hebrew text found in row {i+1}, column '{key}': {value}")
+                            break
+                
                 return rows
         except Exception as e:
             print(f"❌ Comma parsing failed: {e}")
@@ -402,11 +433,24 @@ def parse_csv_content(csv_content):
         except Exception as e:
             print(f"❌ Semicolon parsing failed: {e}")
         
-        print("❌ Could not parse CSV")
+        # ניסיון עם טאב
+        try:
+            reader = csv.DictReader(io.StringIO(csv_content), delimiter='\t')
+            rows = list(reader)
+            print(f"📊 Parsed {len(rows)} rows with tab delimiter")
+            
+            if rows:
+                columns = list(rows[0].keys())
+                print(f"📋 Columns: {columns}")
+                return rows
+        except Exception as e:
+            print(f"❌ Tab parsing failed: {e}")
+        
+        print("❌ Could not parse CSV with any delimiter")
         return None
         
     except Exception as e:
-        print(f"❌ General error: {e}")
+        print(f"❌ General error in CSV parsing: {e}")
         return None
 
 def convert_to_csv_import_format(csv_rows):
