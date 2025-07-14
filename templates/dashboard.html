@@ -143,6 +143,32 @@
             box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
         }
         
+        /* Date picker icon positioning fix */
+        input[type="date"] {
+            position: relative;
+            padding-right: 40px !important;
+        }
+        
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            position: absolute;
+            left: 16px;
+            opacity: 0.6;
+            cursor: pointer;
+            z-index: 1;
+        }
+        
+        input[type="date"]::-webkit-calendar-picker-indicator:hover {
+            opacity: 1;
+        }
+        
+        /* Firefox date picker icon fix */
+        input[type="date"]::-moz-calendar-picker-indicator {
+            position: absolute;
+            left: 16px;
+            opacity: 0.6;
+            cursor: pointer;
+        }
+        
         .load-btn {
             padding: 12px 32px;
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 20%);
@@ -456,6 +482,23 @@
             color: var(--text-tertiary);
             font-size: 13px;
             margin-top: 4px;
+        }
+        
+        .stat-card .exit-line {
+            color: var(--text-tertiary);
+            font-size: 12px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .stat-card .tsper3-line {
+            color: var(--danger);
+            font-size: 12px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
+            font-weight: 500;
         }
         
         /* Chart Sections */
@@ -1683,6 +1726,7 @@ function updateStats() {
             </div>
             ` : '<div class="change neutral">ללא נתוני השוואה</div>'}
             <div class="subtext">מכל אמצעי התשלום</div>
+            <div class="tsper3-line">סיכומים tsper3: ₪${(stats.totalTsper3 || 0).toLocaleString()}</div>
         </div>
         
         <div class="stat-card" data-stat-type="entries">
@@ -1696,6 +1740,7 @@ function updateStats() {
             </div>
             ` : '<div class="change neutral">ללא נתוני השוואה</div>'}
             <div class="subtext">${stats.dailyAvgEntries.toLocaleString()} בממוצע ליום</div>
+            <div class="exit-line">יציאות: ${(stats.totalExits || 0).toLocaleString()}</div>
         </div>
         
         <div class="stat-card" data-stat-type="casual">
@@ -1704,6 +1749,7 @@ function updateStats() {
             <div class="value">${stats.totalCasual.toLocaleString()}</div>
             <div class="change neutral">${stats.casualPercent.toFixed(1)}% מהכניסות</div>
             <div class="subtext">כניסות ללא מנוי</div>
+            <div class="exit-line">יציאות: ${(stats.totalExitsCasual || 0).toLocaleString()}</div>
         </div>
         
         <div class="stat-card" data-stat-type="members">
@@ -1712,6 +1758,7 @@ function updateStats() {
             <div class="value">${stats.totalMembers.toLocaleString()}</div>
             <div class="change neutral">${stats.memberPercent.toFixed(1)}% מהכניסות</div>
             <div class="subtext">כניסות עם מנוי</div>
+            <div class="exit-line">יציאות: ${(stats.totalExitsMembers || 0).toLocaleString()}</div>
         </div>
         
         ${stats.totalApp > 0 ? `
@@ -1808,6 +1855,14 @@ function calculateStats() {
     const totalMembers = currentData.reduce((sum, d) => sum + (d.t_entry_p || 0), 0);
     const totalApp = currentData.reduce((sum, d) => sum + (d.t_entry_ap || 0), 0);
     
+    // Add exits data
+    const totalExits = currentData.reduce((sum, d) => sum + (d.t_exit_tot || 0), 0);
+    const totalExitsCasual = currentData.reduce((sum, d) => sum + (d.t_exit_s || 0), 0);
+    const totalExitsMembers = currentData.reduce((sum, d) => sum + (d.t_exit_p || 0), 0);
+    
+    // Add tsper3 data
+    const totalTsper3 = currentData.reduce((sum, d) => sum + (d.tsper3 || 0), 0);
+    
     const totalBarrier = currentData.reduce((sum, d) => sum + (d.t_open_b || 0), 0);
     
     const uniqueDays = [...new Set(currentData.map(d => d.report_date))].length;
@@ -1831,6 +1886,10 @@ function calculateStats() {
         totalCasual,
         totalMembers,
         totalApp,
+        totalExits,
+        totalExitsCasual,
+        totalExitsMembers,
+        totalTsper3,
         totalBarrier,
         uniqueDays,
         uniqueParkings,
