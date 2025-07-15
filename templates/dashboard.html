@@ -1893,10 +1893,36 @@ function calculateStats() {
     const totalCasual = currentData.reduce((sum, d) => sum + (d.t_entry_s || 0), 0);
     const totalMembers = currentData.reduce((sum, d) => sum + (d.t_entry_p || 0), 0);
     const totalApp = currentData.reduce((sum, d) => sum + (d.t_entry_ap || 0), 0);
-
-    const totalExits = currentData.reduce((sum, d) => sum + (d.t_exit_tot || 0), 0);
-    const totalExitsCasual = currentData.reduce((sum, d) => sum + (d.t_exit_s || 0), 0);
-    const totalExitsMembers = currentData.reduce((sum, d) => sum + (d.t_exit_p || 0), 0);
+    
+    // Add exits data - first check if exit fields exist
+    let totalExits = 0;
+    let totalExitsCasual = 0;
+    let totalExitsMembers = 0;
+    
+    // Check if we have exit data at all
+    if (currentData[0] && currentData[0].t_exit_tot !== undefined) {
+        totalExits = currentData.reduce((sum, d) => sum + (parseFloat(d.t_exit_tot) || 0), 0);
+    } else {
+        // If no exit data, use entry data as fallback
+        console.log('No t_exit_tot field found, using entry data');
+        totalExits = currentData.reduce((sum, d) => sum + (parseFloat(d.t_entry_tot) || 0), 0);
+    }
+    
+    if (currentData[0] && currentData[0].t_exit_s !== undefined) {
+        totalExitsCasual = currentData.reduce((sum, d) => sum + (parseFloat(d.t_exit_s) || 0), 0);
+    } else {
+        console.log('No t_exit_s field found');
+        // Use entry data if no exit data
+        totalExitsCasual = currentData.reduce((sum, d) => sum + (parseFloat(d.t_entry_s) || 0), 0);
+    }
+    
+    if (currentData[0] && currentData[0].t_exit_p !== undefined) {
+        totalExitsMembers = currentData.reduce((sum, d) => sum + (parseFloat(d.t_exit_p) || 0), 0);
+    } else {
+        console.log('No t_exit_p field found');
+        // Use entry data if no exit data
+        totalExitsMembers = currentData.reduce((sum, d) => sum + (parseFloat(d.t_entry_p) || 0), 0);
+    }
     
     // Debug log for exits
     if (currentData[0]) {
