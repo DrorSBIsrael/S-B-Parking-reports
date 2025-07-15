@@ -1041,7 +1041,18 @@ def process_single_email(mail, email_id):
         # שליחת התראת הצלחה
         send_success_notification(sender, processed_files, transferred_count)
         
-        print(f"🎉 Email processed successfully: {transferred_count} rows added")
+print(f"🎉 Email processed successfully: {transferred_count} rows added")
+        
+        # 🗑️ מחיקת המייל אחרי עיבוד מוצלח
+        try:
+            print(f"🗑️ Deleting processed email (ID: {email_id})...")
+            mail.store(email_id, '+FLAGS', '\\Deleted')
+            mail.expunge()
+            print(f"✅ Email deleted successfully")
+        except Exception as delete_error:
+            print(f"⚠️ Could not delete email: {str(delete_error)}")
+            # לא נכשיל את התהליך אם המחיקה נכשלה
+        
         return True
         
     except Exception as e:
