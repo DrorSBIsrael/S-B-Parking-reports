@@ -1554,6 +1554,8 @@ def get_parking_data():
                 'sencodertot': int(row.get('sencodertot', 0)),  # הוסף סה"כ מקודדים
                 't_entry_tot': int(row.get('t_entry_tot', 0)),
                 't_exit_tot': int(row.get('t_exit_tot', 0)),
+                't_exit_s': int(row.get('t_exit_tot', 0)),
+                't_exit_p': int(row.get('t_exit_tot', 0)),
                 't_entry_s': int(row.get('t_entry_s', 0)),  # מזדמנים
                 't_entry_p': int(row.get('t_entry_p', 0)),  # מנויים
                 't_entry_ap': int(row.get('t_entry_ap', 0)),  # אפליקציה
