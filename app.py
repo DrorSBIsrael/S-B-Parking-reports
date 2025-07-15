@@ -1037,11 +1037,11 @@ def process_single_email(mail, email_id):
             error_msg = "שגיאה בהעברת הנתונים לטבלה הסופית"
             send_error_notification(sender, error_msg)
             return False
-        
+
         # שליחת התראת הצלחה
         send_success_notification(sender, processed_files, transferred_count)
         
-print(f"🎉 Email processed successfully: {transferred_count} rows added")
+        print(f"🎉 Email processed successfully: {transferred_count} rows added")
         
         # 🗑️ מחיקת המייל אחרי עיבוד מוצלח
         try:
