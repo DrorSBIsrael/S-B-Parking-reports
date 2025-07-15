@@ -1243,7 +1243,7 @@ async function initializeDashboard() {
         // Set default dates (last 30 days)
         const today = new Date();
         const thirtyDaysAgo = new Date(today);
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 1);
         
         document.getElementById('endDate').value = formatDateForInput(today);
         document.getElementById('startDate').value = formatDateForInput(thirtyDaysAgo);
@@ -3311,9 +3311,9 @@ function setQuickRange(range) {
             startDate = endDate = new Date(today);
             startDate.setDate(startDate.getDate() - 1);
             break;
-        case 'currentWeek':
-            // השבוע הנוכחי - מיום ראשון עד היום (או עד שבת אם היום שבת)
-            endDate = today;
+case 'currentWeek':
+    endDate = new Date(today);
+    endDate.setDate(endDate.getDate() - 1); // ← עד אתמול
             startDate = new Date(today);
             // חזור ליום ראשון (0 = ראשון בישראל)
             startDate.setDate(startDate.getDate() - today.getDay());
