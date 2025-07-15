@@ -1779,7 +1779,7 @@ function updateStats() {
             </div>
             ` : '<div class="change neutral">ללא נתוני השוואה</div>'}
             <div class="subtext">${stats.dailyAvgEntries.toLocaleString()} בממוצע ליום</div>
-            <div class="exit-line">יציאות: ${(stats.totalExits || 0).toLocaleString()}${stats.hasExitData ? '' : ' *'}</div>
+            <div class="exit-line">יציאות: ${(stats.totalExits || 0).toLocaleString()}</div>
         </div>
         
         <div class="stat-card" data-stat-type="casual">
@@ -1788,7 +1788,7 @@ function updateStats() {
             <div class="value">${stats.totalCasual.toLocaleString()}</div>
             <div class="change neutral">${stats.casualPercent.toFixed(1)}% מהכניסות</div>
             <div class="subtext">כניסות ללא מנוי</div>
-            <div class="exit-line">יציאות: ${(stats.totalExitsCasual || 0).toLocaleString()}${stats.hasExitData ? '' : ' *'}</div>
+            <div class="exit-line">יציאות: ${(stats.totalExitsCasual || 0).toLocaleString()}</div>
         </div>
         
         <div class="stat-card" data-stat-type="members">
@@ -1797,7 +1797,7 @@ function updateStats() {
             <div class="value">${stats.totalMembers.toLocaleString()}</div>
             <div class="change neutral">${stats.memberPercent.toFixed(1)}% מהכניסות</div>
             <div class="subtext">כניסות עם מנוי</div>
-            <div class="exit-line">יציאות: ${(stats.totalExitsCasual || 0).toLocaleString()}${stats.hasExitData ? '' : ' *'}</div>
+            <div class="exit-line">יציאות: ${(stats.totalExitsMembers || 0).toLocaleString()}</div>
         </div>
         
         ${stats.totalApp > 0 ? `
@@ -1873,30 +1873,6 @@ function updateStats() {
     
     document.getElementById('statsGrid').innerHTML = statsHTML;
     
-    // Add warning message if exit data is missing
-    if (!stats.hasExitData) {
-        const warningHTML = `
-            <div style="
-                grid-column: 1 / -1;
-                background: linear-gradient(135deg, rgba(255, 149, 0, 0.1) 0%, rgba(255, 149, 0, 0.05) 100%);
-                border: 2px solid rgba(255, 149, 0, 0.3);
-                border-radius: 12px;
-                padding: 16px;
-                margin-top: 20px;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-            ">
-                <span style="font-size: 24px;">⚠️</span>
-                <div>
-                    <div style="font-weight: 600; color: #FF9500; margin-bottom: 4px;">התראה: חסרים נתוני יציאות</div>
-                    <div style="color: #666; font-size: 14px;">נתוני היציאות המוצגים (* מסומנים) הם בהתבסס על נתוני כניסות. לקבלת נתונים מדויקים יותר, ודא שבסיס הנתונים מכיל נתוני יציאות אמיתיים בשדות t_exit_s ו-t_exit_p.</div>
-                </div>
-            </div>
-        `;
-        document.getElementById('statsGrid').innerHTML += warningHTML;
-    }
-    
     // Add hover functionality for group users
     if (isGroup && !isSingleParkingMode) {
         setupStatCardHovers();
@@ -1917,47 +1893,42 @@ function calculateStats() {
     const totalCasual = currentData.reduce((sum, d) => sum + (d.t_entry_s || 0), 0);
     const totalMembers = currentData.reduce((sum, d) => sum + (d.t_entry_p || 0), 0);
     const totalApp = currentData.reduce((sum, d) => sum + (d.t_entry_ap || 0), 0);
+
+    const totalExits = currentData.reduce((sum, d) => sum + (d.t_exit_tot || 0), 0);
+    const totalExitsCasual = currentData.reduce((sum, d) => sum + (d.t_exit_s || 0), 0);
+    const totalExitsMembers = currentData.reduce((sum, d) => sum + (d.t_exit_p || 0), 0);
     
-// Add exits data - improved logic to handle exit fields properly
-let totalExits = 0;
-let totalExitsCasual = 0;
-let totalExitsMembers = 0;
-
-// Calculate total exits
-totalExits = currentData.reduce((sum, d) => sum + (parseFloat(d.t_exit_tot) || 0), 0);
-
-// Calculate casual exits with better detection
-totalExitsCasual = currentData.reduce((sum, d) => sum + (parseFloat(d.t_exit_s) || 0), 0);
-
-// Calculate member exits with better detection  
-totalExitsMembers = currentData.reduce((sum, d) => sum + (parseFloat(d.t_exit_p) || 0), 0);
-
-// Check if we actually have exit data (non-zero values)
-const hasExitData = totalExits > 0 || totalExitsCasual > 0 || totalExitsMembers > 0;
-
-// Debug: Check if exit fields exist and have data
-console.log('Exit fields analysis:', {
-    hasT_exit_tot: currentData[0] && 't_exit_tot' in currentData[0],
-    hasT_exit_s: currentData[0] && 't_exit_s' in currentData[0], 
-    hasT_exit_p: currentData[0] && 't_exit_p' in currentData[0],
-    totalExits: totalExits,
-    totalExitsCasual: totalExitsCasual,
-    totalExitsMembers: totalExitsMembers,
-    hasExitData: hasExitData,
-    sampleExitValues: currentData[0] ? {
-        t_exit_tot: currentData[0].t_exit_tot,
-        t_exit_s: currentData[0].t_exit_s,
-        t_exit_p: currentData[0].t_exit_p
-    } : 'No data'
-});
-
-// If no real exit data found, use entry data as fallback but warn user
-if (!hasExitData) {
-    console.warn('No exit data found in database - using entry data as fallback');
-    totalExits = currentData.reduce((sum, d) => sum + (parseFloat(d.t_entry_tot) || 0), 0);
-    totalExitsCasual = currentData.reduce((sum, d) => sum + (parseFloat(d.t_entry_s) || 0), 0);
-    totalExitsMembers = currentData.reduce((sum, d) => sum + (parseFloat(d.t_entry_p) || 0), 0);
-}
+    // Debug log for exits
+    if (currentData[0]) {
+        const allFields = Object.keys(currentData[0]);
+        console.log('All fields:', allFields);
+        
+        const exitFields = allFields.filter(key => key.toLowerCase().includes('exit') || key.toLowerCase().includes('out'));
+        console.log('Exit fields found:', exitFields);
+        
+        // Look for fields that might be exits
+        const possibleExitFields = allFields.filter(key => 
+            key.includes('t_') && (key.includes('out') || key.includes('exit') || key.includes('tot') || key.includes('_s') || key.includes('_p'))
+        );
+        console.log('Possible exit fields:', possibleExitFields);
+        
+        console.log('Sample values:', {
+            t_exit_tot: currentData[0].t_exit_tot,
+            t_exit_s: currentData[0].t_exit_s,
+            t_exit_p: currentData[0].t_exit_p,
+            t_entry_tot: currentData[0].t_entry_tot,
+            t_entry_s: currentData[0].t_entry_s,
+            t_entry_p: currentData[0].t_entry_p
+        });
+    }
+    
+    console.log('Exit data:', {
+        totalExits,
+        totalExitsCasual,
+        totalExitsMembers,
+        sampleData: currentData[0],
+        allFields: currentData[0] ? Object.keys(currentData[0]) : []
+    });
     
     // Add tsper3 data
     const totalTsper3 = currentData.reduce((sum, d) => sum + (d.tsper3 || 0), 0);
@@ -1992,8 +1963,7 @@ if (!hasExitData) {
         totalBarrier,
         uniqueDays,
         uniqueParkings,
-        hasExitData,
-
+        
         // Percentages
         cashPercent: totalRevenue > 0 ? (totalCash / totalRevenue) * 100 : 0,
         creditPercent: totalRevenue > 0 ? (totalCredit / totalRevenue) * 100 : 0,
