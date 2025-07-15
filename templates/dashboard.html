@@ -144,17 +144,29 @@
         }
         
         /* Date picker icon positioning fix */
+        .date-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        .date-wrapper::before {
+            content: "📅";
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 18px;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
         input[type="date"] {
             position: relative;
             padding-left: 36px !important;
             direction: ltr;
             text-align: right;
             background-color: white;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%230051D5' d='M4.5 0a.5.5 0 0 1 .5.5V2h10V.5a.5.5 0 0 1 1 0V2h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h2V.5a.5.5 0 0 1 .5-.5zM2 5v13h16V5H2z'/%3E%3Cpath fill='%230051D5' d='M6 8h2v2H6V8zm3 0h2v2H9V8zm3 0h2v2h-2V8zM6 11h2v2H6v-2zm3 0h2v2H9v-2zm3 0h2v2h-2v-2zM6 14h2v2H6v-2zm3 0h2v2H9v-2z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: 8px center;
-            background-size: 20px 20px;
-            transition: background-position 0.2s ease;
         }
         
         /* Hover effect for the date input */
@@ -164,23 +176,31 @@
         
         /* Style the native calendar picker */
         input[type="date"]::-webkit-calendar-picker-indicator {
-            position: absolute !important;
-            left: 6px !important;
+            position: absolute;
+            left: 6px;
             cursor: pointer;
             width: 24px;
             height: 24px;
-            opacity: 0.01 !important; /* Almost invisible but still clickable */
+            background: transparent;
+            color: transparent;
             z-index: 2;
+        }
+        
+        /* Fix for Chrome to keep the picker visible */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            display: block !important;
+            -webkit-appearance: none;
+            appearance: none;
         }
         
         /* Firefox support */
         input[type="date"]::-moz-calendar-picker-indicator {
-            position: absolute !important;
-            left: 6px !important;
+            position: absolute;
+            left: 6px;
             cursor: pointer;
             width: 24px;
             height: 24px;
-            opacity: 0.01 !important;
+            background: transparent;
             z-index: 2;
         }
         
@@ -780,14 +800,14 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-                    <div class="header-top">
+            <div class="header-top">
             <div style="display: flex; align-items: center; gap: 20px;">
                 <h1>לוח בקרה - <span id="dashboardTitle">טוען...</span></h1>
                 <img src="https://raw.githubusercontent.com/DrorSBIsrael/S-B-Parking-reports/refs/heads/master/templates/Logo%20SB%20300dpi.jpg" 
                      alt="Logo" 
                      style="height: 60px; width: auto; object-fit: contain;">
+                </div>
             </div>
-        </div>
             
             <!-- Control Panel -->
             <div class="control-panel">
@@ -803,26 +823,30 @@
                     <!-- Date Navigation -->
                     <button class="date-nav-btn" onclick="navigateDate(-1)">◀</button>
                     
-                    <!-- Date Range -->
-                    <div class="control-group">
-                        <label class="control-label">מתאריך</label>
-                        <input type="date" id="startDate" class="control-input">
-                    </div>
-                    
-                    <div class="control-group">
-                        <label class="control-label">עד תאריך</label>
-                        <input type="date" id="endDate" class="control-input">
-                    </div>
-                    
-                    <button class="date-nav-btn" onclick="navigateDate(1)">▶</button>
-                    
-                    <!-- Load Button -->
-                    <button class="load-btn" onclick="loadData()">
-                        <span>📊</span>
-                        <span>טען נתונים</span>
-                    </button>
+                <!-- Date Range -->
+                <div class="control-group">
+                    <label class="control-label">מתאריך</label>
+                        <div class="date-wrapper">
+                    <input type="date" id="startDate" class="control-input">
+                        </div>
                 </div>
                 
+                <div class="control-group">
+                    <label class="control-label">עד תאריך</label>
+                        <div class="date-wrapper">
+                    <input type="date" id="endDate" class="control-input">
+                        </div>
+                </div>
+                    
+                    <button class="date-nav-btn" onclick="navigateDate(1)">▶</button>
+                
+                <!-- Load Button -->
+                <button class="load-btn" onclick="loadData()">
+                    <span>📊</span>
+                    <span>טען נתונים</span>
+                </button>
+            </div>
+            
                 <!-- Second Row - Quick Actions -->
                 <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; align-items: center;">
                     <button class="quick-action-btn yesterday" onclick="setQuickRange('yesterday')">
@@ -853,15 +877,15 @@
                     <!-- Parking Selector -->
                     <div id="parkingSelectorGroup" style="display: none; margin-right: 20px;">
                         <select id="parkingSelector" class="control-input" style="text-align: center; font-weight: 500; min-width: 200px;">
-                            <option value="">כל החניונים</option>
-                        </select>
-                    </div>
-                    
+                    <option value="">כל החניונים</option>
+                </select>
+            </div>
+            
                     <!-- Logout Button moved here -->
                     <button class="logout-btn" onclick="logout()" style="background: #000; margin-right: auto;">
                         התנתק
                     </button>
-                </div>
+            </div>
             </div>
             
             <!-- User Info -->
@@ -1024,7 +1048,7 @@
                             <span>🥧</span>
                             <span>עוגה</span>
                         </button>
-                    </div>
+                </div>
                 </div>
                 <div class="stay-duration-grid" id="stayDurationGrid">
                     <!-- Stay duration cards will be populated here -->
@@ -1275,7 +1299,7 @@ function formatDateForDisplay(dateString) {
     const parts = dateString.split('-');
     if (parts.length === 3) {
         const [year, month, day] = parts;
-        return `${day}/${month}/${year}`;
+    return `${day}/${month}/${year}`;
     }
     
     // If date is in any other format, try to parse it
@@ -1870,17 +1894,66 @@ function calculateStats() {
     const totalMembers = currentData.reduce((sum, d) => sum + (d.t_entry_p || 0), 0);
     const totalApp = currentData.reduce((sum, d) => sum + (d.t_entry_ap || 0), 0);
     
-    // Add exits data
-    const totalExits = currentData.reduce((sum, d) => sum + (d.t_exit_tot || 0), 0);
-    const totalExitsCasual = currentData.reduce((sum, d) => sum + (d.t_exit_s || 0), 0);
-    const totalExitsMembers = currentData.reduce((sum, d) => sum + (d.t_exit_p || 0), 0);
+    // Add exits data - first check if exit fields exist
+    let totalExits = 0;
+    let totalExitsCasual = 0;
+    let totalExitsMembers = 0;
+    
+    // Check if we have exit data at all
+    if (currentData[0] && currentData[0].t_exit_tot !== undefined) {
+        totalExits = currentData.reduce((sum, d) => sum + (parseFloat(d.t_exit_tot) || 0), 0);
+    } else {
+        // If no exit data, use entry data as fallback
+        console.log('No t_exit_tot field found, using entry data');
+        totalExits = currentData.reduce((sum, d) => sum + (parseFloat(d.t_entry_tot) || 0), 0);
+    }
+    
+    if (currentData[0] && currentData[0].t_exit_s !== undefined) {
+        totalExitsCasual = currentData.reduce((sum, d) => sum + (parseFloat(d.t_exit_s) || 0), 0);
+    } else {
+        console.log('No t_exit_s field found');
+        // Use entry data if no exit data
+        totalExitsCasual = currentData.reduce((sum, d) => sum + (parseFloat(d.t_entry_s) || 0), 0);
+    }
+    
+    if (currentData[0] && currentData[0].t_exit_p !== undefined) {
+        totalExitsMembers = currentData.reduce((sum, d) => sum + (parseFloat(d.t_exit_p) || 0), 0);
+    } else {
+        console.log('No t_exit_p field found');
+        // Use entry data if no exit data
+        totalExitsMembers = currentData.reduce((sum, d) => sum + (parseFloat(d.t_entry_p) || 0), 0);
+    }
     
     // Debug log for exits
+    if (currentData[0]) {
+        const allFields = Object.keys(currentData[0]);
+        console.log('All fields:', allFields);
+        
+        const exitFields = allFields.filter(key => key.toLowerCase().includes('exit') || key.toLowerCase().includes('out'));
+        console.log('Exit fields found:', exitFields);
+        
+        // Look for fields that might be exits
+        const possibleExitFields = allFields.filter(key => 
+            key.includes('t_') && (key.includes('out') || key.includes('exit') || key.includes('tot') || key.includes('_s') || key.includes('_p'))
+        );
+        console.log('Possible exit fields:', possibleExitFields);
+        
+        console.log('Sample values:', {
+            t_exit_tot: currentData[0].t_exit_tot,
+            t_exit_s: currentData[0].t_exit_s,
+            t_exit_p: currentData[0].t_exit_p,
+            t_entry_tot: currentData[0].t_entry_tot,
+            t_entry_s: currentData[0].t_entry_s,
+            t_entry_p: currentData[0].t_entry_p
+        });
+    }
+    
     console.log('Exit data:', {
         totalExits,
         totalExitsCasual,
         totalExitsMembers,
-        sampleData: currentData[0]
+        sampleData: currentData[0],
+        allFields: currentData[0] ? Object.keys(currentData[0]) : []
     });
     
     // Add tsper3 data
@@ -2347,31 +2420,31 @@ function createDailyChart() {
     if (currentViewMode === 'daily') {
         // Daily view - show days of week
         titleElement.textContent = 'השוואה יומית';
-        
-        const weekdays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
-        const weeklyData = {};
-        
-        weekdays.forEach(day => {
-            weeklyData[day] = { revenue: 0, entries: 0, count: 0 };
-        });
-        
-        currentData.forEach(d => {
-            const date = new Date(d.report_date);
-            const dayName = weekdays[date.getDay()];
-            if (weeklyData[dayName]) {
-                weeklyData[dayName].revenue += d.total_revenue_shekels || 0;
-                weeklyData[dayName].entries += d.t_entry_tot || 0;
-                weeklyData[dayName].count++;
-            }
-        });
-        
+    
+    const weekdays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+    const weeklyData = {};
+    
+    weekdays.forEach(day => {
+        weeklyData[day] = { revenue: 0, entries: 0, count: 0 };
+    });
+    
+    currentData.forEach(d => {
+        const date = new Date(d.report_date);
+        const dayName = weekdays[date.getDay()];
+        if (weeklyData[dayName]) {
+            weeklyData[dayName].revenue += d.total_revenue_shekels || 0;
+            weeklyData[dayName].entries += d.t_entry_tot || 0;
+            weeklyData[dayName].count++;
+        }
+    });
+    
         labels = weekdays;
         avgRevenues = weekdays.map(day => 
-            weeklyData[day].count > 0 ? weeklyData[day].revenue / weeklyData[day].count : 0
-        );
+        weeklyData[day].count > 0 ? weeklyData[day].revenue / weeklyData[day].count : 0
+    );
         avgEntries = weekdays.map(day => 
-            weeklyData[day].count > 0 ? weeklyData[day].entries / weeklyData[day].count : 0
-        );
+        weeklyData[day].count > 0 ? weeklyData[day].entries / weeklyData[day].count : 0
+    );
         
     } else if (currentViewMode === 'weekly') {
         // Weekly view - show week numbers
@@ -2508,7 +2581,7 @@ function updateStayDuration() {
         // Calculate total for percentages
         const total = Object.values(durations).reduce((sum, val) => sum + val, 0) + stay015; // Include stay015 in total to avoid double counting
         const actualTotal = Object.values(durations).reduce((sum, val) => sum + val, 0);
-        
+    
         // Generate HTML for duration cards
         let html = '';
         
@@ -2717,8 +2790,8 @@ function createStayDurationChart(durations, chartType, stay015, stay0to60) {
                     ticks: {
                         maxRotation: 45,
                         minRotation: 45
-                    }
                 }
+            }
             } : {}
         }
     };
@@ -3558,10 +3631,10 @@ function showParkingDetails(parkingName, data) {
             <canvas id="parkingTrendChart" style="max-height: 250px;"></canvas>
         </div>
         
-                    <!-- Stay Duration Details -->
-            <div style="margin-top: 30px;">
-                <h4 style="font-size: 18px; font-weight: 600; margin-bottom: 20px;">התפלגות זמני שהייה - ${parkingName}</h4>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+        <!-- Stay Duration Details -->
+        <div style="margin-top: 30px;">
+            <h4 style="font-size: 18px; font-weight: 600; margin-bottom: 20px;">התפלגות זמני שהייה - ${parkingName}</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
                     ${(data.stay015 + data.stay030 + data.stay045 + data.stay060) > 0 ? `<div style="padding: 15px; background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(0, 122, 255, 0.05)); border-radius: 8px; text-align: center; border: 2px solid var(--primary); position: relative;">
                         <div style="color: var(--primary); font-size: 14px; margin-bottom: 5px; font-weight: 600;">0-60 דקות</div>
                         <div style="font-weight: 700; font-size: 24px; color: var(--primary);">${(data.stay015 + data.stay030 + data.stay045 + data.stay060).toLocaleString()}</div>
@@ -3569,7 +3642,7 @@ function showParkingDetails(parkingName, data) {
                         <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0, 122, 255, 0.2); font-size: 12px; color: var(--primary);">
                             <strong>0-15 דקות:</strong> ${data.stay015.toLocaleString()} (${(data.stay015 + data.stay030 + data.stay045 + data.stay060) > 0 ? ((data.stay015/(data.stay015 + data.stay030 + data.stay045 + data.stay060))*100).toFixed(1) : 0}%)
                         </div>
-                    </div>` : ''}
+                </div>` : ''}
                 ${data.stay2 > 0 ? `<div style="padding: 15px; background: var(--background); border-radius: 8px; text-align: center;">
                     <div style="color: var(--text-secondary); font-size: 12px; margin-bottom: 5px;">עד 2 שעות</div>
                     <div style="font-weight: 600; font-size: 20px; color: var(--primary);">${data.stay2.toLocaleString()}</div>
