@@ -455,11 +455,15 @@ def parse_csv_content(csv_content):
         return None
 
 def convert_to_csv_import_format(csv_rows):
-    """המרה לפורמט csv_import_shekels - עם סכומים נכונים באגורות"""
+    """המרה לפורמט csv_import_shekels - עם תמיכה בשורות מרובות"""
     converted_rows = []
+    
+    print(f"🔄 Processing {len(csv_rows)} rows from CSV...")
     
     for index, row in enumerate(csv_rows):
         try:
+            print(f"📝 Processing row {index + 1}/{len(csv_rows)}...")
+            
             # המרת תאריך
             date_str = str(row.get('TTCRET', '')).strip()
             if '/' in date_str:
@@ -472,7 +476,7 @@ def convert_to_csv_import_format(csv_rows):
             else:
                 formatted_date = date_str
                 
-            # המרת נתוני כסף - הערכים כבר באגורות, לא צריך לחלק!
+            # המרת נתוני כסף - הערכים כבר בשקלים!
             def safe_int(value, default=0):
                 try:
                     if value is None or value == '':
@@ -481,17 +485,16 @@ def convert_to_csv_import_format(csv_rows):
                 except (ValueError, TypeError):
                     return default
             
-            # הערכים כבר באגורות - לא צריך חישובים!
-            cash_agorot = safe_int(row.get('SCASH'))
-            credit_agorot = safe_int(row.get('SCREDIT'))
-            pango_agorot = safe_int(row.get('SPANGO'))
-            celo_agorot = safe_int(row.get('SCELO'))
-            
-            # חישוב שקלים לתצוגה בלבד (אבל לא נשמור אותם)
+            # הערכים כבר בשקלים - לא צריך חישובים!
             cash_shekels = safe_int(row.get('SCASH'))
             credit_shekels = safe_int(row.get('SCREDIT'))
             pango_shekels = safe_int(row.get('SPANGO'))
             celo_shekels = safe_int(row.get('SCELO'))
+            
+            # בדיקת טקסט בעברית
+            ctext_value = str(row.get('CTEXT', '')).strip()
+            if ctext_value and any('\u0590' <= char <= '\u05FF' for char in ctext_value):
+                print(f"🇮🇱 Hebrew text in row {index + 1}: '{ctext_value}'")
             
             converted_row = {
                 'project_number': str(row.get('ProjectNumber', '')),
@@ -501,13 +504,13 @@ def convert_to_csv_import_format(csv_rows):
                 'report_start_time': str(row.get('TTCRET', '')),
                 'report_end_time': str(row.get('TTENDT', '')),
                 'report_date': formatted_date,
-                'ctext': str(row.get('CTEXT', '') or '').strip(),
+                'ctext': ctext_value,
                 
-                # כסף באגורות - הערכים הנכונים!
-                's_cash_agorot': cash_agorot,
-                's_credit_agorot': credit_agorot,
-                's_pango_agorot': pango_agorot,
-                's_celo_agorot': celo_agorot,
+                # כסף בשקלים (נשמור כאגורות בשדות הללו)
+                's_cash_agorot': cash_shekels,
+                's_credit_agorot': credit_shekels,
+                's_pango_agorot': pango_shekels,
+                's_celo_agorot': celo_shekels,
                 'stot_cacr': safe_int(row.get('STOTCACR')),
                 's_exp_agorot': safe_int(row.get('SEXP')),
                 
@@ -553,13 +556,14 @@ def convert_to_csv_import_format(csv_rows):
             
             converted_rows.append(converted_row)
             
-            print(f"✅ Row {index+1}: project {converted_row['project_number']}, cash: {cash_agorot} agorot ({cash_shekels} shekels)")
+            print(f"✅ Row {index+1}: project {converted_row['project_number']}, cash: {cash_shekels} shekels, text: '{ctext_value}'")
             
         except Exception as e:
-            print(f"❌ Error converting row {index}: {str(e)}")
+            print(f"❌ Error converting row {index+1}: {str(e)}")
             print(f"   Row data: {row}")
-            continue
+            continue  # ממשיך לשורה הבאה במקום להפסיק
     
+    print(f"🎯 Successfully converted {len(converted_rows)} out of {len(csv_rows)} rows")
     return converted_rows
 
 def insert_to_csv_import_shekels(converted_data):
@@ -710,7 +714,7 @@ def insert_to_csv_import_shekels(converted_data):
         return 0
 
 def transfer_to_parking_data():
-    """העברה מ csv_import_shekels ל parking_data - ללא בדיקת כפילויות (זמנית)"""
+    """העברה מ csv_import_shekels ל parking_data - משופר לשורות מרובות"""
     if not supabase:
         print("❌ Supabase not available")
         return 0
@@ -740,10 +744,11 @@ def transfer_to_parking_data():
                 print(f"❌ Error getting parking_id: {str(e)}")
                 return None
         
-        # עיבוד הנתונים להעברה
-        transfer_data = []
+        # עיבוד הנתונים להעברה - שורה אחת בכל פעם
+        successful_transfers = 0
+        failed_transfers = 0
         
-        for row in csv_result.data:
+        for i, row in enumerate(csv_result.data):
             try:
                 project_number = int(row.get('project_number', 0))
                 parking_id = get_parking_id(project_number)
@@ -803,55 +808,63 @@ def transfer_to_parking_data():
                     'imported_at': datetime.now().isoformat()
                 }
                 
-                if transfer_row['project_number'] > 0:
-                    transfer_data.append(transfer_row)
-                    print(f"✅ Prepared for transfer: project {project_number}, parking_id: {parking_id}")
+                if transfer_row['project_number'] <= 0:
+                    print(f"⚠️ Row {i+1}: Skipping - invalid project_number")
+                    continue
+                
+                # ניסיון הכנסה של השורה הבודדת
+                try:
+                    print(f"🔄 Transferring row {i+1}/{len(csv_result.data)}: project {project_number}, text: '{ctext_value}'")
+                    
+                    # ניסיון upsert ראשון
+                    result = supabase.table('parking_data').upsert([transfer_row]).execute()
+                    
+                    if result.data:
+                        successful_transfers += 1
+                        print(f"✅ Row {i+1}: Successfully transferred")
+                    else:
+                        print(f"⚠️ Row {i+1}: No data returned from upsert")
+                        
+                except Exception as single_error:
+                    # אם upsert נכשל, ננסה insert
+                    if "already exists" in str(single_error):
+                        print(f"⏭️ Row {i+1}: Already exists - skipping")
+                        failed_transfers += 1
+                    else:
+                        try:
+                            result = supabase.table('parking_data').insert([transfer_row]).execute()
+                            if result.data:
+                                successful_transfers += 1
+                                print(f"✅ Row {i+1}: Successfully inserted")
+                            else:
+                                failed_transfers += 1
+                                print(f"❌ Row {i+1}: Insert failed - no data returned")
+                        except Exception as insert_error:
+                            failed_transfers += 1
+                            print(f"❌ Row {i+1}: Both upsert and insert failed: {str(insert_error)}")
                     
             except Exception as row_error:
-                print(f"❌ Error processing row: {str(row_error)}")
+                failed_transfers += 1
+                print(f"❌ Row {i+1}: Error processing row: {str(row_error)}")
                 continue
         
-        if not transfer_data:
-            print("❌ No valid data to transfer")
-            return 0
-            
-        print(f"🔄 Transferring {len(transfer_data)} rows...")
+        # דוח סיכום
+        total_processed = successful_transfers + failed_transfers
+        print(f"📊 Transfer Summary:")
+        print(f"   ✅ Successfully transferred: {successful_transfers} rows")
+        print(f"   ❌ Failed/Skipped: {failed_transfers} rows")
+        print(f"   📈 Total processed: {total_processed} out of {len(csv_result.data)} rows")
         
-        # הכנסה לטבלת parking_data - ננסה עם upsert במקום insert
-        try:
-            result = supabase.table('parking_data').upsert(transfer_data).execute()
-            
-            if result.data:
-                transferred_count = len(result.data)
-                print(f"✅ Successfully transferred: {transferred_count} rows")
-                
-                # מחיקת csv_import_shekels אחרי הצלחה
-                try:
-                    print("🧹 Cleaning csv_import_shekels...")
-                    delete_result = supabase.table('csv_import_shekels').delete().gt('id', 0).execute()
-                    print("✅ csv_import_shekels cleaned successfully")
-                except Exception as cleanup_error:
-                    print(f"⚠️ Could not clean csv_import_shekels: {str(cleanup_error)}")
-                
-                return transferred_count
-            else:
-                print("❌ No data was returned from upsert")
-                return 0
-                
-        except Exception as insert_error:
-            print(f"❌ Error inserting data: {str(insert_error)}")
-            # אם upsert נכשל, ננסה insert רגיל
+        # מחיקת csv_import_shekels אחרי העברה
+        if total_processed > 0:
             try:
-                print("🔄 Trying regular insert...")
-                result = supabase.table('parking_data').insert(transfer_data).execute()
-                if result.data:
-                    transferred_count = len(result.data)
-                    print(f"✅ Successfully inserted: {transferred_count} rows")
-                    return transferred_count
-                return 0
-            except Exception as insert_error2:
-                print(f"❌ Both upsert and insert failed: {str(insert_error2)}")
-                return 0
+                print("🧹 Cleaning csv_import_shekels...")
+                delete_result = supabase.table('csv_import_shekels').delete().gt('id', 0).execute()
+                print("✅ csv_import_shekels cleaned successfully")
+            except Exception as cleanup_error:
+                print(f"⚠️ Could not clean csv_import_shekels: {str(cleanup_error)}")
+        
+        return successful_transfers
             
     except Exception as e:
         print(f"❌ Error transferring to parking_data: {str(e)}")
@@ -1755,7 +1768,7 @@ if __name__ == '__main__':
     print(f"🔍 Debug mode: {debug_mode}")
     
     keep_service_alive()
-    
+
     app.run(host='0.0.0.0', port=port, debug=debug_mode)
 else:
     if EMAIL_MONITORING_AVAILABLE:
