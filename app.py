@@ -1734,6 +1734,31 @@ def logout():
     session.clear()
     return redirect(url_for('login_page'))
 
+@app.route('/ping')
+def ping():
+    return "pong", 200
+
+@app.route('/health')
+def health_check():
+    """נקודת קצה לבדיקת תקינות השירות"""
+    try:
+        current_time = datetime.now().isoformat()
+        
+        return jsonify({
+            'status': 'healthy',
+            'timestamp': current_time,
+            'email_monitoring': EMAIL_MONITORING_AVAILABLE,
+            'supabase_connected': supabase is not None,
+            'uptime': 'Service is running'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
 # Error handlers
 @app.errorhandler(404)
 def not_found(error):
