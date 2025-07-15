@@ -1554,12 +1554,18 @@ def get_parking_data():
                 'sencodertot': int(row.get('sencodertot', 0)),  # הוסף סה"כ מקודדים
                 't_entry_tot': int(row.get('t_entry_tot', 0)),
                 't_exit_tot': int(row.get('t_exit_tot', 0)),
-                't_exit_s': int(row.get('t_exit_tot', 0)),
-                't_exit_p': int(row.get('t_exit_tot', 0)),
+                't_exit_s': int(row.get('t_exit_s', 0)),
+                't_exit_p': int(row.get('t_exit_p', 0)),
                 't_entry_s': int(row.get('t_entry_s', 0)),  # מזדמנים
                 't_entry_p': int(row.get('t_entry_p', 0)),  # מנויים
                 't_entry_ap': int(row.get('t_entry_ap', 0)),  # אפליקציה
                 't_open_b': int(row.get('t_open_b', 0)),  # פתיחות מחסום
+                'ts_per1': int(row.get('ts_per1', 0)),
+                'ts_per2': int(row.get('ts_per2', 0)),
+                'ts_per3': int(row.get('ts_per3', 0)),
+                'ts_per4': int(row.get('ts_per4', 0)),
+                'ts_per5': int(row.get('ts_per5', 0)),
+                'ts_per6': int(row.get('ts_per6', 0)),
                 'stay_015': int(row.get('stay_015', 0)),
                 'stay_030': int(row.get('stay_030', 0)),
                 'stay_045': int(row.get('stay_045', 0)),
