@@ -1755,6 +1755,20 @@ def logout():
 
 @app.route('/ping')
 def ping():
+    """פינג פשוט לשמירה על השירות ערני"""
+    
+    # self-ping ברקע כל 8 דקות
+    def delayed_ping():
+        time.sleep(480)  # 8 דקות
+        try:
+            requests.get('https://s-b-parking-reports.onrender.com/ping', timeout=10)
+            print("🏓 Self-ping executed")
+        except:
+            pass
+    
+    # הפעלה ברקע
+    threading.Thread(target=delayed_ping, daemon=True).start()
+    
     return "pong", 200
 
 @app.route('/health')
