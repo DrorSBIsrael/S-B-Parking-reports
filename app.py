@@ -1295,16 +1295,29 @@ def check_for_new_emails():
         
         print(f"===== EMAIL CHECK ENDED at {datetime.now()} =====\n")
 
+# מצא את הפונקציה keep_service_alive בקוד שלך והחלף אותה עם זו:
+
 def keep_service_alive():
-    """פונקציה לשמירה על השירות ערני - מונע תרדמה של Render"""
+    """פונקציה לשמירה על השירות ערני - גרסה מתוקנת"""
     def ping_self():
+        print("🏓 Keep-alive service started")
+        
+        # קבלת URL של השרת מהמשתנה שהגדרנו
+        app_url = os.environ.get('RENDER_EXTERNAL_URL', 'https://s-b-parking-reports.onrender.com')
+        
         while True:
             try:
                 # שליחת בקשה לעצמנו כל 10 דקות
-                response = requests.get('https://s-b-parking-reports.onrender.com/', timeout=30)
-                print(f"🏓 Keep-alive ping: {response.status_code}")
-            except Exception as e:
+                print(f"🏓 Sending keep-alive ping to {app_url}")
+                response = requests.get(f'{app_url}/ping', timeout=30)
+                print(f"🏓 Keep-alive ping successful: {response.status_code}")
+                
+            except requests.exceptions.RequestException as e:
                 print(f"⚠️ Keep-alive ping failed: {str(e)}")
+                # ממשיכים גם במקרה של שגיאה
+                
+            except Exception as e:
+                print(f"⚠️ Unexpected error in keep-alive: {str(e)}")
             
             # המתנה של 10 דקות (600 שניות)
             time.sleep(600)
@@ -1312,7 +1325,7 @@ def keep_service_alive():
     # הרצת הפונקציה ברקע
     ping_thread = threading.Thread(target=ping_self, daemon=True)
     ping_thread.start()
-    print("🏓 Keep-alive service started - pinging every 10 minutes")
+    print("🏓 Keep-alive service initialized")
 
 @app.route('/api/test-email-system', methods=['GET'])
 def test_email_system():
@@ -1753,23 +1766,60 @@ def logout():
     session.clear()
     return redirect(url_for('login_page'))
 
+# מצא את השורות האלה בקוד שלך והחלף אותן:
+
+# ===== החלף את @app.route('/ping') עם זה: =====
 @app.route('/ping')
 def ping():
-    """פינג פשוט לשמירה על השירות ערני"""
+    """פינג פשוט לשמירה על השירות ערני - גרסה משופרת"""
     
-    # self-ping ברקע כל 8 דקות
+    current_time = datetime.now()
+    
+    # לוג מפורט יותר
+    print(f"🏓 Ping received at {current_time}")
+    print(f"🔋 Service status: Active and responsive")
+    
+    # self-ping ברקע כל 8 דקות (בתור גיבוי)
     def delayed_ping():
         time.sleep(480)  # 8 דקות
         try:
-            requests.get('https://s-b-parking-reports.onrender.com/ping', timeout=10)
-            print("🏓 Self-ping executed")
-        except:
-            pass
+            app_url = os.environ.get('RENDER_EXTERNAL_URL', 'https://s-b-parking-reports.onrender.com')
+            response = requests.get(f'{app_url}/ping', timeout=10)
+            print(f"🏓 Self-ping executed: {response.status_code}")
+        except Exception as e:
+            print(f"⚠️ Self-ping failed: {str(e)}")
     
     # הפעלה ברקע
     threading.Thread(target=delayed_ping, daemon=True).start()
     
-    return "pong", 200
+    return jsonify({
+        'status': 'pong',
+        'timestamp': current_time.isoformat(),
+        'message': 'Service is alive',
+        'uptime': 'Active'
+    }), 200
+
+# ===== הוסף את זה אחרי @app.route('/ping') =====
+@app.route('/status')
+def status():
+    """בדיקת סטטוס מפורטת"""
+    try:
+        return jsonify({
+            'service': 'S&B Parking Reports',
+            'status': 'running',
+            'timestamp': datetime.now().isoformat(),
+            'email_monitoring': EMAIL_MONITORING_AVAILABLE,
+            'supabase_connected': supabase is not None,
+            'version': '1.0',
+            'environment': os.environ.get('FLASK_ENV', 'production')
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'service': 'S&B Parking Reports',
+            'status': 'error',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 @app.route('/health')
 def health_check():
