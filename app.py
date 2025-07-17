@@ -1781,10 +1781,10 @@ def ping():
     
     # self-ping ברקע כל 8 דקות (בתור גיבוי)
     def delayed_ping():
-        time.sleep(480)  # 8 דקות
+        time.sleep(4800)  # 8 דקות
         try:
             app_url = os.environ.get('RENDER_EXTERNAL_URL', 'https://s-b-parking-reports.onrender.com')
-            response = requests.get(f'{app_url}/ping', timeout=10)
+            response = requests.get(f'{app_url}/ping', timeout=100)
             print(f"🏓 Self-ping executed: {response.status_code}")
         except Exception as e:
             print(f"⚠️ Self-ping failed: {str(e)}")
