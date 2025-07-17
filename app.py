@@ -871,13 +871,12 @@ def transfer_to_parking_data():
         return 0
 
 def send_success_notification(sender_email, processed_files, total_rows):
-    """שליחת התראת הצלחה עם type checking מתוקן"""
+    """שליחת התראת הצלחה עם type checking מתוקן והגנה מפני שגיאות"""
     if not EMAIL_MONITORING_AVAILABLE:
+        print("⚠️ Email notification skipped - EMAIL_MONITORING_AVAILABLE is False")
         return
         
     try:
-        msg = MIMEMultipart()
-        
         # תיקון type checking - וידוא שהמשתנים לא None
         gmail_user = os.environ.get('GMAIL_USERNAME')
         gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
@@ -886,6 +885,9 @@ def send_success_notification(sender_email, processed_files, total_rows):
             print("❌ Missing Gmail credentials for notification")
             return
             
+        print(f"📧 Sending success notification to {sender_email}...")
+        
+        msg = MIMEMultipart()
         msg['From'] = gmail_user
         msg['To'] = sender_email
         msg['Subject'] = '✅ קבצי הנתונים עובדו בהצלחה - S&B Parking'
@@ -915,7 +917,7 @@ def send_success_notification(sender_email, processed_files, total_rows):
         server.send_message(msg)
         server.quit()
         
-        print(f"📧 Success notification sent to {sender_email}")
+        print(f"✅ Success notification sent to {sender_email}")
         
     except Exception as e:
         print(f"❌ Failed to send notification: {str(e)}")
@@ -1095,7 +1097,7 @@ def verify_email_system():
         return False
 
 def start_email_monitoring_with_logs():
-    """הפעלת מעקב מיילים עם לוגים מפורטים - ללא schedule"""
+    """הפעלת מעקב מיילים עם לוגים מפורטים - ללא schedule ועם הגנה מפני כפילות"""
     if not EMAIL_MONITORING_AVAILABLE:
         print("⚠️ Email monitoring not available - libraries missing")
         return
@@ -1108,16 +1110,33 @@ def start_email_monitoring_with_logs():
             print("❌ Email system verification failed. Monitoring will not start.")
             return
         
+        # משתנה למניעת ריצות מקבילות
+        email_check_running = False
+        
         def monitoring_loop():
+            nonlocal email_check_running
             print("🔄 Email monitoring loop started")
             check_count = 0
             
             while True:
                 try:
-                    # בדיקת מיילים כל 5 דקות (300 שניות)
-                    with app.app_context():
-                        print(f"⏰ Email check triggered at {datetime.now()}")
-                        check_for_new_emails()
+                    # בדיקה שאין ריצה מקבילה
+                    if email_check_running:
+                        print("⏳ Email check already running, skipping this cycle")
+                        time.sleep(300)  # המתנה של 5 דקות
+                        continue
+                    
+                    # סימון שהבדיקה מתחילה
+                    email_check_running = True
+                    
+                    try:
+                        # בדיקת מיילים כל 5 דקות (300 שניות)
+                        with app.app_context():
+                            print(f"⏰ Email check triggered at {datetime.now()}")
+                            check_for_new_emails()
+                    finally:
+                        # וידוא שהסימון יוסר גם במקרה של שגיאה
+                        email_check_running = False
                     
                     # המתנה של 5 דקות
                     time.sleep(300)  # 300 שניות = 5 דקות
@@ -1131,6 +1150,7 @@ def start_email_monitoring_with_logs():
                     break
                 except Exception as e:
                     print(f"❌ Email monitoring error: {str(e)}")
+                    email_check_running = False  # וידוא שהסימון יוסר
                     print("⏳ Retrying in 5 minutes...")
                     time.sleep(300)  # 5 דקות המתנה לפני ניסיון חוזר
         
@@ -1141,7 +1161,7 @@ def start_email_monitoring_with_logs():
         print("✅ Email monitoring started successfully in background")
         print(f"⏰ Email checks scheduled every {EMAIL_CHECK_INTERVAL} minutes")
         
-        # בדיקה ראשונית מיידית
+        # בדיקה ראשונית מיידית (ללא כפילות)
         print("🚀 Running initial email check...")
         
         def initial_check():
@@ -1152,6 +1172,7 @@ def start_email_monitoring_with_logs():
         
     except Exception as e:
         print(f"❌ Failed to start email monitoring: {str(e)}")
+
 
 def start_background_email_monitoring():
     """נקודת כניסה להפעלת מעקב מיילים ברקע"""
