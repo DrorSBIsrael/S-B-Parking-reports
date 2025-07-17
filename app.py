@@ -340,7 +340,7 @@ def download_csv_from_email(msg):
         return []
 
 def parse_csv_content(csv_content):
-    """פרסור CSV עם זיהוי קידוד אוטומטי לעברית"""
+    """פרסור CSV עם זיהוי קידוד אוטומטי לעברית ואימות תקינות"""
     try:
         print(f"🔍 Input type: {type(csv_content)}")
         
@@ -396,6 +396,18 @@ def parse_csv_content(csv_content):
         first_line = csv_content.split('\n')[0]
         print(f"📄 First line: {repr(first_line)}")
         
+        # ⚠️ בדיקת תקינות CSV - אם זה קובץ SQL או לא תקין
+        if any(sql_keyword in first_line.lower() for sql_keyword in ['connect', 'insert', 'select', 'values', 'create']):
+            print("🚫 INVALID FILE: This appears to be a SQL file, not a CSV file!")
+            print(f"🚫 First line contains SQL keywords: {first_line}")
+            return None
+        
+        # בדיקה שיש כותרות CSV תקינות
+        if 'ProjectNumber' not in first_line:
+            print("🚫 INVALID CSV: Missing expected header 'ProjectNumber'")
+            print(f"🚫 First line: {first_line}")
+            return None
+        
         # אם יש עברית בשורה הראשונה, נדווח על כך
         if any('\u0590' <= char <= '\u05FF' for char in first_line):
             print("🇮🇱 Hebrew characters detected in header")
@@ -410,6 +422,11 @@ def parse_csv_content(csv_content):
                 columns = list(rows[0].keys())
                 print(f"📋 Columns: {columns}")
                 
+                # בדיקה נוספת - אם השורה הראשונה ריקה או לא תקינה
+                if not rows or not any(rows[0].values()):
+                    print("🚫 INVALID CSV: First data row is empty or invalid")
+                    return None
+                
                 # בדיקה אם יש עברית בנתונים
                 for i, row in enumerate(rows[:3]):  # בדיקת 3 שורות ראשונות
                     for key, value in row.items():
@@ -421,33 +438,8 @@ def parse_csv_content(csv_content):
         except Exception as e:
             print(f"❌ Comma parsing failed: {e}")
         
-        # ניסיון עם נקודה-פסיק
-        try:
-            reader = csv.DictReader(io.StringIO(csv_content), delimiter=';')
-            rows = list(reader)
-            print(f"📊 Parsed {len(rows)} rows with semicolon delimiter")
-            
-            if rows:
-                columns = list(rows[0].keys())
-                print(f"📋 Columns: {columns}")
-                return rows
-        except Exception as e:
-            print(f"❌ Semicolon parsing failed: {e}")
-        
-        # ניסיון עם טאב
-        try:
-            reader = csv.DictReader(io.StringIO(csv_content), delimiter='\t')
-            rows = list(reader)
-            print(f"📊 Parsed {len(rows)} rows with tab delimiter")
-            
-            if rows:
-                columns = list(rows[0].keys())
-                print(f"📋 Columns: {columns}")
-                return rows
-        except Exception as e:
-            print(f"❌ Tab parsing failed: {e}")
-        
-        print("❌ Could not parse CSV with any delimiter")
+        # אם הגענו לכאן, הקובץ לא תקין
+        print("🚫 INVALID CSV: Could not parse as valid CSV file")
         return None
         
     except Exception as e:
@@ -1097,7 +1089,7 @@ def verify_email_system():
         return False
 
 def start_email_monitoring_with_logs():
-    """הפעלת מעקב מיילים עם לוגים מפורטים - ללא schedule ועם הגנה מפני כפילות"""
+    """הפעלת מעקב מיילים עם לוגים מפורטים - ללא כפילות"""
     if not EMAIL_MONITORING_AVAILABLE:
         print("⚠️ Email monitoring not available - libraries missing")
         return
@@ -1110,33 +1102,16 @@ def start_email_monitoring_with_logs():
             print("❌ Email system verification failed. Monitoring will not start.")
             return
         
-        # משתנה למניעת ריצות מקבילות
-        email_check_running = False
-        
         def monitoring_loop():
-            nonlocal email_check_running
             print("🔄 Email monitoring loop started")
             check_count = 0
             
             while True:
                 try:
-                    # בדיקה שאין ריצה מקבילה
-                    if email_check_running:
-                        print("⏳ Email check already running, skipping this cycle")
-                        time.sleep(300)  # המתנה של 5 דקות
-                        continue
-                    
-                    # סימון שהבדיקה מתחילה
-                    email_check_running = True
-                    
-                    try:
-                        # בדיקת מיילים כל 5 דקות (300 שניות)
-                        with app.app_context():
-                            print(f"⏰ Email check triggered at {datetime.now()}")
-                            check_for_new_emails()
-                    finally:
-                        # וידוא שהסימון יוסר גם במקרה של שגיאה
-                        email_check_running = False
+                    # בדיקת מיילים כל 5 דקות (300 שניות)
+                    with app.app_context():
+                        print(f"⏰ Email check triggered at {datetime.now()}")
+                        check_for_new_emails()
                     
                     # המתנה של 5 דקות
                     time.sleep(300)  # 300 שניות = 5 דקות
@@ -1150,7 +1125,6 @@ def start_email_monitoring_with_logs():
                     break
                 except Exception as e:
                     print(f"❌ Email monitoring error: {str(e)}")
-                    email_check_running = False  # וידוא שהסימון יוסר
                     print("⏳ Retrying in 5 minutes...")
                     time.sleep(300)  # 5 דקות המתנה לפני ניסיון חוזר
         
@@ -1161,18 +1135,12 @@ def start_email_monitoring_with_logs():
         print("✅ Email monitoring started successfully in background")
         print(f"⏰ Email checks scheduled every {EMAIL_CHECK_INTERVAL} minutes")
         
-        # בדיקה ראשונית מיידית (ללא כפילות)
+        # בדיקה ראשונית מיידית - רק אחת!
         print("🚀 Running initial email check...")
-        
-        def initial_check():
-            with app.app_context():
-                check_for_new_emails()
-        
-        threading.Thread(target=initial_check, daemon=True).start()
+        threading.Thread(target=lambda: check_for_new_emails(), daemon=True).start()
         
     except Exception as e:
         print(f"❌ Failed to start email monitoring: {str(e)}")
-
 
 def start_background_email_monitoring():
     """נקודת כניסה להפעלת מעקב מיילים ברקע"""
@@ -1217,7 +1185,7 @@ def is_authorized_sender(sender_email):
     return False
 
 def check_for_new_emails():
-    """בדיקת מיילים חדשים - גרסה מתוקנת"""
+    """בדיקת מיילים חדשים - תיקון תאריכים"""
     global processed_email_ids
     
     if not EMAIL_MONITORING_AVAILABLE:
@@ -1246,22 +1214,26 @@ def check_for_new_emails():
         print("📂 Selecting inbox...")
         mail.select('inbox')
         
-        # תיקון פשוט - רק חיפוש מיילים מהיום האחרון
-        since_date = (datetime.now() - timedelta(days=1)).strftime('%d-%b-%Y')
-        search_criteria = f'SINCE {since_date}'
+        # תיקון תאריכים - מחפש מהיומיים האחרונים
+        today = datetime.now().strftime('%d-%b-%Y')
+        yesterday = (datetime.now() - timedelta(days=1)).strftime('%d-%b-%Y')
+        
+        # חיפוש מיילים מהיומיים האחרונים
+        search_criteria = f'OR SINCE {yesterday} SINCE {today}'
         
         print(f"🔍 Search criteria: {search_criteria}")
+        print(f"📅 Today: {today}, Yesterday: {yesterday}")
         
         _, message_ids = mail.search(None, search_criteria)
         
         if not message_ids[0]:
-            print("📭 No emails found from yesterday")
+            print("📭 No emails found from the last 2 days")
             print(f"📊 Processed emails cache: {len(processed_email_ids)} emails")
             mail.logout()
             return
         
         email_ids = message_ids[0].split()
-        print(f"📧 Found {len(email_ids)} emails from yesterday")
+        print(f"📧 Found {len(email_ids)} emails from the last 2 days")
         
         new_emails = 0
         processed_successfully = 0
@@ -1315,8 +1287,6 @@ def check_for_new_emails():
             pass
         
         print(f"===== EMAIL CHECK ENDED at {datetime.now()} =====\n")
-
-# מצא את הפונקציה keep_service_alive בקוד שלך והחלף אותה עם זו:
 
 def keep_service_alive():
     """פונקציה לשמירה על השירות ערני - גרסה מתוקנת"""
@@ -1787,12 +1757,9 @@ def logout():
     session.clear()
     return redirect(url_for('login_page'))
 
-# מצא את השורות האלה בקוד שלך והחלף אותן:
-
-# ===== החלף את @app.route('/ping') עם זה: =====
 @app.route('/ping')
 def ping():
-    """פינג פשוט לשמירה על השירות ערני - גרסה משופרת"""
+    """פינג פשוט לשמירה על השירות ערני - גרסה מתוקנת"""
     
     current_time = datetime.now()
     
@@ -1800,12 +1767,11 @@ def ping():
     print(f"🏓 Ping received at {current_time}")
     print(f"🔋 Service status: Active and responsive")
     
-    # self-ping ברקע כל 8 דקות (בתור גיבוי)
     def delayed_ping():
-        time.sleep(4800)  # 8 דקות
+        time.sleep(480)
         try:
             app_url = os.environ.get('RENDER_EXTERNAL_URL', 'https://s-b-parking-reports.onrender.com')
-            response = requests.get(f'{app_url}/ping', timeout=100)
+            response = requests.get(f'{app_url}/ping', timeout=10)
             print(f"🏓 Self-ping executed: {response.status_code}")
         except Exception as e:
             print(f"⚠️ Self-ping failed: {str(e)}")
@@ -1820,7 +1786,7 @@ def ping():
         'uptime': 'Active'
     }), 200
 
-# ===== הוסף את זה אחרי @app.route('/ping') =====
+
 @app.route('/status')
 def status():
     """בדיקת סטטוס מפורטת"""
