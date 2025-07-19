@@ -29,6 +29,7 @@ if EMAIL_MONITORING_AVAILABLE:
     EMAIL_CHECK_INTERVAL = 5  # בדיקה כל 5 דקות
     PROCESSED_EMAILS_LIMIT = 100  # מקסימום מיילים לזכור
     processed_email_ids = []  # רשימה לזכור מיילים שכבר עובדו
+    last_cache_reset = None
 
 # רשימת שולחים מורשים לשליחת קבצי נתונים
 AUTHORIZED_SENDERS = [
@@ -1252,7 +1253,18 @@ def is_authorized_sender(sender_email):
 
 def check_for_new_emails():
     """בדיקת מיילים חדשים - תיקון תאריכים"""
-    global processed_email_ids
+    global processed_email_ids, last_cache_reset
+    
+    # 🆕 איפוס זיכרון אחת לשעה
+    if last_cache_reset is None or (datetime.now() - last_cache_reset).seconds > 3600:
+        processed_email_ids = []
+        last_cache_reset = datetime.now()
+        print(f"🔄 Hourly cache reset completed")
+    
+    # ניקוי זיכרון אם יש יותר מדי
+    if len(processed_email_ids) > 50:
+        processed_email_ids = processed_email_ids[-20:]
+        print(f"🧹 Email cache cleaned - kept last 20 emails")
     
     if not EMAIL_MONITORING_AVAILABLE:
         print("⚠️ Email check skipped - libraries not available")
@@ -1316,8 +1328,14 @@ def check_for_new_emails():
             # עיבוד המייל
             success = process_single_email(mail, email_id)
             
-            # הוספה לרשימה רק אחרי עיבוד (להימנע מעיבוד חוזר)
-            processed_email_ids.append(email_id_str)
+            # 🔧 תיקון: הוסף לרשימה רק אם הצליח!
+            if success:
+                processed_email_ids.append(email_id_str)
+                print(f"✅ Email {email_id_str} added to processed cache")
+            else:
+                # לא מוסיפים לרשימה - ננסה שוב בפעם הבאה
+                print(f"❌ Email {email_id_str} NOT added to cache - will retry next time")
+            
             new_emails += 1
             
             # ספירת הצלחות בלבד
