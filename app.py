@@ -1759,25 +1759,9 @@ def logout():
 
 @app.route('/ping')
 def ping():
-    """פינג פשוט לשמירה על השירות ערני - גרסה מתוקנת"""
-    
     current_time = datetime.now()
-    
-    # לוג מפורט יותר
     print(f"🏓 Ping received at {current_time}")
     print(f"🔋 Service status: Active and responsive")
-    
-    def delayed_ping():
-        time.sleep(480)
-        try:
-            app_url = os.environ.get('RENDER_EXTERNAL_URL', 'https://s-b-parking-reports.onrender.com')
-            response = requests.get(f'{app_url}/ping', timeout=10)
-            print(f"🏓 Self-ping executed: {response.status_code}")
-        except Exception as e:
-            print(f"⚠️ Self-ping failed: {str(e)}")
-    
-    # הפעלה ברקע
-    threading.Thread(target=delayed_ping, daemon=True).start()
     
     return jsonify({
         'status': 'pong',
@@ -1785,7 +1769,6 @@ def ping():
         'message': 'Service is alive',
         'uptime': 'Active'
     }), 200
-
 
 @app.route('/status')
 def status():
