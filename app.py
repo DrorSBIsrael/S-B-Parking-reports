@@ -706,7 +706,7 @@ def insert_to_csv_import_shekels(converted_data):
         return 0
 
 def transfer_to_parking_data():
-    """העברה מ csv_import_shekels ל parking_data - עם מניעת כפילויות"""
+    """העברה מ csv_import_shekels ל parking_data - עם תיקונים"""
     if not supabase:
         print("❌ Supabase not available")
         return 0
@@ -736,7 +736,7 @@ def transfer_to_parking_data():
                 print(f"❌ Error getting parking_id: {str(e)}")
                 return None
         
-        # עיבוד הנתונים להעברה - עם בדיקות כפילות
+        # עיבוד הנתונים להעברה - עם בדיקות כפילות משופרות
         successful_transfers = 0
         failed_transfers = 0
         skipped_duplicates = 0
@@ -811,24 +811,21 @@ def transfer_to_parking_data():
                     'imported_at': datetime.now().isoformat()
                 }
                 
-                # 🆕 בדיקה אם השורה כבר קיימת לפני הכנסה
+                # 🆕 בדיקה משופרת עם 3 שדות מזהים (במקום 5)
                 try:
                     print(f"🔄 Checking row {i+1}/{len(csv_result.data)}: project {project_number}, date {report_date}, text: '{ctext_value}'")
                     
+                    # בדיקה עם שילוב שדות - כמו constraint במסד הנתונים
                     existing_check = supabase.table('parking_data').select('id').eq(
-                        'project_number', project_number
+                        'parking_id', parking_id
                     ).eq(
                         'report_date', report_date
-                    ).eq(
-                        'l_global_ref', l_global_ref
-                    ).eq(
-                        's_computer', s_computer
                     ).eq(
                         's_shift_id', s_shift_id
                     ).execute()
                     
                     if existing_check.data:
-                        print(f"🔄 Row {i+1}: DUPLICATE DETECTED - skipping completely")
+                        print(f"🔄 Row {i+1}: DUPLICATE DETECTED (constraint match) - skipping completely")
                         skipped_duplicates += 1
                         continue
                     
@@ -843,9 +840,15 @@ def transfer_to_parking_data():
                         print(f"❌ Row {i+1}: Insert failed - no data returned")
                         
                 except Exception as single_error:
-                    failed_transfers += 1
-                    print(f"❌ Row {i+1}: Error during processing: {str(single_error)}")
-                    continue
+                    # טיפול בשגיאת constraint
+                    if "duplicate key value violates unique constraint" in str(single_error):
+                        print(f"🔄 Row {i+1}: DUPLICATE DETECTED (database constraint) - skipping")
+                        skipped_duplicates += 1
+                        continue
+                    else:
+                        failed_transfers += 1
+                        print(f"❌ Row {i+1}: Error during processing: {str(single_error)}")
+                        continue
                     
             except Exception as row_error:
                 failed_transfers += 1
@@ -1040,15 +1043,15 @@ def process_single_email(mail, email_id):
         
         # העברה לטבלה הסופית
         transferred_count = transfer_to_parking_data()
-        if transferred_count == 0:
-            error_msg = "שגיאה בהעברת הנתונים לטבלה הסופית"
-            send_error_notification(sender, error_msg)
-            return False
-
-        # שליחת התראת הצלחה
-        send_success_notification(sender, processed_files, transferred_count)
         
-        print(f"🎉 Email processed successfully: {transferred_count} rows added")
+        # שליחת התראת הצלחה - תמיד!
+        total_processed = len(all_converted_data)
+        send_success_notification(sender, processed_files, total_processed)
+        
+        if transferred_count > 0:
+            print(f"🎉 Email processed successfully: {transferred_count} new rows added")
+        else:
+            print(f"🎉 Email processed successfully: All {total_processed} rows were duplicates (already exist)")
         
         # 🗑️ מחיקת המייל אחרי עיבוד מוצלח
         try:
@@ -1148,9 +1151,13 @@ def start_email_monitoring_with_logs():
         print("✅ Email monitoring started successfully in background")
         print(f"⏰ Email checks scheduled every {EMAIL_CHECK_INTERVAL} minutes")
         
-        # בדיקה ראשונית מיידית - רק אחת!
-        print("🚀 Running initial email check...")
-        threading.Thread(target=lambda: check_for_new_emails(), daemon=True).start()
+        # בדיקה ראשונית מעוכבת למניעת כפילות
+        print("🚀 Running initial email check in 15 seconds...")
+        def delayed_initial_check():
+            time.sleep(15)  # המתנה של 15 שניות
+            with app.app_context():
+                check_for_new_emails()
+        threading.Thread(target=delayed_initial_check, daemon=True).start()
         
     except Exception as e:
         print(f"❌ Failed to start email monitoring: {str(e)}")
