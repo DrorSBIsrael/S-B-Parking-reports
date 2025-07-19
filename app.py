@@ -879,10 +879,10 @@ def transfer_to_parking_data():
         return 0
 
 def send_success_notification(sender_email, processed_files, total_rows):
-    """שליחת התראת הצלחה עם type checking מתוקן והגנה מפני שגיאות"""
+    """שליחת התראת הצלחה עם דיבוג משופר"""
     if not EMAIL_MONITORING_AVAILABLE:
         print("⚠️ Email notification skipped - EMAIL_MONITORING_AVAILABLE is False")
-        return
+        return False
         
     try:
         # תיקון type checking - וידוא שהמשתנים לא None
@@ -891,9 +891,11 @@ def send_success_notification(sender_email, processed_files, total_rows):
         
         if not gmail_user or not gmail_password:
             print("❌ Missing Gmail credentials for notification")
-            return
+            print(f"📱 Would send notification to {sender_email}: {total_rows} rows processed")
+            return False
             
         print(f"📧 Sending success notification to {sender_email}...")
+        print(f"📧 Files processed: {len(processed_files)}, Total rows: {total_rows}")
         
         msg = MIMEMultipart()
         msg['From'] = gmail_user
@@ -909,7 +911,7 @@ def send_success_notification(sender_email, processed_files, total_rows):
 
 {files_list}
 
-סה"כ שורות שנוספו: {total_rows}
+סה"כ שורות שעובדו: {total_rows}
 
 הנתונים זמינים כעת בדשבורד.
 
@@ -926,9 +928,12 @@ def send_success_notification(sender_email, processed_files, total_rows):
         server.quit()
         
         print(f"✅ Success notification sent to {sender_email}")
+        return True
         
     except Exception as e:
         print(f"❌ Failed to send notification: {str(e)}")
+        print(f"📱 Would send notification to {sender_email}: {total_rows} rows processed")
+        return False
 
 def send_error_notification(sender_email, error_message):
     """שליחת התראת שגיאה עם type checking מתוקן"""
@@ -976,7 +981,7 @@ def send_error_notification(sender_email, error_message):
         print(f"❌ Failed to send error notification: {str(e)}")
 
 def process_single_email(mail, email_id):
-    """עיבוד מייל יחיד - עם בדיקת שולח מורשה"""
+    """עיבוד מייל יחיד - עם בדיקת שולח מורשה ומחיקה משופרת"""
     try:
         _, msg_data = mail.fetch(email_id, '(RFC822)')
         email_body = msg_data[0][1]
@@ -1046,6 +1051,7 @@ def process_single_email(mail, email_id):
         
         # שליחת התראת הצלחה - תמיד!
         total_processed = len(all_converted_data)
+        print(f"📧 About to send success notification: {total_processed} rows to {sender}")
         send_success_notification(sender, processed_files, total_processed)
         
         if transferred_count > 0:
@@ -1053,15 +1059,29 @@ def process_single_email(mail, email_id):
         else:
             print(f"🎉 Email processed successfully: All {total_processed} rows were duplicates (already exist)")
         
-        # 🗑️ מחיקת המייל אחרי עיבוד מוצלח
+        # 🗑️ מחיקת המייל אחרי עיבוד מוצלח - גרסה משופרת
         try:
             print(f"🗑️ Deleting processed email (ID: {email_id})...")
+            
+            # בדיקה שהחיבור עדיין פעיל
+            if not mail:
+                print("❌ Mail connection lost - cannot delete email")
+                return True  # עדיין מחזירים הצלחה
+            
+            # ניסיון מחיקה
             mail.store(email_id, '+FLAGS', '\\Deleted')
             mail.expunge()
             print(f"✅ Email deleted successfully")
+            
         except Exception as delete_error:
-            print(f"⚠️ Could not delete email: {str(delete_error)}")
-            # לא נכשיל את התהליך אם המחיקה נכשלה
+            error_msg = str(delete_error)
+            print(f"⚠️ Could not delete email: {error_msg}")
+            
+            # אם השגיאה היא שהמייל כבר נמחק - זה בסדר
+            if "already deleted" in error_msg.lower() or "not found" in error_msg.lower():
+                print("ℹ️ Email was already deleted - continuing")
+            else:
+                print(f"⚠️ Email deletion failed but continuing process")
         
         return True
         
@@ -1173,6 +1193,7 @@ def start_background_email_monitoring():
         
         def delayed_start():
             time.sleep(5)
+            print("📧 About to start email monitoring with logs...")  # 🆕 הוסף דיבוג
             start_email_monitoring_with_logs()
         
         startup_thread = threading.Thread(target=delayed_start, daemon=True)
