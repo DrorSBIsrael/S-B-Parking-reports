@@ -706,7 +706,7 @@ def insert_to_csv_import_shekels(converted_data):
         return 0
 
 def transfer_to_parking_data():
-    """העברה מ csv_import_shekels ל parking_data - משופר לשורות מרובות"""
+    """העברה מ csv_import_shekels ל parking_data - עם מניעת כפילויות מתקדמת ותיקון type checking"""
     if not supabase:
         print("❌ Supabase not available")
         return 0
@@ -736,13 +736,64 @@ def transfer_to_parking_data():
                 print(f"❌ Error getting parking_id: {str(e)}")
                 return None
         
-        # עיבוד הנתונים להעברה - שורה אחת בכל פעם
+        # 🆕 פונקציה לבדיקה אם השורה כבר קיימת (בדיקה מדויקת)
+        def record_exists(project_number, report_date, l_global_ref, s_computer, s_shift_id):
+            try:
+                if not supabase:  # 🔧 הוספת בדיקה
+                    return False
+                    
+                result = supabase.table('parking_data').select('id').eq(
+                    'project_number', project_number
+                ).eq(
+                    'report_date', report_date
+                ).eq(
+                    'l_global_ref', l_global_ref
+                ).eq(
+                    's_computer', s_computer
+                ).eq(
+                    's_shift_id', s_shift_id
+                ).execute()
+                
+                return len(result.data) > 0
+            except Exception as e:
+                print(f"❌ Error checking record existence: {str(e)}")
+                return False
+        
+        # עיבוד הנתונים להעברה - עם בדיקות כפילות
         successful_transfers = 0
+        skipped_duplicates = 0
         failed_transfers = 0
         
-        for i, row in enumerate(csv_result.data):
+        # 🆕 מיון הנתונים לפני עיבוד (לבדיקת כפילויות טובה יותר)
+        sorted_data = sorted(csv_result.data, key=lambda x: (
+            x.get('project_number', 0),
+            x.get('report_date', ''),
+            x.get('l_global_ref', 0),
+            x.get('s_computer', 0),
+            x.get('s_shift_id', 0)
+        ))
+        
+        print(f"🔄 Processing {len(sorted_data)} sorted rows...")
+        
+        for i, row in enumerate(sorted_data):
             try:
                 project_number = int(row.get('project_number', 0))
+                report_date = str(row.get('report_date', ''))
+                l_global_ref = int(row.get('l_global_ref', 0))
+                s_computer = int(row.get('s_computer', 0))
+                s_shift_id = int(row.get('s_shift_id', 0))
+                
+                if project_number <= 0:
+                    print(f"⚠️ Row {i+1}: Skipping - invalid project_number")
+                    failed_transfers += 1
+                    continue
+                
+                # 🆕 בדיקה מדויקת אם השורה כבר קיימת
+                if record_exists(project_number, report_date, l_global_ref, s_computer, s_shift_id):
+                    skipped_duplicates += 1
+                    print(f"🔄 Row {i+1}/{len(sorted_data)}: DUPLICATE DETECTED - project {project_number}, date {report_date}, ref {l_global_ref}")
+                    continue
+                
                 parking_id = get_parking_id(project_number)
                 
                 # תיקון c_text
@@ -754,12 +805,12 @@ def transfer_to_parking_data():
                 transfer_row = {
                     'parking_id': parking_id,
                     'project_number': project_number,
-                    'report_date': str(row.get('report_date', '')),
+                    'report_date': report_date,
                     'report_start_time': str(row.get('report_start_time', '')),
                     'report_end_time': str(row.get('report_end_time', '')),
-                    'l_global_ref': int(row.get('l_global_ref', 0)),
-                    's_computer': int(row.get('s_computer', 0)),
-                    's_shift_id': int(row.get('s_shift_id', 0)),
+                    'l_global_ref': l_global_ref,
+                    's_computer': s_computer,
+                    's_shift_id': s_shift_id,
                     'c_text': ctext_value,
                     's_cash_agorot': int(row.get('s_cash_agorot', 0)),
                     's_credit_agorot': int(row.get('s_credit_agorot', 0)),
@@ -800,59 +851,57 @@ def transfer_to_parking_data():
                     'imported_at': datetime.now().isoformat()
                 }
                 
-                if transfer_row['project_number'] <= 0:
-                    print(f"⚠️ Row {i+1}: Skipping - invalid project_number")
-                    continue
-                
-                # ניסיון הכנסה של השורה הבודדת
+                # ניסיון הכנסה של השורה הבודדת (insert בלבד - לא upsert)
                 try:
-                    print(f"🔄 Transferring row {i+1}/{len(csv_result.data)}: project {project_number}, text: '{ctext_value}'")
+                    print(f"🔄 Inserting NEW row {i+1}/{len(sorted_data)}: project {project_number}, date {report_date}, text: '{ctext_value}'")
                     
-                    # ניסיון upsert ראשון
-                    result = supabase.table('parking_data').upsert([transfer_row]).execute()
+                    # 🔧 בדיקה נוספת לפני insert
+                    if not supabase:
+                        print("❌ Supabase connection lost during insert")
+                        failed_transfers += 1
+                        continue
+                        
+                    result = supabase.table('parking_data').insert([transfer_row]).execute()
                     
                     if result.data:
                         successful_transfers += 1
-                        print(f"✅ Row {i+1}: Successfully transferred")
+                        print(f"✅ Row {i+1}: Successfully inserted as new record")
                     else:
-                        print(f"⚠️ Row {i+1}: No data returned from upsert")
+                        failed_transfers += 1
+                        print(f"❌ Row {i+1}: Insert failed - no data returned")
                         
                 except Exception as single_error:
-                    # אם upsert נכשל, ננסה insert
-                    if "already exists" in str(single_error):
-                        print(f"⏭️ Row {i+1}: Already exists - skipping")
-                        failed_transfers += 1
-                    else:
-                        try:
-                            result = supabase.table('parking_data').insert([transfer_row]).execute()
-                            if result.data:
-                                successful_transfers += 1
-                                print(f"✅ Row {i+1}: Successfully inserted")
-                            else:
-                                failed_transfers += 1
-                                print(f"❌ Row {i+1}: Insert failed - no data returned")
-                        except Exception as insert_error:
-                            failed_transfers += 1
-                            print(f"❌ Row {i+1}: Both upsert and insert failed: {str(insert_error)}")
+                    failed_transfers += 1
+                    print(f"❌ Row {i+1}: Insert failed: {str(single_error)}")
+                    continue
                     
             except Exception as row_error:
                 failed_transfers += 1
                 print(f"❌ Row {i+1}: Error processing row: {str(row_error)}")
                 continue
         
-        # דוח סיכום
-        total_processed = successful_transfers + failed_transfers
-        print(f"📊 Transfer Summary:")
-        print(f"   ✅ Successfully transferred: {successful_transfers} rows")
-        print(f"   ❌ Failed/Skipped: {failed_transfers} rows")
+        # דוח סיכום מפורט
+        total_processed = successful_transfers + skipped_duplicates + failed_transfers
+        print(f"\n📊 Transfer Summary:")
+        print(f"   ✅ Successfully transferred: {successful_transfers} NEW records")
+        print(f"   🔄 Skipped duplicates: {skipped_duplicates} existing records")
+        print(f"   ❌ Failed: {failed_transfers} records")
         print(f"   📈 Total processed: {total_processed} out of {len(csv_result.data)} rows")
+        
+        if len(csv_result.data) > 0:
+            success_rate = ((successful_transfers + skipped_duplicates) / len(csv_result.data) * 100)
+            print(f"   📈 Efficiency: {success_rate:.1f}% success rate")
         
         # מחיקת csv_import_shekels אחרי העברה
         if total_processed > 0:
             try:
                 print("🧹 Cleaning csv_import_shekels...")
-                delete_result = supabase.table('csv_import_shekels').delete().gt('id', 0).execute()
-                print("✅ csv_import_shekels cleaned successfully")
+                # 🔧 בדיקה נוספת לפני מחיקה
+                if not supabase:
+                    print("❌ Supabase connection lost during cleanup")
+                else:
+                    delete_result = supabase.table('csv_import_shekels').delete().gt('id', 0).execute()
+                    print("✅ csv_import_shekels cleaned successfully")
             except Exception as cleanup_error:
                 print(f"⚠️ Could not clean csv_import_shekels: {str(cleanup_error)}")
         
