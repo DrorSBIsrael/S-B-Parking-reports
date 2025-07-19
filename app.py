@@ -984,16 +984,34 @@ def process_single_email(mail, email_id):
     """עיבוד מייל יחיד - עם בדיקת שולח מורשה ומחיקה משופרת"""
     try:
         _, msg_data = mail.fetch(email_id, '(RFC822)')
+        
+        # 🔧 תיקון: בדיקה שיש נתונים
+        if not msg_data or len(msg_data) == 0:
+            print(f"❌ No data for email ID: {email_id}")
+            return False
+            
         email_body = msg_data[0][1]
+        
+        # 🔧 תיקון: בדיקה שיש body
+        if not email_body:
+            print(f"❌ Empty email body for ID: {email_id}")
+            return False
+            
         email_message = email.message_from_bytes(email_body)
         
-        sender = email_message['From']
-        subject = email_message['Subject'] or ''
-        date = email_message['Date'] or ''
+        # 🔧 תיקון: בדיקות נוספות
+        sender = email_message.get('From', 'unknown@unknown.com')
+        subject = email_message.get('Subject', 'No Subject') or 'No Subject'
+        date = email_message.get('Date', 'No Date') or 'No Date'
         
         print(f"\n📧 Processing email from: {sender}")
         print(f"   Subject: {subject}")
         print(f"   Date: {date}")
+        
+        # בדיקה שהשולח תקין
+        if sender == 'unknown@unknown.com' or '@' not in sender:
+            print(f"❌ Invalid sender address: {sender}")
+            return False
         
         # בדיקת שולח מורשה
         if not is_authorized_sender(sender):
@@ -1088,10 +1106,17 @@ def process_single_email(mail, email_id):
     except Exception as e:
         print(f"❌ Error processing email: {str(e)}")
         try:
-            sender = email_message['From'] if 'email_message' in locals() else 'unknown'
-            send_error_notification(sender, f"שגיאה טכנית: {str(e)}")
-        except:
-            pass
+            # 🔧 תיקון: בדיקה שיש sender לפני שליחת התראה
+            if 'email_message' in locals() and email_message:
+                sender = email_message.get('From', None)
+                if sender and '@' in sender:
+                    send_error_notification(sender, f"שגיאה טכנית: {str(e)}")
+                else:
+                    print(f"⚠️ Cannot send error notification - invalid sender: {sender}")
+            else:
+                print(f"⚠️ Cannot send error notification - no valid email message")
+        except Exception as notify_error:
+            print(f"⚠️ Failed to send error notification: {str(notify_error)}")
         return False
 
 def verify_email_system():
