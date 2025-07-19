@@ -1300,7 +1300,7 @@ def keep_service_alive():
             try:
                 # שליחת בקשה לעצמנו כל 10 דקות
                 print(f"🏓 Sending keep-alive ping to {app_url}")
-                response = requests.get(f'{app_url}/ping', timeout=3000)
+                response = requests.get(f'{app_url}/ping', timeout=30000)
                 print(f"🏓 Keep-alive ping successful: {response.status_code}")
                 
             except requests.exceptions.RequestException as e:
