@@ -1838,7 +1838,7 @@ function calculateStats() {
     });
     
     // Add tsper1 data
-    const totalTsper1 = currentData.reduce((sum, d) => sum + (d.ts_per1 || 0), 0);
+    const totalTsper1 = currentData.reduce((sum, d) => sum + (d.ts_per1 || 0) / 100, 0);
     
     const totalBarrier = currentData.reduce((sum, d) => sum + (d.t_open_b || 0), 0);
     
