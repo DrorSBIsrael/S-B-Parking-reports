@@ -527,7 +527,7 @@
             border-top: 1px solid var(--border);
         }
         
-        .stat-card .tsper3-line {
+        .stat-card .tsper1-line {
             color: var(--danger);
             font-size: 12px;
             margin-top: 8px;
@@ -1646,7 +1646,7 @@ function updateStats() {
             </div>
             ` : '<div class="change neutral">ללא נתוני השוואה</div>'}
             <div class="subtext">מכל אמצעי התשלום</div>
-            <div class="tsper3-line">₪${(stats.totalTsper3 || 0).toLocaleString()}</div>
+            <div class="tsper1-line">₪${(stats.totalTsper1 || 0).toLocaleString()}</div>
         </div>
         
         <div class="stat-card" data-stat-type="entries">
@@ -1837,8 +1837,8 @@ function calculateStats() {
         allFields: currentData[0] ? Object.keys(currentData[0]) : []
     });
     
-    // Add tsper3 data
-    const totalTsper3 = currentData.reduce((sum, d) => sum + (d.tsper3 || 0), 0);
+    // Add tsper1 data
+    const totalTsper1 = currentData.reduce((sum, d) => sum + (d.ts_per1 || 0), 0);
     
     const totalBarrier = currentData.reduce((sum, d) => sum + (d.t_open_b || 0), 0);
     
@@ -1866,7 +1866,7 @@ function calculateStats() {
         totalExits,
         totalExitsCasual,
         totalExitsMembers,
-        totalTsper3,
+        totalTsper1,
         totalBarrier,
         uniqueDays,
         uniqueParkings,
