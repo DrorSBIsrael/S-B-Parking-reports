@@ -880,106 +880,15 @@ def transfer_to_parking_data():
         return 0
 
 def send_success_notification(sender_email, processed_files, total_rows):
-    """שליחת התראת הצלחה עם דיבוג משופר"""
-    if not EMAIL_MONITORING_AVAILABLE:
-        print("⚠️ Email notification skipped - EMAIL_MONITORING_AVAILABLE is False")
-        return False
-        
-    try:
-        # תיקון type checking - וידוא שהמשתנים לא None
-        gmail_user = os.environ.get('GMAIL_USERNAME')
-        gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
-        
-        if not gmail_user or not gmail_password:
-            print("❌ Missing Gmail credentials for notification")
-            print(f"📱 Would send notification to {sender_email}: {total_rows} rows processed")
-            return False
-            
-        print(f"📧 Sending success notification to {sender_email}...")
-        print(f"📧 Files processed: {len(processed_files)}, Total rows: {total_rows}")
-        
-        msg = MIMEMultipart()
-        msg['From'] = gmail_user
-        msg['To'] = sender_email
-        msg['Subject'] = '✅ קבצי הנתונים עובדו בהצלחה - S&B Parking'
-        
-        files_list = '\n'.join([f"• {file['name']} - {file['rows']} שורות" for file in processed_files])
-        
-        body = f"""
-שלום,
-
-קבצי הנתונים שלך עובדו בהצלחה במערכת S&B Parking:
-
-{files_list}
-
-סה"כ שורות שעובדו: {total_rows}
-
-הנתונים זמינים כעת בדשבורד.
-
-תודה,
-מערכת S&B Parking (אוטומטית)
-        """
-        
-        msg.attach(MIMEText(body, 'plain', 'utf-8'))
-        
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(gmail_user, gmail_password)
-        server.send_message(msg)
-        server.quit()
-        
-        print(f"✅ Success notification sent to {sender_email}")
-        return True
-        
-    except Exception as e:
-        print(f"❌ Failed to send notification: {str(e)}")
-        print(f"📱 Would send notification to {sender_email}: {total_rows} rows processed")
-        return False
+    """שליחת התראת הצלחה - מבוטלת לחיסכון במיילים"""
+    files_summary = ', '.join([f['name'] for f in processed_files])
+    print(f"📝 Success logged (email disabled): {total_rows} rows from {files_summary}")
+    return  # לא שולח מיילים
 
 def send_error_notification(sender_email, error_message):
-    """שליחת התראת שגיאה עם type checking מתוקן"""
-    if not EMAIL_MONITORING_AVAILABLE:
-        return
-        
-    try:
-        msg = MIMEMultipart()
-        
-        # תיקון type checking - וידוא שהמשתנים לא None
-        gmail_user = os.environ.get('GMAIL_USERNAME')
-        gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
-        
-        if not gmail_user or not gmail_password:
-            print("❌ Missing Gmail credentials for error notification")
-            return
-            
-        msg['From'] = gmail_user
-        msg['To'] = sender_email
-        msg['Subject'] = '❌ שגיאה בעיבוד קבצי הנתונים - S&B Parking'
-        
-        body = f"""
-שלום,
-
-התרחשה שגיאה בעיבוד קבצי הנתונים שלך:
-
-{error_message}
-
-אנא בדוק את הקובץ ונסה שוב, או פנה לתמיכה.
-
-מערכת S&B Parking (אוטומטית)
-        """
-        
-        msg.attach(MIMEText(body, 'plain', 'utf-8'))
-        
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(gmail_user, gmail_password)
-        server.send_message(msg)
-        server.quit()
-        
-        print(f"📧 Error notification sent to {sender_email}")
-        
-    except Exception as e:
-        print(f"❌ Failed to send error notification: {str(e)}")
+    """שליחת התראת שגיאה - מבוטלת לחיסכון במיילים"""
+    print(f"📝 Error logged (email disabled): {error_message[:100]}...")
+    return  # לא שולח מיילים
 
 def process_single_email(mail, email_id):
     """עיבוד מייל יחיד - עם בדיקת שולח מורשה ומחיקה משופרת"""
@@ -1054,15 +963,13 @@ def process_single_email(mail, email_id):
             print(f"✅ File {csv_file['filename']}: {len(converted_data)} rows converted")
         
         if not all_converted_data:
-            error_msg = "לא נמצאו נתונים תקינים בקבצים המצורפים"
-            send_error_notification(sender, error_msg)
+            print(f"❌ No valid data in files from {sender}")
             return False
         
         # הכנסה לטבלת הביניים
         inserted_count = insert_to_csv_import_shekels(all_converted_data)
         if inserted_count == 0:
-            error_msg = "שגיאה בהכנסת הנתונים לטבלת הביניים"
-            send_error_notification(sender, error_msg)
+            print(f"❌ Failed to insert data to intermediate table from {sender}")
             return False
         
         # העברה לטבלה הסופית
@@ -1070,13 +977,12 @@ def process_single_email(mail, email_id):
         
         # שליחת התראת הצלחה - תמיד!
         total_processed = len(all_converted_data)
-        print(f"📧 About to send success notification: {total_processed} rows to {sender}")
-        send_success_notification(sender, processed_files, total_processed)
+        files_summary = ', '.join([f['name'] for f in processed_files])
         
         if transferred_count > 0:
-            print(f"🎉 Email processed successfully: {transferred_count} new rows added")
+            print(f"🎉 Email processed successfully: {transferred_count} new rows added from {files_summary}")
         else:
-            print(f"🎉 Email processed successfully: All {total_processed} rows were duplicates (already exist)")
+            print(f"🎉 Email processed successfully: All {total_processed} rows were duplicates from {files_summary}")
         
         # 🗑️ מחיקת המייל אחרי עיבוד מוצלח - גרסה משופרת
         try:
@@ -1106,18 +1012,15 @@ def process_single_email(mail, email_id):
         
     except Exception as e:
         print(f"❌ Error processing email: {str(e)}")
+        
+        # רישום sender אם אפשר (ללא שליחת מייל)
         try:
-            # 🔧 תיקון: בדיקה שיש sender לפני שליחת התראה
             if 'email_message' in locals() and email_message:
-                sender = email_message.get('From', None)
-                if sender and '@' in sender:
-                    send_error_notification(sender, f"שגיאה טכנית: {str(e)}")
-                else:
-                    print(f"⚠️ Cannot send error notification - invalid sender: {sender}")
-            else:
-                print(f"⚠️ Cannot send error notification - no valid email message")
-        except Exception as notify_error:
-            print(f"⚠️ Failed to send error notification: {str(notify_error)}")
+                sender = email_message.get('From', 'unknown')
+                print(f"❌ Email error from sender: {sender}")
+        except:
+            print(f"❌ Email error from unknown sender")
+            
         return False
 
 def verify_email_system():
