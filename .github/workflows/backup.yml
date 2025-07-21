@@ -1,8 +1,10 @@
+# תיקון הקובץ backup.yml - עדכון לגרסה חדשה
+
 name: Daily Database Backup
 
 on:
   schedule:
-    - cron:  '0 10 * * *'
+    - cron: '0 10 * * *'
   workflow_dispatch:
 
 jobs:
@@ -11,10 +13,10 @@ jobs:
     
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4  # עדכון גם זה
       
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5  # עדכון גם זה
       with:
         python-version: '3.9'
         
@@ -37,7 +39,7 @@ jobs:
         git push || true
         
     - name: Upload backup artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4  # ← התיקון העיקרי!
       with:
         name: sb-parking-backup-${{ github.run_number }}
         path: backups/
