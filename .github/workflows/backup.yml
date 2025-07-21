@@ -1,0 +1,44 @@
+name: Daily Database Backup
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
+      run: |
+        pip install supabase python-dotenv
+        
+    - name: Run backup script
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      run: python backup_script.py
+      
+    - name: Commit and push backup files
+      run: |
+        git config --local user.email "backup@sbparking.com"
+        git config --local user.name "SB Parking Backup Bot"
+        git add backups/ || true
+        git diff --staged --quiet || git commit -m "🔄 Daily backup $(date +%Y-%m-%d)" || true
+        git push || true
+        
+    - name: Upload backup artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: sb-parking-backup-${{ github.run_number }}
+        path: backups/
+        retention-days: 30
