@@ -725,14 +725,29 @@ def transfer_to_parking_data():
         print(f"📊 Found {len(csv_result.data)} rows in csv_import_shekels")
         
         # פונקציה לקבלת parking_id
+# פונקציה לקבלת parking_id
         def get_parking_id(project_number):
             try:
                 if not supabase:
                     return None
-                result = supabase.table('project_parking_mapping').select('parking_id').eq('project_number', str(project_number)).execute()
+                    
+                # בדיקה שהחניון פעיל
+                active_check = supabase.table('user_parkings').select('project_number').eq(
+                    'project_number', str(project_number)
+                ).eq('is_active', True).execute()
+                
+                if not active_check.data:
+                    return None
+                
+                # קבלת parking_id
+                result = supabase.table('project_parking_mapping').select('parking_id').eq(
+                    'project_number', str(project_number)
+                ).execute()
+                
                 if result.data and len(result.data) > 0:
                     return result.data[0]['parking_id']
                 return None
+                
             except Exception as e:
                 print(f"❌ Error getting parking_id: {str(e)}")
                 return None
@@ -1399,7 +1414,7 @@ def get_user_info():
 
 @app.route('/api/user-parkings', methods=['GET'])
 def get_user_parkings():
-    """קבלת רשימת החניונים עבור מנהל קבוצה"""
+    """קבלת רשימת החניונים עבור מנהל קבוצה - רק חניונים פעילים"""
     try:
         if 'user_email' not in session:
             return jsonify({'success': False, 'message': 'לא מחובר'}), 401
@@ -1422,10 +1437,10 @@ def get_user_parkings():
         if user_data['access_level'] != 'group_manager' and user_data['access_level'] != 'group_access':
             return jsonify({'success': False, 'message': 'אין הרשאה לצפייה בחניונים מרובים'})
         
-        # קבלת כל החניונים של החברה
+        # ✅ קבלת כל החניונים הפעילים של החברה
         parkings_result = supabase.table('user_parkings').select(
             'project_number, parking_name'
-        ).eq('company_type', user_data['company_type']).execute()
+        ).eq('company_type', user_data['company_type']).eq('is_active', True).execute()
         
         # הסרת כפילויות
         unique_parkings = {}
@@ -1434,6 +1449,8 @@ def get_user_parkings():
                 unique_parkings[parking['project_number']] = parking
         
         parkings_list = list(unique_parkings.values())
+        
+        print(f"✅ Found {len(parkings_list)} active parkings for company {user_data['company_type']}")
         
         return jsonify({
             'success': True,
@@ -1446,7 +1463,7 @@ def get_user_parkings():
 
 @app.route('/api/parking-data', methods=['GET'])
 def get_parking_data():
-    """קבלת נתוני החניון לפי תאריכים והרשאות"""
+    """קבלת נתוני החניון לפי תאריכים והרשאות - רק חניונים פעילים"""
     try:
         if 'user_email' not in session:
             return jsonify({'success': False, 'message': 'לא מחובר'}), 401
@@ -1471,13 +1488,13 @@ def get_parking_data():
         
         email = session['user_email']
         
-        # קבלת נתוני המשתמש
+        # ✅ קבלת נתוני המשתמש עם בדיקת is_active
         user_result = supabase.table('user_parkings').select(
             'access_level, project_number, company_type'
-        ).eq('email', email).execute()
+        ).eq('email', email).eq('is_active', True).execute()
         
         if not user_result.data:
-            return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
+            return jsonify({'success': False, 'message': 'משתמש לא נמצא או לא פעיל'})
         
         user_data = user_result.data[0]
         
@@ -1489,32 +1506,41 @@ def get_parking_data():
         
         # הגבלת חניונים לפי הרשאות
         if user_data['access_level'] == 'single_parking':
-            # משתמש חניון בודד - רק החניון שלו
+            # משתמש חניון בודד - רק החניון שלו אם הוא פעיל
+            active_check = supabase.table('user_parkings').select('project_number').eq(
+                'project_number', user_data['project_number']
+            ).eq('is_active', True).execute()
+            
+            if not active_check.data:
+                return jsonify({'success': False, 'message': 'החניון לא פעיל'})
+            
             query = query.eq('project_number', user_data['project_number'])
             
         elif user_data['access_level'] == 'group_manager' or user_data['access_level'] == 'group_access':
             # מנהל קבוצה או משתמש קבוצה
             if parking_id:
-                # אימות שהחניון שייך לחברה שלו
+                # ✅ אימות שהחניון שייך לחברה שלו ופעיל
                 parking_check = supabase.table('user_parkings').select('project_number').eq(
                     'project_number', parking_id
-                ).eq('company_type', user_data['company_type']).execute()
+                ).eq('company_type', user_data['company_type']).eq('is_active', True).execute()
                 
                 if not parking_check.data:
-                    return jsonify({'success': False, 'message': 'אין הרשאה לחניון זה'})
+                    return jsonify({'success': False, 'message': 'אין הרשאה לחניון זה או שהחניון לא פעיל'})
                 
                 query = query.eq('project_number', parking_id)
             else:
-                # כל החניונים של החברה
+                # ✅ כל החניונים הפעילים של החברה
                 company_parkings = supabase.table('user_parkings').select('project_number').eq(
                     'company_type', user_data['company_type']
-                ).execute()
+                ).eq('is_active', True).execute()
                 
                 parking_numbers = [p['project_number'] for p in company_parkings.data]
                 
                 if parking_numbers:
                     query = query.in_('project_number', parking_numbers)
+                    print(f"✅ Filtering by {len(parking_numbers)} active parkings")
                 else:
+                    print(f"⚠️ No active parkings found for company {user_data['company_type']}")
                     return jsonify({'success': True, 'data': []})
         else:
             return jsonify({'success': False, 'message': 'רמת הרשאה לא מוכרת'})
@@ -1525,43 +1551,51 @@ def get_parking_data():
         # ביצוע השאילתה
         result = query.execute()
         
-        # קבלת מיפוי שמות החניונים מ-project_parking_mapping
+        # ✅ קבלת מיפוי שמות החניונים מ-project_parking_mapping - רק פעילים
         parking_names_map = {}
         try:
-            mapping_result = supabase.table('project_parking_mapping').select('project_number, parking_name').execute()
+            mapping_result = supabase.table('project_parking_mapping').select(
+                'project_number, parking_name'
+            ).execute()
+            
+            # סינון נוסף - רק חניונים שהם פעילים ב-user_parkings
+            active_projects = supabase.table('user_parkings').select('project_number').eq('is_active', True).execute()
+            active_project_numbers = [p['project_number'] for p in active_projects.data]
+            
             for mapping in mapping_result.data:
-                parking_names_map[mapping['project_number']] = mapping['parking_name']
+                if mapping['project_number'] in active_project_numbers:
+                    parking_names_map[mapping['project_number']] = mapping['parking_name']
+                    
         except Exception as e:
             print(f"Warning: Could not load parking names mapping: {str(e)}")
         
-        # עיבוד הנתונים
+        # עיבוד הנתונים (שאר הקוד נשאר זהה...)
         processed_data = []
         for row in result.data:
-            # וידוא שכל השדות הנדרשים קיימים
             processed_row = {
                 'id': row.get('id'),
                 'parking_id': row.get('parking_id'),
                 'report_date': row.get('report_date'),
                 'project_number': row.get('project_number'),
-                'parking_name': parking_names_map.get(row.get('project_number'), '') or row.get('parking_name', ''),  # שם חניון מהמיפוי
+                'parking_name': parking_names_map.get(row.get('project_number'), '') or row.get('parking_name', ''),
                 'total_revenue_shekels': float(row.get('total_revenue_shekels', 0)),
                 'net_revenue_shekels': float(row.get('net_revenue_shekels', 0)),
                 's_cash_shekels': float(row.get('s_cash_shekels', 0)),
                 's_credit_shekels': float(row.get('s_credit_shekels', 0)),
                 's_pango_shekels': float(row.get('s_pango_shekels', 0)),
                 's_celo_shekels': float(row.get('s_celo_shekels', 0)),
-                's_encoder1': int(row.get('s_encoder1', 0)),  # הוסף מקודד 1
-                's_encoder2': int(row.get('s_encoder2', 0)),  # הוסף מקודד 2
-                's_encoder3': int(row.get('s_encoder3', 0)),  # הוסף מקודד 3
-                'sencodertot': int(row.get('sencodertot', 0)),  # הוסף סה"כ מקודדים
+                's_encoder1': int(row.get('s_encoder1', 0)),
+                's_encoder2': int(row.get('s_encoder2', 0)),
+                's_encoder3': int(row.get('s_encoder3', 0)),
+                'sencodertot': int(row.get('sencodertot', 0)),
                 't_entry_tot': int(row.get('t_entry_tot', 0)),
                 't_exit_tot': int(row.get('t_exit_tot', 0)),
                 't_exit_s': int(row.get('t_exit_s', 0)),
                 't_exit_p': int(row.get('t_exit_p', 0)),
-                't_entry_s': int(row.get('t_entry_s', 0)),  # מזדמנים
-                't_entry_p': int(row.get('t_entry_p', 0)),  # מנויים
-                't_entry_ap': int(row.get('t_entry_ap', 0)),  # אפליקציה
-                't_open_b': int(row.get('t_open_b', 0)),  # פתיחות מחסום
+                't_entry_s': int(row.get('t_entry_s', 0)),
+                't_entry_p': int(row.get('t_entry_p', 0)),
+                't_entry_ap': int(row.get('t_entry_ap', 0)),
+                't_open_b': int(row.get('t_open_b', 0)),
                 'ts_per1': int(row.get('ts_per1', 0)),
                 'ts_per2': int(row.get('ts_per2', 0)),
                 'ts_per3': int(row.get('ts_per3', 0)),
@@ -1581,7 +1615,7 @@ def get_parking_data():
             }
             processed_data.append(processed_row)
         
-        print(f"✅ Retrieved {len(processed_data)} parking records for user {email}")
+        print(f"✅ Retrieved {len(processed_data)} parking records for user {email} (active parkings only)")
         
         return jsonify({
             'success': True,
@@ -1592,6 +1626,7 @@ def get_parking_data():
     except Exception as e:
         print(f"❌ Error getting parking data: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני חניון'})
+
 
 @app.route('/api/check-emails-now', methods=['POST'])
 def manual_email_check():
