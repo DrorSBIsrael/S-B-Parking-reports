@@ -3,7 +3,7 @@ name: Daily Database Backup
 on:
   schedule:
     # כל יום ב-3:00 בבוקר (UTC) = 5:00 בישראל
-- cron: '0 3 * * *'
+    - cron: '0 3 * * *'
   
   # אפשרות הרצה ידנית
   workflow_dispatch:
