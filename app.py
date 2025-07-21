@@ -1425,7 +1425,7 @@ def get_user_parkings():
         # קבלת כל החניונים של החברה
         parkings_result = supabase.table('user_parkings').select(
             'project_number, parking_name'
-        ).eq('company_type', user_data['company_type']).eq('is_active', True).execute()
+        ).eq('company_type', user_data['company_type']).execute()
         
         # הסרת כפילויות
         unique_parkings = {}
@@ -1508,7 +1508,7 @@ def get_parking_data():
                 # כל החניונים של החברה
                 company_parkings = supabase.table('user_parkings').select('project_number').eq(
                     'company_type', user_data['company_type']
-                ).eq('is_active', True).execute()
+                ).execute()
                 
                 parking_numbers = [p['project_number'] for p in company_parkings.data]
                 
