@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """
 S&B Parking - Database Backup Script
-גיבוי אוטומטי של כל מסד הנתונים
+תואם ל-supabase 1.2.0
 """
 
 import os
 import json
 import csv
 from datetime import datetime
-from supabase import create_client
+try:
+    from supabase import create_client
+except ImportError:
+    from supabase.client import create_client
 import zipfile
 
 def backup_supabase():
-    """פונקציה לגיבוי Supabase"""
+    """פונקציה לגיבוי Supabase - תואם לכל הגרסאות"""
     
     print("🚀 Starting S&B Parking database backup...")
     
@@ -34,7 +37,7 @@ def backup_supabase():
         backup_dir = f"backups/{today}"
         os.makedirs(backup_dir, exist_ok=True)
         
-        # רשימת הטבלאות (מהגיבוי שעשינו)
+        # רשימת הטבלאות
         tables = [
             'csv_field_mapping',
             'csv_import_shekels', 
@@ -57,29 +60,45 @@ def backup_supabase():
             try:
                 print(f"🔄 Backing up {table_name}...")
                 
-                # שליפת הנתונים
-                result = supabase.table(table_name).select("*").execute()
-                record_count = len(result.data)
+                # שליפת הנתונים - תואם לכל הגרסאות
+                response = supabase.table(table_name).select("*").execute()
+                
+                # טיפול בתגובה לפי הגרסה
+                if hasattr(response, 'data'):
+                    result_data = response.data
+                elif hasattr(response, 'content'):
+                    result_data = response.content
+                else:
+                    result_data = response
+                
+                if not isinstance(result_data, list):
+                    print(f"⚠️ {table_name}: Unexpected response format")
+                    continue
+                
+                record_count = len(result_data)
                 total_records += record_count
                 
                 # שמירה כJSON
                 json_file = f"{backup_dir}/{table_name}.json"
                 with open(json_file, 'w', encoding='utf-8') as f:
-                    json.dump(result.data, f, ensure_ascii=False, indent=2, default=str)
+                    json.dump(result_data, f, ensure_ascii=False, indent=2, default=str)
                 
                 # שמירה כCSV (אם יש נתונים)
-                if result.data:
+                if result_data and len(result_data) > 0:
                     csv_file = f"{backup_dir}/{table_name}.csv"
                     with open(csv_file, 'w', newline='', encoding='utf-8') as f:
-                        if result.data:
-                            # שימוש בכל המפתחות מכל השורות
-                            all_keys = set()
-                            for row in result.data:
+                        # שימוש בכל המפתחות מכל השורות
+                        all_keys = set()
+                        for row in result_data:
+                            if isinstance(row, dict):
                                 all_keys.update(row.keys())
-                            
+                        
+                        if all_keys:
                             writer = csv.DictWriter(f, fieldnames=list(all_keys))
                             writer.writeheader()
-                            writer.writerows(result.data)
+                            for row in result_data:
+                                if isinstance(row, dict):
+                                    writer.writerow(row)
                 
                 successful_backups.append({
                     'table': table_name,
@@ -103,8 +122,7 @@ def backup_supabase():
             'failed_backups': len(failed_backups),
             'total_records': total_records,
             'successful_tables': successful_backups,
-            'failed_tables': failed_backups,
-            'supabase_url': SUPABASE_URL.split('@')[1] if '@' in SUPABASE_URL else SUPABASE_URL
+            'failed_tables': failed_backups
         }
         
         with open(report_file, 'w', encoding='utf-8') as f:
