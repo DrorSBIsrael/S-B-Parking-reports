@@ -1817,7 +1817,7 @@ def verify_code():
         }), 500
 
 @app.route('/logout')
-def logout():
+def logout_page():
     session.clear()
     return redirect(url_for('login_page'))
 
