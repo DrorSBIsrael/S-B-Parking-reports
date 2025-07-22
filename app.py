@@ -1670,91 +1670,79 @@ def validate_date_format(date_string):
 def login():
     print("=== LOGIN START ===")
     try:
-        print("Getting JSON data...")
         data = request.get_json()
-        print(f"Received data: {data}")
-        
         username = data.get('username')
         password = data.get('password')
-        print(f"Username: {username}, Password length: {len(password) if password else 0}")
         
-        # וידוא שהפרמטרים קיימים
         if not username or not password:
-            print("Missing username or password")
             return jsonify({
                 'success': False,
                 'message': 'שם משתמש וסיסמה נדרשים'
             }), 400
         
-        print("Calling Supabase RPC...")
+        print(f"Attempting login for: {username}")
         
-        # קריאה לפונקציה עם טיפול נכון בתוצאה
-        try:
-            result = supabase.rpc(
-                'login_with_password_and_send_code',
-                {
-                    'input_username': username,
-                    'input_password': password
-                }
-            ).execute()
-            login_result = result.data
-            print(f"Normal result: {login_result}")
-            
-        except Exception as rpc_error:
-            print(f"RPC Error type: {type(rpc_error)}")
-            print(f"RPC Error: {rpc_error}")
-            
-            # אם זה APIError עם תוצאה מוצלחת, נחלץ את הנתונים
-            if hasattr(rpc_error, 'args') and len(rpc_error.args) > 0:
-                error_data = rpc_error.args[0]
-                print(f"Error data: {error_data}")
-                
-                if isinstance(error_data, dict):
-                    login_result = error_data  # פשוט ניקח את התוצאה כמו שהיא
-                    print(f"Using result from APIError: {login_result}")
-                else:
-                    print("Error data is not dict, re-raising error")
-                    raise rpc_error
-            else:
-                print("No args in error, re-raising")
-                raise rpc_error
+        # במקום להשתמש ב-supabase.rpc, נעשה את הבדיקה ישירות
+        # קבלת המשתמש
+        user_result = supabase.table('user_parkings')\
+            .select('*')\
+            .eq('username', username)\
+            .execute()
         
-        # בדיקה אם הסיסמה פגה תוקף
-        if login_result.get('password_expired'):
+        if not user_result.data:
+            print("User not found")
             return jsonify({
                 'success': False,
-                'message': login_result.get('message'),
-                'password_expired': True
-            }), 403
+                'message': 'שם משתמש או סיסמה שגויים'
+            }), 401
         
-        if login_result.get('success'):
-            print("Login successful, setting session...")
-            # שמירת פרטי המשתמש בסשן
+        user_data = user_result.data[0]
+        print(f"User found: {user_data['username']}")
+        
+        # בדיקת הסיסמה באמצעות SQL query
+        password_check = supabase.rpc('check_password', {
+            'input_username': username,
+            'input_password': password
+        }).execute()
+        
+        print(f"Password check result: {password_check}")
+        
+        # אם הסיסמה נכונה, ניצור קוד אימות
+        if password_check.data:  # אם הסיסמה נכונה
+            # יצירת קוד אימות
+            import random
+            verification_code = str(random.randint(100000, 999999))
+            
+            # שמירת הקוד
+            supabase.table('user_parkings')\
+                .update({
+                    'verification_code': verification_code,
+                    'code_expires_at': 'NOW() + INTERVAL \'10 minutes\''
+                })\
+                .eq('username', username)\
+                .execute()
+            
+            # שמירה בסשן
             session['pending_user'] = {
-                'email': login_result.get('email'),
+                'email': user_data['email'],
                 'username': username
             }
-            print(f"Session set: {session.get('pending_user')}")
             
+            print("Login successful!")
             return jsonify({
                 'success': True,
-                'message': login_result.get('message'),
+                'message': 'קוד אימות נשלח למייל',
                 'redirect': '/verify'
             })
         else:
-            print("Login failed from function")
+            print("Password incorrect")
             return jsonify({
                 'success': False,
-                'message': login_result.get('message')
+                'message': 'שם משתמש או סיסמה שגויים'
             }), 401
             
     except Exception as e:
-        print(f"=== LOGIN EXCEPTION ===")
-        print(f"Exception type: {type(e)}")
-        print(f"Exception message: {str(e)}")
-        import traceback
-        print(f"Full traceback: {traceback.format_exc()}")
-        print("=== END EXCEPTION ===")
+        print(f"Login error: {e}")
         return jsonify({
             'success': False,
             'message': 'שגיאה בשרת'
