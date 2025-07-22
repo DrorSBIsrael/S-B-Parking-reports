@@ -1691,24 +1691,39 @@ def login():
         
         print(f"🔑 Login attempt: {validated_username}")
         
-        # שימוש ב-RPC function עם הצפנה
-        auth_result = supabase.rpc('login_with_password_and_send_code', {
-            'input_username': validated_username,
-            'input_password': validated_password
-        }).execute()
+        # שימוש ב-RPC function עם טיפול נכון בException
+        auth_result = None
         
-        print(f"🔐 Auth result: {auth_result.data}")
+        try:
+            result = supabase.rpc('login_with_password_and_send_code', {
+                'input_username': validated_username,
+                'input_password': validated_password
+            }).execute()
+            auth_result = result.data
+            print(f"🔐 Normal result: {auth_result}")
+            
+        except Exception as rpc_error:
+            # אם זה APIError עם תוצאה מוצלחת
+            if hasattr(rpc_error, 'args') and len(rpc_error.args) > 0:
+                error_data = rpc_error.args[0]
+                if isinstance(error_data, dict) and error_data.get('success'):
+                    auth_result = error_data
+                    print(f"🔐 Extracted from APIError: {auth_result}")
+                else:
+                    raise rpc_error
+            else:
+                raise rpc_error
         
         # בדיקה אם התוצאה מוצלחת
-        if auth_result.data and isinstance(auth_result.data, dict) and auth_result.data.get('success'):
-            email = auth_result.data.get('email')
+        if auth_result and isinstance(auth_result, dict) and auth_result.get('success'):
+            email = auth_result.get('email')
             print(f"✅ Login successful for: {email}")
             
             # שמירה ב-session
             session['pending_email'] = email
             return jsonify({'success': True, 'redirect': '/verify'})
         else:
-            error_msg = auth_result.data.get('message', 'שם משתמש או סיסמה שגויים') if auth_result.data else 'שגיאה בהתחברות'
+            error_msg = auth_result.get('message', 'שם משתמש או סיסמה שגויים') if auth_result else 'שגיאה בהתחברות'
             print(f"❌ Authentication failed: {error_msg}")
             return jsonify({'success': False, 'message': error_msg})
             
