@@ -1669,195 +1669,88 @@ def validate_date_format(date_string):
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    print("=== LOGIN START ===")
     try:
+        if not supabase:
+            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+            
         data = request.get_json()
-        username = data.get('username')
-        password = data.get('password')
+        username = data.get('username', '').strip()
+        password = data.get('password', '').strip()
         
-        if not username or not password:
-            return jsonify({
-                'success': False,
-                'message': 'שם משתמש וסיסמה נדרשים'
-            }), 400
+        # אימות קלט
+        is_valid_username, validated_username = validate_input(username, "username")
+        is_valid_password, validated_password = validate_input(password, "password")
         
-        print(f"Attempting login for: {username}")
+        if not is_valid_username:
+            print(f"🚨 Invalid username attempt: {username}")
+            return jsonify({'success': False, 'message': 'שם משתמש לא תקין'})
         
-        # במקום להשתמש ב-supabase.rpc, נעשה את הבדיקה ישירות
-        # קבלת המשתמש
-        user_result = supabase.table('user_parkings')\
-            .select('*')\
-            .eq('username', username)\
-            .execute()
+        if not is_valid_password:
+            print(f"🚨 Invalid password attempt from user: {validated_username}")
+            return jsonify({'success': False, 'message': 'סיסמה לא תקינה'})
         
-        if not user_result.data:
-            print("User not found")
-            return jsonify({
-                'success': False,
-                'message': 'שם משתמש או סיסמה שגויים'
-            }), 401
+        print(f"🔑 Login attempt: {validated_username}")
         
-        user_data = user_result.data[0]
-        print(f"User found: {user_data['username']}")
-        
-        # בדיקת הסיסמה באמצעות SQL query
-        password_check = supabase.rpc('check_password', {
-            'input_username': username,
-            'input_password': password
+        # שימוש ב-RPC function עם הצפנה
+        auth_result = supabase.rpc('login_with_password_and_send_code', {
+            'input_username': validated_username,
+            'input_password': validated_password
         }).execute()
         
-        print(f"Password check result: {password_check}")
+        print(f"🔐 Auth result: {auth_result.data}")
         
-        # אם הסיסמה נכונה, ניצור קוד אימות
-        if password_check.data:  # אם הסיסמה נכונה
-            # יצירת קוד אימות
-            import random
-            verification_code = str(random.randint(100000, 999999))
+        # בדיקה אם התוצאה מוצלחת
+        if auth_result.data and isinstance(auth_result.data, dict) and auth_result.data.get('success'):
+            email = auth_result.data.get('email')
+            print(f"✅ Login successful for: {email}")
             
-            # שמירת הקוד
-            expires_at = datetime.now() + timedelta(minutes=10)
-            
-            supabase.table('user_parkings')\
-                .update({
-                    'verification_code': verification_code,
-                    'code_expires_at': expires_at.isoformat()
-                })\
-                .eq('username', username)\
-                .execute()
-            
-            # שמירה בסשן
-            session['pending_user'] = {
-                'email': user_data['email'],
-                'username': username
-            }
-            
-            print("Login successful!")
-            return jsonify({
-                'success': True,
-                'message': 'קוד אימות נשלח למייל',
-                'redirect': '/verify'
-            })
+            # שמירה ב-session
+            session['pending_email'] = email
+            return jsonify({'success': True, 'redirect': '/verify'})
         else:
-            print("Password incorrect")
-            return jsonify({
-                'success': False,
-                'message': 'שם משתמש או סיסמה שגויים'
-            }), 401
+            error_msg = auth_result.data.get('message', 'שם משתמש או סיסמה שגויים') if auth_result.data else 'שגיאה בהתחברות'
+            print(f"❌ Authentication failed: {error_msg}")
+            return jsonify({'success': False, 'message': error_msg})
             
     except Exception as e:
-        print(f"Login error: {e}")
-        return jsonify({
-            'success': False,
-            'message': 'שגיאה בשרת'
-        }), 500
+        print(f"❌ Login error: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
 
 @app.route('/api/verify-code', methods=['POST'])
 def verify_code():
-    print("=== VERIFY START ===")
     try:
+        if not supabase:
+            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+            
         data = request.get_json()
-        code = data.get('code')
-        print(f"Received code: {code}")
+        code = data.get('code', '').strip()
+        email = session.get('pending_email')
         
-        if not code or len(code) != 6:
-            print("Invalid code length")
-            return jsonify({
-                'success': False,
-                'message': 'נא להכניס קוד בן 6 ספרות'
-            }), 400
+        # אימות קוד
+        is_valid_code, validated_code = validate_input(code, "verification_code")
+        if not is_valid_code:
+            print(f"🚨 Invalid verification code format: {code}")
+            return jsonify({'success': False, 'message': 'קוד לא תקין'})
         
-        # קבלת האימייל מהסשן
-        pending_user = session.get('pending_user')
-        print(f"Session pending_user: {pending_user}")
+        if not email:
+            print(f"🚨 No pending email in session")
+            return jsonify({'success': False, 'message': 'אין בקשה לאימות'})
         
-        if not pending_user:
-            print("No pending user in session")
-            return jsonify({
-                'success': False,
-                'message': 'לא נמצא פרטי משתמש. אנא התחבר מחדש'
-            }), 400
+        print(f"🔍 Verify attempt: code={validated_code}, email={email}")
         
-        user_email = pending_user.get('email')
-        print(f"Verifying code for email: {user_email}")
-        
-        # בדיקה מה יש בבסיס הנתונים
-        all_codes = supabase.table('user_parkings')\
-            .select('username, email, verification_code')\
-            .eq('email', user_email)\
-            .execute()
-        
-        print(f"All data for this email: {all_codes.data}")
-        
-        # בדיקת הקוד ישירות מהטבלה
-        user_result = supabase.table('user_parkings')\
-            .select('*')\
-            .eq('email', user_email)\
-            .eq('verification_code', code)\
-            .execute()
-        
-        print(f"Code match result: {user_result.data}")
-        
-        if not user_result.data:
-            print("Code not found or incorrect")
-            return jsonify({
-                'success': False,
-                'message': 'קוד אימות שגוי'
-            }), 401
-        
-        user_data = user_result.data[0]
-        print(f"Code verified for user: {user_data['username']}")
-        
-        # מחיקת קוד האימות
-        supabase.table('user_parkings')\
-            .update({
-                'verification_code': None,
-                'code_expires_at': None
-            })\
-            .eq('email', user_email)\
-            .execute()
-        
-        # שמירת המשתמש בסשן
-        session['user'] = {
-            'username': user_data['username'],
-            'email': user_data['email'],
-            'project_number': user_data['project_number'],  # השם הנכון
-            'parking_name': user_data['parking_name'],
-            'code_type': user_data['code_type'],
-            'company_list': user_data['company_list']
-        }
-        
-        # מחיקת הפרטים הזמניים
-        session.pop('pending_user', None)
-        
-        # הפניה לפי סוג המשתמש
-        redirect_url = '/dashboard'
-        if user_data['code_type'] == 'master':
-            redirect_url = '/master-panel'
-        elif user_data['code_type'] == 'parking_manager':
-            redirect_url = '/parking-manager'
-        
-        print("Verification successful!")
-        return jsonify({
-            'success': True,
-            'message': 'התחברות הושלמה בהצלחה',
-            'redirect': redirect_url,
-            'user': {
-                'username': user_data['username'],
-                'code_type': user_data['code_type']
-            }
-        })
-        
+        # בדיקת הקוד מהמסד נתונים
+        if verify_code_from_database(email, validated_code):
+            session['user_email'] = email
+            session.pop('pending_email', None)
+            print(f"✅ SUCCESS - Redirecting to dashboard")
+            return jsonify({'success': True, 'redirect': '/dashboard'})
+        else:
+            print(f"❌ FAILED - Invalid or expired code")
+            return jsonify({'success': False, 'message': 'קוד שגוי או פג תוקף'})
+            
     except Exception as e:
-        print(f"=== VERIFY EXCEPTION ===")
-        print(f"Exception type: {type(e)}")
-        print(f"Exception message: {str(e)}")
-        import traceback
-        print(f"Full traceback: {traceback.format_exc()}")
-        print("=== END EXCEPTION ===")
-        return jsonify({
-            'success': False,
-            'message': 'שגיאה בשרת'
-        }), 500
+        print(f"❌ Verify error: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
 
 @app.route('/logout')
 def logout_page():
