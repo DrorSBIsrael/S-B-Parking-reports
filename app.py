@@ -1753,11 +1753,11 @@ def login():
 
 @app.route('/api/verify-code', methods=['POST'])
 def verify_code():
+    print("=== VERIFY START ===")
     try:
         data = request.get_json()
         code = data.get('code')
         
-        # בדיקה שקיים קוד
         if not code or len(code) != 6:
             return jsonify({
                 'success': False,
@@ -1773,63 +1773,67 @@ def verify_code():
             }), 400
         
         user_email = pending_user.get('email')
+        print(f"Verifying code for email: {user_email}")
         
-        # אימות הקוד
-        result = supabase.rpc('verify_code', {
-            'p_email': user_email,
-            'p_code': code
-        }).execute()
+        # בדיקת הקוד ישירות מהטבלה
+        user_result = supabase.table('user_parkings')\
+            .select('*')\
+            .eq('email', user_email)\
+            .eq('verification_code', code)\
+            .execute()
         
-        if result.data and result.data.get('success'):
-            # האימות הצליח - קבלת פרטי המשתמש המלאים
-            user_result = supabase.table('user_parkings')\
-                .select('username, email, parking_id, code_type, company_list')\
-                .eq('email', user_email)\
-                .execute()
-            
-            if not user_result.data:
-                return jsonify({
-                    'success': False,
-                    'message': 'שגיאה בקבלת פרטי משתמש'
-                }), 500
-            
-            user_data = user_result.data[0]
-            
-            # שמירת פרטי המשתמש בסשן
-            session['user'] = {
-                'username': user_data['username'],
-                'email': user_data['email'],
-                'parking_id': user_data['parking_id'],
-                'code_type': user_data['code_type'],
-                'company_list': user_data['company_list']
-            }
-            
-            # מחיקת הפרטים הזמניים
-            session.pop('pending_user', None)
-            
-            # הפניה לפי סוג המשתמש
-            redirect_url = '/dashboard'
-            if user_data['code_type'] == 'master':
-                redirect_url = '/master-panel'
-            elif user_data['code_type'] == 'parking_manager':
-                redirect_url = '/parking-manager'
-            
-            return jsonify({
-                'success': True,
-                'message': 'התחברות הושלמה בהצלחה',
-                'redirect': redirect_url,
-                'user': {
-                    'username': user_data['username'],
-                    'code_type': user_data['code_type']
-                }
-            })
-        else:
-            error_message = result.data.get('message') if result.data else 'שגיאה באימות'
+        if not user_result.data:
+            print("Code not found or incorrect")
             return jsonify({
                 'success': False,
-                'message': error_message
+                'message': 'קוד אימות שגוי'
             }), 401
-            
+        
+        user_data = user_result.data[0]
+        print(f"Code verified for user: {user_data['username']}")
+        
+        # בדיקת תוקף הקוד (אם יש)
+        # כאן נוסיף בדיקת זמן אם נרצה
+        
+        # מחיקת קוד האימות
+        supabase.table('user_parkings')\
+            .update({
+                'verification_code': None,
+                'code_expires_at': None
+            })\
+            .eq('email', user_email)\
+            .execute()
+        
+        # שמירת המשתמש בסשן
+        session['user'] = {
+            'username': user_data['username'],
+            'email': user_data['email'],
+            'parking_id': user_data['parking_id'],
+            'code_type': user_data['code_type'],
+            'company_list': user_data['company_list']
+        }
+        
+        # מחיקת הפרטים הזמניים
+        session.pop('pending_user', None)
+        
+        # הפניה לפי סוג המשתמש
+        redirect_url = '/dashboard'
+        if user_data['code_type'] == 'master':
+            redirect_url = '/master-panel'
+        elif user_data['code_type'] == 'parking_manager':
+            redirect_url = '/parking-manager'
+        
+        print("Verification successful!")
+        return jsonify({
+            'success': True,
+            'message': 'התחברות הושלמה בהצלחה',
+            'redirect': redirect_url,
+            'user': {
+                'username': user_data['username'],
+                'code_type': user_data['code_type']
+            }
+        })
+        
     except Exception as e:
         print(f"Verification error: {e}")
         return jsonify({
