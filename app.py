@@ -1668,101 +1668,96 @@ def validate_date_format(date_string):
 
 @app.route('/api/login', methods=['POST'])
 def login():
-   print("=== LOGIN START ===")
-   try:
-       print("Getting JSON data...")
-       data = request.get_json()
-       print(f"Received data: {data}")
-       
-       username = data.get('username')
-       password = data.get('password')
-       print(f"Username: {username}, Password length: {len(password) if password else 0}")
-       
-       # וידוא שהפרמטרים קיימים
-       if not username or not password:
-           print("Missing username or password")
-           return jsonify({
-               'success': False,
-               'message': 'שם משתמש וסיסמה נדרשים'
-           }), 400
-       
-       print("Calling Supabase RPC...")
-       # קריאה לפונקציה המעודכנת עם הצפנה
-       result = supabase.rpc(
-           'login_with_password_and_send_code',
-           {
-               'input_username': username,
-               'input_password': password
-           }
-       ).execute()
-       
-       print(f"Result type: {type(result.data)}")
-       print(f"Result data: {result.data}")
-       
-       if result.error:
-           print(f"Supabase error: {result.error}")
-           return jsonify({
-               'success': False,
-               'message': 'שגיאה בשרת'
-           }), 500
-       
-       if result.data:
-           # תיקון: וידוא שזה אובייקט Python
-           if isinstance(result.data, str):
-               import json
-               login_result = json.loads(result.data)
-           else:
-               login_result = result.data
-           
-           print(f"Login result: {login_result}")
-           
-           # בדיקה אם הסיסמה פגה תוקף
-           if login_result.get('password_expired'):
-               return jsonify({
-                   'success': False,
-                   'message': login_result.get('message'),
-                   'password_expired': True
-               }), 403
-           
-           if login_result.get('success'):
-               print("Login successful, setting session...")
-               # שמירת פרטי המשתמש בסשן
-               session['pending_user'] = {
-                   'email': login_result.get('email'),
-                   'username': username
-               }
-               print(f"Session set: {session.get('pending_user')}")
-               
-               return jsonify({
-                   'success': True,
-                   'message': login_result.get('message'),
-                   'redirect': '/verify'
-               })
-           else:
-               print("Login failed from function")
-               return jsonify({
-                   'success': False,
-                   'message': login_result.get('message')
-               }), 401
-       else:
-           print("No data returned from Supabase")
-           return jsonify({
-               'success': False,
-               'message': 'שגיאה בהתחברות'
-           }), 500
-           
-   except Exception as e:
-       print(f"=== LOGIN EXCEPTION ===")
-       print(f"Exception type: {type(e)}")
-       print(f"Exception message: {str(e)}")
-       print(f"Exception details: {repr(e)}")
-       import traceback
-       print(f"Full traceback: {traceback.format_exc()}")
-       print("=== END EXCEPTION ===")
-       return jsonify({
-           'success': False,
-           'message': 'שגיאה בשרת'
-       }), 500
+    print("=== LOGIN START ===")
+    try:
+        print("Getting JSON data...")
+        data = request.get_json()
+        print(f"Received data: {data}")
+        
+        username = data.get('username')
+        password = data.get('password')
+        print(f"Username: {username}, Password length: {len(password) if password else 0}")
+        
+        # וידוא שהפרמטרים קיימים
+        if not username or not password:
+            print("Missing username or password")
+            return jsonify({
+                'success': False,
+                'message': 'שם משתמש וסיסמה נדרשים'
+            }), 400
+        
+        print("Calling Supabase RPC...")
+        
+        # קריאה לפונקציה עם טיפול נכון בתוצאה
+        try:
+            result = supabase.rpc(
+                'login_with_password_and_send_code',
+                {
+                    'input_username': username,
+                    'input_password': password
+                }
+            ).execute()
+            login_result = result.data
+            print(f"Normal result: {login_result}")
+            
+        except Exception as rpc_error:
+            print(f"RPC Error type: {type(rpc_error)}")
+            print(f"RPC Error: {rpc_error}")
+            
+            # אם זה APIError עם תוצאה מוצלחת, נחלץ את הנתונים
+            if hasattr(rpc_error, 'args') and len(rpc_error.args) > 0:
+                error_data = rpc_error.args[0]
+                print(f"Error data: {error_data}")
+                if isinstance(error_data, dict) and error_data.get('success'):
+                    login_result = error_data
+                    print(f"Extracted successful result from APIError: {login_result}")
+                else:
+                    print("Not a successful result, re-raising error")
+                    raise rpc_error
+            else:
+                print("No args in error, re-raising")
+                raise rpc_error
+        
+        # בדיקה אם הסיסמה פגה תוקף
+        if login_result.get('password_expired'):
+            return jsonify({
+                'success': False,
+                'message': login_result.get('message'),
+                'password_expired': True
+            }), 403
+        
+        if login_result.get('success'):
+            print("Login successful, setting session...")
+            # שמירת פרטי המשתמש בסשן
+            session['pending_user'] = {
+                'email': login_result.get('email'),
+                'username': username
+            }
+            print(f"Session set: {session.get('pending_user')}")
+            
+            return jsonify({
+                'success': True,
+                'message': login_result.get('message'),
+                'redirect': '/verify'
+            })
+        else:
+            print("Login failed from function")
+            return jsonify({
+                'success': False,
+                'message': login_result.get('message')
+            }), 401
+            
+    except Exception as e:
+        print(f"=== LOGIN EXCEPTION ===")
+        print(f"Exception type: {type(e)}")
+        print(f"Exception message: {str(e)}")
+        import traceback
+        print(f"Full traceback: {traceback.format_exc()}")
+        print("=== END EXCEPTION ===")
+        return jsonify({
+            'success': False,
+            'message': 'שגיאה בשרת'
+        }), 500
 
 @app.route('/api/verify-code', methods=['POST'])
 def verify_code():
