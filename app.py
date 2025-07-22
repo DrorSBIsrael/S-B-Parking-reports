@@ -1715,10 +1715,12 @@ def login():
             verification_code = str(random.randint(100000, 999999))
             
             # שמירת הקוד
+            expires_at = datetime.now() + timedelta(minutes=10)
+            
             supabase.table('user_parkings')\
                 .update({
                     'verification_code': verification_code,
-                    'code_expires_at': 'NOW() + INTERVAL \'10 minutes\''
+                    'code_expires_at': expires_at.isoformat()
                 })\
                 .eq('username', username)\
                 .execute()
