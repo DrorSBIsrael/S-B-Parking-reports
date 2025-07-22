@@ -1393,7 +1393,7 @@ def login_page():
 
 @app.route('/verify')
 def verify_page():
-    if 'pending_email' not in session:
+    if 'pending_user' not in session:  # ← שינוי כאן!
         return redirect(url_for('login_page'))
     return render_template('verify.html')
 
