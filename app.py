@@ -1820,7 +1820,8 @@ def verify_code():
         session['user'] = {
             'username': user_data['username'],
             'email': user_data['email'],
-            'parking_id': user_data['parking_id'],
+            'project_number': user_data['project_number'],  # השם הנכון
+            'parking_name': user_data['parking_name'],
             'code_type': user_data['code_type'],
             'company_list': user_data['company_list']
         }
