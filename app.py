@@ -1673,14 +1673,13 @@ def login():
         username = data.get('username')
         password = data.get('password')
         
-        # וידוא שהפרמטרים קיימים
         if not username or not password:
             return jsonify({
                 'success': False,
                 'message': 'שם משתמש וסיסמה נדרשים'
             }), 400
         
-        # קריאה לפונקציה המעודכנת עם הצפנה
+        # קריאה לפונקציה
         result = supabase.rpc(
             'login_with_password_and_send_code',
             {
@@ -1688,11 +1687,17 @@ def login():
                 'input_password': password
             }
         ).execute()
-        
+        print(f"Result type: {type(result.data)}")
+        print(f"Result data: {result.data}")
         if result.data:
-            login_result = result.data
+            # תיקון: וידוא שזה אובייקט Python
+            if isinstance(result.data, str):
+                import json
+                login_result = json.loads(result.data)
+            else:
+                login_result = result.data
             
-            # בדיקה אם הסיסמה פגה תוקף
+            # המשך הקוד כמו שהיה...
             if login_result.get('password_expired'):
                 return jsonify({
                     'success': False,
@@ -1701,7 +1706,6 @@ def login():
                 }), 403
             
             if login_result.get('success'):
-                # שמירת פרטי המשתמש בסשן
                 session['pending_user'] = {
                     'email': login_result.get('email'),
                     'username': username
