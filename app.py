@@ -1708,11 +1708,12 @@ def login():
             if hasattr(rpc_error, 'args') and len(rpc_error.args) > 0:
                 error_data = rpc_error.args[0]
                 print(f"Error data: {error_data}")
-                if isinstance(error_data, dict) and error_data.get('success'):
-                    login_result = error_data
-                    print(f"Extracted successful result from APIError: {login_result}")
+                
+                if isinstance(error_data, dict):
+                    login_result = error_data  # פשוט ניקח את התוצאה כמו שהיא
+                    print(f"Using result from APIError: {login_result}")
                 else:
-                    print("Not a successful result, re-raising error")
+                    print("Error data is not dict, re-raising error")
                     raise rpc_error
             else:
                 print("No args in error, re-raising")
