@@ -1757,8 +1757,10 @@ def verify_code():
     try:
         data = request.get_json()
         code = data.get('code')
+        print(f"Received code: {code}")
         
         if not code or len(code) != 6:
+            print("Invalid code length")
             return jsonify({
                 'success': False,
                 'message': 'נא להכניס קוד בן 6 ספרות'
@@ -1766,7 +1768,10 @@ def verify_code():
         
         # קבלת האימייל מהסשן
         pending_user = session.get('pending_user')
+        print(f"Session pending_user: {pending_user}")
+        
         if not pending_user:
+            print("No pending user in session")
             return jsonify({
                 'success': False,
                 'message': 'לא נמצא פרטי משתמש. אנא התחבר מחדש'
@@ -1775,12 +1780,22 @@ def verify_code():
         user_email = pending_user.get('email')
         print(f"Verifying code for email: {user_email}")
         
+        # בדיקה מה יש בבסיס הנתונים
+        all_codes = supabase.table('user_parkings')\
+            .select('username, email, verification_code')\
+            .eq('email', user_email)\
+            .execute()
+        
+        print(f"All data for this email: {all_codes.data}")
+        
         # בדיקת הקוד ישירות מהטבלה
         user_result = supabase.table('user_parkings')\
             .select('*')\
             .eq('email', user_email)\
             .eq('verification_code', code)\
             .execute()
+        
+        print(f"Code match result: {user_result.data}")
         
         if not user_result.data:
             print("Code not found or incorrect")
@@ -1791,9 +1806,6 @@ def verify_code():
         
         user_data = user_result.data[0]
         print(f"Code verified for user: {user_data['username']}")
-        
-        # בדיקת תוקף הקוד (אם יש)
-        # כאן נוסיף בדיקת זמן אם נרצה
         
         # מחיקת קוד האימות
         supabase.table('user_parkings')\
@@ -1835,7 +1847,12 @@ def verify_code():
         })
         
     except Exception as e:
-        print(f"Verification error: {e}")
+        print(f"=== VERIFY EXCEPTION ===")
+        print(f"Exception type: {type(e)}")
+        print(f"Exception message: {str(e)}")
+        import traceback
+        print(f"Full traceback: {traceback.format_exc()}")
+        print("=== END EXCEPTION ===")
         return jsonify({
             'success': False,
             'message': 'שגיאה בשרת'
