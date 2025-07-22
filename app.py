@@ -1396,13 +1396,6 @@ def verify_page():
         return redirect(url_for('login_page'))
     return render_template('verify.html')
 
-@app.route('/dashboard')
-def dashboard():
-    """דף הדשבורד הראשי"""
-    if 'user_email' not in session:
-        return redirect(url_for('login_page'))
-    return render_template('dashboard.html')
-
 @app.route('/api/user-info', methods=['GET'])
 def get_user_info():
     """קבלת נתוני המשתמש המחובר"""
