@@ -1660,15 +1660,30 @@ def login():
         
         print(f"🔑 Login attempt: {validated_username}")
         
-        # שימוש ב-RPC function המעודכנת
-        auth_result = supabase.rpc('user_login', {
-            'p_username': validated_username,
-            'p_password': validated_password
-        }).execute()
+# שימוש ב-RPC function המעודכנת עם טיפול נכון בAPIError
+        auth_result = None
         
-        print(f"🔐 Auth result: {auth_result.data}")
+        try:
+            result = supabase.rpc('user_login', {
+                'p_username': validated_username,
+                'p_password': validated_password
+            }).execute()
+            auth_result = result.data
+            print(f"🔐 Normal result: {auth_result}")
+            
+        except Exception as rpc_error:
+            # טיפול ב-APIError שמכיל תוצאה מוצלחת
+            if hasattr(rpc_error, 'args') and len(rpc_error.args) > 0:
+                error_data = rpc_error.args[0]
+                if isinstance(error_data, dict) and error_data.get('success'):
+                    auth_result = error_data
+                    print(f"🔐 Extracted from APIError: {auth_result}")
+                else:
+                    raise rpc_error
+            else:
+                raise rpc_error
         
-        if auth_result.data and auth_result.data.get('success'):
+        if auth_result and auth_result.get('success'):
             # בדיקה אם נדרש לשנות סיסמה
             if auth_result.data.get('require_password_change'):
                 session['change_password_user'] = validated_username
