@@ -1690,6 +1690,11 @@ def login():
                     except:
                         print("🔍 Could not parse as JSON")
                         raise rpc_error
+                elif isinstance(auth_result, dict):
+                    print(f"🔐 Already a dict: {auth_result}")
+                else:
+                    print(f"🔍 Unknown type: {type(auth_result)}")
+                    raise rpc_error
             else:
                 raise rpc_error
         
