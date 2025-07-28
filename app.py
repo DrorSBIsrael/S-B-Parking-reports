@@ -1659,7 +1659,7 @@ def login():
             return jsonify({'success': False, 'message': 'סיסמה לא תקינה'})
         
         print(f"🔑 Login attempt: {validated_username}")
-        
+        print("🔍 About to call RPC function...")
 # שימוש ב-RPC function המעודכנת עם טיפול נכון בAPIError
         auth_result = None
         
