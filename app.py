@@ -1665,7 +1665,7 @@ def login():
         print(f"🔑 Login attempt: {validated_username}")
         print("🔍 About to call RPC function...")
         
-        # קריאה לפונקציה עם טיפול פשוט
+# קריאה לפונקציה עם טיפול פשוט  
         try:
             result = supabase.rpc('user_login', {
                 'p_username': validated_username,
@@ -1676,22 +1676,23 @@ def login():
             
         except Exception as rpc_error:
             print(f"🔍 RPC Exception: {rpc_error}")
-            # פשוט ניקח את התוצאה מהשגיאה
+            # ניקח את התוצאה מהשגיאה
             if hasattr(rpc_error, 'args') and rpc_error.args:
                 auth_result = rpc_error.args[0]
                 print(f"🔐 From exception: {auth_result}")
+                print(f"🔐 Type: {type(auth_result)}")
                 
-                # אם זה string, נמיר ל-JSON
-                if isinstance(auth_result, str):
+                # בדיקת סוג הנתונים
+                if isinstance(auth_result, dict):
+                    print(f"🔐 It's already a dict!")
+                elif isinstance(auth_result, str):
                     import json
                     try:
                         auth_result = json.loads(auth_result)
-                        print(f"🔐 Converted to dict: {auth_result}")
+                        print(f"🔐 Converted string to dict: {auth_result}")
                     except:
-                        print("🔍 Could not parse as JSON")
+                        print("🔍 Could not parse string as JSON")
                         raise rpc_error
-                elif isinstance(auth_result, dict):
-                    print(f"🔐 Already a dict: {auth_result}")
                 else:
                     print(f"🔍 Unknown type: {type(auth_result)}")
                     raise rpc_error
