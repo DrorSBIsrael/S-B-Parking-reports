@@ -1680,6 +1680,16 @@ def login():
             if hasattr(rpc_error, 'args') and rpc_error.args:
                 auth_result = rpc_error.args[0]
                 print(f"🔐 From exception: {auth_result}")
+                
+                # אם זה string, נמיר ל-JSON
+                if isinstance(auth_result, str):
+                    import json
+                    try:
+                        auth_result = json.loads(auth_result)
+                        print(f"🔐 Converted to dict: {auth_result}")
+                    except:
+                        print("🔍 Could not parse as JSON")
+                        raise rpc_error
             else:
                 raise rpc_error
         
