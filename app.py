@@ -1686,13 +1686,20 @@ def login():
                 if isinstance(auth_result, dict):
                     print(f"🔐 It's already a dict!")
                 elif isinstance(auth_result, str):
-                    import json
+                    print(f"🔍 Raw string: {repr(auth_result)}")
+                    # זה כנראה string שנראה כמו dict - ננסה eval
                     try:
-                        auth_result = json.loads(auth_result)
-                        print(f"🔐 Converted string to dict: {auth_result}")
+                        import ast
+                        auth_result = ast.literal_eval(auth_result)
+                        print(f"🔐 Converted with literal_eval: {auth_result}")
                     except:
-                        print("🔍 Could not parse string as JSON")
-                        raise rpc_error
+                        try:
+                            import json
+                            auth_result = json.loads(auth_result)
+                            print(f"🔐 Converted with json: {auth_result}")
+                        except:
+                            print("🔍 Could not parse - treating as error message")
+                            return jsonify({'success': False, 'message': auth_result})
                 else:
                     print(f"🔍 Unknown type: {type(auth_result)}")
                     raise rpc_error
