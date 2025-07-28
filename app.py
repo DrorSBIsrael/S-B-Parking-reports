@@ -1660,7 +1660,7 @@ def login():
         
         print(f"🔑 Login attempt: {validated_username}")
         
-        # שימוש ב-RPC function
+        # שימוש ב-RPC function המעודכנת
         auth_result = supabase.rpc('user_login', {
             'p_username': validated_username,
             'p_password': validated_password
@@ -1668,8 +1668,18 @@ def login():
         
         print(f"🔐 Auth result: {auth_result.data}")
         
-        if auth_result.data is True:
-            # Get user email
+        if auth_result.data and auth_result.data.get('success'):
+            # בדיקה אם נדרש לשנות סיסמה
+            if auth_result.data.get('require_password_change'):
+                session['change_password_user'] = validated_username
+                return jsonify({
+                    'success': True,
+                    'require_password_change': True,
+                    'message': auth_result.data.get('message'),
+                    'redirect': '/change-password'
+                })
+            
+            # התחברות רגילה - קבלת האימייל
             user_result = supabase.table('user_parkings').select('email').eq('username', validated_username).execute()
             
             if user_result.data and len(user_result.data) > 0:
@@ -1696,8 +1706,9 @@ def login():
             else:
                 return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
         else:
-            print(f"❌ Authentication failed for: {validated_username}")
-            return jsonify({'success': False, 'message': 'שם משתמש או סיסמה שגויים'})
+            error_msg = auth_result.data.get('message', 'שם משתמש או סיסמה שגויים') if auth_result.data else 'שגיאה בהתחברות'
+            print(f"❌ Authentication failed: {error_msg}")
+            return jsonify({'success': False, 'message': error_msg})
             
     except Exception as e:
         print(f"❌ Login error: {str(e)}")
@@ -1808,6 +1819,180 @@ def not_found(error):
 def internal_error(error):
     return jsonify({'error': 'Internal server error'}), 500
 
+# Route לדף שינוי סיסמה
+@app.route('/change-password')
+def change_password_page():
+    if 'change_password_user' not in session:
+        return redirect(url_for('login_page'))
+    return render_template('change-password.html')
+
+# API לשינוי סיסמה
+@app.route('/api/change-password', methods=['POST'])
+def change_password():
+    try:
+        if not supabase:
+            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+        
+        if 'change_password_user' not in session:
+            return jsonify({'success': False, 'message': 'אין הרשאה לשינוי סיסמה'})
+        
+        data = request.get_json()
+        old_password = data.get('old_password', '').strip()
+        new_password = data.get('new_password', '').strip()
+        confirm_password = data.get('confirm_password', '').strip()
+        
+        # אימות קלט
+        if not old_password or not new_password or not confirm_password:
+            return jsonify({'success': False, 'message': 'יש למלא את כל השדות'})
+        
+        if new_password != confirm_password:
+            return jsonify({'success': False, 'message': 'סיסמאות לא תואמות'})
+        
+        if len(new_password) < 6:
+            return jsonify({'success': False, 'message': 'סיסמה חייבת להיות לפחות 6 תווים'})
+        
+        username = session['change_password_user']
+        
+        # שינוי הסיסמה
+        result = supabase.rpc('change_user_password', {
+            'p_username': username,
+            'p_old_password': old_password,
+            'p_new_password': new_password
+        }).execute()
+        
+        if result.data and result.data.get('success'):
+            # מחיקת המשתמש מהסשן וחזרה להתחברות
+            session.pop('change_password_user', None)
+            return jsonify({
+                'success': True,
+                'message': 'סיסמה שונתה בהצלחה. אנא התחבר מחדש',
+                'redirect': '/login'
+            })
+        else:
+            error_msg = result.data.get('message', 'שגיאה בשינוי סיסמה') if result.data else 'שגיאה בשינוי סיסמה'
+            return jsonify({'success': False, 'message': error_msg})
+        
+    except Exception as e:
+        print(f"❌ Change password error: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
+
+# API ליצירת משתמש חדש (למאסטר)
+@app.route('/api/create-user', methods=['POST'])
+def create_user():
+    try:
+        if not supabase:
+            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+        
+        # בדיקת הרשאות - כרגע נחזור לזה אחר כך
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'})
+        
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip()
+        project_number = data.get('project_number')
+        code_type = data.get('code_type', 'dashboard').strip()
+        company_list = data.get('company_list', '').strip() or None
+        
+        # אימות קלט בסיסי
+        if not username or not email or not project_number:
+            return jsonify({'success': False, 'message': 'יש למלא את כל השדות הנדרשים'})
+        
+        # יצירת המשתמש
+        result = supabase.rpc('create_user_with_temp_password', {
+            'p_username': username,
+            'p_email': email,
+            'p_project_number': int(project_number),
+            'p_code_type': code_type,
+            'p_created_by': session['user_email'],
+            'p_company_list': company_list
+        }).execute()
+        
+        if result.data and result.data.get('success'):
+            # שליחת מייל למשתמש החדש
+            user_data = result.data
+            send_new_user_email(
+                user_data.get('email'),
+                user_data.get('username'),
+                user_data.get('temp_password'),
+                user_data.get('login_url')
+            )
+            
+            return jsonify({
+                'success': True,
+                'message': f'משתמש נוצר בהצלחה. מייל נשלח ל-{email}',
+                'user_data': {
+                    'username': username,
+                    'email': email,
+                    'temp_password': user_data.get('temp_password')
+                }
+            })
+        else:
+            error_msg = result.data.get('message', 'שגיאה ביצירת משתמש') if result.data else 'שגיאה ביצירת משתמש'
+            return jsonify({'success': False, 'message': error_msg})
+        
+    except Exception as e:
+        print(f"❌ Create user error: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
+
+def send_new_user_email(email, username, temp_password, login_url):
+    """שליחת מייל למשתמש חדש עם פרטי התחברות"""
+    
+    if not mail:
+        print(f"❌ Mail system not available")
+        print(f"📱 NEW USER DETAILS for {email}:")
+        print(f"   Username: {username}")
+        print(f"   Password: {temp_password}")
+        print(f"   URL: {login_url}")
+        return False
+    
+    try:
+        print(f"🚀 Sending new user email to {email}...")
+        
+        msg = Message(
+            subject='חשבון חדש - S&B Parking',
+            recipients=[email],
+            html=f"""
+            <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">
+                <h2 style="color: #667eea;">שיידט את בכמן ישראל</h2>
+                <h3>חשבון חדש נוצר עבורך במערכת דוחות החניות</h3>
+                
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <p><strong>שם משתמש:</strong> {username}</p>
+                    <p><strong>סיסמה זמנית:</strong> <span style="font-family: monospace; background: #e9ecef; padding: 2px 6px;">{temp_password}</span></p>
+                    <p><strong>קישור להתחברות:</strong></p>
+                    <a href="{login_url}" style="color: #667eea; text-decoration: none; font-weight: bold;">{login_url}</a>
+                </div>
+                
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <p style="margin: 0; color: #856404;"><strong>חשוב:</strong></p>
+                    <p style="margin: 5px 0 0 0; color: #856404;">
+                        • הסיסמה הזמנית תפוג ב-01/01/2025<br>
+                        • בכניסה הראשונה תתבקש לשנות את הסיסמה<br>
+                        • לאחר שינוי הסיסמה תוכל להתחבר למערכת
+                    </p>
+                </div>
+                
+                <p>אם יש לך שאלות, צור קשר עם מנהל המערכת.</p>
+                
+                <hr>
+                <p style="color: #666; font-size: 12px;">S&B Parking - מערכת דוחות חניות</p>
+            </div>
+            """,
+            sender=app.config['MAIL_USERNAME']
+        )
+        
+        mail.send(msg)
+        print(f"✅ New user email sent successfully to {email}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ New user email error: {str(e)}")
+        print(f"📱 BACKUP - NEW USER DETAILS for {email}:")
+        print(f"   Username: {username}")
+        print(f"   Password: {temp_password}")
+        print(f"   URL: {login_url}")
+        return False
 # הפעלה אוטומטית כשהאפליקציה מתחילה
 if __name__ == '__main__':
     print("\n🔧 Pre-flight email system check...")
