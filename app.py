@@ -1896,14 +1896,26 @@ def change_password():
         
         username = session['change_password_user']
         
-        # שינוי הסיסמה
-        result = supabase.rpc('change_user_password', {
-            'p_username': username,
-            'p_old_password': old_password,
-            'p_new_password': new_password
-        }).execute()
+# שינוי הסיסמה עם טיפול בAPIError
+        try:
+            result = supabase.rpc('change_user_password', {
+                'p_username': username,
+                'p_old_password': old_password,
+                'p_new_password': new_password
+            }).execute()
+            change_result = result.data
+        except Exception as rpc_error:
+            # טיפול באותה בעיה
+            if hasattr(rpc_error, 'args') and rpc_error.args:
+                try:
+                    import ast
+                    change_result = ast.literal_eval(str(rpc_error.args[0]))
+                except:
+                    change_result = rpc_error.args[0]
+            else:
+                raise rpc_error
         
-        if result.data and result.data.get('success'):
+        if change_result and change_result.get('success'):
             # מחיקת המשתמש מהסשן וחזרה להתחברות
             session.pop('change_password_user', None)
             return jsonify({
