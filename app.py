@@ -1638,14 +1638,18 @@ def validate_date_format(date_string):
 
 @app.route('/api/login', methods=['POST'])
 def login():
+    print("🔍 === LOGIN FUNCTION STARTED ===")
     try:
+        print("🔍 Step 1: Checking supabase...")
         if not supabase:
             return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
             
+        print("🔍 Step 2: Getting JSON data...")
         data = request.get_json()
         username = data.get('username', '').strip()
         password = data.get('password', '').strip()
         
+        print("🔍 Step 3: Validating input...")
         # אימות קלט
         is_valid_username, validated_username = validate_input(username, "username")
         is_valid_password, validated_password = validate_input(password, "password")
@@ -1660,9 +1664,8 @@ def login():
         
         print(f"🔑 Login attempt: {validated_username}")
         print("🔍 About to call RPC function...")
-# שימוש ב-RPC function המעודכנת עם טיפול נכון בAPIError
-        auth_result = None
         
+        # קריאה לפונקציה עם טיפול פשוט
         try:
             result = supabase.rpc('user_login', {
                 'p_username': validated_username,
@@ -1672,25 +1675,26 @@ def login():
             print(f"🔐 Normal result: {auth_result}")
             
         except Exception as rpc_error:
-            # טיפול ב-APIError שמכיל תוצאה מוצלחת
-            if hasattr(rpc_error, 'args') and len(rpc_error.args) > 0:
-                error_data = rpc_error.args[0]
-                if isinstance(error_data, dict) and error_data.get('success'):
-                    auth_result = error_data
-                    print(f"🔐 Extracted from APIError: {auth_result}")
-                else:
-                    raise rpc_error
+            print(f"🔍 RPC Exception: {rpc_error}")
+            # פשוט ניקח את התוצאה מהשגיאה
+            if hasattr(rpc_error, 'args') and rpc_error.args:
+                auth_result = rpc_error.args[0]
+                print(f"🔐 From exception: {auth_result}")
             else:
                 raise rpc_error
         
+        print(f"🔍 Final result: {auth_result}")
+        
+        # עיבוד התוצאה
         if auth_result and auth_result.get('success'):
             # בדיקה אם נדרש לשנות סיסמה
-            if auth_result.data.get('require_password_change'):
+            if auth_result.get('require_password_change'):
                 session['change_password_user'] = validated_username
+                print("🔍 Redirecting to password change")
                 return jsonify({
                     'success': True,
                     'require_password_change': True,
-                    'message': auth_result.data.get('message'),
+                    'message': auth_result.get('message'),
                     'redirect': '/change-password'
                 })
             
@@ -1721,12 +1725,13 @@ def login():
             else:
                 return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
         else:
-            error_msg = auth_result.data.get('message', 'שם משתמש או סיסמה שגויים') if auth_result.data else 'שגיאה בהתחברות'
+            error_msg = auth_result.get('message', 'שם משתמש או סיסמה שגויים') if auth_result else 'שגיאה בהתחברות'
             print(f"❌ Authentication failed: {error_msg}")
             return jsonify({'success': False, 'message': error_msg})
             
     except Exception as e:
-        print(f"❌ Login error: {str(e)}")
+        print(f"❌ OUTER EXCEPTION: {type(e)}")
+        print(f"❌ OUTER EXCEPTION MESSAGE: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה במערכת'})
 
 @app.route('/api/verify-code', methods=['POST'])
