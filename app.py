@@ -879,79 +879,158 @@ def transfer_to_parking_data():
         print(f"❌ Error transferring to parking_data: {str(e)}")
         return 0
 
-# החזרת מיילי הצלחה ושגיאה - עם הגבלה יומית
-
-def send_error_notification(sender_email, error_message):
-    """שליחת התראת שגיאה - עם הגבלה יומית - גרסה מתוקנת"""
+def process_single_email(mail, email_id):
+    """עיבוד מייל יחיד - עם תיקון שליחת הודעות"""
+    sender = None  # נגדיר את המשתנה מלכתחילה
     
-    # בדיקת מגבלה יומית
-    if not hasattr(send_error_notification, 'daily_count'):
-        send_error_notification.daily_count = 0
-        send_error_notification.last_reset = datetime.now().date()
-    
-    # איפוס יומי
-    if send_error_notification.last_reset != datetime.now().date():
-        send_error_notification.daily_count = 0
-        send_error_notification.last_reset = datetime.now().date()
-    
-    # הגבלה ל-50 מיילי שגיאה ביום
-    if send_error_notification.daily_count >= 200:
-        print(f"⚠️ Daily error email limit reached (50/day) - logging only: {error_message[:100]}...")
-        return
-    
-    # בדיקת נתוניםת
-    gmail_user = os.environ.get('GMAIL_USERNAME')
-    gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
-    
-    if not gmail_user or not gmail_password:
-        print(f"❌ Missing Gmail credentials for error notification")
-        print(f"📝 Error logged: {error_message}")
-        return
-        
     try:
-        print(f"📧 Sending error notification to {sender_email}...")
+        _, msg_data = mail.fetch(email_id, '(RFC822)')
         
-        msg = MIMEMultipart()
-        msg['From'] = gmail_user
-        msg['To'] = sender_email
-        msg['Subject'] = '❌ שגיאה בעיבוד קבצי הנתונים - S&B Parking'
+        # בדיקה שיש נתונים
+        if not msg_data or len(msg_data) == 0:
+            print(f"❌ No data for email ID: {email_id}")
+            return False
+            
+        email_body = msg_data[0][1]
         
-        body = f"""
-שלום,
-
-התרחשה שגיאה בעיבוד קבצי הנתונים שלך:
-
-{error_message}
-
-אנא בדוק את הקובץ ונסה שוב, או פנה לתמיכה טכנית.
-
-בברכה,
-מערכת S&B Parking (דוח אוטומטי)
-נשלח מ: {gmail_user}
-        """
+        # בדיקה שיש body
+        if not email_body:
+            print(f"❌ Empty email body for ID: {email_id}")
+            return False
+            
+        email_message = email.message_from_bytes(email_body)
         
-        msg.attach(MIMEText(body, 'plain', 'utf-8'))
+        # קבלת פרטי השולח
+        sender = email_message.get('From', 'unknown@unknown.com')
+        subject = email_message.get('Subject', 'No Subject') or 'No Subject'
+        date = email_message.get('Date', 'No Date') or 'No Date'
         
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(gmail_user, gmail_password)
-        server.send_message(msg)
-        server.quit()
+        print(f"\n📧 Processing email from: {sender}")
+        print(f"   Subject: {subject}")
+        print(f"   Date: {date}")
         
-        send_error_notification.daily_count += 1
-        print(f"✅ Error notification sent to {sender_email} ({send_error_notification.daily_count}/50 today)")
+        # בדיקה שהשולח תקין
+        if sender == 'unknown@unknown.com' or '@' not in sender:
+            print(f"❌ Invalid sender address: {sender}")
+            return False
+        
+        # בדיקת שולח מורשה
+        if not is_authorized_sender(sender):
+            print(f"🚫 UNAUTHORIZED SENDER: {sender}")
+            print(f"✅ Authorized senders: {AUTHORIZED_SENDERS}")
+            print(f"⏭️ Skipping email from unauthorized sender")
+            
+            # 🆕 שליחת מייל על שולח לא מורשה
+            send_error_notification(sender, 
+                f"השולח {sender} אינו מורשה לשלוח קבצי נתונים. אנא פנה למנהל המערכת.")
+            return False
+        
+        print(f"✅ AUTHORIZED SENDER: {sender}")
+        
+        csv_files = download_csv_from_email(email_message)
+        
+        if not csv_files:
+            print("⚠️ No CSV files found in email")
+            # 🆕 שליחת מייל על חוסר קבצים
+            send_error_notification(sender, 
+                "לא נמצאו קבצי CSV במייל. אנא ודא שצירפת קבצי נתונים תקינים.")
+            return False
+        
+        all_converted_data = []
+        processed_files = []
+        
+        for csv_file in csv_files:
+            print(f"\n🔄 Processing file: {csv_file['filename']}")
+            
+            # פרסור CSV
+            csv_rows = parse_csv_content(csv_file['data'])
+            if csv_rows is None:
+                print(f"❌ Failed to parse file: {csv_file['filename']}")
+                continue
+            
+            # המרה לפורמט שלנו
+            converted_data = convert_to_csv_import_format(csv_rows)
+            if not converted_data:
+                print(f"❌ Failed to convert file: {csv_file['filename']}")
+                continue
+            
+            all_converted_data.extend(converted_data)
+            processed_files.append({
+                'name': csv_file['filename'],
+                'rows': len(converted_data)
+            })
+            
+            print(f"✅ File {csv_file['filename']}: {len(converted_data)} rows converted")
+        
+        # בדיקה שיש נתונים תקינים
+        if not all_converted_data:
+            error_msg = "לא נמצאו נתונים תקינים בקבצים. אנא בדוק את פורמט הקבצים."
+            print(f"❌ {error_msg}")
+            send_error_notification(sender, error_msg)
+            return False
+        
+        print(f"📊 Total converted data: {len(all_converted_data)} rows")
+        
+        # הכנסה לטבלת הביניים
+        inserted_count = insert_to_csv_import_shekels(all_converted_data)
+        if inserted_count == 0:
+            error_msg = "שגיאה בהכנסת הנתונים למסד הנתונים."
+            print(f"❌ {error_msg}")
+            send_error_notification(sender, error_msg)
+            return False
+        
+        print(f"✅ Inserted to csv_import_shekels: {inserted_count} rows")
+        
+        # העברה לטבלה הסופית
+        transferred_count = transfer_to_parking_data()
+        
+        # 🆕 תמיד שליחת מייל הצלחה - גם אם הכל כפילויות
+        total_processed = len(all_converted_data)
+        files_summary = ', '.join([f['name'] for f in processed_files])
+        
+        if transferred_count > 0:
+            success_msg = f"עובדו {transferred_count} רשומות חדשות מתוך {total_processed} רשומות כולל"
+            print(f"🎉 Email processed successfully: {success_msg}")
+        else:
+            success_msg = f"כל {total_processed} הרשומות כבר קיימות במערכת (כפילויות)"
+            print(f"🎉 Email processed successfully: {success_msg}")
+        
+        # 🆕 שליחת מייל הצלחה עם פרטים מלאים
+        send_success_notification(sender, processed_files, transferred_count, total_processed)
+        
+        # מחיקת המייל אחרי עיבוד מוצלח
+        try:
+            print(f"🗑️ Deleting processed email (ID: {email_id})...")
+            mail.store(email_id, '+FLAGS', '\\Deleted')
+            mail.expunge()
+            print(f"✅ Email deleted successfully")
+            
+        except Exception as delete_error:
+            error_msg = str(delete_error)
+            print(f"⚠️ Could not delete email: {error_msg}")
+            
+            if "already deleted" in error_msg.lower() or "not found" in error_msg.lower():
+                print("ℹ️ Email was already deleted - continuing")
+            else:
+                print(f"⚠️ Email deletion failed but continuing process")
+        
+        return True
         
     except Exception as e:
-        error_str = str(e)
-        if "sending limit exceeded" in error_str.lower():
-            print(f"🚫 Gmail daily limit exceeded - switching to log-only mode")
-            send_error_notification.daily_count = 99
+        error_msg = f"שגיאה טכנית בעיבוד המייל: {str(e)}"
+        print(f"❌ Error processing email: {error_msg}")
+        
+        # 🆕 שליחת מייל שגיאה עם פרטים
+        if sender and sender != 'unknown@unknown.com':
+            send_error_notification(sender, error_msg)
         else:
-            print(f"❌ Failed to send error notification: {str(e)}")
-            print(f"📝 Error logged: {error_message}")
+            print(f"❌ Could not send error notification - unknown sender")
+            
+        return False
 
-def send_success_notification(sender_email, processed_files, total_rows):
-    """שליחת התראת הצלחה - עם הגבלה יומית - גרסה מתוקנת"""
+
+def send_success_notification(sender_email, processed_files, new_rows, total_rows):
+    """שליחת התראת הצלחה - גרסה מתוקנת עם פרטים מלאים"""
     
     # בדיקת מגבלה יומית
     if not hasattr(send_success_notification, 'daily_count'):
@@ -964,9 +1043,9 @@ def send_success_notification(sender_email, processed_files, total_rows):
         send_success_notification.last_reset = datetime.now().date()
     
     # הגבלה ל-100 מיילי הצלחה ביום
-    if send_success_notification.daily_count >= 300:
+    if send_success_notification.daily_count >= 100:
         files_summary = ', '.join([f['name'] for f in processed_files])
-        print(f"⚠️ Daily success email limit reached (100/day) - logging only: {total_rows} rows from {files_summary}")
+        print(f"⚠️ Daily success email limit reached (100/day) - logging only: {new_rows} new, {total_rows} total from {files_summary}")
         return
     
     # בדיקת נתונים
@@ -976,7 +1055,7 @@ def send_success_notification(sender_email, processed_files, total_rows):
     if not gmail_user or not gmail_password:
         print(f"❌ Missing Gmail credentials for success notification")
         files_summary = ', '.join([f['name'] for f in processed_files])
-        print(f"📝 Success logged: {total_rows} rows from {files_summary}")
+        print(f"📝 Success logged: {new_rows} new, {total_rows} total from {files_summary}")
         return
         
     try:
@@ -989,16 +1068,28 @@ def send_success_notification(sender_email, processed_files, total_rows):
         
         files_list = '\n'.join([f"• {file['name']} - {file['rows']:,} שורות" for file in processed_files])
         
+        # 🆕 הודעה מפורטת יותר
+        if new_rows > 0:
+            status_message = f"נוספו {new_rows:,} רשומות חדשות למסד הנתונים"
+            if new_rows < total_rows:
+                status_message += f" (מתוך {total_rows:,} רשומות כולל - יתר הרשומות כבר קיימות)"
+        else:
+            status_message = f"כל {total_rows:,} הרשומות כבר קיימות במערכת (לא נוספו רשומות חדשות)"
+        
         body = f"""
 שלום,
 
 קבצי הנתונים שלך עובדו בהצלחה במערכת S&B Parking:
 
+📁 קבצים שעובדו:
 {files_list}
 
-סה"כ שורות שנוספו למסד הנתונים: {total_rows:,}
+📊 תוצאות העיבוד:
+{status_message}
 
-הנתונים זמינים כעת בדשבורד לצפייה ודוחות.
+💡 הערה: אם הרשומות כבר קיימות, זה אומר שהנתונים כבר הועלו קודם לכן.
+
+🔍 הנתונים זמינים כעת בדשבורד לצפייה ודוחות.
 
 בברכה,
 מערכת S&B Parking (דוח אוטומטי)
@@ -1024,141 +1115,84 @@ def send_success_notification(sender_email, processed_files, total_rows):
         else:
             print(f"❌ Failed to send success notification: {str(e)}")
             files_summary = ', '.join([f['name'] for f in processed_files])
-            print(f"📝 Success logged: {total_rows} rows from {files_summary}")
+            print(f"📝 Success logged: {new_rows} new, {total_rows} total from {files_summary}")
 
-def process_single_email(mail, email_id):
-    """עיבוד מייל יחיד - עם בדיקת שולח מורשה ומחיקה משופרת"""
+
+def send_error_notification(sender_email, error_message):
+    """שליחת התראת שגיאה - גרסה מתוקנת"""
+    
+    # בדיקת מגבלה יומית
+    if not hasattr(send_error_notification, 'daily_count'):
+        send_error_notification.daily_count = 0
+        send_error_notification.last_reset = datetime.now().date()
+    
+    # איפוס יומי
+    if send_error_notification.last_reset != datetime.now().date():
+        send_error_notification.daily_count = 0
+        send_error_notification.last_reset = datetime.now().date()
+    
+    # הגבלה ל-50 מיילי שגיאה ביום
+    if send_error_notification.daily_count >= 50:
+        print(f"⚠️ Daily error email limit reached (50/day) - logging only: {error_message[:100]}...")
+        return
+    
+    # בדיקת נתונים
+    gmail_user = os.environ.get('GMAIL_USERNAME')
+    gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
+    
+    if not gmail_user or not gmail_password:
+        print(f"❌ Missing Gmail credentials for error notification")
+        print(f"📝 Error logged: {error_message}")
+        return
+        
     try:
-        _, msg_data = mail.fetch(email_id, '(RFC822)')
+        print(f"📧 Sending error notification to {sender_email}...")
         
-        # 🔧 תיקון: בדיקה שיש נתונים
-        if not msg_data or len(msg_data) == 0:
-            print(f"❌ No data for email ID: {email_id}")
-            return False
-            
-        email_body = msg_data[0][1]
+        msg = MIMEMultipart()
+        msg['From'] = gmail_user
+        msg['To'] = sender_email
+        msg['Subject'] = '❌ שגיאה בעיבוד קבצי הנתונים - S&B Parking'
         
-        # 🔧 תיקון: בדיקה שיש body
-        if not email_body:
-            print(f"❌ Empty email body for ID: {email_id}")
-            return False
-            
-        email_message = email.message_from_bytes(email_body)
+        body = f"""
+שלום,
+
+התרחשה שגיאה בעיבוד קבצי הנתונים שלך:
+
+🚨 פרטי השגיאה:
+{error_message}
+
+🔧 המלצות לפתרון:
+• ודא שהקובץ הוא בפורמט CSV תקין
+• בדוק שהקובץ מכיל את הכותרות הנדרשות
+• ודא שהנתונים אינם פגומים או חסרים
+• נסה לשלוח את הקובץ שוב
+
+אם הבעיה נמשכת, אנא פנה לתמיכה טכנית.
+
+בברכה,
+מערכת S&B Parking (דוח אוטומטי)
+נשלח מ: {gmail_user}
+        """
         
-        # 🔧 תיקון: בדיקות נוספות
-        sender = email_message.get('From', 'unknown@unknown.com')
-        subject = email_message.get('Subject', 'No Subject') or 'No Subject'
-        date = email_message.get('Date', 'No Date') or 'No Date'
+        msg.attach(MIMEText(body, 'plain', 'utf-8'))
         
-        print(f"\n📧 Processing email from: {sender}")
-        print(f"   Subject: {subject}")
-        print(f"   Date: {date}")
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(gmail_user, gmail_password)
+        server.send_message(msg)
+        server.quit()
         
-        # בדיקה שהשולח תקין
-        if sender == 'unknown@unknown.com' or '@' not in sender:
-            print(f"❌ Invalid sender address: {sender}")
-            return False
-        
-        # בדיקת שולח מורשה
-        if not is_authorized_sender(sender):
-            print(f"🚫 UNAUTHORIZED SENDER: {sender}")
-            print(f"✅ Authorized senders: {AUTHORIZED_SENDERS}")
-            print(f"⏭️ Skipping email from unauthorized sender")
-            return False
-        
-        print(f"✅ AUTHORIZED SENDER: {sender}")
-        
-        csv_files = download_csv_from_email(email_message)
-        
-        if not csv_files:
-            print("⚠️ No CSV files found in email")
-            return False
-        
-        all_converted_data = []
-        processed_files = []
-        
-        for csv_file in csv_files:
-            print(f"\n🔄 Processing file: {csv_file['filename']}")
-            
-            # פרסור CSV (עכשיו מחזיר רשימה במקום DataFrame)
-            csv_rows = parse_csv_content(csv_file['data'])
-            if csv_rows is None:
-                continue
-            
-            # המרה לפורמט שלנו
-            converted_data = convert_to_csv_import_format(csv_rows)
-            if not converted_data:
-                continue
-            
-            all_converted_data.extend(converted_data)
-            processed_files.append({
-                'name': csv_file['filename'],
-                'rows': len(converted_data)
-            })
-            
-            print(f"✅ File {csv_file['filename']}: {len(converted_data)} rows converted")
-        
-        if not all_converted_data:
-            send_error_notification(sender, "לא נמצאו נתונים תקינים")
-            return False
-        
-        # הכנסה לטבלת הביניים
-        inserted_count = insert_to_csv_import_shekels(all_converted_data)
-        if inserted_count == 0:
-            send_error_notification(sender, "שגיאה בהכנסת הנתונים")
-            return False
-        
-        # העברה לטבלה הסופית
-        transferred_count = transfer_to_parking_data()
-        
-        # שליחת התראת הצלחה - תמיד!
-        total_processed = len(all_converted_data)
-        files_summary = ', '.join([f['name'] for f in processed_files])
-        
-        if transferred_count > 0:
-            print(f"🎉 Email processed successfully: {transferred_count} new rows added from {files_summary}")
-        else:
-            print(f"🎉 Email processed successfully: All {total_processed} rows were duplicates from {files_summary}")
-            
-        send_success_notification(sender, processed_files, transferred_count)
-        # 🗑️ מחיקת המייל אחרי עיבוד מוצלח - גרסה משופרת
-        try:
-            print(f"🗑️ Deleting processed email (ID: {email_id})...")
-            
-            # בדיקה שהחיבור עדיין פעיל
-            if not mail:
-                print("❌ Mail connection lost - cannot delete email")
-                return True  # עדיין מחזירים הצלחה
-            
-            # ניסיון מחיקה
-            mail.store(email_id, '+FLAGS', '\\Deleted')
-            mail.expunge()
-            print(f"✅ Email deleted successfully")
-            
-        except Exception as delete_error:
-            error_msg = str(delete_error)
-            print(f"⚠️ Could not delete email: {error_msg}")
-            
-            # אם השגיאה היא שהמייל כבר נמחק - זה בסדר
-            if "already deleted" in error_msg.lower() or "not found" in error_msg.lower():
-                print("ℹ️ Email was already deleted - continuing")
-            else:
-                print(f"⚠️ Email deletion failed but continuing process")
-        
-        return True
+        send_error_notification.daily_count += 1
+        print(f"✅ Error notification sent to {sender_email} ({send_error_notification.daily_count}/50 today)")
         
     except Exception as e:
-        print(f"❌ Error processing email: {str(e)}")
-        
-        # רישום sender אם אפשר (ללא שליחת מייל)
-        try:
-            if 'email_message' in locals() and email_message:
-                sender = email_message.get('From', 'unknown')
-                send_error_notification(sender, f"שגיאה טכנית בעיבוד המייל: {str(e)}")
-        except:
-            print(f"❌ Email error from unknown sender")
-            
-        return False
+        error_str = str(e)
+        if "sending limit exceeded" in error_str.lower():
+            print(f"🚫 Gmail daily limit exceeded - switching to log-only mode")
+            send_error_notification.daily_count = 99
+        else:
+            print(f"❌ Failed to send error notification: {str(e)}")
+            print(f"📝 Error logged: {error_message}")
 
 def verify_email_system():
     """בדיקת התקינות של מערכת המיילים"""
