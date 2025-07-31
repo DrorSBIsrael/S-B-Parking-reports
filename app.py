@@ -880,7 +880,7 @@ def transfer_to_parking_data():
         return 0
 
 def process_single_email(mail, email_id):
-    """עיבוד מייל יחיד - עם תיקון שליחת הודעות"""
+    """עיבוד מייל יחיד - עם שליחת מיילי הודעות מתוקן"""
     sender = None  # נגדיר את המשתנה מלכתחילה
     
     try:
@@ -1028,7 +1028,6 @@ def process_single_email(mail, email_id):
             
         return False
 
-
 def send_success_notification(sender_email, processed_files, new_rows, total_rows):
     """שליחת התראת הצלחה - גרסה מתוקנת עם פרטים מלאים"""
     
@@ -1117,9 +1116,8 @@ def send_success_notification(sender_email, processed_files, new_rows, total_row
             files_summary = ', '.join([f['name'] for f in processed_files])
             print(f"📝 Success logged: {new_rows} new, {total_rows} total from {files_summary}")
 
-
 def send_error_notification(sender_email, error_message):
-    """שליחת התראת שגיאה - גרסה מתוקנת"""
+    """שליחת התראת שגיאה - גרסה מתוקנת ומשופרת"""
     
     # בדיקת מגבלה יומית
     if not hasattr(send_error_notification, 'daily_count'):
@@ -1153,21 +1151,61 @@ def send_error_notification(sender_email, error_message):
         msg['To'] = sender_email
         msg['Subject'] = '❌ שגיאה בעיבוד קבצי הנתונים - S&B Parking'
         
+        # זיהוי סוג השגיאה להודעה מותאמת
+        if "לא מורשה" in error_message or "UNAUTHORIZED" in error_message:
+            error_type = "🚫 שולח לא מורשה"
+            solutions = """
+• ודא שאתה שולח מכתובת מייל מורשה
+• פנה למנהל המערכת להוספת כתובת המייל שלך לרשימת השולחים המורשים
+• בדוק שכתובת המייל נכתבת נכון (ללא שגיאות הקלדה)"""
+        
+        elif "לא נמצאו קבצי CSV" in error_message:
+            error_type = "📎 קבצים חסרים"
+            solutions = """
+• ודא שצירפת קובץ CSV למייל
+• בדוק שהקובץ בפורמט .csv או .txt
+• ודא שהקובץ לא פגום"""
+        
+        elif "לא נמצאו נתונים תקינים" in error_message:
+            error_type = "📊 בעיה בפורמט הנתונים"
+            solutions = """
+• בדוק שהקובץ מכיל את הכותרות הנדרשות
+• ודא שהנתונים בפורמט הנכון (תאריכים, מספרים)
+• בדוק שהקובץ אינו ריק
+• ודא שלא חסרים נתונים חיוניים"""
+        
+        elif "שגיאה בהכנסת הנתונים" in error_message:
+            error_type = "💾 שגיאת מסד נתונים"
+            solutions = """
+• נסה לשלוח את הקובץ שוב
+• ודא שהנתונים תקינים ושלמים
+• אם הבעיה נמשכת, פנה לתמיכה טכנית"""
+        
+        else:
+            error_type = "⚠️ שגיאה טכנית"
+            solutions = """
+• נסה לשלוח את הקובץ שוב
+• ודא שהקובץ תקין ולא פגום
+• בדוק את פורמט הקובץ
+• אם הבעיה נמשכת, פנה לתמיכה טכנית"""
+        
         body = f"""
 שלום,
 
 התרחשה שגיאה בעיבוד קבצי הנתונים שלך:
 
+{error_type}
+
 🚨 פרטי השגיאה:
 {error_message}
 
 🔧 המלצות לפתרון:
-• ודא שהקובץ הוא בפורמט CSV תקין
-• בדוק שהקובץ מכיל את הכותרות הנדרשות
-• ודא שהנתונים אינם פגומים או חסרים
-• נסה לשלוח את הקובץ שוב
+{solutions}
 
-אם הבעיה נמשכת, אנא פנה לתמיכה טכנית.
+📞 תמיכה נוספת:
+אם הבעיה נמשכת, אנא פנה למנהל המערכת עם פרטי השגיאה המופיעים למעלה.
+
+⏰ זמן השגיאה: {datetime.now().strftime('%d/%m/%Y %H:%M')}
 
 בברכה,
 מערכת S&B Parking (דוח אוטומטי)
@@ -1193,7 +1231,14 @@ def send_error_notification(sender_email, error_message):
         else:
             print(f"❌ Failed to send error notification: {str(e)}")
             print(f"📝 Error logged: {error_message}")
-
+            
+            # אם שליחת המייל נכשלה, לפחות נשמור פרטים בלוג
+            print(f"📝 ERROR DETAILS FOR MANUAL FOLLOW-UP:")
+            print(f"   👤 Sender: {sender_email}")
+            print(f"   📅 Time: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+            print(f"   💬 Message: {error_message}")
+            print(f"   ======================================")
+            
 def verify_email_system():
     """בדיקת התקינות של מערכת המיילים"""
     if not EMAIL_MONITORING_AVAILABLE:
