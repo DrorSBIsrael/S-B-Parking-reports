@@ -882,10 +882,7 @@ def transfer_to_parking_data():
 # החזרת מיילי הצלחה ושגיאה - עם הגבלה יומית
 
 def send_error_notification(sender_email, error_message):
-    """שליחת התראת שגיאה - עם הגבלה יומית"""
-    if not EMAIL_MONITORING_AVAILABLE:
-        print(f"📝 Error logged: {error_message[:100]}...")
-        return
+    """שליחת התראת שגיאה - עם הגבלה יומית - גרסה מתוקנת"""
     
     # בדיקת מגבלה יומית
     if not hasattr(send_error_notification, 'daily_count'):
@@ -897,21 +894,24 @@ def send_error_notification(sender_email, error_message):
         send_error_notification.daily_count = 0
         send_error_notification.last_reset = datetime.now().date()
     
-    # הגבלה ל-50 מיילי שגיאה ביום (מתוך 2000)
-    if send_error_notification.daily_count >= 50:
+    # הגבלה ל-50 מיילי שגיאה ביום
+    if send_error_notification.daily_count >= 200:
         print(f"⚠️ Daily error email limit reached (50/day) - logging only: {error_message[:100]}...")
+        return
+    
+    # בדיקת נתוניםת
+    gmail_user = os.environ.get('GMAIL_USERNAME')
+    gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
+    
+    if not gmail_user or not gmail_password:
+        print(f"❌ Missing Gmail credentials for error notification")
+        print(f"📝 Error logged: {error_message}")
         return
         
     try:
+        print(f"📧 Sending error notification to {sender_email}...")
+        
         msg = MIMEMultipart()
-        
-        gmail_user = os.environ.get('GMAIL_USERNAME')
-        gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
-        
-        if not gmail_user or not gmail_password:
-            print(f"❌ Missing Gmail credentials for error notification")
-            return
-            
         msg['From'] = gmail_user
         msg['To'] = sender_email
         msg['Subject'] = '❌ שגיאה בעיבוד קבצי הנתונים - S&B Parking'
@@ -939,22 +939,19 @@ def send_error_notification(sender_email, error_message):
         server.quit()
         
         send_error_notification.daily_count += 1
-        print(f"📧 Error notification sent to {sender_email} ({send_error_notification.daily_count}/50 today)")
+        print(f"✅ Error notification sent to {sender_email} ({send_error_notification.daily_count}/50 today)")
         
     except Exception as e:
         error_str = str(e)
         if "sending limit exceeded" in error_str.lower():
             print(f"🚫 Gmail daily limit exceeded - switching to log-only mode")
-            send_error_notification.daily_count = 99  # חסימה לכל היום
+            send_error_notification.daily_count = 99
         else:
             print(f"❌ Failed to send error notification: {str(e)}")
+            print(f"📝 Error logged: {error_message}")
 
 def send_success_notification(sender_email, processed_files, total_rows):
-    """שליחת התראת הצלחה - עם הגבלה יומית"""
-    if not EMAIL_MONITORING_AVAILABLE:
-        files_summary = ', '.join([f['name'] for f in processed_files])
-        print(f"📝 Success logged: {total_rows} rows from {files_summary}")
-        return
+    """שליחת התראת הצלחה - עם הגבלה יומית - גרסה מתוקנת"""
     
     # בדיקת מגבלה יומית
     if not hasattr(send_success_notification, 'daily_count'):
@@ -966,22 +963,26 @@ def send_success_notification(sender_email, processed_files, total_rows):
         send_success_notification.daily_count = 0
         send_success_notification.last_reset = datetime.now().date()
     
-    # הגבלה ל-100 מיילי הצלחה ביום (מתוך 2000)
-    if send_success_notification.daily_count >= 100:
+    # הגבלה ל-100 מיילי הצלחה ביום
+    if send_success_notification.daily_count >= 300:
         files_summary = ', '.join([f['name'] for f in processed_files])
         print(f"⚠️ Daily success email limit reached (100/day) - logging only: {total_rows} rows from {files_summary}")
         return
+    
+    # בדיקת נתונים
+    gmail_user = os.environ.get('GMAIL_USERNAME')
+    gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
+    
+    if not gmail_user or not gmail_password:
+        print(f"❌ Missing Gmail credentials for success notification")
+        files_summary = ', '.join([f['name'] for f in processed_files])
+        print(f"📝 Success logged: {total_rows} rows from {files_summary}")
+        return
         
     try:
+        print(f"📧 Sending success notification to {sender_email}...")
+        
         msg = MIMEMultipart()
-        
-        gmail_user = os.environ.get('GMAIL_USERNAME')
-        gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
-        
-        if not gmail_user or not gmail_password:
-            print(f"❌ Missing Gmail credentials for success notification")
-            return
-            
         msg['From'] = gmail_user
         msg['To'] = sender_email
         msg['Subject'] = '✅ קבצי הנתונים עובדו בהצלחה - S&B Parking'
@@ -1013,15 +1014,17 @@ def send_success_notification(sender_email, processed_files, total_rows):
         server.quit()
         
         send_success_notification.daily_count += 1
-        print(f"📧 Success notification sent to {sender_email} ({send_success_notification.daily_count}/100 today)")
+        print(f"✅ Success notification sent to {sender_email} ({send_success_notification.daily_count}/100 today)")
         
     except Exception as e:
         error_str = str(e)
         if "sending limit exceeded" in error_str.lower():
             print(f"🚫 Gmail daily limit exceeded - switching to log-only mode")
-            send_success_notification.daily_count = 99  # חסימה לכל היום
+            send_success_notification.daily_count = 99
         else:
             print(f"❌ Failed to send success notification: {str(e)}")
+            files_summary = ', '.join([f['name'] for f in processed_files])
+            print(f"📝 Success logged: {total_rows} rows from {files_summary}")
 
 def process_single_email(mail, email_id):
     """עיבוד מייל יחיד - עם בדיקת שולח מורשה ומחיקה משופרת"""
@@ -1213,7 +1216,7 @@ def start_email_monitoring_with_logs():
                         check_for_new_emails()
                     
                     # המתנה של 5 דקות
-                    time.sleep(300)  # 300 שניות = 5 דקות
+                    time.sleep(150)  # 300 שניות = 5 דקות
                     
                     check_count += 1
                     if check_count % 6 == 0:  # כל 30 דקות (6 * 5 דקות)
