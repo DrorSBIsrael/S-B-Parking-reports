@@ -879,16 +879,149 @@ def transfer_to_parking_data():
         print(f"❌ Error transferring to parking_data: {str(e)}")
         return 0
 
-def send_success_notification(sender_email, processed_files, total_rows):
-    """שליחת התראת הצלחה - מבוטלת לחיסכון במיילים"""
-    files_summary = ', '.join([f['name'] for f in processed_files])
-    print(f"📝 Success logged (email disabled): {total_rows} rows from {files_summary}")
-    return  # לא שולח מיילים
+# החזרת מיילי הצלחה ושגיאה - עם הגבלה יומית
 
 def send_error_notification(sender_email, error_message):
-    """שליחת התראת שגיאה - מבוטלת לחיסכון במיילים"""
-    print(f"📝 Error logged (email disabled): {error_message[:100]}...")
-    return  # לא שולח מיילים
+    """שליחת התראת שגיאה - עם הגבלה יומית"""
+    if not EMAIL_MONITORING_AVAILABLE:
+        print(f"📝 Error logged: {error_message[:100]}...")
+        return
+    
+    # בדיקת מגבלה יומית
+    if not hasattr(send_error_notification, 'daily_count'):
+        send_error_notification.daily_count = 0
+        send_error_notification.last_reset = datetime.now().date()
+    
+    # איפוס יומי
+    if send_error_notification.last_reset != datetime.now().date():
+        send_error_notification.daily_count = 0
+        send_error_notification.last_reset = datetime.now().date()
+    
+    # הגבלה ל-50 מיילי שגיאה ביום (מתוך 2000)
+    if send_error_notification.daily_count >= 50:
+        print(f"⚠️ Daily error email limit reached (50/day) - logging only: {error_message[:100]}...")
+        return
+        
+    try:
+        msg = MIMEMultipart()
+        
+        gmail_user = os.environ.get('GMAIL_USERNAME')
+        gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
+        
+        if not gmail_user or not gmail_password:
+            print(f"❌ Missing Gmail credentials for error notification")
+            return
+            
+        msg['From'] = gmail_user
+        msg['To'] = sender_email
+        msg['Subject'] = '❌ שגיאה בעיבוד קבצי הנתונים - S&B Parking'
+        
+        body = f"""
+שלום,
+
+התרחשה שגיאה בעיבוד קבצי הנתונים שלך:
+
+{error_message}
+
+אנא בדוק את הקובץ ונסה שוב, או פנה לתמיכה טכנית.
+
+בברכה,
+מערכת S&B Parking (דוח אוטומטי)
+נשלח מ: {gmail_user}
+        """
+        
+        msg.attach(MIMEText(body, 'plain', 'utf-8'))
+        
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(gmail_user, gmail_password)
+        server.send_message(msg)
+        server.quit()
+        
+        send_error_notification.daily_count += 1
+        print(f"📧 Error notification sent to {sender_email} ({send_error_notification.daily_count}/50 today)")
+        
+    except Exception as e:
+        error_str = str(e)
+        if "sending limit exceeded" in error_str.lower():
+            print(f"🚫 Gmail daily limit exceeded - switching to log-only mode")
+            send_error_notification.daily_count = 99  # חסימה לכל היום
+        else:
+            print(f"❌ Failed to send error notification: {str(e)}")
+
+def send_success_notification(sender_email, processed_files, total_rows):
+    """שליחת התראת הצלחה - עם הגבלה יומית"""
+    if not EMAIL_MONITORING_AVAILABLE:
+        files_summary = ', '.join([f['name'] for f in processed_files])
+        print(f"📝 Success logged: {total_rows} rows from {files_summary}")
+        return
+    
+    # בדיקת מגבלה יומית
+    if not hasattr(send_success_notification, 'daily_count'):
+        send_success_notification.daily_count = 0
+        send_success_notification.last_reset = datetime.now().date()
+    
+    # איפוס יומי
+    if send_success_notification.last_reset != datetime.now().date():
+        send_success_notification.daily_count = 0
+        send_success_notification.last_reset = datetime.now().date()
+    
+    # הגבלה ל-100 מיילי הצלחה ביום (מתוך 2000)
+    if send_success_notification.daily_count >= 100:
+        files_summary = ', '.join([f['name'] for f in processed_files])
+        print(f"⚠️ Daily success email limit reached (100/day) - logging only: {total_rows} rows from {files_summary}")
+        return
+        
+    try:
+        msg = MIMEMultipart()
+        
+        gmail_user = os.environ.get('GMAIL_USERNAME')
+        gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
+        
+        if not gmail_user or not gmail_password:
+            print(f"❌ Missing Gmail credentials for success notification")
+            return
+            
+        msg['From'] = gmail_user
+        msg['To'] = sender_email
+        msg['Subject'] = '✅ קבצי הנתונים עובדו בהצלחה - S&B Parking'
+        
+        files_list = '\n'.join([f"• {file['name']} - {file['rows']:,} שורות" for file in processed_files])
+        
+        body = f"""
+שלום,
+
+קבצי הנתונים שלך עובדו בהצלחה במערכת S&B Parking:
+
+{files_list}
+
+סה"כ שורות שנוספו למסד הנתונים: {total_rows:,}
+
+הנתונים זמינים כעת בדשבורד לצפייה ודוחות.
+
+בברכה,
+מערכת S&B Parking (דוח אוטומטי)
+נשלח מ: {gmail_user}
+        """
+        
+        msg.attach(MIMEText(body, 'plain', 'utf-8'))
+        
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(gmail_user, gmail_password)
+        server.send_message(msg)
+        server.quit()
+        
+        send_success_notification.daily_count += 1
+        print(f"📧 Success notification sent to {sender_email} ({send_success_notification.daily_count}/100 today)")
+        
+    except Exception as e:
+        error_str = str(e)
+        if "sending limit exceeded" in error_str.lower():
+            print(f"🚫 Gmail daily limit exceeded - switching to log-only mode")
+            send_success_notification.daily_count = 99  # חסימה לכל היום
+        else:
+            print(f"❌ Failed to send success notification: {str(e)}")
 
 def process_single_email(mail, email_id):
     """עיבוד מייל יחיד - עם בדיקת שולח מורשה ומחיקה משופרת"""
@@ -963,13 +1096,13 @@ def process_single_email(mail, email_id):
             print(f"✅ File {csv_file['filename']}: {len(converted_data)} rows converted")
         
         if not all_converted_data:
-            print(f"❌ No valid data in files from {sender}")
+            send_error_notification(sender, "לא נמצאו נתונים תקינים")
             return False
         
         # הכנסה לטבלת הביניים
         inserted_count = insert_to_csv_import_shekels(all_converted_data)
         if inserted_count == 0:
-            print(f"❌ Failed to insert data to intermediate table from {sender}")
+            send_error_notification(sender, "שגיאה בהכנסת הנתונים")
             return False
         
         # העברה לטבלה הסופית
@@ -983,7 +1116,8 @@ def process_single_email(mail, email_id):
             print(f"🎉 Email processed successfully: {transferred_count} new rows added from {files_summary}")
         else:
             print(f"🎉 Email processed successfully: All {total_processed} rows were duplicates from {files_summary}")
-        
+            
+        send_success_notification(sender, processed_files, transferred_count)
         # 🗑️ מחיקת המייל אחרי עיבוד מוצלח - גרסה משופרת
         try:
             print(f"🗑️ Deleting processed email (ID: {email_id})...")
@@ -1017,7 +1151,7 @@ def process_single_email(mail, email_id):
         try:
             if 'email_message' in locals() and email_message:
                 sender = email_message.get('From', 'unknown')
-                print(f"❌ Email error from sender: {sender}")
+                send_error_notification(sender, f"שגיאה טכנית בעיבוד המייל: {str(e)}")
         except:
             print(f"❌ Email error from unknown sender")
             
