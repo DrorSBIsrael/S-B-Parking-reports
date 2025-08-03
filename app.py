@@ -2319,16 +2319,17 @@ def master_create_user():
         if not is_valid_email:
             return jsonify({'success': False, 'message': 'כתובת אימייל לא תקינה'})
         
-        # בדיקה אם המשתמש כבר קיים
-        existing_user = supabase.table('user_parkings').select('username, email').or_(
-            f'username.eq.{username},email.eq.{validated_email}'
-        ).execute()
+        # בדיקה אם המשתמש כבר קיים - גרסה מתוקנת לSupabase
+        existing_username = supabase.table('user_parkings').select('username').eq('username', username).execute()
+        existing_email = supabase.table('user_parkings').select('email').eq('email', validated_email).execute()
         
-        if existing_user.data:
-            return jsonify({'success': False, 'message': 'שם משתמש או אימייל כבר קיימים במערכת'})
+        if existing_username.data:
+            return jsonify({'success': False, 'message': f'שם משתמש "{username}" כבר קיים במערכת'})
+        
+        if existing_email.data:
+            return jsonify({'success': False, 'message': f'כתובת אימייל "{validated_email}" כבר קיימת במערכת'})
         
         # יצירת hash לסיסמה
-        import bcrypt
         password_hash = bcrypt.hashpw('Dd123456'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         
         # הכנת הנתונים להוספה
@@ -2342,13 +2343,12 @@ def master_create_user():
             'company_type': company_type if company_type else 'לא צוין',
             'access_level': access_level,
             'code_type': code_type,
-            'created_at': 'now()',
-            'updated_at': 'now()',
-            'password_changed_at': 'now()',
             'is_temp_password': True,  # סיסמה זמנית שיש לשנות
             'verification_code': None,
             'code_expires_at': None
         }
+        
+        print(f"💾 Inserting user data: {new_user_data}")
         
         # הוספת המשתמש למסד הנתונים
         result = supabase.table('user_parkings').insert(new_user_data).execute()
@@ -2379,12 +2379,12 @@ def master_create_user():
                 }
             })
         else:
+            print(f"❌ Failed to insert user to database")
             return jsonify({'success': False, 'message': 'שגיאה ביצירת המשתמש במסד הנתונים'})
         
     except Exception as e:
         print(f"❌ Master create user error: {str(e)}")
         return jsonify({'success': False, 'message': f'שגיאה במערכת: {str(e)}'})
-
 
 @app.route('/api/master/reset-password', methods=['POST'])
 def master_reset_password():
@@ -2481,7 +2481,6 @@ def parking_manager_get_info():
         print(f"❌ Error getting parking manager info: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני חניון'})
 
-# גם תוסיף את הפונקציה הזו למנהל חניון:
 @app.route('/api/parking-manager/create-user', methods=['POST'])
 def parking_manager_create_user():
     """יצירת משתמש חדש לחניון - למנהל חניון בלבד - גרסה מתוקנת"""
@@ -2515,16 +2514,17 @@ def parking_manager_create_user():
         if not is_valid_email:
             return jsonify({'success': False, 'message': 'כתובת אימייל לא תקינה'})
         
-        # בדיקה אם המשתמש כבר קיים
-        existing_user = supabase.table('user_parkings').select('username, email').or_(
-            f'username.eq.{username},email.eq.{validated_email}'
-        ).execute()
+        # בדיקה אם המשתמש כבר קיים - גרסה מתוקנת לSupabase
+        existing_username = supabase.table('user_parkings').select('username').eq('username', username).execute()
+        existing_email = supabase.table('user_parkings').select('email').eq('email', validated_email).execute()
         
-        if existing_user.data:
-            return jsonify({'success': False, 'message': 'שם משתמש או אימייל כבר קיימים במערכת'})
+        if existing_username.data:
+            return jsonify({'success': False, 'message': f'שם משתמש "{username}" כבר קיים במערכת'})
+        
+        if existing_email.data:
+            return jsonify({'success': False, 'message': f'כתובת אימייל "{validated_email}" כבר קיימת במערכת'})
         
         # יצירת hash לסיסמה
-        import bcrypt
         password_hash = bcrypt.hashpw('Dd123456'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         
         # הכנת הנתונים להוספה
@@ -2538,13 +2538,12 @@ def parking_manager_create_user():
             'company_type': manager_data['company_type'],
             'access_level': access_level,
             'code_type': 'dashboard',  # משתמש רגיל
-            'created_at': 'now()',
-            'updated_at': 'now()',
-            'password_changed_at': 'now()',
             'is_temp_password': True,  # סיסמה זמנית שיש לשנות
             'verification_code': None,
             'code_expires_at': None
         }
+        
+        print(f"💾 Inserting parking user data: {new_user_data}")
         
         # הוספת המשתמש למסד הנתונים
         result = supabase.table('user_parkings').insert(new_user_data).execute()
@@ -2576,6 +2575,7 @@ def parking_manager_create_user():
                 }
             })
         else:
+            print(f"❌ Failed to insert parking user to database")
             return jsonify({'success': False, 'message': 'שגיאה ביצירת המשתמש במסד הנתונים'})
         
     except Exception as e:
