@@ -9,8 +9,7 @@ import re
 import html
 import bcrypt
 from datetime import datetime, timedelta, timezone
-import time
-from functools import wraps
+
 try:
     import imaplib
     import email
@@ -27,7 +26,6 @@ except ImportError as e:
     EMAIL_MONITORING_AVAILABLE = False
     print(f"⚠️ Email monitoring not available: {e}")
 
-SESSION_TIMEOUT_MINUTES = 30
 ERROR_EMAILS_DISABLED = True
 # הגדרות מיילים אוטומטיים - להוסיף אחרי ההגדרות הקיימות:
 if EMAIL_MONITORING_AVAILABLE:
@@ -1453,44 +1451,6 @@ def validate_username(username):
     
     return True, username
 
-def check_session_timeout():
-    """בדיקה אם ה-session פג תוקף"""
-    if 'user_email' not in session:
-        return False, "לא מחובר"
-    
-    if 'last_activity' not in session:
-        # אם אין זמן פעילות אחרון, נניח שזה עכשיו
-        session['last_activity'] = time.time()
-        return True, "OK"
-    
-    # בדיקת זמן שעבר מהפעילות האחרונה
-    last_activity = session['last_activity']
-    current_time = time.time()
-    time_diff = current_time - last_activity
-    
-    # אם עברו יותר מ-30 דקות
-    if time_diff > (SESSION_TIMEOUT_MINUTES * 60):
-        # ניקוי session
-        session.clear()
-        return False, "תקופת החיבור פגה. אנא התחבר מחדש"
-    
-    # עדכון זמן פעילות אחרון
-    session['last_activity'] = current_time
-    return True, "OK"
-
-def require_login(f):
-    """Decorator לבדיקת התחברות ו-timeout"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        is_valid, message = check_session_timeout()
-        if not is_valid:
-            if request.is_json:
-                return jsonify({'success': False, 'message': message, 'redirect': '/login'}), 401
-            else:
-                return redirect(url_for('login_page'))
-        return f(*args, **kwargs)
-    return decorated_function
-
 @app.route('/api/test-email-system', methods=['GET'])
 def test_email_system():
     """API לבדיקת מערכת המיילים"""
@@ -1553,10 +1513,11 @@ def dashboard():
     return render_template('dashboard.html')
 
 @app.route('/api/user-info', methods=['GET'])
-@require_login
 def get_user_info():
     """קבלת נתוני המשתמש המחובר"""
     try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
         
         if not supabase:
             return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
@@ -1583,11 +1544,12 @@ def get_user_info():
         return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני משתמש'})
 
 @app.route('/api/user-parkings', methods=['GET'])
-@require_login
 def get_user_parkings():
     """קבלת רשימת החניונים עבור מנהל קבוצה"""
     try:
-
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
         if not supabase:
             return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
         
@@ -1629,11 +1591,12 @@ def get_user_parkings():
         return jsonify({'success': False, 'message': 'שגיאה בקבלת רשימת חניונים'})
 
 @app.route('/api/parking-data', methods=['GET'])
-@require_login
 def get_parking_data():
     """קבלת נתוני החניון לפי תאריכים והרשאות"""
     try:
-
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
         if not supabase:
             return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
         
@@ -1777,11 +1740,12 @@ def get_parking_data():
         return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני חניון'})
 
 @app.route('/api/check-emails-now', methods=['POST'])
-@require_login
 def manual_email_check():
     """API לבדיקת מיילים ידנית"""
     try:
-
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
         if not supabase:
             return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
         
@@ -2297,11 +2261,10 @@ def send_new_user_email(email, username, temp_password, login_url):
         return False
 
 @app.route('/master-users')
-@require_login
 def master_users_page():
     """דף ניהול משתמשים למאסטר"""
-    # הסרתי את השורה: if 'user_email' not in session:
-    # כי הdecorator כבר עושה את הבדיקה
+    if 'user_email' not in session:
+        return redirect(url_for('login_page'))
     
     # בדיקת הרשאות מאסטר
     try:
@@ -2316,11 +2279,10 @@ def master_users_page():
     return render_template('master_users.html')
 
 @app.route('/parking-manager-users')
-@require_login
 def parking_manager_users_page():
     """דף ניהול משתמשים למנהל חניון"""
-    # הסרתי את השורה: if 'user_email' not in session:
-    # כי הdecorator כבר עושה את הבדיקה
+    if 'user_email' not in session:
+        return redirect(url_for('login_page'))
     
     # בדיקת הרשאות מנהל חניון
     try:
@@ -2337,11 +2299,12 @@ def parking_manager_users_page():
 # ========== API למאסטר ==========
 
 @app.route('/api/master/get-all-users', methods=['GET'])
-@require_login
 def master_get_all_users():
     """קבלת כל המשתמשים - למאסטר בלבד"""
     try:
-
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
         # בדיקת הרשאות מאסטר
         user_result = supabase.table('user_parkings').select('code_type').eq('email', session['user_email']).execute()
         if not user_result.data or user_result.data[0].get('code_type') != 'master':
@@ -2362,11 +2325,12 @@ def master_get_all_users():
         return jsonify({'success': False, 'message': 'שגיאה בקבלת רשימת משתמשים'})
 
 @app.route('/api/master/create-user', methods=['POST'])
-@require_login
 def master_create_user():
     """יצירת משתמש חדש - למאסטר בלבד - עם user_id ידני"""
     try:
-
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
         # בדיקת הרשאות מאסטר
         user_result = supabase.table('user_parkings').select('code_type').eq('email', session['user_email']).execute()
         if not user_result.data or user_result.data[0].get('code_type') != 'master':
@@ -2493,11 +2457,12 @@ def master_create_user():
 
 
 @app.route('/api/parking-manager/create-user', methods=['POST'])
-@require_login
 def parking_manager_create_user():
     """יצירת משתמש חדש לחניון - למנהל חניון בלבד - עם user_id ידני"""
     try:
-
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
         # בדיקת הרשאות מנהל חניון
         manager_result = supabase.table('user_parkings').select(
             'code_type, project_number, parking_name, company_type'
@@ -2624,11 +2589,12 @@ def parking_manager_create_user():
         return jsonify({'success': False, 'message': f'שגיאה במערכת: {str(e)}'})
 
 @app.route('/api/master/reset-password', methods=['POST'])
-@require_login
 def master_reset_password():
     """איפוס סיסמה - למאסטר בלבד"""
     try:
-
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
         # בדיקת הרשאות מאסטר
         user_result = supabase.table('user_parkings').select('code_type').eq('email', session['user_email']).execute()
         if not user_result.data or user_result.data[0].get('code_type') != 'master':
@@ -2682,11 +2648,12 @@ def master_reset_password():
 # ========== API למנהל חניון ==========
 
 @app.route('/api/parking-manager/get-parking-info', methods=['GET'])
-@require_login
 def parking_manager_get_info():
     """קבלת נתוני החניון של המנהל"""
     try:
-
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
         # בדיקת הרשאות מנהל חניון
         user_result = supabase.table('user_parkings').select(
             'code_type, project_number, parking_name, company_type'
@@ -2836,27 +2803,6 @@ def send_password_reset_email(email, username, new_password):
         print(f"❌ Password reset email error: {str(e)}")
         print(f"📱 BACKUP - PASSWORD RESET for {username}: {new_password}")
         return False 
-
-@app.route('/api/check-session', methods=['GET'])
-def check_session():
-    """בדיקת תקינות session"""
-    is_valid, message = check_session_timeout()
-    return jsonify({'success': is_valid, 'message': message})
-
-@app.route('/api/update-activity', methods=['POST'])
-def update_activity():
-    """עדכון זמן פעילות אחרון"""
-    if 'user_email' in session:
-        session['last_activity'] = time.time()
-        return jsonify({'success': True})
-    return jsonify({'success': False})
-
-@app.route('/api/logout', methods=['POST'])
-def logout():
-    """התנתקות ידנית"""
-    session.clear()
-    return jsonify({'success': True, 'message': 'התנתקת בהצלחה'})
-
 # הפעלה אוטומטית כשהאפליקציה מתחילה
 if __name__ == '__main__':
     print("\n🔧 Pre-flight email system check...")
