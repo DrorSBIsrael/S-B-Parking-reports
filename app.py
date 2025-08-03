@@ -2330,7 +2330,7 @@ def master_create_user():
             return jsonify({'success': False, 'message': f'כתובת אימייל "{validated_email}" כבר קיימת במערכת'})
         
         # יצירת hash לסיסמה
-        password_hash = bcrypt.hashpw('Dd123456'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        password_hash = bcrypt.hashpw('Dd123456'.encode('utf-8'), bcrypt.gensalt(rounds=6, prefix=b'2a')).decode('utf-8')
         
         # קבלת user_id הבא
         try:
@@ -2457,7 +2457,7 @@ def parking_manager_create_user():
             return jsonify({'success': False, 'message': f'כתובת אימייל "{validated_email}" כבר קיימת במערכת'})
         
         # יצירת hash לסיסמה
-        password_hash = bcrypt.hashpw('Dd123456'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        password_hash = bcrypt.hashpw('Dd123456'.encode('utf-8'), bcrypt.gensalt(rounds=6, prefix=b'2a')).decode('utf-8')
         
         # קבלת user_id הבא
         try:
