@@ -318,13 +318,23 @@
                         <input type="email" id="email" name="email" required>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="accessLevel">רמת גישה</label>
-                        <select id="accessLevel" name="accessLevel">
-                            <option value="single_parking">גישה לחניון בלבד</option>
-                            <option value="group_access">גישה לקבוצת חניונים</option>
-                        </select>
-                    </div>
+	<div class="form-group">
+	    <label for="companyList">רשימת מספרי חברות</label>
+	    <input type="text" id="companyList" name="companyList" 
+	           placeholder="לדוגמה: 100-2-55">
+	    <small style="color: #6c757d; font-size: 12px;">
+ 	       הזינו מספרי חברות מופרדים במקף (-) בלבד. השאירו ריק אם לא רלוונטי.
+ 	   </small>
+	</div>
+
+	<div class="form-group">
+	    <label for="accessLevel">רמת גישה</label>
+	    <select id="accessLevel" name="accessLevel">
+	        <option value="single_parking">גישה לחניון בלבד</option>
+  	        <option value="group_access">גישה לקבוצת חניונים</option>
+	        <option value="company_manager">מנהל חברות</option>
+ 	   </select>
+	</div>
                     
                     <button type="submit" class="btn btn-primary" id="createBtn">
                         ✅ הוסף משתמש לחניון
@@ -443,11 +453,12 @@
             createBtn.disabled = true;
             
             const formData = new FormData(e.target);
-            const userData = {
-                username: formData.get('username'),
-                email: formData.get('email'),
-                access_level: formData.get('accessLevel')
-            };
+	const userData = {
+	    username: formData.get('username'),
+	    email: formData.get('email'),
+	    access_level: formData.get('accessLevel'),
+	    company_list: formData.get('companyList')
+	};
             
             try {
                 const response = await fetch('/api/parking-manager/create-user', {
