@@ -2288,7 +2288,7 @@ def master_get_all_users():
 
 @app.route('/api/master/create-user', methods=['POST'])
 def master_create_user():
-    """יצירת משתמש חדש - למאסטר בלבד - גרסה עובדת"""
+    """יצירת משתמש חדש - למאסטר בלבד - עם user_id ידני"""
     try:
         if 'user_email' not in session:
             return jsonify({'success': False, 'message': 'לא מחובר'}), 401
@@ -2332,10 +2332,28 @@ def master_create_user():
         # יצירת hash לסיסמה
         password_hash = bcrypt.hashpw('Dd123456'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         
-        # הכנת הנתונים להוספה עם timestamps נכונים
+        # קבלת user_id הבא
+        try:
+            max_user_result = supabase.table('user_parkings').select('user_id').order('user_id', desc=True).limit(1).execute()
+            
+            if max_user_result.data:
+                next_user_id = max_user_result.data[0]['user_id'] + 1
+            else:
+                next_user_id = 1
+            
+            print(f"🆔 Next user_id will be: {next_user_id}")
+            
+        except Exception as e:
+            print(f"❌ Error getting max user_id: {str(e)}")
+            import random
+            next_user_id = random.randint(1000, 9999)
+            print(f"🎲 Using random user_id: {next_user_id}")
+        
+        # הכנת הנתונים להוספה
         current_time = datetime.now(timezone.utc).isoformat()
         
         new_user_data = {
+            'user_id': next_user_id,
             'username': username,
             'email': validated_email,
             'password_hash': password_hash,
@@ -2355,13 +2373,13 @@ def master_create_user():
             'company_list': None
         }
         
-        print(f"💾 Inserting user data: {new_user_data}")
+        print(f"💾 Inserting user data with user_id {next_user_id}")
         
         # הוספת המשתמש למסד הנתונים
         result = supabase.table('user_parkings').insert(new_user_data).execute()
         
         if result.data:
-            print(f"✅ User created successfully: {username}")
+            print(f"✅ User created successfully: {username} (ID: {next_user_id})")
             
             # שליחת מייל למשתמש החדש
             email_sent = send_new_user_welcome_email(
@@ -2382,6 +2400,7 @@ def master_create_user():
                 'user_data': {
                     'username': username,
                     'email': validated_email,
+                    'user_id': next_user_id,
                     'temp_password': 'Dd123456'
                 }
             })
@@ -2391,6 +2410,134 @@ def master_create_user():
         
     except Exception as e:
         print(f"❌ Master create user error: {str(e)}")
+        return jsonify({'success': False, 'message': f'שגיאה במערכת: {str(e)}'})
+
+
+@app.route('/api/parking-manager/create-user', methods=['POST'])
+def parking_manager_create_user():
+    """יצירת משתמש חדש לחניון - למנהל חניון בלבד - עם user_id ידני"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        # בדיקת הרשאות מנהל חניון
+        manager_result = supabase.table('user_parkings').select(
+            'code_type, project_number, parking_name, company_type'
+        ).eq('email', session['user_email']).execute()
+        
+        if not manager_result.data or manager_result.data[0].get('code_type') != 'parking_manager':
+            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+        
+        manager_data = manager_result.data[0]
+        
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip()
+        access_level = data.get('access_level', 'single_parking').strip()
+        
+        print(f"🅿️ Parking manager creating user: {username} for parking {manager_data['project_number']}")
+        
+        # אימות קלט בסיסי
+        if not username or not email:
+            return jsonify({'success': False, 'message': 'יש למלא שם משתמש ואימייל'})
+        
+        # אימות אימייל
+        is_valid_email, validated_email = validate_input(email, "email")
+        if not is_valid_email:
+            return jsonify({'success': False, 'message': 'כתובת אימייל לא תקינה'})
+        
+        # בדיקה אם המשתמש כבר קיים
+        existing_username = supabase.table('user_parkings').select('username').eq('username', username).execute()
+        existing_email = supabase.table('user_parkings').select('email').eq('email', validated_email).execute()
+        
+        if existing_username.data:
+            return jsonify({'success': False, 'message': f'שם משתמש "{username}" כבר קיים במערכת'})
+        
+        if existing_email.data:
+            return jsonify({'success': False, 'message': f'כתובת אימייל "{validated_email}" כבר קיימת במערכת'})
+        
+        # יצירת hash לסיסמה
+        password_hash = bcrypt.hashpw('Dd123456'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        # קבלת user_id הבא
+        try:
+            max_user_result = supabase.table('user_parkings').select('user_id').order('user_id', desc=True).limit(1).execute()
+            
+            if max_user_result.data:
+                next_user_id = max_user_result.data[0]['user_id'] + 1
+            else:
+                next_user_id = 1
+            
+            print(f"🆔 Next user_id will be: {next_user_id}")
+            
+        except Exception as e:
+            print(f"❌ Error getting max user_id: {str(e)}")
+            import random
+            next_user_id = random.randint(1000, 9999)
+            print(f"🎲 Using random user_id: {next_user_id}")
+        
+        # הכנת הנתונים להוספה
+        current_time = datetime.now(timezone.utc).isoformat()
+        
+        new_user_data = {
+            'user_id': next_user_id,
+            'username': username,
+            'email': validated_email,
+            'password_hash': password_hash,
+            'role': 'user',
+            'project_number': manager_data['project_number'],
+            'parking_name': manager_data['parking_name'],
+            'company_type': manager_data['company_type'],
+            'access_level': access_level,
+            'code_type': 'dashboard',
+            'created_at': current_time,
+            'updated_at': current_time,
+            'password_changed_at': current_time,
+            'is_temp_password': True,
+            'verification_code': None,
+            'code_expires_at': None,
+            'password_expires_at': None,
+            'company_list': None
+        }
+        
+        print(f"💾 Inserting parking user data with user_id {next_user_id}")
+        
+        # הוספת המשתמש למסד הנתונים
+        result = supabase.table('user_parkings').insert(new_user_data).execute()
+        
+        if result.data:
+            print(f"✅ Parking user created successfully: {username} (ID: {next_user_id})")
+            
+            # שליחת מייל למשתמש החדש
+            email_sent = send_new_user_welcome_email(
+                validated_email,
+                username,
+                'Dd123456',
+                'https://s-b-parking-reports.onrender.com'
+            )
+            
+            if email_sent:
+                message = f'משתמש {username} נוסף בהצלחה לחניון {manager_data["parking_name"]}! מייל נשלח ל-{validated_email}'
+            else:
+                message = f'משתמש {username} נוסף בהצלחה לחניון {manager_data["parking_name"]}, אך לא ניתן לשלוח מייל. הסיסמה הראשונית: Dd123456'
+            
+            return jsonify({
+                'success': True,
+                'message': message,
+                'user_data': {
+                    'username': username,
+                    'email': validated_email,
+                    'parking_name': manager_data['parking_name'],
+                    'user_id': next_user_id,
+                    'temp_password': 'Dd123456'
+                }
+            })
+        else:
+            print(f"❌ Failed to insert parking user to database")
+            return jsonify({'success': False, 'message': 'שגיאה ביצירת המשתמש במסד הנתונים'})
+        
+    except Exception as e:
+        print(f"❌ Parking manager create user error: {str(e)}")
         return jsonify({'success': False, 'message': f'שגיאה במערכת: {str(e)}'})
 
 @app.route('/api/master/reset-password', methods=['POST'])
@@ -2488,113 +2635,6 @@ def parking_manager_get_info():
         print(f"❌ Error getting parking manager info: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני חניון'})
 
-@app.route('/api/parking-manager/create-user', methods=['POST'])
-def parking_manager_create_user():
-    """יצירת משתמש חדש לחניון - למנהל חניון בלבד - גרסה עובדת"""
-    try:
-        if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
-        
-        # בדיקת הרשאות מנהל חניון
-        manager_result = supabase.table('user_parkings').select(
-            'code_type, project_number, parking_name, company_type'
-        ).eq('email', session['user_email']).execute()
-        
-        if not manager_result.data or manager_result.data[0].get('code_type') != 'parking_manager':
-            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
-        
-        manager_data = manager_result.data[0]
-        
-        data = request.get_json()
-        username = data.get('username', '').strip()
-        email = data.get('email', '').strip()
-        access_level = data.get('access_level', 'single_parking').strip()
-        
-        print(f"🅿️ Parking manager creating user: {username} for parking {manager_data['project_number']}")
-        
-        # אימות קלט בסיסי
-        if not username or not email:
-            return jsonify({'success': False, 'message': 'יש למלא שם משתמש ואימייל'})
-        
-        # אימות אימייל
-        is_valid_email, validated_email = validate_input(email, "email")
-        if not is_valid_email:
-            return jsonify({'success': False, 'message': 'כתובת אימייל לא תקינה'})
-        
-        # בדיקה אם המשתמש כבר קיים
-        existing_username = supabase.table('user_parkings').select('username').eq('username', username).execute()
-        existing_email = supabase.table('user_parkings').select('email').eq('email', validated_email).execute()
-        
-        if existing_username.data:
-            return jsonify({'success': False, 'message': f'שם משתמש "{username}" כבר קיים במערכת'})
-        
-        if existing_email.data:
-            return jsonify({'success': False, 'message': f'כתובת אימייל "{validated_email}" כבר קיימת במערכת'})
-        
-        # יצירת hash לסיסמה
-        password_hash = bcrypt.hashpw('Dd123456'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        
-        # הכנת הנתונים להוספה עם timestamps נכונים
-        current_time = datetime.now(timezone.utc).isoformat()
-        
-        new_user_data = {
-            'username': username,
-            'email': validated_email,
-            'password_hash': password_hash,
-            'role': 'user',  # משתמש רגיל בחניון
-            'project_number': manager_data['project_number'],
-            'parking_name': manager_data['parking_name'],
-            'company_type': manager_data['company_type'],
-            'access_level': access_level,
-            'code_type': 'dashboard',  # משתמש רגיל
-            'created_at': current_time,
-            'updated_at': current_time,
-            'password_changed_at': current_time,
-            'is_temp_password': True,
-            'verification_code': None,
-            'code_expires_at': None,
-            'password_expires_at': None,
-            'company_list': None
-        }
-        
-        print(f"💾 Inserting parking user data: {new_user_data}")
-        
-        # הוספת המשתמש למסד הנתונים
-        result = supabase.table('user_parkings').insert(new_user_data).execute()
-        
-        if result.data:
-            print(f"✅ Parking user created successfully: {username}")
-            
-            # שליחת מייל למשתמש החדש
-            email_sent = send_new_user_welcome_email(
-                validated_email,
-                username,
-                'Dd123456',
-                'https://s-b-parking-reports.onrender.com'
-            )
-            
-            if email_sent:
-                message = f'משתמש {username} נוסף בהצלחה לחניון {manager_data["parking_name"]}! מייל נשלח ל-{validated_email}'
-            else:
-                message = f'משתמש {username} נוסף בהצלחה לחניון {manager_data["parking_name"]}, אך לא ניתן לשלוח מייל. הסיסמה הראשונית: Dd123456'
-            
-            return jsonify({
-                'success': True,
-                'message': message,
-                'user_data': {
-                    'username': username,
-                    'email': validated_email,
-                    'parking_name': manager_data['parking_name'],
-                    'temp_password': 'Dd123456'
-                }
-            })
-        else:
-            print(f"❌ Failed to insert parking user to database")
-            return jsonify({'success': False, 'message': 'שגיאה ביצירת המשתמש במסד הנתונים'})
-        
-    except Exception as e:
-        print(f"❌ Parking manager create user error: {str(e)}")
-        return jsonify({'success': False, 'message': f'שגיאה במערכת: {str(e)}'})
 # ========== פונקציות מיילים ==========
 
 def send_new_user_welcome_email(email, username, password, login_url):
