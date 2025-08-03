@@ -1413,6 +1413,44 @@ def keep_service_alive():
     ping_thread.start()
     print("🏓 Keep-alive service initialized")
 
+def validate_username(username):
+    """
+    תיקוף שם משתמש - רק אותיות אנגלית, מספרים וקו תחתון
+    """
+    import re
+    
+    if not username or len(username.strip()) == 0:
+        return False, "יש להזין שם משתמש"
+    
+    username = username.strip()
+    
+    # בדיקת אורך
+    if len(username) < 3:
+        return False, "שם משתמש חייב להיות לפחות 3 תווים"
+    
+    if len(username) > 20:
+        return False, "שם משתמש יכול להיות מקסימום 20 תווים"
+    
+    # בדיקה שיש רק אותיות אנגלית, מספרים וקו תחתון
+    if not re.match(r'^[a-zA-Z0-9_]+$', username):
+        return False, "שם משתמש יכול לכלול רק אותיות אנגלית, מספרים וקו תחתון (_)"
+    
+    # בדיקה שמתחיל באות
+    if not username[0].isalpha():
+        return False, "שם משתמש חייב להתחיל באות אנגלית"
+    
+    # רשימת שמות אסורים
+    forbidden_names = [
+        'admin', 'administrator', 'root', 'user', 'test', 'guest', 'null', 'undefined',
+        'api', 'www', 'mail', 'email', 'support', 'help', 'info', 'contact',
+        'scheidt', 'master', 'system', 'service'
+    ]
+    
+    if username.lower() in forbidden_names:
+        return False, "שם משתמש זה אינו זמין"
+    
+    return True, username
+
 @app.route('/api/test-email-system', methods=['GET'])
 def test_email_system():
     """API לבדיקת מערכת המיילים"""
@@ -2313,6 +2351,11 @@ def master_create_user():
         # אימות קלט בסיסי
         if not username or not email:
             return jsonify({'success': False, 'message': 'יש למלא שם משתמש ואימייל'})
+
+        # תיקוף שם משתמש
+        is_valid_username, username_or_error = validate_username(username)
+        if not is_valid_username:
+            return jsonify({'success': False, 'message': username_or_error})
         
         # אימות אימייל
         is_valid_email, validated_email = validate_input(email, "email")
@@ -2440,6 +2483,11 @@ def parking_manager_create_user():
         # אימות קלט בסיסי
         if not username or not email:
             return jsonify({'success': False, 'message': 'יש למלא שם משתמש ואימייל'})
+
+        # תיקוף שם משתמש
+        is_valid_username, username_or_error = validate_username(username)
+        if not is_valid_username:
+            return jsonify({'success': False, 'message': username_or_error})
         
         # אימות אימייל
         is_valid_email, validated_email = validate_input(email, "email")
