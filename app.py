@@ -2154,6 +2154,451 @@ def send_new_user_email(email, username, temp_password, login_url):
         print(f"   Password: {temp_password}")
         print(f"   URL: {login_url}")
         return False
+
+@app.route('/master-users')
+def master_users_page():
+    """דף ניהול משתמשים למאסטר"""
+    if 'user_email' not in session:
+        return redirect(url_for('login_page'))
+    
+    # בדיקת הרשאות מאסטר
+    try:
+        user_result = supabase.table('user_parkings').select('code_type, access_level').eq('email', session['user_email']).execute()
+        if not user_result.data or user_result.data[0].get('code_type') != 'master':
+            print(f"⚠️ Unauthorized access attempt to master-users by {session['user_email']}")
+            return redirect(url_for('dashboard'))
+    except Exception as e:
+        print(f"❌ Error checking master permissions: {str(e)}")
+        return redirect(url_for('dashboard'))
+    
+    return render_template('master_users.html')
+
+@app.route('/parking-manager-users')
+def parking_manager_users_page():
+    """דף ניהול משתמשים למנהל חניון"""
+    if 'user_email' not in session:
+        return redirect(url_for('login_page'))
+    
+    # בדיקת הרשאות מנהל חניון
+    try:
+        user_result = supabase.table('user_parkings').select('code_type, project_number, access_level').eq('email', session['user_email']).execute()
+        if not user_result.data or user_result.data[0].get('code_type') != 'parking_manager':
+            print(f"⚠️ Unauthorized access attempt to parking-manager-users by {session['user_email']}")
+            return redirect(url_for('dashboard'))
+    except Exception as e:
+        print(f"❌ Error checking parking manager permissions: {str(e)}")
+        return redirect(url_for('dashboard'))
+    
+    return render_template('parking_manager_users.html')
+
+# ========== API למאסטר ==========
+
+@app.route('/api/master/get-all-users', methods=['GET'])
+def master_get_all_users():
+    """קבלת כל המשתמשים - למאסטר בלבד"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        # בדיקת הרשאות מאסטר
+        user_result = supabase.table('user_parkings').select('code_type').eq('email', session['user_email']).execute()
+        if not user_result.data or user_result.data[0].get('code_type') != 'master':
+            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+        
+        # קבלת כל המשתמשים
+        users_result = supabase.table('user_parkings').select(
+            'user_id, username, email, role, project_number, parking_name, company_type, access_level, code_type, created_at, password_changed_at, is_temp_password'
+        ).order('created_at', desc=True).execute()
+        
+        return jsonify({
+            'success': True,
+            'users': users_result.data
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting all users: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה בקבלת רשימת משתמשים'})
+
+@app.route('/api/master/create-user', methods=['POST'])
+def master_create_user():
+    """יצירת משתמש חדש - למאסטר בלבד"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        # בדיקת הרשאות מאסטר
+        user_result = supabase.table('user_parkings').select('code_type').eq('email', session['user_email']).execute()
+        if not user_result.data or user_result.data[0].get('code_type') != 'master':
+            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+        
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip()
+        project_number = data.get('project_number')
+        code_type = data.get('code_type', 'dashboard').strip()
+        role = data.get('role', 'user').strip()
+        access_level = data.get('access_level', 'single_parking').strip()
+        company_type = data.get('company_type', '').strip()
+        parking_name = data.get('parking_name', '').strip()
+        
+        # אימות קלט בסיסי
+        if not username or not email:
+            return jsonify({'success': False, 'message': 'יש למלא שם משתמש ואימייל'})
+        
+        # אימות אימייל
+        is_valid_email, validated_email = validate_input(email, "email")
+        if not is_valid_email:
+            return jsonify({'success': False, 'message': 'כתובת אימייל לא תקינה'})
+        
+        # יצירת המשתמש עם הסיסמה הקבועה
+        try:
+            result = supabase.rpc('master_create_user', {
+                'p_username': username,
+                'p_email': validated_email,
+                'p_project_number': int(project_number) if project_number else 0,
+                'p_code_type': code_type,
+                'p_role': role,
+                'p_access_level': access_level,
+                'p_company_type': company_type,
+                'p_parking_name': parking_name,
+                'p_created_by': session['user_email'],
+                'p_initial_password': 'Dd123456'  # סיסמה קבועה
+            }).execute()
+        except Exception as rpc_error:
+            # טיפול בAPIError
+            if hasattr(rpc_error, 'args') and rpc_error.args:
+                try:
+                    import ast
+                    result_data = ast.literal_eval(str(rpc_error.args[0]))
+                except:
+                    result_data = {'success': False, 'message': str(rpc_error)}
+            else:
+                result_data = {'success': False, 'message': str(rpc_error)}
+        else:
+            result_data = result.data
+        
+        if result_data and result_data.get('success'):
+            # שליחת מייל למשתמש החדש
+            send_new_user_welcome_email(
+                validated_email,
+                username,
+                'Dd123456',
+                'https://s-b-parking-reports.onrender.com'
+            )
+            
+            return jsonify({
+                'success': True,
+                'message': f'משתמש נוצר בהצלחה. מייל נשלח ל-{validated_email}',
+                'user_data': {
+                    'username': username,
+                    'email': validated_email
+                }
+            })
+        else:
+            error_msg = result_data.get('message', 'שגיאה ביצירת משתמש') if result_data else 'שגיאה ביצירת משתמש'
+            return jsonify({'success': False, 'message': error_msg})
+        
+    except Exception as e:
+        print(f"❌ Master create user error: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
+
+@app.route('/api/master/reset-password', methods=['POST'])
+def master_reset_password():
+    """איפוס סיסמה - למאסטר בלבד"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        # בדיקת הרשאות מאסטר
+        user_result = supabase.table('user_parkings').select('code_type').eq('email', session['user_email']).execute()
+        if not user_result.data or user_result.data[0].get('code_type') != 'master':
+            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+        
+        data = request.get_json()
+        target_username = data.get('username', '').strip()
+        
+        if not target_username:
+            return jsonify({'success': False, 'message': 'יש לציין שם משתמש'})
+        
+        # איפוס הסיסמה ל-Dd123456
+        try:
+            result = supabase.rpc('master_reset_password', {
+                'p_username': target_username,
+                'p_new_password': 'Dd123456',
+                'p_reset_by': session['user_email']
+            }).execute()
+        except Exception as rpc_error:
+            # טיפול בAPIError
+            if hasattr(rpc_error, 'args') and rpc_error.args:
+                try:
+                    import ast
+                    result_data = ast.literal_eval(str(rpc_error.args[0]))
+                except:
+                    result_data = {'success': False, 'message': str(rpc_error)}
+            else:
+                result_data = {'success': False, 'message': str(rpc_error)}
+        else:
+            result_data = result.data
+        
+        if result_data and result_data.get('success'):
+            # קבלת כתובת המייל של המשתמש
+            user_info = supabase.table('user_parkings').select('email').eq('username', target_username).execute()
+            if user_info.data:
+                user_email = user_info.data[0]['email']
+                send_password_reset_email(user_email, target_username, 'Dd123456')
+            
+            return jsonify({
+                'success': True,
+                'message': f'סיסמה אופסה בהצלחה עבור {target_username}'
+            })
+        else:
+            error_msg = result_data.get('message', 'שגיאה באיפוס סיסמה') if result_data else 'שגיאה באיפוס סיסמה'
+            return jsonify({'success': False, 'message': error_msg})
+        
+    except Exception as e:
+        print(f"❌ Master reset password error: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
+
+# ========== API למנהל חניון ==========
+
+@app.route('/api/parking-manager/get-parking-info', methods=['GET'])
+def parking_manager_get_info():
+    """קבלת נתוני החניון של המנהל"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        # בדיקת הרשאות מנהל חניון
+        user_result = supabase.table('user_parkings').select(
+            'code_type, project_number, parking_name, company_type'
+        ).eq('email', session['user_email']).execute()
+        
+        if not user_result.data or user_result.data[0].get('code_type') != 'parking_manager':
+            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+        
+        user_data = user_result.data[0]
+        
+        # קבלת משתמשי החניון
+        parking_users = supabase.table('user_parkings').select(
+            'user_id, username, email, role, access_level, created_at, password_changed_at, is_temp_password'
+        ).eq('project_number', user_data['project_number']).order('created_at', desc=True).execute()
+        
+        return jsonify({
+            'success': True,
+            'parking_info': {
+                'project_number': user_data['project_number'],
+                'parking_name': user_data['parking_name'],
+                'company_type': user_data['company_type']
+            },
+            'users': parking_users.data
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting parking manager info: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני חניון'})
+
+@app.route('/api/parking-manager/create-user', methods=['POST'])
+def parking_manager_create_user():
+    """יצירת משתמש חדש לחניון - למנהל חניון בלבד"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        # בדיקת הרשאות מנהל חניון
+        manager_result = supabase.table('user_parkings').select(
+            'code_type, project_number, parking_name, company_type'
+        ).eq('email', session['user_email']).execute()
+        
+        if not manager_result.data or manager_result.data[0].get('code_type') != 'parking_manager':
+            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+        
+        manager_data = manager_result.data[0]
+        
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip()
+        access_level = data.get('access_level', 'single_parking').strip()
+        
+        # אימות קלט בסיסי
+        if not username or not email:
+            return jsonify({'success': False, 'message': 'יש למלא שם משתמש ואימייל'})
+        
+        # אימות אימייל
+        is_valid_email, validated_email = validate_input(email, "email")
+        if not is_valid_email:
+            return jsonify({'success': False, 'message': 'כתובת אימייל לא תקינה'})
+        
+        # יצירת המשתמש לחניון הספציפי
+        try:
+            result = supabase.rpc('parking_manager_create_user', {
+                'p_username': username,
+                'p_email': validated_email,
+                'p_project_number': manager_data['project_number'],
+                'p_parking_name': manager_data['parking_name'],
+                'p_company_type': manager_data['company_type'],
+                'p_access_level': access_level,
+                'p_created_by': session['user_email'],
+                'p_initial_password': 'Dd123456'  # סיסמה קבועה
+            }).execute()
+        except Exception as rpc_error:
+            # טיפול בAPIError
+            if hasattr(rpc_error, 'args') and rpc_error.args:
+                try:
+                    import ast
+                    result_data = ast.literal_eval(str(rpc_error.args[0]))
+                except:
+                    result_data = {'success': False, 'message': str(rpc_error)}
+            else:
+                result_data = {'success': False, 'message': str(rpc_error)}
+        else:
+            result_data = result.data
+        
+        if result_data and result_data.get('success'):
+            # שליחת מייל למשתמש החדש
+            send_new_user_welcome_email(
+                validated_email,
+                username,
+                'Dd123456',
+                'https://s-b-parking-reports.onrender.com'
+            )
+            
+            return jsonify({
+                'success': True,
+                'message': f'משתמש נוצר בהצלחה לחניון {manager_data["parking_name"]}. מייל נשלח ל-{validated_email}',
+                'user_data': {
+                    'username': username,
+                    'email': validated_email,
+                    'parking_name': manager_data['parking_name']
+                }
+            })
+        else:
+            error_msg = result_data.get('message', 'שגיאה ביצירת משתמש') if result_data else 'שגיאה ביצירת משתמש'
+            return jsonify({'success': False, 'message': error_msg})
+        
+    except Exception as e:
+        print(f"❌ Parking manager create user error: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
+
+# ========== פונקציות מיילים ==========
+
+def send_new_user_welcome_email(email, username, password, login_url):
+    """שליחת מייל ברוכים הבאים למשתמש חדש"""
+    
+    if not mail:
+        print(f"❌ Mail system not available")
+        print(f"📱 NEW USER DETAILS for {email}:")
+        print(f"   Username: {username}")
+        print(f"   Password: {password}")
+        print(f"   URL: {login_url}")
+        return False
+    
+    try:
+        print(f"🚀 Sending welcome email to {email}...")
+        
+        msg = Message(
+            subject='ברוכים הבאים למערכת S&B Parking',
+            recipients=[email],
+            html=f"""
+            <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">
+                <h2 style="color: #667eea;">ברוכים הבאים למערכת S&B Parking</h2>
+                <h3>חשבון חדש נוצר עבורך במערכת דוחות החניות</h3>
+                
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <p><strong>שם משתמש:</strong> {username}</p>
+                    <p><strong>סיסמה ראשונית:</strong> <span style="font-family: monospace; background: #e9ecef; padding: 2px 6px; color: #d63384; font-weight: bold;">Dd123456</span></p>
+                    <p><strong>קישור להתחברות:</strong></p>
+                    <a href="{login_url}" style="color: #667eea; text-decoration: none; font-weight: bold;">{login_url}</a>
+                </div>
+                
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <p style="margin: 0; color: #856404;"><strong>חשוב - הוראות בטיחות:</strong></p>
+                    <p style="margin: 5px 0 0 0; color: #856404;">
+                        • בכניסה הראשונה תתבקש לשנות את הסיסמה<br>
+                        • אנא שנה את הסיסמה לסיסמה אישית וחזקה<br>
+                        • שמור על פרטי ההתחברות שלך במקום בטוח<br>
+                        • אל תשתף את פרטי ההתחברות עם אחרים
+                    </p>
+                </div>
+                
+                <p>אם יש לך שאלות או בעיות בהתחברות, צור קשר עם מנהל המערכת.</p>
+                
+                <hr>
+                <p style="color: #666; font-size: 12px;">
+                    S&B Parking - מערכת ניהול דוחות חניות<br>
+                    מייל אוטומטי - אנא אל תענה למייל זה
+                </p>
+            </div>
+            """,
+            sender=app.config['MAIL_USERNAME']
+        )
+        
+        mail.send(msg)
+        print(f"✅ Welcome email sent successfully to {email}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Welcome email error: {str(e)}")
+        print(f"📱 BACKUP - NEW USER DETAILS for {email}:")
+        print(f"   Username: {username}")
+        print(f"   Password: {password}")
+        print(f"   URL: {login_url}")
+        return False
+
+def send_password_reset_email(email, username, new_password):
+    """שליחת מייל על איפוס סיסמה"""
+    
+    if not mail:
+        print(f"❌ Mail system not available")
+        print(f"📱 PASSWORD RESET for {username}: {new_password}")
+        return False
+    
+    try:
+        print(f"🚀 Sending password reset email to {email}...")
+        
+        msg = Message(
+            subject='איפוס סיסמה - S&B Parking',
+            recipients=[email],
+            html=f"""
+            <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">
+                <h2 style="color: #667eea;">איפוס סיסמה - S&B Parking</h2>
+                <h3>הסיסמה שלך אופסה על ידי מנהל המערכת</h3>
+                
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <p><strong>שם משתמש:</strong> {username}</p>
+                    <p><strong>סיסמה חדשה:</strong> <span style="font-family: monospace; background: #e9ecef; padding: 2px 6px; color: #d63384; font-weight: bold;">Dd123456</span></p>
+                    <p><strong>קישור להתחברות:</strong></p>
+                    <a href="https://s-b-parking-reports.onrender.com" style="color: #667eea; text-decoration: none; font-weight: bold;">https://s-b-parking-reports.onrender.com</a>
+                </div>
+                
+                <div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <p style="margin: 0; color: #721c24;"><strong>חשוב:</strong></p>
+                    <p style="margin: 5px 0 0 0; color: #721c24;">
+                        • בכניסה הבאה תתבקש לשנות את הסיסמה<br>
+                        • שנה את הסיסמה מיד לסיסמה אישית וחזקה<br>
+                        • אל תשתף את הסיסמה עם אחרים
+                    </p>
+                </div>
+                
+                <p>אם לא ביקשת איפוס סיסמה, צור קשר עם מנהל המערכת מיד.</p>
+                
+                <hr>
+                <p style="color: #666; font-size: 12px;">
+                    S&B Parking - מערכת ניהול דוחות חניות<br>
+                    מייל אוטומטי - אנא אל תענה למייל זה
+                </p>
+            </div>
+            """,
+            sender=app.config['MAIL_USERNAME']
+        )
+        
+        mail.send(msg)
+        print(f"✅ Password reset email sent successfully to {email}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Password reset email error: {str(e)}")
+        print(f"📱 BACKUP - PASSWORD RESET for {username}: {new_password}")
+        return False 
 # הפעלה אוטומטית כשהאפליקציה מתחילה
 if __name__ == '__main__':
     print("\n🔧 Pre-flight email system check...")
