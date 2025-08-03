@@ -921,9 +921,15 @@ def process_single_email(mail, email_id):
             print(f"✅ Authorized senders: {AUTHORIZED_SENDERS}")
             print(f"⏭️ Skipping email from unauthorized sender")
             
-            # 🆕 שליחת מייל על שולח לא מורשה
-            send_error_notification(sender, 
-                f"השולח {sender} אינו מורשה לשלוח קבצי נתונים. אנא פנה למנהל המערכת.")
+            # 🆕 סימון המייל כדי לא לבדוק אותו שוב
+            try:
+                print(f"🏷️ Marking unauthorized email as processed (ID: {email_id})...")
+                mail.store(email_id, '+FLAGS', '\\Seen \\Flagged')
+                print(f"✅ Unauthorized email marked as processed")
+            except Exception as mark_error:
+                print(f"⚠️ Could not mark unauthorized email: {str(mark_error)}")
+            
+            print(f"📝 UNAUTHORIZED ACCESS LOGGED: {sender} tried to send data files")
             return False
         
         print(f"✅ AUTHORIZED SENDER: {sender}")
