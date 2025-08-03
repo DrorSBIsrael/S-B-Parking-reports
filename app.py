@@ -8,7 +8,7 @@ import requests
 import re
 import html
 import bcrypt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 try:
     import imaplib
@@ -2288,7 +2288,7 @@ def master_get_all_users():
 
 @app.route('/api/master/create-user', methods=['POST'])
 def master_create_user():
-    """יצירת משתמש חדש - למאסטר בלבד - גרסה מתוקנת"""
+    """יצירת משתמש חדש - למאסטר בלבד - גרסה עובדת"""
     try:
         if 'user_email' not in session:
             return jsonify({'success': False, 'message': 'לא מחובר'}), 401
@@ -2319,7 +2319,7 @@ def master_create_user():
         if not is_valid_email:
             return jsonify({'success': False, 'message': 'כתובת אימייל לא תקינה'})
         
-        # בדיקה אם המשתמש כבר קיים - גרסה מתוקנת לSupabase
+        # בדיקה אם המשתמש כבר קיים
         existing_username = supabase.table('user_parkings').select('username').eq('username', username).execute()
         existing_email = supabase.table('user_parkings').select('email').eq('email', validated_email).execute()
         
@@ -2332,7 +2332,9 @@ def master_create_user():
         # יצירת hash לסיסמה
         password_hash = bcrypt.hashpw('Dd123456'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         
-        # הכנת הנתונים להוספה
+        # הכנת הנתונים להוספה עם timestamps נכונים
+        current_time = datetime.now(timezone.utc).isoformat()
+        
         new_user_data = {
             'username': username,
             'email': validated_email,
@@ -2343,9 +2345,14 @@ def master_create_user():
             'company_type': company_type if company_type else 'לא צוין',
             'access_level': access_level,
             'code_type': code_type,
-            'is_temp_password': True,  # סיסמה זמנית שיש לשנות
+            'created_at': current_time,
+            'updated_at': current_time,
+            'password_changed_at': current_time,
+            'is_temp_password': True,
             'verification_code': None,
-            'code_expires_at': None
+            'code_expires_at': None,
+            'password_expires_at': None,
+            'company_list': None
         }
         
         print(f"💾 Inserting user data: {new_user_data}")
@@ -2483,7 +2490,7 @@ def parking_manager_get_info():
 
 @app.route('/api/parking-manager/create-user', methods=['POST'])
 def parking_manager_create_user():
-    """יצירת משתמש חדש לחניון - למנהל חניון בלבד - גרסה מתוקנת"""
+    """יצירת משתמש חדש לחניון - למנהל חניון בלבד - גרסה עובדת"""
     try:
         if 'user_email' not in session:
             return jsonify({'success': False, 'message': 'לא מחובר'}), 401
@@ -2514,7 +2521,7 @@ def parking_manager_create_user():
         if not is_valid_email:
             return jsonify({'success': False, 'message': 'כתובת אימייל לא תקינה'})
         
-        # בדיקה אם המשתמש כבר קיים - גרסה מתוקנת לSupabase
+        # בדיקה אם המשתמש כבר קיים
         existing_username = supabase.table('user_parkings').select('username').eq('username', username).execute()
         existing_email = supabase.table('user_parkings').select('email').eq('email', validated_email).execute()
         
@@ -2527,7 +2534,9 @@ def parking_manager_create_user():
         # יצירת hash לסיסמה
         password_hash = bcrypt.hashpw('Dd123456'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         
-        # הכנת הנתונים להוספה
+        # הכנת הנתונים להוספה עם timestamps נכונים
+        current_time = datetime.now(timezone.utc).isoformat()
+        
         new_user_data = {
             'username': username,
             'email': validated_email,
@@ -2538,9 +2547,14 @@ def parking_manager_create_user():
             'company_type': manager_data['company_type'],
             'access_level': access_level,
             'code_type': 'dashboard',  # משתמש רגיל
-            'is_temp_password': True,  # סיסמה זמנית שיש לשנות
+            'created_at': current_time,
+            'updated_at': current_time,
+            'password_changed_at': current_time,
+            'is_temp_password': True,
             'verification_code': None,
-            'code_expires_at': None
+            'code_expires_at': None,
+            'password_expires_at': None,
+            'company_list': None
         }
         
         print(f"💾 Inserting parking user data: {new_user_data}")
