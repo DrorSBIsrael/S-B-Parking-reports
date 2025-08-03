@@ -24,6 +24,7 @@ except ImportError as e:
     EMAIL_MONITORING_AVAILABLE = False
     print(f"⚠️ Email monitoring not available: {e}")
 
+ERROR_EMAILS_DISABLED = True
 # הגדרות מיילים אוטומטיים - להוסיף אחרי ההגדרות הקיימות:
 if EMAIL_MONITORING_AVAILABLE:
     EMAIL_CHECK_INTERVAL = 5  # בדיקה כל 5 דקות
@@ -998,21 +999,15 @@ def process_single_email(mail, email_id):
         # 🆕 שליחת מייל הצלחה עם פרטים מלאים
         send_success_notification(sender, processed_files, transferred_count, total_processed)
         
-        # מחיקת המייל אחרי עיבוד מוצלח
+# 🏷️ סימון המייל כמעובד במקום מחיקה
         try:
-            print(f"🗑️ Deleting processed email (ID: {email_id})...")
-            mail.store(email_id, '+FLAGS', '\\Deleted')
-            mail.expunge()
-            print(f"✅ Email deleted successfully")
+            print(f"🏷️ Marking email as processed (ID: {email_id})...")
+            mail.store(email_id, '+FLAGS', '\\Seen \\Flagged')
+            print(f"✅ Email marked as processed successfully")
             
-        except Exception as delete_error:
-            error_msg = str(delete_error)
-            print(f"⚠️ Could not delete email: {error_msg}")
-            
-            if "already deleted" in error_msg.lower() or "not found" in error_msg.lower():
-                print("ℹ️ Email was already deleted - continuing")
-            else:
-                print(f"⚠️ Email deletion failed but continuing process")
+        except Exception as mark_error:
+            print(f"⚠️ Could not mark email as processed: {str(mark_error)}")
+            # לא מפסיקים את התהליך בגלל זה
         
         return True
         
@@ -1117,127 +1112,16 @@ def send_success_notification(sender_email, processed_files, new_rows, total_row
             print(f"📝 Success logged: {new_rows} new, {total_rows} total from {files_summary}")
 
 def send_error_notification(sender_email, error_message):
-    """שליחת התראת שגיאה - גרסה מתוקנת ומשופרת"""
+    """שליחת התראת שגיאה - מושבת, רק לוג"""
     
-    # בדיקת מגבלה יומית
-    if not hasattr(send_error_notification, 'daily_count'):
-        send_error_notification.daily_count = 0
-        send_error_notification.last_reset = datetime.now().date()
-    
-    # איפוס יומי
-    if send_error_notification.last_reset != datetime.now().date():
-        send_error_notification.daily_count = 0
-        send_error_notification.last_reset = datetime.now().date()
-    
-    # הגבלה ל-50 מיילי שגיאה ביום
-    if send_error_notification.daily_count >= 50:
-        print(f"⚠️ Daily error email limit reached (50/day) - logging only: {error_message[:100]}...")
+    # בדיקה אם מיילי שגיאה מושבתים
+    if ERROR_EMAILS_DISABLED:
+        print(f"🚫 Error email DISABLED - logging only")
+        print(f"📝 Error for {sender_email}: {error_message}")
         return
     
-    # בדיקת נתונים
-    gmail_user = os.environ.get('GMAIL_USERNAME')
-    gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
-    
-    if not gmail_user or not gmail_password:
-        print(f"❌ Missing Gmail credentials for error notification")
-        print(f"📝 Error logged: {error_message}")
-        return
-        
-    try:
-        print(f"📧 Sending error notification to {sender_email}...")
-        
-        msg = MIMEMultipart()
-        msg['From'] = gmail_user
-        msg['To'] = sender_email
-        msg['Subject'] = '❌ שגיאה בעיבוד קבצי הנתונים - S&B Parking'
-        
-        # זיהוי סוג השגיאה להודעה מותאמת
-        if "לא מורשה" in error_message or "UNAUTHORIZED" in error_message:
-            error_type = "🚫 שולח לא מורשה"
-            solutions = """
-• ודא שאתה שולח מכתובת מייל מורשה
-• פנה למנהל המערכת להוספת כתובת המייל שלך לרשימת השולחים המורשים
-• בדוק שכתובת המייל נכתבת נכון (ללא שגיאות הקלדה)"""
-        
-        elif "לא נמצאו קבצי CSV" in error_message:
-            error_type = "📎 קבצים חסרים"
-            solutions = """
-• ודא שצירפת קובץ CSV למייל
-• בדוק שהקובץ בפורמט .csv או .txt
-• ודא שהקובץ לא פגום"""
-        
-        elif "לא נמצאו נתונים תקינים" in error_message:
-            error_type = "📊 בעיה בפורמט הנתונים"
-            solutions = """
-• בדוק שהקובץ מכיל את הכותרות הנדרשות
-• ודא שהנתונים בפורמט הנכון (תאריכים, מספרים)
-• בדוק שהקובץ אינו ריק
-• ודא שלא חסרים נתונים חיוניים"""
-        
-        elif "שגיאה בהכנסת הנתונים" in error_message:
-            error_type = "💾 שגיאת מסד נתונים"
-            solutions = """
-• נסה לשלוח את הקובץ שוב
-• ודא שהנתונים תקינים ושלמים
-• אם הבעיה נמשכת, פנה לתמיכה טכנית"""
-        
-        else:
-            error_type = "⚠️ שגיאה טכנית"
-            solutions = """
-• נסה לשלוח את הקובץ שוב
-• ודא שהקובץ תקין ולא פגום
-• בדוק את פורמט הקובץ
-• אם הבעיה נמשכת, פנה לתמיכה טכנית"""
-        
-        body = f"""
-שלום,
-
-התרחשה שגיאה בעיבוד קבצי הנתונים שלך:
-
-{error_type}
-
-🚨 פרטי השגיאה:
-{error_message}
-
-🔧 המלצות לפתרון:
-{solutions}
-
-📞 תמיכה נוספת:
-אם הבעיה נמשכת, אנא פנה למנהל המערכת עם פרטי השגיאה המופיעים למעלה.
-
-⏰ זמן השגיאה: {datetime.now().strftime('%d/%m/%Y %H:%M')}
-
-בברכה,
-מערכת S&B Parking (דוח אוטומטי)
-נשלח מ: {gmail_user}
-        """
-        
-        msg.attach(MIMEText(body, 'plain', 'utf-8'))
-        
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(gmail_user, gmail_password)
-        server.send_message(msg)
-        server.quit()
-        
-        send_error_notification.daily_count += 1
-        print(f"✅ Error notification sent to {sender_email} ({send_error_notification.daily_count}/50 today)")
-        
-    except Exception as e:
-        error_str = str(e)
-        if "sending limit exceeded" in error_str.lower():
-            print(f"🚫 Gmail daily limit exceeded - switching to log-only mode")
-            send_error_notification.daily_count = 99
-        else:
-            print(f"❌ Failed to send error notification: {str(e)}")
-            print(f"📝 Error logged: {error_message}")
-            
-            # אם שליחת המייל נכשלה, לפחות נשמור פרטים בלוג
-            print(f"📝 ERROR DETAILS FOR MANUAL FOLLOW-UP:")
-            print(f"   👤 Sender: {sender_email}")
-            print(f"   📅 Time: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-            print(f"   💬 Message: {error_message}")
-            print(f"   ======================================")
+    # אם לא מושבת, רק לוג (ללא שליחת מייל)
+    print(f"📝 ERROR LOGGED (no email sent): {sender_email} - {error_message}")
             
 def verify_email_system():
     """בדיקת התקינות של מערכת המיילים"""
@@ -1421,7 +1305,7 @@ def check_for_new_emails():
         print(f"🔍 Search criteria: {search_criteria}")
         print(f"📅 Today: {today}, Yesterday: {yesterday}")
         
-        _, message_ids = mail.search(None, search_criteria)
+        _, message_ids = mail.search(None, f'({search_criteria}) UNFLAGGED')
         
         if not message_ids[0]:
             print("📭 No emails found from the last 2 days")
