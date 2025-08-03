@@ -69,15 +69,17 @@
             gap: 20px;
         }
         
-        .header h1 {
-            font-size: 48px;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin: 0;
-            letter-spacing: -1px;
-        }
+    .header h1 {
+        font-size: clamp(28px, 5vw, 48px);
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0;
+        letter-spacing: -0.5px;
+        line-height: 1.2;
+    }
         
         .user-info {
             display: flex;
@@ -687,16 +689,60 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
-        /* Responsive */
-        @media (max-width: 768px) {
-            .header h1 { font-size: 36px; }
-            .charts-grid { grid-template-columns: 1fr; }
-            .stats-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-            .stat-card { padding: 20px; }
-            .stat-card .value { font-size: 24px; }
-            .control-panel { flex-direction: column; }
-            .control-group { width: 100%; }
-        }
+/* Responsive */
+@media (max-width: 768px) {
+    .header h1 { 
+        font-size: clamp(20px, 6vw, 28px);
+        text-align: center;
+    }
+    .header-top {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 15px;
+    }
+    .charts-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+    .stat-card { padding: 20px; }
+    .stat-card .value { font-size: 24px; }
+    .control-panel { flex-direction: column; }
+    .control-group { width: 100%; }
+    
+    /* Better mobile navigation */
+    .date-nav-btn {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+    
+    .date-nav-btn span:last-child {
+        font-size: 10px;
+    }
+    
+    /* Mobile quick actions */
+    .quick-action-btn {
+        padding: 10px 16px;
+        font-size: 14px;
+        min-width: 100px;
+        justify-content: center;
+    }
+    
+    /* Mobile control panel */
+    .control-panel > div:first-child {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .view-mode-switcher {
+        order: -1;
+        align-self: center;
+    }
+    
+    /* Date inputs on mobile */
+    .control-group {
+        min-width: auto;
+    }
+}
         
         /* Stay Duration Cards */
         .stay-duration-grid {
@@ -801,13 +847,20 @@
         <!-- Header -->
         <div class="header">
             <div class="header-top">
-            <div style="display: flex; align-items: center; gap: 20px;">
-                <h1>לוח בקרה - <span id="dashboardTitle">טוען...</span></h1>
-                <img src="https://raw.githubusercontent.com/DrorSBIsrael/S-B-Parking-reports/refs/heads/master/templates/Logo%20SB%20300dpi.jpg" 
-                     alt="Logo" 
-                     style="height: 60px; width: auto; object-fit: contain;">
+                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; flex-wrap: wrap; gap: 20px;">
+                    <div style="display: flex; align-items: center; gap: 20px; flex: 1; min-width: 300px;">
+                        <h1 style="margin: 0;">לוח בקרה - <span id="dashboardTitle">טוען...</span></h1>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <img src="https://raw.githubusercontent.com/DrorSBIsrael/S-B-Parking-reports/refs/heads/master/templates/Logo%20SB%20300dpi.jpg" 
+                             alt="S&B Parking Logo" 
+                             style="height: 65px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
+                        <div style="text-align: right; color: var(--text-secondary); font-size: 13px; line-height: 1.3;">
+                            <div style="font-weight: 600; color: var(--text-primary);">S&B Parking</div>
+                            <div>מערכת ניהול חניונים</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
             
             <!-- Control Panel -->
             <div class="control-panel">
@@ -821,7 +874,44 @@
                     </div>
                     
                     <!-- Date Navigation -->
-                    <button class="date-nav-btn" onclick="navigateDate(-1)">◀</button>
+                    <!-- Date Navigation with Labels -->
+<div style="display: flex; align-items: center; gap: 8px;">
+    <button class="date-nav-btn" onclick="navigateDate(-1)" title="תקופה קודמת" style="
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 14px;
+        position: relative;
+    ">
+        <span>◀</span>
+        <span style="font-size: 12px; font-weight: 500;">קודם</span>
+    </button>
+    
+    <div style="
+        padding: 8px 16px;
+        background: var(--background);
+        border-radius: var(--radius-small);
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--primary);
+        white-space: nowrap;
+        min-width: 80px;
+        text-align: center;
+    " id="currentPeriodLabel">
+        תקופה נוכחית
+    </div>
+    
+    <button class="date-nav-btn" onclick="navigateDate(1)" title="תקופה הבאה" style="
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 14px;
+        position: relative;
+    ">
+        <span style="font-size: 12px; font-weight: 500;">הבא</span>
+        <span>▶</span>
+    </button>
+</div>
                     
                 <!-- Date Range -->
                 <div class="control-group">
@@ -838,8 +928,7 @@
                         </div>
                 </div>
                     
-                    <button class="date-nav-btn" onclick="navigateDate(1)">▶</button>
-                
+
                 <!-- Load Button -->
                 <button class="load-btn" onclick="loadData()">
                     <span>📊</span>
@@ -1135,10 +1224,13 @@ async function initializeDashboard() {
         // Load parking list
         await loadParkingList();
         
-        // Load initial data
-        await loadData();
-        
-        // Fix date picker display after everything is loaded
+// Load initial data
+await loadData();
+
+// Update period label after loading
+updateCurrentPeriodLabel();
+
+// Fix date picker display after everything is loaded
         setTimeout(() => {
         //    fixDatePickerFormat();
         }, 500);
@@ -3226,10 +3318,9 @@ case 'currentWeek':
     document.getElementById('startDate').value = formatDateForInput(startDate);
     document.getElementById('endDate').value = formatDateForInput(endDate);
     
-    // Fix date picker display
-    //fixDatePickerFormat();
+    // Update period label
+    updateCurrentPeriodLabel();
     
-    // Auto load data
     loadData();
 }
 
@@ -3306,8 +3397,8 @@ function navigateDate(direction) {
     document.getElementById('startDate').value = formatDateForInput(startDate);
     document.getElementById('endDate').value = formatDateForInput(endDate);
     
-    // Fix date picker display
-    // fixDatePickerFormat();
+    // Update period label
+    updateCurrentPeriodLabel();
     
     loadData();
 }
@@ -4222,6 +4313,59 @@ function toggleChartType(chartName) {
             createDailyChart();
             break;
     }
+}
+
+// Update current period label based on view mode and dates
+function updateCurrentPeriodLabel() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const label = document.getElementById('currentPeriodLabel');
+    
+    if (!startDate || !endDate || !label) return;
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    let labelText = '';
+    
+    switch(currentViewMode) {
+        case 'daily':
+            if (startDate === endDate) {
+                // Single day
+                labelText = formatDateForDisplay(startDate);
+            } else {
+                // Date range
+                labelText = `${formatDateForDisplay(startDate)} - ${formatDateForDisplay(endDate)}`;
+            }
+            break;
+            
+        case 'weekly':
+            const weekNumber = getWeekNumber(start);
+            labelText = `שבוע ${weekNumber}`;
+            break;
+            
+        case 'monthly':
+            const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 
+                              'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+            if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+                labelText = `${monthNames[start.getMonth()]} ${start.getFullYear()}`;
+            } else {
+                labelText = `${monthNames[start.getMonth()]} - ${monthNames[end.getMonth()]}`;
+            }
+            break;
+            
+        default:
+            labelText = 'תקופה נוכחית';
+    }
+    
+    label.textContent = labelText;
+}
+
+// Helper function to get week number
+function getWeekNumber(date) {
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+    const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
 }
 
 // Initialize
