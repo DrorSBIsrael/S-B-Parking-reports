@@ -278,20 +278,30 @@
                         </select>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="accessLevel">רמת גישה</label>
-                        <select id="accessLevel" name="accessLevel">
-                            <option value="single_parking">חניון בודד</option>
-                            <option value="group_access">גישה קבוצתית</option>
-                            <option value="group_manager">מנהל קבוצה</option>
-                        </select>
-                    </div>
+	<div class="form-group">
+	    <label for="accessLevel">רמת גישה</label>
+	    <select id="accessLevel" name="accessLevel">
+	        <option value="single_parking">חניון בודד</option>
+	        <option value="group_access">גישה קבוצתית</option>
+	        <option value="group_manager">מנהל קבוצה</option>
+	        <option value="company_manager">מנהל חברות</option>
+	    </select>
+	</div>
                     
                     <div class="form-group">
                         <label for="companyType">סוג חברה</label>
                         <input type="text" id="companyType" name="companyType" placeholder="לדוגמה: מבנה, צי, פרטי">
                     </div>
                     
+	<div class="form-group">
+	    <label for="companyList">רשימת מספרי חברות</label>
+	    <input type="text" id="companyList" name="companyList" 
+	           placeholder="לדוגמה: 123456789-987654321-555666777">
+	    <small style="color: #6c757d; font-size: 12px;">
+	        הזינו מספרי חברות מופרדים במקף (-) בלבד. השאירו ריק אם לא רלוונטי.
+ 	   </small>
+	</div>
+
                     <div class="form-group">
                         <label for="parkingName">שם חניון</label>
                         <input type="text" id="parkingName" name="parkingName">
@@ -402,16 +412,17 @@
             createBtn.disabled = true;
             
             const formData = new FormData(e.target);
-            const userData = {
-                username: formData.get('username'),
-                email: formData.get('email'),
-                project_number: formData.get('projectNumber') || 0,
-                code_type: formData.get('codeType'),
-                role: formData.get('role'),
-                access_level: formData.get('accessLevel'),
-                company_type: formData.get('companyType'),
-                parking_name: formData.get('parkingName')
-            };
+	const userData = {
+	    username: formData.get('username'),
+	    email: formData.get('email'),
+	    project_number: formData.get('projectNumber') || 0,
+ 	   code_type: formData.get('codeType'),
+ 	   role: formData.get('role'),
+	    access_level: formData.get('accessLevel'),
+	    company_type: formData.get('companyType'),
+	    parking_name: formData.get('parkingName'),
+	    company_list: formData.get('companyList')
+	};
             
             try {
                 const response = await fetch('/api/master/create-user', {
