@@ -1942,9 +1942,9 @@ def verify_code():
                     
                     print(f"✅ SUCCESS - User type: {code_type}")
                     
-                    # קביעת הפניה לפי סוג המשתמש
+# קביעת הפניה לפי סוג המשתמש
                     redirect_url = '/dashboard'  # ברירת מחדל
-                    
+
                     if code_type == 'master':
                         redirect_url = '/master-users'
                         print(f"🔧 Redirecting MASTER to: {redirect_url}")
@@ -1952,10 +1952,15 @@ def verify_code():
                         redirect_url = '/parking-manager-users'
                         print(f"🅿️ Redirecting PARKING MANAGER to: {redirect_url}")
                     else:
-                        # dashboard משתמשים רגילים
-                        redirect_url = '/dashboard'
-                        print(f"📊 Redirecting REGULAR USER to: {redirect_url}")
-                    
+                        # בדיקת access_level למשתמשים רגילים
+                        access_level = user_data.get('access_level', 'single_parking')
+                        if access_level == 'company_manager':
+                            redirect_url = '/company-manager'
+                            print(f"🏢 Redirecting COMPANY MANAGER to: {redirect_url}")
+                        else:
+                            redirect_url = '/dashboard'
+                            print(f"📊 Redirecting REGULAR USER to: {redirect_url}")
+
                     return jsonify({
                         'success': True, 
                         'redirect': redirect_url,
@@ -2345,7 +2350,15 @@ def master_create_user():
         access_level = data.get('access_level', 'single_parking').strip()
         company_type = data.get('company_type', '').strip()
         parking_name = data.get('parking_name', '').strip()
+        company_list = data.get('company_list', '').strip()
         
+        if company_list:
+            if not re.match(r'^[0-9\-]+$', company_list):
+                return jsonify({'success': False, 'message': 'רשימת מספרי חברות יכולה לכלול רק מספרים ומקפים'})
+    
+        if '--' in company_list or company_list.startswith('-') or company_list.endswith('-'):
+                return jsonify({'success': False, 'message': 'פורמט רשימת מספרי חברות לא תקין'})
+
         print(f"🆕 Creating new user: {username} ({email})")
         
         # אימות קלט בסיסי
@@ -2413,7 +2426,7 @@ def master_create_user():
             'verification_code': None,
             'code_expires_at': None,
             'password_expires_at': None,
-            'company_list': None
+            'company_list': company_list if company_list else None
         }
         
         print(f"💾 Inserting user data with user_id {next_user_id}")
@@ -2477,7 +2490,15 @@ def parking_manager_create_user():
         username = data.get('username', '').strip()
         email = data.get('email', '').strip()
         access_level = data.get('access_level', 'single_parking').strip()
+        company_list = data.get('company_list', '').strip()
         
+        if company_list:
+            if not re.match(r'^[0-9\-]+$', company_list):
+                return jsonify({'success': False, 'message': 'רשימת מספרי חברות יכולה לכלול רק מספרים ומקפים'})
+    
+            if '--' in company_list or company_list.startswith('-') or company_list.endswith('-'):
+                return jsonify({'success': False, 'message': 'פורמט רשימת מספרי חברות לא תקין'})
+
         print(f"🅿️ Parking manager creating user: {username} for parking {manager_data['project_number']}")
         
         # אימות קלט בסיסי
@@ -2545,7 +2566,7 @@ def parking_manager_create_user():
             'verification_code': None,
             'code_expires_at': None,
             'password_expires_at': None,
-            'company_list': None
+            'company_list': company_list if company_list else None
         }
         
         print(f"💾 Inserting parking user data with user_id {next_user_id}")
@@ -2645,8 +2666,25 @@ def master_reset_password():
         print(f"❌ Master reset password error: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה במערכת'})
 
+@app.route('/company-manager')
+def company_manager_page():
+    """דף מנהל חברות - זמנית בבניה"""
+    if 'user_email' not in session:
+        return redirect(url_for('login_page'))
+    
+    # בדיקת הרשאות מנהל חברות
+    try:
+        user_result = supabase.table('user_parkings').select('access_level').eq('email', session['user_email']).execute()
+        if not user_result.data or user_result.data[0].get('access_level') != 'company_manager':
+            print(f"⚠️ Unauthorized access attempt to company-manager by {session['user_email']}")
+            return redirect(url_for('dashboard'))
+    except Exception as e:
+        print(f"❌ Error checking company manager permissions: {str(e)}")
+        return redirect(url_for('dashboard'))
+    
+    return render_template('company_manager.html')
+    
 # ========== API למנהל חניון ==========
-
 @app.route('/api/parking-manager/get-parking-info', methods=['GET'])
 def parking_manager_get_info():
     """קבלת נתוני החניון של המנהל"""
