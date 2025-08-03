@@ -1889,8 +1889,46 @@ def verify_code():
         if verify_code_from_database(email, validated_code):
             session['user_email'] = email
             session.pop('pending_email', None)
-            print(f"✅ SUCCESS - Redirecting to dashboard")
-            return jsonify({'success': True, 'redirect': '/dashboard'})
+            
+            # 🆕 קבלת נתוני המשתמש לקביעת ההפניה
+            try:
+                user_result = supabase.table('user_parkings').select(
+                    'code_type, access_level, role'
+                ).eq('email', email).execute()
+                
+                if user_result.data and len(user_result.data) > 0:
+                    user_data = user_result.data[0]
+                    code_type = user_data.get('code_type', 'dashboard')
+                    
+                    print(f"✅ SUCCESS - User type: {code_type}")
+                    
+                    # קביעת הפניה לפי סוג המשתמש
+                    redirect_url = '/dashboard'  # ברירת מחדל
+                    
+                    if code_type == 'master':
+                        redirect_url = '/master-users'
+                        print(f"🔧 Redirecting MASTER to: {redirect_url}")
+                    elif code_type == 'parking_manager':
+                        redirect_url = '/parking-manager-users'
+                        print(f"🅿️ Redirecting PARKING MANAGER to: {redirect_url}")
+                    else:
+                        # dashboard משתמשים רגילים
+                        redirect_url = '/dashboard'
+                        print(f"📊 Redirecting REGULAR USER to: {redirect_url}")
+                    
+                    return jsonify({
+                        'success': True, 
+                        'redirect': redirect_url,
+                        'user_type': code_type
+                    })
+                else:
+                    print(f"⚠️ User data not found, redirecting to dashboard")
+                    return jsonify({'success': True, 'redirect': '/dashboard'})
+                    
+            except Exception as e:
+                print(f"❌ Error getting user data: {str(e)}")
+                # במקרה של שגיאה, נפנה לדשבורד רגיל
+                return jsonify({'success': True, 'redirect': '/dashboard'})
         else:
             print(f"❌ FAILED - Invalid or expired code")
             return jsonify({'success': False, 'message': 'קוד שגוי או פג תוקף'})
@@ -1898,6 +1936,33 @@ def verify_code():
     except Exception as e:
         print(f"❌ Verify error: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה במערכת'})
+
+# 🆕 הוסף גם פונקציה לבדיקת הרשאות מוקדמת (אופציונלית)
+def get_user_redirect_url(email):
+    """קבלת URL להפניה לפי סוג המשתמש"""
+    try:
+        if not supabase:
+            return '/dashboard'
+            
+        user_result = supabase.table('user_parkings').select(
+            'code_type, access_level, role'
+        ).eq('email', email).execute()
+        
+        if user_result.data and len(user_result.data) > 0:
+            code_type = user_result.data[0].get('code_type', 'dashboard')
+            
+            if code_type == 'master':
+                return '/master-users'
+            elif code_type == 'parking_manager':
+                return '/parking-manager-users'
+            else:
+                return '/dashboard'
+        else:
+            return '/dashboard'
+            
+    except Exception as e:
+        print(f"❌ Error in get_user_redirect_url: {str(e)}")
+        return '/dashboard'
 
 @app.route('/logout')
 def logout():
