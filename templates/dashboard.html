@@ -2537,7 +2537,6 @@ function createDailyChart() {
 }
 
 // Update stay duration display
-// Update stay duration display
 function updateStayDuration() {
     // Calculate individual totals
     const stay015 = currentData.reduce((sum, d) => sum + (d.stay_015 || 0), 0);
@@ -2599,7 +2598,7 @@ function updateStayDuration() {
         document.getElementById('stayDurationChart').style.display = 'none';
         
         // Calculate total for percentages
-        const total = Object.values(durations).reduce((sum, val) => sum + val, 0) + stay015;
+        const total = Object.values(durations).reduce((sum, val) => sum + val, 0) + stay015; // Include stay015 in total to avoid double counting
         const actualTotal = Object.values(durations).reduce((sum, val) => sum + val, 0);
 
         // Generate HTML for duration cards
@@ -2636,7 +2635,7 @@ function updateStayDuration() {
             </div>
         `;
         
-        // Add other duration cards
+        // Add other duration cards - כל אחד שיש לו ערך גדול מ-0
         Object.entries(durations).forEach(([time, value]) => {
             if (time !== '0-60 דקות' && value > 0) {
                 const percentage = actualTotal > 0 ? ((value / actualTotal) * 100).toFixed(1) : '0';
