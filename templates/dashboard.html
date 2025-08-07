@@ -928,12 +928,6 @@
                         </div>
                 </div>
                     
-                <!-- Load Button -->
-                <button class="load-btn" onclick="loadData()">
-                <span>📊</span>
-                <span>טען נתונים</span>
-                </button>
-
                 <!-- Export/Print Buttons -->
                 <div style="display: flex; gap: 8px;">
                    <button class="load-btn" onclick="exportToCSV()" style="background: linear-gradient(135deg, var(--success) 0%, #2DB553 100%);">
@@ -945,7 +939,13 @@
                     <span>🖨️</span>
                     <span>הדפסה</span>
                     </button>
+
+                     <!-- Logout Button moved here -->
+                     <button class="logout-btn" onclick="logout()" style="background: #000; margin-right: auto;">
+                        התנתק
+                    </button>
                 </div>
+
                 <!-- Second Row - Quick Actions -->
                 <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; align-items: center;">
                     <button class="quick-action-btn yesterday" onclick="setQuickRange('yesterday')">
@@ -979,23 +979,17 @@
                     <option value="">כל החניונים</option>
                 </select>
             </div>
-            
-                    <!-- Logout Button moved here -->
-                    <button class="logout-btn" onclick="logout()" style="background: #000; margin-right: auto;">
-                        התנתק
-                    </button>
+            <button class="load-btn" onclick="loadData()">
+                <span>📊</span>
+                <span>טען נתונים</span>
+            </button>
             </div>
-            </div>
-            
             <!-- User Info -->
             <div style="margin-top: 15px; padding: 10px 0; color: var(--text-secondary); font-size: 14px;">
                 <span>משתמש מחובר: </span>
                 <span id="userName" style="font-weight: 600;">טוען...</span>
             </div>
             
-
-        </div>
-        
         <!-- Loading Overlay -->
         <div class="loading-overlay" id="loadingOverlay">
             <div class="loading-content">
