@@ -928,14 +928,24 @@
                         </div>
                 </div>
                     
-
                 <!-- Load Button -->
                 <button class="load-btn" onclick="loadData()">
-                    <span>📊</span>
-                    <span>טען נתונים</span>
+                <span>📊</span>
+                <span>טען נתונים</span>
                 </button>
-            </div>
-            
+
+                <!-- Export/Print Buttons -->
+                <div style="display: flex; gap: 8px;">
+                   <button class="load-btn" onclick="exportToCSV()" style="background: linear-gradient(135deg, var(--success) 0%, #2DB553 100%);">
+                        <span>📥</span>
+                        <span>יצוא CSV</span>
+                    </button>
+    
+                    <button class="load-btn" onclick="printDashboard()" style="background: linear-gradient(135deg, var(--purple) 0%, #C969FF 100%);">
+                    <span>🖨️</span>
+                    <span>הדפסה</span>
+                    </button>
+                </div>
                 <!-- Second Row - Quick Actions -->
                 <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; align-items: center;">
                     <button class="quick-action-btn yesterday" onclick="setQuickRange('yesterday')">
