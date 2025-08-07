@@ -2612,7 +2612,7 @@ if (stayTitleElement) {
         '7-24 שעות': currentData.reduce((sum, d) => sum + (d.stay_724 || 0), 0),
     };
     
-    if (stayDurationViewMode === 'cards') {
+    if (stayDurationViewMode === 'bar') {
         // Show cards view
         document.getElementById('stayDurationGrid').style.display = 'grid';
         document.getElementById('stayDurationChart').style.display = 'none';
