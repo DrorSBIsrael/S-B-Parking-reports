@@ -1757,7 +1757,7 @@ function updateStats() {
             ` : '<div class="change neutral">ללא נתוני השוואה</div>'}
             <div class="subtext">מכל אמצעי התשלום</div>
             <div class="tsper1-line">₪${(stats.totalTsper1 || 0).toLocaleString()}</div>
-            ${(stats.totalTsper1 || 0) > 0 ? `<div style="color: var(--danger); font-size: 11px; margin-top: 4px; font-weight: 500;">זיכוי מכרטיסי הנחה</div>` : ``}
+            ${(stats.totalTsper1 || 0) > 0 ? '<div style="color: var(--danger); font-size: 11px; margin-top: 4px; font-weight: 500;">זיכוי מכרטיסי הנחה</div>' : ''}
         </div>
         
         <div class="stat-card" data-stat-type="entries">
