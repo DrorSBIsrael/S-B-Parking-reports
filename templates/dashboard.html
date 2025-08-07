@@ -1243,17 +1243,6 @@ await loadData();
 updateCurrentPeriodLabel();
 
 // Fix date picker display after everything is loaded
-// Set default stay duration view to bar chart
-stayDurationViewMode = 'bar';
-const barBtn = Array.from(document.querySelectorAll('.chart-section:has(#stayDurationGrid) .chart-option-btn'))
-    .find(btn => btn.textContent.includes('עמודות'));
-if (barBtn) {
-    barBtn.classList.add('active');
-    // Remove active from cards button
-    const cardsBtn = Array.from(document.querySelectorAll('.chart-section:has(#stayDurationGrid) .chart-option-btn'))
-        .find(btn => btn.textContent.includes('כרטיסים'));
-    if (cardsBtn) cardsBtn.classList.remove('active');
-}
         setTimeout(() => {
         //    fixDatePickerFormat();
         }, 500);
@@ -1761,8 +1750,7 @@ function updateStats() {
             </div>
             ` : '<div class="change neutral">ללא נתוני השוואה</div>'}
             <div class="subtext">מכל אמצעי התשלום</div>
-           <div class="tsper1-line">₪${(stats.totalTsper1 || 0).toLocaleString()}</div>
-            ${stats.totalTsper1 > 0 ? `<div style="color: var(--danger); font-size: 11px; margin-top: 4px; font-weight: 500;">זיכוי מכרטיסי הנחה</div>` : ''}
+            <div class="tsper1-line">₪${(stats.totalTsper1 || 0).toLocaleString()}</div>
         </div>
         
         <div class="stat-card" data-stat-type="entries">
