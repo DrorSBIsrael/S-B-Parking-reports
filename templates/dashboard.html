@@ -2535,6 +2535,40 @@ function updateStayDuration() {
     // Combined 0-60 minutes
     const stay0to60 = stay015 + stay030 + stay045 + stay060;
     
+    // Calculate average stay for casual visitors
+    const totalCasual = currentData.reduce((sum, d) => sum + (d.t_entry_s || 0), 0);
+    let avgStayCasual = 0;
+    
+    if (totalCasual > 0) {
+        // Calculate weighted average (approximate)
+        const weightedSum = (stay015 * 7.5) + (stay030 * 22.5) + (stay045 * 37.5) + (stay060 * 52.5) +
+                           (currentData.reduce((sum, d) => sum + (d.stay_2 || 0), 0) * 90) +
+                           (currentData.reduce((sum, d) => sum + (d.stay_3 || 0), 0) * 150) +
+                           (currentData.reduce((sum, d) => sum + (d.stay_4 || 0), 0) * 210) +
+                           (currentData.reduce((sum, d) => sum + (d.stay_5 || 0), 0) * 270) +
+                           (currentData.reduce((sum, d) => sum + (d.stay_6 || 0), 0) * 330) +
+                           (currentData.reduce((sum, d) => sum + (d.stay_724 || 0), 0) * 900);
+        
+        const totalStayRecords = stay015 + stay030 + stay045 + stay060 +
+                                currentData.reduce((sum, d) => sum + (d.stay_2 || 0), 0) +
+                                currentData.reduce((sum, d) => sum + (d.stay_3 || 0), 0) +
+                                currentData.reduce((sum, d) => sum + (d.stay_4 || 0), 0) +
+                                currentData.reduce((sum, d) => sum + (d.stay_5 || 0), 0) +
+                                currentData.reduce((sum, d) => sum + (d.stay_6 || 0), 0) +
+                                currentData.reduce((sum, d) => sum + (d.stay_724 || 0), 0);
+        
+        avgStayCasual = totalStayRecords > 0 ? weightedSum / totalStayRecords : 0;
+    }
+    
+    // Update the title with average stay
+    const stayTitleElement = document.querySelector('#stayDurationGrid').parentElement.querySelector('.chart-title span:last-child');
+    if (stayTitleElement) {
+        const avgHours = Math.floor(avgStayCasual / 60);
+        const avgMinutes = Math.floor(avgStayCasual % 60);
+        const avgText = avgHours > 0 ? `${avgHours}:${avgMinutes.toString().padStart(2, '0')}` : `${Math.floor(avgStayCasual)} דקות`;
+        stayTitleElement.innerHTML = `זמני שהייה <span style="font-size: 16px; color: var(--primary); font-weight: 500;">(ממוצע מזדמנים: ${avgText})</span>`;
+    }
+    
     // Prepare durations for display (combining 0-60)
     const durations = {
         '0-60 דקות': stay0to60,
@@ -2554,7 +2588,7 @@ function updateStayDuration() {
         // Calculate total for percentages
         const total = Object.values(durations).reduce((sum, val) => sum + val, 0) + stay015; // Include stay015 in total to avoid double counting
         const actualTotal = Object.values(durations).reduce((sum, val) => sum + val, 0);
-    
+
         // Generate HTML for duration cards
         let html = '';
         
@@ -2589,7 +2623,7 @@ function updateStayDuration() {
             </div>
         `;
         
-        // Add other duration cards
+        // Add other duration cards - כל אחד שיש לו ערך גדול מ-0
         Object.entries(durations).forEach(([time, value]) => {
             if (time !== '0-60 דקות' && value > 0) {
                 const percentage = actualTotal > 0 ? ((value / actualTotal) * 100).toFixed(1) : '0';
@@ -2606,7 +2640,7 @@ function updateStayDuration() {
         document.getElementById('stayDurationGrid').innerHTML = html;
         
     } else {
-        // Show chart view
+        // Show chart view - always start with bar chart
         document.getElementById('stayDurationGrid').style.display = 'none';
         document.getElementById('stayDurationChart').style.display = 'block';
         
