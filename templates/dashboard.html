@@ -2612,7 +2612,7 @@ if (stayTitleElement) {
         '7-24 שעות': currentData.reduce((sum, d) => sum + (d.stay_724 || 0), 0),
     };
     
-    if (stayDurationViewMode === 'bar') {
+    if (stayDurationViewMode === 'pie') {
         // Show cards view
         document.getElementById('stayDurationGrid').style.display = 'grid';
         document.getElementById('stayDurationChart').style.display = 'none';
@@ -4544,6 +4544,9 @@ function exportToCSV() {
 // Print dashboard function
 function printDashboard() {
     try {
+        // Get all the current statistics
+        const stats = calculateStats();
+        
         // Create print-specific styles
         const printStyles = `
             <style>
@@ -4552,93 +4555,274 @@ function printDashboard() {
                         font-family: 'Heebo', Arial, sans-serif; 
                         background: white;
                         color: black;
-                        font-size: 12px;
-                        line-height: 1.4;
+                        font-size: 11px;
+                        line-height: 1.3;
+                        margin: 0;
+                        padding: 0;
                     }
-                    .no-print { display: none !important; }
-                    .container { max-width: none; padding: 10px; }
-                    .header { page-break-inside: avoid; margin-bottom: 20px; }
-                    .stats-grid { 
-                        display: grid; 
-                        grid-template-columns: repeat(4, 1fr); 
-                        gap: 10px; 
-                        page-break-inside: avoid; 
-                        margin-bottom: 20px;
+                    .print-page { 
+                        page-break-after: always; 
+                        padding: 15mm;
+                        min-height: 250mm;
                     }
-                    .stat-card { 
-                        border: 1px solid #ccc; 
-                        padding: 10px; 
+                    .print-page:last-child { page-break-after: auto; }
+                    .print-header { 
                         text-align: center; 
-                        background: #f9f9f9;
-                    }
-                    .stat-card .icon { display: none; }
-                    .stat-card .value { font-size: 18px; font-weight: bold; }
-                    .stat-card h3 { font-size: 12px; margin-bottom: 5px; }
-                    .chart-section { 
-                        page-break-inside: avoid; 
-                        border: 1px solid #ccc; 
                         margin-bottom: 20px; 
-                        padding: 10px;
+                        border-bottom: 2px solid #007AFF; 
+                        padding-bottom: 10px;
                     }
-                    .chart-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; }
-                    canvas { max-width: 100% !important; height: 300px !important; }
-                    .stay-duration-grid { 
+                    .print-header h1 { 
+                        font-size: 20px; 
+                        margin: 0 0 10px 0; 
+                        color: #007AFF;
+                    }
+                    .print-stats { 
                         display: grid; 
                         grid-template-columns: repeat(3, 1fr); 
-                        gap: 10px; 
+                        gap: 8px; 
+                        margin-bottom: 20px;
                     }
-                    .stay-duration-item { 
+                    .print-stat-card { 
                         border: 1px solid #ccc; 
                         padding: 8px; 
+                        text-align: center; 
+                        background: #f9f9f9;
+                        border-radius: 4px;
+                    }
+                    .print-stat-title { 
+                        font-size: 10px; 
+                        margin-bottom: 4px; 
+                        color: #666;
+                        font-weight: bold;
+                    }
+                    .print-stat-value { 
+                        font-size: 14px; 
+                        font-weight: bold; 
+                        color: #007AFF;
+                    }
+                    .print-section { 
+                        margin-bottom: 20px; 
+                        border: 1px solid #ddd; 
+                        padding: 10px;
+                        border-radius: 4px;
+                    }
+                    .print-section-title { 
+                        font-size: 14px; 
+                        font-weight: bold; 
+                        margin-bottom: 10px; 
+                        color: #007AFF;
+                        border-bottom: 1px solid #007AFF;
+                        padding-bottom: 4px;
+                    }
+                    .print-stay-grid { 
+                        display: grid; 
+                        grid-template-columns: repeat(2, 1fr); 
+                        gap: 8px; 
+                    }
+                    .print-stay-item { 
+                        border: 1px solid #ccc; 
+                        padding: 6px; 
                         text-align: center;
                         background: #f9f9f9;
+                        border-radius: 3px;
                     }
-                    .control-panel, .view-mode-switcher, .chart-options { display: none !important; }
-                    .header h1 { font-size: 24px; text-align: center; }
-                    .loading-overlay { display: none !important; }
+                    .print-stay-time { 
+                        font-size: 9px; 
+                        font-weight: bold; 
+                        margin-bottom: 2px;
+                    }
+                    .print-stay-value { 
+                        font-size: 12px; 
+                        font-weight: bold;
+                    }
+                    .print-table { 
+                        width: 100%; 
+                        border-collapse: collapse; 
+                        margin-top: 10px;
+                    }
+                    .print-table th, .print-table td { 
+                        border: 1px solid #ccc; 
+                        padding: 4px; 
+                        text-align: center; 
+                        font-size: 9px;
+                    }
+                    .print-table th { 
+                        background: #007AFF; 
+                        color: white; 
+                        font-weight: bold;
+                    }
+                    .print-footer { 
+                        position: fixed; 
+                        bottom: 10mm; 
+                        left: 0; 
+                        right: 0; 
+                        text-align: center; 
+                        font-size: 8px; 
+                        color: #666;
+                    }
                 }
                 @page { 
-                    margin: 15mm; 
+                    margin: 10mm; 
                     size: A4;
                 }
             </style>
         `;
         
-        // Add print date and time info
+        // Get current date range
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
         const now = new Date();
-        const printInfo = `
-            <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #007AFF; padding-bottom: 10px;">
-                <h1>דוח חניות S&B Parking</h1>
-                <p>תקופה: ${formatDateForDisplay(document.getElementById('startDate').value)} עד ${formatDateForDisplay(document.getElementById('endDate').value)}</p>
-                <p>הופק בתאריך: ${now.toLocaleDateString('he-IL')} בשעה: ${now.toLocaleTimeString('he-IL')}</p>
-            </div>
-        `;
         
-        // Create print window
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
+        // Prepare stay duration data
+        const stay015 = currentData.reduce((sum, d) => sum + (d.stay_015 || 0), 0);
+        const stay030 = currentData.reduce((sum, d) => sum + (d.stay_030 || 0), 0);
+        const stay045 = currentData.reduce((sum, d) => sum + (d.stay_045 || 0), 0);
+        const stay060 = currentData.reduce((sum, d) => sum + (d.stay_060 || 0), 0);
+        const stay0to60 = stay015 + stay030 + stay045 + stay060;
+        
+        const stayData = [
+            { time: '0-60 דקות', value: stay0to60 },
+            { time: 'עד 2 שעות', value: currentData.reduce((sum, d) => sum + (d.stay_2 || 0), 0) },
+            { time: 'עד 3 שעות', value: currentData.reduce((sum, d) => sum + (d.stay_3 || 0), 0) },
+            { time: 'עד 4 שעות', value: currentData.reduce((sum, d) => sum + (d.stay_4 || 0), 0) },
+            { time: 'עד 5 שעות', value: currentData.reduce((sum, d) => sum + (d.stay_5 || 0), 0) },
+            { time: 'עד 6 שעות', value: currentData.reduce((sum, d) => sum + (d.stay_6 || 0), 0) },
+            { time: '7-24 שעות', value: currentData.reduce((sum, d) => sum + (d.stay_724 || 0), 0) }
+        ].filter(item => item.value > 0);
+        
+        // Create detailed data table (limited to recent records)
+        const recentData = currentData.slice(0, 50); // Last 50 records
+        
+        let dataTable = '';
+        if (recentData.length > 0) {
+            dataTable = `
+                <div class="print-section">
+                    <div class="print-section-title">נתונים מפורטים (50 רשומות אחרונות)</div>
+                    <table class="print-table">
+                        <thead>
+                            <tr>
+                                <th>תאריך</th>
+                                <th>חניון</th>
+                                <th>הכנסות</th>
+                                <th>כניסות</th>
+                                <th>מזומן</th>
+                                <th>אשראי</th>
+                                <th>מחסומים</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            recentData.forEach(row => {
+                dataTable += `
+                    <tr>
+                        <td>${formatDateForDisplay(row.report_date)}</td>
+                        <td>${row.parking_name || ''}</td>
+                        <td>₪${(row.total_revenue_shekels || 0).toLocaleString()}</td>
+                        <td>${(row.t_entry_tot || 0).toLocaleString()}</td>
+                        <td>₪${(row.s_cash_shekels || 0).toLocaleString()}</td>
+                        <td>₪${(row.s_credit_shekels || 0).toLocaleString()}</td>
+                        <td>${(row.t_open_b || 0).toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+            
+            dataTable += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+        
+        // Create print content
+        const printContent = `
             <!DOCTYPE html>
             <html dir="rtl" lang="he">
             <head>
                 <meta charset="UTF-8">
-                <title>דוח חניות - ${formatDateForDisplay(document.getElementById('startDate').value)} עד ${formatDateForDisplay(document.getElementById('endDate').value)}</title>
+                <title>דוח חניות מלא - ${formatDateForDisplay(startDate)} עד ${formatDateForDisplay(endDate)}</title>
                 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
                 ${printStyles}
             </head>
             <body>
-                ${printInfo}
-                ${document.querySelector('.stats-grid').outerHTML}
-                <div class="chart-section">
-                    <h3 class="chart-title">זמני שהייה</h3>
-                    ${document.querySelector('#stayDurationGrid').outerHTML}
+                <!-- עמוד 1: סיכום כללי -->
+                <div class="print-page">
+                    <div class="print-header">
+                        <h1>דוח חניות S&B Parking - סיכום כללי</h1>
+                        <p><strong>תקופה:</strong> ${formatDateForDisplay(startDate)} עד ${formatDateForDisplay(endDate)}</p>
+                        <p><strong>הופק בתאריך:</strong> ${now.toLocaleDateString('he-IL')} בשעה: ${now.toLocaleTimeString('he-IL')}</p>
+                        <p><strong>סה"כ רשומות:</strong> ${currentData.length.toLocaleString()}</p>
+                    </div>
+                    
+                    <div class="print-section">
+                        <div class="print-section-title">נתונים כלליים</div>
+                        <div class="print-stats">
+                            <div class="print-stat-card">
+                                <div class="print-stat-title">סה"כ הכנסות</div>
+                                <div class="print-stat-value">₪${stats.totalRevenue.toLocaleString()}</div>
+                            </div>
+                            <div class="print-stat-card">
+                                <div class="print-stat-title">סה"כ כניסות</div>
+                                <div class="print-stat-value">${stats.totalEntries.toLocaleString()}</div>
+                            </div>
+                            <div class="print-stat-card">
+                                <div class="print-stat-title">ממוצע יומי</div>
+                                <div class="print-stat-value">₪${stats.dailyAvgRevenue.toLocaleString()}</div>
+                            </div>
+                            <div class="print-stat-card">
+                                <div class="print-stat-title">מזומן</div>
+                                <div class="print-stat-value">₪${stats.totalCash.toLocaleString()}</div>
+                            </div>
+                            <div class="print-stat-card">
+                                <div class="print-stat-title">אשראי</div>
+                                <div class="print-stat-value">₪${stats.totalCredit.toLocaleString()}</div>
+                            </div>
+                            <div class="print-stat-card">
+                                <div class="print-stat-title">פנגו</div>
+                                <div class="print-stat-value">₪${stats.totalPango.toLocaleString()}</div>
+                            </div>
+                            <div class="print-stat-card">
+                                <div class="print-stat-title">מזדמנים</div>
+                                <div class="print-stat-value">${stats.totalCasual.toLocaleString()}</div>
+                            </div>
+                            <div class="print-stat-card">
+                                <div class="print-stat-title">מנויים</div>
+                                <div class="print-stat-value">${stats.totalMembers.toLocaleString()}</div>
+                            </div>
+                            <div class="print-stat-card">
+                                <div class="print-stat-title">פתיחות מחסום</div>
+                                <div class="print-stat-value">${stats.totalBarrier.toLocaleString()}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="print-section">
+                        <div class="print-section-title">זמני שהייה</div>
+                        <div class="print-stay-grid">
+                            ${stayData.map(item => `
+                                <div class="print-stay-item">
+                                    <div class="print-stay-time">${item.time}</div>
+                                    <div class="print-stay-value">${item.value.toLocaleString()}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
                 </div>
-                <div style="text-align: center; margin-top: 30px; font-size: 10px; color: #666;">
-                    מערכת S&B Parking - דוח אוטומטי
+                
+                <!-- עמוד 2: נתונים מפורטים -->
+                ${dataTable ? `<div class="print-page">${dataTable}</div>` : ''}
+                
+                <div class="print-footer">
+                    מערכת S&B Parking - דוח אוטומטי | עמוד __PAGE__ מתוך __NUMPAGES__
                 </div>
             </body>
             </html>
-        `);
+        `;
         
+        // Create print window
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(printContent);
         printWindow.document.close();
         
         // Wait for content to load then print
