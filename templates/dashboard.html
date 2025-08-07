@@ -2612,7 +2612,7 @@ if (stayTitleElement) {
         '7-24 שעות': currentData.reduce((sum, d) => sum + (d.stay_724 || 0), 0),
     };
     
-    if (stayDurationViewMode === 'bar') {
+    if (stayDurationViewMode === 'cards') {
         // Show cards view
         document.getElementById('stayDurationGrid').style.display = 'grid';
         document.getElementById('stayDurationChart').style.display = 'none';
@@ -2849,9 +2849,9 @@ function toggleStayDurationView(viewType) {
     
     // Set active button
     const activeBtn = Array.from(document.querySelectorAll('.chart-section:has(#stayDurationGrid) .chart-option-btn'))
-        .find(btn => {
-            if (viewType === 'bar' && btn.textContent.includes('עמודות')) return true;           
+        .find(btn => {    
             if (viewType === 'cards' && btn.textContent.includes('כרטיסים')) return true;
+            if (viewType === 'bar' && btn.textContent.includes('עמודות')) return true;       
             if (viewType === 'pie' && btn.textContent.includes('עוגה')) return true;
             return false;
         });
