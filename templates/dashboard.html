@@ -1238,7 +1238,7 @@ await loadData();
 // Update period label after loading
 updateCurrentPeriodLabel();
 // Set default stay duration view to bar chart
-stayDurationViewMode = 'bar';
+stayDurationViewMode = 'cards';
 const barBtn = Array.from(document.querySelectorAll('.chart-section:has(#stayDurationGrid) .chart-option-btn'))
     .find(btn => btn.textContent.includes('עמודות'));
 if (barBtn) {
