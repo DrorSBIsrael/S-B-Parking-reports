@@ -1930,7 +1930,7 @@ def reset_password():
             return jsonify({'success': False, 'message': 'הטוקן פג תוקף'})
         
         # הצפנת הסיסמה החדשה
-        password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt(rounds=6, prefix=b'2a')).decode('utf-8')
         
         # עדכון הסיסמה בבסיס הנתונים
         current_time = datetime.now(timezone.utc).isoformat()
