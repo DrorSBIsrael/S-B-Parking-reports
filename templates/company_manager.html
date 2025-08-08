@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מנהל חברות - S&B Parking</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            direction: rtl;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .main-card {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        
+        .icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+        
+        .title {
+            color: #2c3e50;
+            font-size: 36px;
+            margin-bottom: 20px;
+            font-weight: 300;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 18px;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .features-list {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 30px 0;
+            text-align: right;
+        }
+        
+        .features-list h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .features-list ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        .features-list li {
+            padding: 8px 0;
+            color: #6c757d;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .features-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .features-list li::before {
+            content: "🏢";
+            margin-left: 10px;
+        }
+        
+        .coming-soon {
+            display: inline-block;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-card">
+            <div class="icon">🏢</div>
+            <h1 class="title">מנהל חברות</h1>
+            <div class="coming-soon">בבניה</div>
+            
+            <p class="subtitle">
+                דף זה נמצא בשלבי פיתוח ויהיה זמין בקרוב
+            </p>
+            
+            <div class="features-list">
+                <h3>תוכנות מתוכננות:</h3>
+                <ul>
+                    <li>ניהול מנויים לחברה בודדת או יותר</li>
+                    <li>ייצוא נתונים מרוכז</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
