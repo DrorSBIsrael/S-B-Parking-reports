@@ -1773,6 +1773,192 @@ def manual_email_check():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
+@app.route('/forgot-password')
+def forgot_password_page():
+    """דף איפוס סיסמה"""
+    return render_template('forgot-password.html')
+
+@app.route('/api/forgot-password', methods=['POST'])
+def forgot_password():
+    """בקשה לאיפוס סיסמה - שליחת קוד למייל"""
+    try:
+        if not supabase:
+            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+        
+        data = request.get_json()
+        email = data.get('email', '').strip()
+        
+        # אימות מייל
+        is_valid_email, validated_email = validate_input(email, "email")
+        if not is_valid_email:
+            return jsonify({'success': False, 'message': 'כתובת מייל לא תקינה'})
+        
+        print(f"🔄 Password reset request for: {validated_email}")
+        
+        # בדיקה שהמייל קיים במערכת
+        user_result = supabase.table('user_parkings').select('username, email').eq('email', validated_email).execute()
+        
+        if not user_result.data:
+            return jsonify({'success': False, 'message': 'כתובת מייל לא נמצאה במערכת'})
+        
+        user = user_result.data[0]
+        
+        # יצירת קוד אימות
+        reset_code = generate_verification_code()
+        
+        # שמירת הקוד בזיכרון זמני
+        password_reset_codes[validated_email] = {
+            'code': reset_code,
+            'timestamp': time.time(),
+            'attempts': 0,
+            'username': user['username']
+        }
+        
+        print(f"🔐 Generated reset code for {validated_email}: {reset_code}")
+        
+        # שליחת מייל
+        email_sent = send_password_reset_verification_email(validated_email, reset_code, user['username'])
+        
+        if email_sent:
+            return jsonify({
+                'success': True,
+                'message': 'קוד אימות נשלח לכתובת המייל שלך'
+            })
+        else:
+            return jsonify({
+                'success': True,  # נחזיר הצלחה גם אם המייל נכשל
+                'message': 'קוד אימות נוצר (בדוק לוגים)'
+            })
+            
+    except Exception as e:
+        print(f"❌ Forgot password error: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
+
+@app.route('/api/verify-reset-code', methods=['POST'])
+def verify_reset_code():
+    """אימות קוד איפוס סיסמה"""
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip()
+        code = data.get('code', '').strip()
+        
+        # אימות קלט
+        is_valid_email, validated_email = validate_input(email, "email")
+        is_valid_code, validated_code = validate_input(code, "verification_code")
+        
+        if not is_valid_email or not is_valid_code:
+            return jsonify({'success': False, 'message': 'נתונים לא תקינים'})
+        
+        print(f"🔍 Verifying reset code for: {validated_email}")
+        
+        # ניקוי קודים ישנים
+        clean_expired_reset_codes()
+        
+        # בדיקה שהקוד קיים
+        if validated_email not in password_reset_codes:
+            return jsonify({'success': False, 'message': 'קוד לא נמצא או פג תוקף'})
+        
+        reset_data = password_reset_codes[validated_email]
+        
+        # בדיקת תוקף (10 דקות)
+        if time.time() - reset_data['timestamp'] > 600:  # 10 דקות
+            del password_reset_codes[validated_email]
+            return jsonify({'success': False, 'message': 'הקוד פג תוקף'})
+        
+        # בדיקת ניסיונות (מקסימום 3)
+        if reset_data['attempts'] >= 3:
+            del password_reset_codes[validated_email]
+            return jsonify({'success': False, 'message': 'חרגת ממספר הניסיונות המותר'})
+        
+        # בדיקת הקוד
+        if reset_data['code'] != validated_code:
+            reset_data['attempts'] += 1
+            return jsonify({'success': False, 'message': 'קוד שגוי'})
+        
+        # יצירת טוקן לאיפוס
+        import secrets
+        reset_token = secrets.token_urlsafe(32)
+        reset_data['token'] = reset_token
+        reset_data['verified'] = True
+        
+        print(f"✅ Reset code verified for: {validated_email}")
+        
+        return jsonify({
+            'success': True,
+            'token': reset_token,
+            'message': 'קוד אומת בהצלחה'
+        })
+        
+    except Exception as e:
+        print(f"❌ Verify reset code error: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
+
+@app.route('/api/reset-password', methods=['POST'])
+def reset_password():
+    """עדכון סיסמה חדשה"""
+    try:
+        if not supabase:
+            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+        
+        data = request.get_json()
+        email = data.get('email', '').strip()
+        token = data.get('token', '').strip()
+        new_password = data.get('newPassword', '').strip()
+        
+        # אימות קלט
+        is_valid_email, validated_email = validate_input(email, "email")
+        if not is_valid_email or not token or not new_password:
+            return jsonify({'success': False, 'message': 'נתונים לא תקינים'})
+        
+        if len(new_password) < 6:
+            return jsonify({'success': False, 'message': 'הסיסמה חייבת להיות לפחות 6 תווים'})
+        
+        print(f"🔄 Resetting password for: {validated_email}")
+        
+        # בדיקת הטוקן
+        if validated_email not in password_reset_codes:
+            return jsonify({'success': False, 'message': 'טוקן לא תקין או פג תוקף'})
+        
+        reset_data = password_reset_codes[validated_email]
+        
+        if not reset_data.get('verified') or reset_data.get('token') != token:
+            return jsonify({'success': False, 'message': 'טוקן לא תקין'})
+        
+        # בדיקת תוקף (30 דקות מתחילת התהליך)
+        if time.time() - reset_data['timestamp'] > 1800:  # 30 דקות
+            del password_reset_codes[validated_email]
+            return jsonify({'success': False, 'message': 'הטוקן פג תוקף'})
+        
+        # הצפנת הסיסמה החדשה
+        password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        # עדכון הסיסמה בבסיס הנתונים
+        current_time = datetime.now(timezone.utc).isoformat()
+        
+        update_result = supabase.table('user_parkings').update({
+            'password_hash': password_hash,
+            'updated_at': current_time,
+            'password_changed_at': current_time,
+            'is_temp_password': False
+        }).eq('email', validated_email).execute()
+        
+        if update_result.data:
+            # מחיקת הקוד מהזיכרון
+            del password_reset_codes[validated_email]
+            
+            print(f"✅ Password reset successfully for: {validated_email}")
+            
+            return jsonify({
+                'success': True,
+                'message': 'הסיסמה עודכנה בהצלחה'
+            })
+        else:
+            return jsonify({'success': False, 'message': 'שגיאה בעדכון הסיסמה'})
+        
+    except Exception as e:
+        print(f"❌ Reset password error: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
+
 # הוסף גם פונקציה לבדיקת תקפות תאריך
 def validate_date_format(date_string):
     """בדיקת תקפות פורמט תאריך YYYY-MM-DD"""
@@ -2848,194 +3034,6 @@ def send_password_reset_email(email, username, new_password):
         print(f"📱 BACKUP - PASSWORD RESET for {username}: {new_password}")
         return False 
 
-# 🆕 הוסף את כל ה-Routes האלה:
-
-@app.route('/forgot-password')
-def forgot_password_page():
-    """דף איפוס סיסמה"""
-    return render_template('forgot-password.html')
-
-@app.route('/api/forgot-password', methods=['POST'])
-def forgot_password():
-    """בקשה לאיפוס סיסמה - שליחת קוד למייל"""
-    try:
-        if not supabase:
-            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
-        
-        data = request.get_json()
-        email = data.get('email', '').strip()
-        
-        # אימות מייל
-        is_valid_email, validated_email = validate_input(email, "email")
-        if not is_valid_email:
-            return jsonify({'success': False, 'message': 'כתובת מייל לא תקינה'})
-        
-        print(f"🔄 Password reset request for: {validated_email}")
-        
-        # בדיקה שהמייל קיים במערכת
-        user_result = supabase.table('user_parkings').select('username, email').eq('email', validated_email).execute()
-        
-        if not user_result.data:
-            return jsonify({'success': False, 'message': 'כתובת מייל לא נמצאה במערכת'})
-        
-        user = user_result.data[0]
-        
-        # יצירת קוד אימות
-        reset_code = generate_verification_code()
-        
-        # שמירת הקוד בזיכרון זמני
-        password_reset_codes[validated_email] = {
-            'code': reset_code,
-            'timestamp': time.time(),
-            'attempts': 0,
-            'username': user['username']
-        }
-        
-        print(f"🔐 Generated reset code for {validated_email}: {reset_code}")
-        
-        # שליחת מייל
-        email_sent = send_password_reset_verification_email(validated_email, reset_code, user['username'])
-        
-        if email_sent:
-            return jsonify({
-                'success': True,
-                'message': 'קוד אימות נשלח לכתובת המייל שלך'
-            })
-        else:
-            return jsonify({
-                'success': True,  # נחזיר הצלחה גם אם המייל נכשל
-                'message': 'קוד אימות נוצר (בדוק לוגים)'
-            })
-            
-    except Exception as e:
-        print(f"❌ Forgot password error: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
-
-@app.route('/api/verify-reset-code', methods=['POST'])
-def verify_reset_code():
-    """אימות קוד איפוס סיסמה"""
-    try:
-        data = request.get_json()
-        email = data.get('email', '').strip()
-        code = data.get('code', '').strip()
-        
-        # אימות קלט
-        is_valid_email, validated_email = validate_input(email, "email")
-        is_valid_code, validated_code = validate_input(code, "verification_code")
-        
-        if not is_valid_email or not is_valid_code:
-            return jsonify({'success': False, 'message': 'נתונים לא תקינים'})
-        
-        print(f"🔍 Verifying reset code for: {validated_email}")
-        
-        # ניקוי קודים ישנים
-        clean_expired_reset_codes()
-        
-        # בדיקה שהקוד קיים
-        if validated_email not in password_reset_codes:
-            return jsonify({'success': False, 'message': 'קוד לא נמצא או פג תוקף'})
-        
-        reset_data = password_reset_codes[validated_email]
-        
-        # בדיקת תוקף (10 דקות)
-        if time.time() - reset_data['timestamp'] > 600:  # 10 דקות
-            del password_reset_codes[validated_email]
-            return jsonify({'success': False, 'message': 'הקוד פג תוקף'})
-        
-        # בדיקת ניסיונות (מקסימום 3)
-        if reset_data['attempts'] >= 3:
-            del password_reset_codes[validated_email]
-            return jsonify({'success': False, 'message': 'חרגת ממספר הניסיונות המותר'})
-        
-        # בדיקת הקוד
-        if reset_data['code'] != validated_code:
-            reset_data['attempts'] += 1
-            return jsonify({'success': False, 'message': 'קוד שגוי'})
-        
-        # יצירת טוקן לאיפוס
-        import secrets
-        reset_token = secrets.token_urlsafe(32)
-        reset_data['token'] = reset_token
-        reset_data['verified'] = True
-        
-        print(f"✅ Reset code verified for: {validated_email}")
-        
-        return jsonify({
-            'success': True,
-            'token': reset_token,
-            'message': 'קוד אומת בהצלחה'
-        })
-        
-    except Exception as e:
-        print(f"❌ Verify reset code error: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
-
-@app.route('/api/reset-password', methods=['POST'])
-def reset_password():
-    """עדכון סיסמה חדשה"""
-    try:
-        if not supabase:
-            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
-        
-        data = request.get_json()
-        email = data.get('email', '').strip()
-        token = data.get('token', '').strip()
-        new_password = data.get('newPassword', '').strip()
-        
-        # אימות קלט
-        is_valid_email, validated_email = validate_input(email, "email")
-        if not is_valid_email or not token or not new_password:
-            return jsonify({'success': False, 'message': 'נתונים לא תקינים'})
-        
-        if len(new_password) < 6:
-            return jsonify({'success': False, 'message': 'הסיסמה חייבת להיות לפחות 6 תווים'})
-        
-        print(f"🔄 Resetting password for: {validated_email}")
-        
-        # בדיקת הטוקן
-        if validated_email not in password_reset_codes:
-            return jsonify({'success': False, 'message': 'טוקן לא תקין או פג תוקף'})
-        
-        reset_data = password_reset_codes[validated_email]
-        
-        if not reset_data.get('verified') or reset_data.get('token') != token:
-            return jsonify({'success': False, 'message': 'טוקן לא תקין'})
-        
-        # בדיקת תוקף (30 דקות מתחילת התהליך)
-        if time.time() - reset_data['timestamp'] > 1800:  # 30 דקות
-            del password_reset_codes[validated_email]
-            return jsonify({'success': False, 'message': 'הטוקן פג תוקף'})
-        
-        # הצפנת הסיסמה החדשה
-        password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        
-        # עדכון הסיסמה בבסיס הנתונים
-        current_time = datetime.now(timezone.utc).isoformat()
-        
-        update_result = supabase.table('user_parkings').update({
-            'password_hash': password_hash,
-            'updated_at': current_time,
-            'password_changed_at': current_time,
-            'is_temp_password': False
-        }).eq('email', validated_email).execute()
-        
-        if update_result.data:
-            # מחיקת הקוד מהזיכרון
-            del password_reset_codes[validated_email]
-            
-            print(f"✅ Password reset successfully for: {validated_email}")
-            
-            return jsonify({
-                'success': True,
-                'message': 'הסיסמה עודכנה בהצלחה'
-            })
-        else:
-            return jsonify({'success': False, 'message': 'שגיאה בעדכון הסיסמה'})
-        
-    except Exception as e:
-        print(f"❌ Reset password error: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
-
 def clean_expired_reset_codes():
     """ניקוי קודים שפגו תוקף - איפוס סיסמה"""
     current_time = time.time()
@@ -3102,9 +3100,7 @@ def send_password_reset_verification_email(email, code, username):
         print(f"📱 BACKUP CODE for {email}: {code}")
         return False
 
-# 🆕 הוסף כאן:
 # ניקוי אוטומטי של קודים ישנים
-import threading
 def auto_cleanup_reset_codes():
     """ניקוי אוטומטי של קודי איפוס שפגו תוקף"""
     def cleanup_loop():
