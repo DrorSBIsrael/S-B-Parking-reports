@@ -149,104 +149,187 @@ class ParkingUIIntegrationXML {
      */
     async loadCompanies() {
         this.setLoading(true);
-        console.log('[loadCompanies] Starting to load companies...');
+        console.log('[loadCompanies] Starting to load parkings from Flask...');
         
         try {
-            // Try to get contracts from server
-            console.log('[loadCompanies] Calling API getContracts()...');
-            const result = await this.api.getContracts();
-            console.log('[loadCompanies] API result:', result);
+            // Get parkings list from Flask (not from parking API)
+            console.log('[loadCompanies] Calling Flask API /api/company-manager/get-parkings...');
+            const response = await fetch('/api/company-manager/get-parkings');
+            const result = await response.json();
+            console.log('[loadCompanies] Flask API result:', result);
             
-            if (result.success && result.data) {
-                console.log('[loadCompanies] Got successful response, data:', result.data);
+            if (result.success && result.parkings) {
+                console.log('[loadCompanies] Got parkings from Flask:', result.parkings);
                 
-                // Check if data has contracts
-                if (!result.data.contract) {
-                    console.warn('[loadCompanies] No contract field in data, using fallback');
-                    this.loadMockCompanies();
+                // Use parkings instead of contracts/companies
+                const parkings = result.parkings;
+                
+                if (!parkings || parkings.length === 0) {
+                    console.warn('[loadCompanies] No parkings found, using fallback');
+                    this.loadMockParkings();
                     return;
                 }
                 
-                // Map contracts to our company format
+                console.log(`[loadCompanies] Found ${parkings.length} parkings:`, parkings);
+                
+                // Display parkings as cards
+                this.displayParkings(parkings);
+                
+                // If only one parking, auto-select it
+                if (parkings.length === 1) {
+                    console.log('[loadCompanies] Auto-selecting single parking:', parkings[0]);
+                    await this.selectParking(parkings[0]);
+                }
+                
+
+            } else {
+                // Use mock data as fallback
+                console.log('[loadCompanies] API failed or no data, reason:', 
+                    result.error || result.message || 'No data in response');
+                await this.loadMockParkings();
+            }
+        } catch (error) {
+            console.error('[loadCompanies] Error loading parkings:', error);
+            this.showNotification('׳©׳’׳™׳׳” ׳‘׳˜׳¢׳™׳ ׳× ׳—׳ ׳™׳•׳ ׳™׳', 'error');
+            await this.loadMockParkings();
+        } finally {
+            this.setLoading(false);
+        }
+    }
+    
+    /**
+     * Load mock parkings for fallback
+     */
+    async loadMockParkings() {
+        console.log('[loadMockParkings] Using mock parkings data');
+        const mockParkings = [
+            { 
+                id: 'mock-1', 
+                name: '׳—׳ ׳™׳•׳ ׳‘׳“׳™׳§׳•׳×', 
+                location: '׳×׳ ׳׳‘׳™׳‘',
+                project_number: '1000',
+                ip_address: '10.0.0.1',
+                port: 8443,
+                is_active: true
+            }
+        ];
+        this.displayParkings(mockParkings);
+        
+        // Auto-select if only one parking
+        if (mockParkings.length === 1) {
+            console.log('[loadMockParkings] Auto-selecting single parking:', mockParkings[0]);
+            await this.selectParking(mockParkings[0]);
+        }
+    }
+    
+    /**
+     * Display parkings as cards
+     */
+    displayParkings(parkings) {
+        const companyList = document.getElementById('companyList');
+        if (!companyList) return;
+        
+        companyList.innerHTML = '';
+        
+        parkings.forEach(parking => {
+            const card = document.createElement('div');
+            card.className = 'company-card';
+            card.onclick = () => this.selectParking(parking);
+            
+            card.innerHTML = `
+                <div class="company-header">
+                    <h3>${parking.name}</h3>
+                    <span class="company-number">#${parking.project_number}</span>
+                </div>
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <span class="stat-label">׳׳™׳§׳•׳</span>
+                        <span class="stat-value">${parking.location || '׳׳ ׳™׳“׳•׳¢'}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">׳¡׳˜׳˜׳•׳¡</span>
+                        <span class="stat-value">${parking.is_active ? 'נ¢ ׳₪׳¢׳™׳' : 'נ”´ ׳׳ ׳₪׳¢׳™׳'}</span>
+                    </div>
+                </div>
+                <div class="facilities-info" style="font-size: 12px; margin-top: 10px; color: #666;">
+                    ${parking.ip_address}:${parking.port}
+                </div>
+            `;
+            
+            companyList.appendChild(card);
+        });
+    }
+    
+    /**
+     * Select a parking and then load its companies
+     */
+    async selectParking(parking) {
+        console.log('[selectParking] Selected parking:', parking);
+        
+        // Set the current parking in API
+        this.api.setCurrentParking(parking.id);
+        
+        // Store parking info
+        this.currentParking = parking;
+        window.currentParking = parking;
+        
+        // Update UI
+        document.querySelectorAll('.company-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        
+        if (event && event.currentTarget) {
+            event.currentTarget.classList.add('selected');
+        }
+        
+        // Now load companies/contracts from this parking
+        await this.loadCompaniesFromParking();
+    }
+    
+    /**
+     * Load companies from selected parking
+     */
+    async loadCompaniesFromParking() {
+        if (!this.currentParking) {
+            console.error('No parking selected');
+            return;
+        }
+        
+        this.setLoading(true);
+        console.log('[loadCompaniesFromParking] Loading companies from parking:', this.currentParking.name);
+        
+        try {
+            // Now we can call the parking API
+            const result = await this.api.getContracts();
+            
+            if (result.success && result.data) {
+                // Process contracts/companies
                 const contracts = Array.isArray(result.data.contract) 
                     ? result.data.contract 
                     : [result.data.contract];
                 
-                console.log(`[loadCompanies] Found ${contracts.length} contracts:`, contracts);
+                console.log(`[loadCompaniesFromParking] Found ${contracts.length} companies`);
                 
-                // Filter companies if user has specific access
-                const allowedCompanies = window.parkingConfig?.allowedCompanies || [];
-                let filteredContracts = contracts;
-                
-                if (allowedCompanies.length > 0) {
-                    filteredContracts = contracts.filter(contract => 
-                        allowedCompanies.includes(contract.id)
-                    );
-                    console.log(`[loadCompanies] Filtered to ${filteredContracts.length} allowed companies`);
-                }
-                
-                // REMOVED LIMIT - Show all companies to fix update issues
-                const maxCompaniesToShow = 9999; // Show all companies
-                console.log(`[loadCompanies] Loading all ${filteredContracts.length} companies without limit`);
-                
-                // Notify user about number of companies
-                if (filteredContracts.length > 20) {
-                    setTimeout(() => {
-                        this.showNotification(
-                            `טוען ${filteredContracts.length} חברות...`,
-                            'info'
-                        );
-                    }, 500);
-                }
-                
-                // Get subscriber counts for each company
-                const companies = await Promise.all(filteredContracts.map(async (contract) => {
-                    let subscribersCount = 0;
-                    let presentCount = 0;
-                    
-                    // Try to get actual count and present status
-                    try {
-                        const consumersResult = await this.api.getConsumers(contract.id);
-                        if (consumersResult.success && consumersResult.data) {
-                            const consumers = Array.isArray(consumersResult.data.consumer) 
-                                ? consumersResult.data.consumer 
-                                : [consumersResult.data.consumer];
-                            subscribersCount = consumers.length;
-                            
-                            // Count present subscribers (will be updated with real data later)
-                            // For now, set to 0 until we get actual data
-                            presentCount = 0; // Will be updated when details load
-                        }
-                    } catch (error) {
-                        console.warn(`Could not get subscriber count for company ${contract.id}`);
-                    }
-                    
-                    return {
-                        id: contract.id,
-                        name: contract.name || `חברה ${contract.id}`,
-                        companyName: contract.name || `חברה ${contract.id}`,
-                        subscribersCount: subscribersCount,
-                        presentCount: presentCount
-                    };
+                // Convert to company format
+                const companies = contracts.map(contract => ({
+                    id: contract.id,
+                    name: contract.name || `׳—׳‘׳¨׳” ${contract.id}`,
+                    companyName: contract.name || `׳—׳‘׳¨׳” ${contract.id}`,
+                    subscribersCount: 0
                 }));
                 
-                console.log('[loadCompanies] Displaying companies:', companies);
                 this.displayCompanies(companies);
                 
                 if (companies.length === 1) {
-                    console.log('[loadCompanies] Auto-selecting single company:', companies[0]);
                     await this.selectCompany(companies[0]);
                 }
             } else {
-                // Use mock data as fallback
-                console.log('[loadCompanies] API failed or no data, reason:', 
-                    result.error || 'No data in response');
-                await this.loadMockCompanies();
+                console.log('[loadCompaniesFromParking] Using mock companies');
+                this.loadMockCompanies();
             }
         } catch (error) {
-            console.error('[loadCompanies] Error loading companies:', error);
-            this.showNotification('שגיאה בטעינת חברות', 'error');
-            await this.loadMockCompanies();
+            console.error('[loadCompaniesFromParking] Error:', error);
+            this.loadMockCompanies();
         } finally {
             this.setLoading(false);
         }
@@ -258,12 +341,12 @@ class ParkingUIIntegrationXML {
     async loadMockCompanies() {
         console.log('[loadMockCompanies] Using mock companies data');
         const mockCompanies = [
-            { id: '1000', name: 'חברה 1000', companyName: 'חברה 1000', subscribersCount: 45 },
-            { id: '2', name: 'חברה 2', companyName: 'חברה 2', subscribersCount: 120 },
-            { id: '3', name: 'חברה 3', companyName: 'חברה 3', subscribersCount: 25 },
-            { id: '4', name: 'חברה 4', companyName: 'חברה 4', subscribersCount: 30 },
-            { id: '5', name: 'חברה 5', companyName: 'חברה 5', subscribersCount: 50 },
-            { id: '6', name: 'חברה 6', companyName: 'חברה 6', subscribersCount: 67 }
+            { id: '1000', name: '׳—׳‘׳¨׳” 1000', companyName: '׳—׳‘׳¨׳” 1000', subscribersCount: 45 },
+            { id: '2', name: '׳—׳‘׳¨׳” 2', companyName: '׳—׳‘׳¨׳” 2', subscribersCount: 120 },
+            { id: '3', name: '׳—׳‘׳¨׳” 3', companyName: '׳—׳‘׳¨׳” 3', subscribersCount: 25 },
+            { id: '4', name: '׳—׳‘׳¨׳” 4', companyName: '׳—׳‘׳¨׳” 4', subscribersCount: 30 },
+            { id: '5', name: '׳—׳‘׳¨׳” 5', companyName: '׳—׳‘׳¨׳” 5', subscribersCount: 50 },
+            { id: '6', name: '׳—׳‘׳¨׳” 6', companyName: '׳—׳‘׳¨׳” 6', subscribersCount: 67 }
         ];
         this.displayCompanies(mockCompanies);
         
@@ -296,19 +379,19 @@ class ParkingUIIntegrationXML {
                 </div>
                 <div class="stats-row">
                     <div class="stat-item">
-                        <span class="stat-label">מנויים</span>
+                        <span class="stat-label">׳׳ ׳•׳™׳™׳</span>
                         <span class="stat-value">${company.subscribersCount || 0}</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">רכבים</span>
+                        <span class="stat-label">׳¨׳›׳‘׳™׳</span>
                         <span class="stat-value" id="vehicles-${company.id}">-</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">נוכחים</span>
+                        <span class="stat-label">׳ ׳•׳›׳—׳™׳</span>
                         <span class="stat-value" id="present-${company.id}">-</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">מקסימום</span>
+                        <span class="stat-label">׳׳§׳¡׳™׳׳•׳</span>
                         <span class="stat-value" id="max-${company.id}">-</span>
                     </div>
                 </div>
@@ -461,13 +544,13 @@ class ParkingUIIntegrationXML {
                         const facilitiesEl = document.getElementById(`facilities-${company.id}`);
                         if (facilitiesEl) {
                             facilitiesEl.style.display = 'block';
-                            facilitiesEl.innerHTML = '<strong>חניונים:</strong>';
+                            facilitiesEl.innerHTML = '<strong>׳—׳ ׳™׳•׳ ׳™׳:</strong>';
                             subFacilities.forEach(f => {
                                 const fPresent = parseInt(f.presentCounter) || 0;
                                 const fMax = parseInt(f.maxCounter) || 0;
                                 facilitiesEl.innerHTML += `
                                     <div class="facility-item">
-                                        <span>חניון ${f.facility}</span>
+                                        <span>׳—׳ ׳™׳•׳ ${f.facility}</span>
                                         <span>${fPresent}/${fMax}</span>
                                     </div>
                                 `;
@@ -581,7 +664,7 @@ class ParkingUIIntegrationXML {
         if (!this.currentContract) return;
         
         this.setLoading(true, 'loadingState');
-        this.showProgressMessage('טוען רשימת מנויים...');
+        this.showProgressMessage('׳˜׳•׳¢׳ ׳¨׳©׳™׳׳× ׳׳ ׳•׳™׳™׳...');
         
         try {
             // Get performance settings from config
@@ -616,7 +699,7 @@ class ParkingUIIntegrationXML {
                     }, 100);
                     
                     // Show subtle progress indicator
-                    this.showBackgroundProgress('טוען פרטים מלאים ברקע...');
+                    this.showBackgroundProgress('׳˜׳•׳¢׳ ׳₪׳¨׳˜׳™׳ ׳׳׳׳™׳ ׳‘׳¨׳§׳¢...');
                 },
                 
                 // Callback when each detail is loaded
@@ -630,12 +713,12 @@ class ParkingUIIntegrationXML {
                 // Progress callback
                 onProgress: (progress) => {
                     // Check if this is a large company notification
-                    if (progress.message && progress.message.includes('חברה גדולה')) {
+                    if (progress.message && progress.message.includes('׳—׳‘׳¨׳” ׳’׳“׳•׳׳”')) {
                         this.updateBackgroundProgress(progress.message);
                         // Show a special notification for large companies
                         setTimeout(() => {
                             this.showNotification(
-                                `⚠️ ${progress.message}\n💡 עמוד על מנוי או ערוך כדי לטעון פרטים מלאים`,
+                                `ג ן¸ ${progress.message}\nנ’¡ ׳¢׳׳•׳“ ׳¢׳ ׳׳ ׳•׳™ ׳׳• ׳¢׳¨׳•׳ ׳›׳“׳™ ׳׳˜׳¢׳•׳ ׳₪׳¨׳˜׳™׳ ׳׳׳׳™׳`,
                                 'warning',
                                 5000 // Show for 5 seconds
                             );
@@ -643,7 +726,7 @@ class ParkingUIIntegrationXML {
                         }, 500);
                     } else if (progress.current && progress.total) {
                         this.updateBackgroundProgress(
-                            `טוען פרטים... ${progress.current}/${progress.total} (${progress.percent}%)`
+                            `׳˜׳•׳¢׳ ׳₪׳¨׳˜׳™׳... ${progress.current}/${progress.total} (${progress.percent}%)`
                         );
                         
                         if (progress.percent === 100) {
@@ -660,7 +743,7 @@ class ParkingUIIntegrationXML {
             }
         } catch (error) {
             console.error('Error loading subscribers:', error);
-            this.showNotification('שגיאה בטעינת מנויים', 'error');
+            this.showNotification('׳©׳’׳™׳׳” ׳‘׳˜׳¢׳™׳ ׳× ׳׳ ׳•׳™׳™׳', 'error');
             this.loadMockSubscribers();
         } finally {
             this.hideProgressMessage();
@@ -674,7 +757,7 @@ class ParkingUIIntegrationXML {
         try {
             const companyResult = await this.api.getContractDetails(this.currentContract.id);
             if (companyResult.success) {
-                const companyName = companyResult.data.name || `חברה ${this.currentContract.id}`;
+                const companyName = companyResult.data.name || `׳—׳‘׳¨׳” ${this.currentContract.id}`;
                 
                 // Update company name in subscribers
                 this.subscribers.forEach(sub => {
@@ -689,12 +772,12 @@ class ParkingUIIntegrationXML {
                 if (companyNameElement) {
                     // Check if this is a large company
                     const isLargeCompany = this.subscribers.length > 300;
-                    const statusText = isLargeCompany ? ' 🚀 מצב מהיר' : '';
-                    companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''}${statusText})`;
+                    const statusText = isLargeCompany ? ' נ€ ׳׳¦׳‘ ׳׳”׳™׳¨' : '';
+                    companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} ׳׳ ׳•׳™׳™׳${presentCount > 0 ? ` | ${presentCount} ׳ ׳•׳›׳—׳™׳` : ''}${statusText})`;
                     
                     // Add tooltip for large companies
                     if (isLargeCompany) {
-                        companyNameElement.title = 'חברה גדולה - פרטי מנויים נטענים לפי דרישה (ערוך או חפש מנוי לטעינת פרטים)';
+                        companyNameElement.title = '׳—׳‘׳¨׳” ׳’׳“׳•׳׳” - ׳₪׳¨׳˜׳™ ׳׳ ׳•׳™׳™׳ ׳ ׳˜׳¢׳ ׳™׳ ׳׳₪׳™ ׳“׳¨׳™׳©׳” (׳¢׳¨׳•׳ ׳׳• ׳—׳₪׳© ׳׳ ׳•׳™ ׳׳˜׳¢׳™׳ ׳× ׳₪׳¨׳˜׳™׳)';
                     }
                 }
             }
@@ -711,16 +794,16 @@ class ParkingUIIntegrationXML {
         const companyNameElement = document.getElementById('companyName');
         if (companyNameElement) {
             const currentText = companyNameElement.textContent;
-            const companyName = currentText.split('(')[0].trim().replace('- ', '').replace(' 🚀', '');
+            const companyName = currentText.split('(')[0].trim().replace('- ', '').replace(' נ€', '');
             
             // Check if this is a large company
             const isLargeCompany = this.subscribers.length > 300;
-            const statusText = isLargeCompany ? ' 🚀 מצב מהיר' : '';
-            companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''}${statusText})`;
+            const statusText = isLargeCompany ? ' נ€ ׳׳¦׳‘ ׳׳”׳™׳¨' : '';
+            companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} ׳׳ ׳•׳™׳™׳${presentCount > 0 ? ` | ${presentCount} ׳ ׳•׳›׳—׳™׳` : ''}${statusText})`;
             
             // Add tooltip for large companies
             if (isLargeCompany) {
-                companyNameElement.title = 'חברה גדולה - פרטי מנויים נטענים לפי דרישה (ערוך או חפש מנוי לטעינת פרטים)';
+                companyNameElement.title = '׳—׳‘׳¨׳” ׳’׳“׳•׳׳” - ׳₪׳¨׳˜׳™ ׳׳ ׳•׳™׳™׳ ׳ ׳˜׳¢׳ ׳™׳ ׳׳₪׳™ ׳“׳¨׳™׳©׳” (׳¢׳¨׳•׳ ׳׳• ׳—׳₪׳© ׳׳ ׳•׳™ ׳׳˜׳¢׳™׳ ׳× ׳₪׳¨׳˜׳™׳)';
             }
         }
     }
@@ -764,7 +847,7 @@ class ParkingUIIntegrationXML {
                 this.updatePresentCount();
                 
                 // Show success notification
-                this.showNotification('המנוי עודכן בהצלחה', 'success');
+                this.showNotification('׳”׳׳ ׳•׳™ ׳¢׳•׳“׳›׳ ׳‘׳”׳¦׳׳—׳”', 'success');
             } else {
                 // If we can't get the specific subscriber, just refresh the display
                 this.displaySubscribers(this.subscribers);
@@ -804,7 +887,7 @@ class ParkingUIIntegrationXML {
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil)}</td>
                 <td style="color: #888;">${subscriber.profile || ''}</td>
                 <td>${this.formatDate(subscriber.validFrom) || ''}</td>
-                <td style="text-align: center; font-size: 18px;">${subscriber.presence ? '✅' : '❌'}</td>
+                <td style="text-align: center; font-size: 18px;">${subscriber.presence ? 'ג…' : 'ג'}</td>
             `;
             
             // Add subtle animation to show update
@@ -922,8 +1005,8 @@ class ParkingUIIntegrationXML {
                 companyNum: this.currentContract.id,
                 companyName: this.currentContract.name,
                 subscriberNum: '1',
-                firstName: 'דוד',
-                lastName: 'כהן',
+                firstName: '׳“׳•׳“',
+                lastName: '׳›׳”׳',
                 tagNum: 'TAG001',
                 vehicle1: '12-345-67',
                 vehicle2: '98-765-43',
@@ -937,8 +1020,8 @@ class ParkingUIIntegrationXML {
                 companyNum: this.currentContract.id,
                 companyName: this.currentContract.name,
                 subscriberNum: '2',
-                firstName: 'רחל',
-                lastName: 'לוי',
+                firstName: '׳¨׳—׳',
+                lastName: '׳׳•׳™',
                 tagNum: 'TAG002',
                 vehicle1: '55-666-77',
                 vehicle2: '',
@@ -967,7 +1050,7 @@ class ParkingUIIntegrationXML {
                 sortableHeaders.forEach(h => {
                     h.classList.remove('sort-asc', 'sort-desc');
                     const icon = h.querySelector('.sort-icon');
-                    if (icon) icon.innerHTML = '⇅';
+                    if (icon) icon.innerHTML = 'ג‡…';
                 });
                 
                 // Update sort direction
@@ -984,7 +1067,7 @@ class ParkingUIIntegrationXML {
                 // Update sort icon
                 const icon = header.querySelector('.sort-icon');
                 if (icon) {
-                    icon.innerHTML = this.currentSortDirection === 'asc' ? '↑' : '↓';
+                    icon.innerHTML = this.currentSortDirection === 'asc' ? 'ג†‘' : 'ג†“';
                 }
                 
                 // Sort and redisplay
@@ -1077,13 +1160,13 @@ class ParkingUIIntegrationXML {
                 
                 // Update title
                 const originalTitle = row.title;
-                row.title = '⏳ טוען פרטים...';
+                row.title = 'ג³ ׳˜׳•׳¢׳ ׳₪׳¨׳˜׳™׳...';
                 
                 // Add loading icon to first cell
                 const firstCell = row.querySelector('td:first-child');
                 const originalFirstCellContent = firstCell ? firstCell.innerHTML : '';
                 if (firstCell) {
-                    firstCell.innerHTML = `<span style="display: inline-block; animation: spin 1s linear infinite;">⏳</span> ${originalFirstCellContent}`;
+                    firstCell.innerHTML = `<span style="display: inline-block; animation: spin 1s linear infinite;">ג³</span> ${originalFirstCellContent}`;
                 }
                 
                 try {
@@ -1170,7 +1253,7 @@ class ParkingUIIntegrationXML {
         if (tableHead && !tableHead.querySelector('th[data-translate="actions"]')) {
             const actionsHeader = document.createElement('th');
             actionsHeader.setAttribute('data-translate', 'actions');
-            actionsHeader.textContent = 'פעולות';
+            actionsHeader.textContent = '׳₪׳¢׳•׳׳•׳×';
             tableHead.appendChild(actionsHeader);
         }
         
@@ -1189,12 +1272,12 @@ class ParkingUIIntegrationXML {
                 
                 // Add hover loading for subscribers without full details
                 if (subscriber.isLargeCompany) {
-                    row.title = 'נתונים בסיסיים - עמוד עם העכבר לטעינת פרטים';
+                    row.title = '׳ ׳×׳•׳ ׳™׳ ׳‘׳¡׳™׳¡׳™׳™׳ - ׳¢׳׳•׳“ ׳¢׳ ׳”׳¢׳›׳‘׳¨ ׳׳˜׳¢׳™׳ ׳× ׳₪׳¨׳˜׳™׳';
                     row.setAttribute('data-hover-loadable', 'true');
                     this.setupHoverLoading(row, subscriber, index);
                 } else {
                     // For small companies, details should already be loading in background
-                    row.title = 'נתונים בסיסיים - טוען פרטים...';
+                    row.title = '׳ ׳×׳•׳ ׳™׳ ׳‘׳¡׳™׳¡׳™׳™׳ - ׳˜׳•׳¢׳ ׳₪׳¨׳˜׳™׳...';
                 }
             }
             
@@ -1214,7 +1297,7 @@ class ParkingUIIntegrationXML {
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil) || ''}</td>
                 <td style="color: #888;">${subscriber.profile || ''}</td>
                 <td>${this.formatDate(subscriber.validFrom) || ''}</td>
-                <td style="text-align: center; font-size: 18px;">${subscriber.presence ? '✅' : '❌'}</td>
+                <td style="text-align: center; font-size: 18px;">${subscriber.presence ? 'ג…' : 'ג'}</td>
             `;
             tbody.appendChild(row);
         });
@@ -1252,14 +1335,14 @@ class ParkingUIIntegrationXML {
             }
             
             // If no profiles in use, return a default based on company
-            // Company 2 typically uses profile 2 (פלאזה מזרח)
+            // Company 2 typically uses profile 2 (׳₪׳׳׳–׳” ׳׳–׳¨׳—)
             console.log('[getCompanyProfiles] No profiles found in use, returning default');
-            return [{ id: '2', name: 'פלאזה מזרח' }];
+            return [{ id: '2', name: '׳₪׳׳׳–׳” ׳׳–׳¨׳—' }];
             
         } catch (error) {
             console.error('[getCompanyProfiles] Error:', error);
             // Return default profile on error
-            return [{ id: '2', name: 'פלאזה מזרח' }];
+            return [{ id: '2', name: '׳₪׳׳׳–׳” ׳׳–׳¨׳—' }];
         }
     }
     
@@ -1300,7 +1383,7 @@ class ParkingUIIntegrationXML {
                         
                         const profileHelpText = document.getElementById('profileHelpText');
                         if (profileHelpText) {
-                            profileHelpText.textContent = '* פרופיל יחיד בחברה';
+                            profileHelpText.textContent = '* ׳₪׳¨׳•׳₪׳™׳ ׳™׳—׳™׳“ ׳‘׳—׳‘׳¨׳”';
                             profileHelpText.style.color = '#666';
                         }
                     } else {
@@ -1312,7 +1395,7 @@ class ParkingUIIntegrationXML {
                         
                         const profileHelpText = document.getElementById('profileHelpText');
                         if (profileHelpText) {
-                            profileHelpText.textContent = '* בחר פרופיל מהרשימה';
+                            profileHelpText.textContent = '* ׳‘׳—׳¨ ׳₪׳¨׳•׳₪׳™׳ ׳׳”׳¨׳©׳™׳׳”';
                             profileHelpText.style.color = '#666';
                         }
                     }
@@ -1320,7 +1403,7 @@ class ParkingUIIntegrationXML {
                     // No profiles - shouldn't happen but add fallback
                     const option = document.createElement('option');
                     option.value = '2';
-                    option.textContent = 'פלאזה מזרח';
+                    option.textContent = '׳₪׳׳׳–׳” ׳׳–׳¨׳—';
                     profileSelect.appendChild(option);
                     profileSelect.disabled = true;
                 }
@@ -1335,7 +1418,7 @@ class ParkingUIIntegrationXML {
                 
                 const profileHelpText = document.getElementById('profileHelpText');
                 if (profileHelpText) {
-                    profileHelpText.textContent = '* לא ניתן לשינוי למנויים קיימים';
+                    profileHelpText.textContent = '* ׳׳ ׳ ׳™׳×׳ ׳׳©׳™׳ ׳•׳™ ׳׳׳ ׳•׳™׳™׳ ׳§׳™׳™׳׳™׳';
                     profileHelpText.style.color = '#888';
                 }
             }
@@ -1353,7 +1436,7 @@ class ParkingUIIntegrationXML {
             console.log(`[UI] Loading full details for subscriber ${subscriber.subscriberNum}`);
             
             // Show loading indicator
-            this.showProgressMessage('טוען פרטי מנוי...');
+            this.showProgressMessage('׳˜׳•׳¢׳ ׳₪׳¨׳˜׳™ ׳׳ ׳•׳™...');
             
             try {
                 // Check if this is from a large company
@@ -1386,7 +1469,7 @@ class ParkingUIIntegrationXML {
                 }
             } catch (error) {
                 console.error('Error loading subscriber details:', error);
-                this.showNotification('שגיאה בטעינת פרטי מנוי', 'error');
+                this.showNotification('׳©׳’׳™׳׳” ׳‘׳˜׳¢׳™׳ ׳× ׳₪׳¨׳˜׳™ ׳׳ ׳•׳™', 'error');
             } finally {
                 this.hideProgressMessage();
             }
@@ -1453,7 +1536,7 @@ class ParkingUIIntegrationXML {
                     validUntil: subscriberData.validUntil,  // Will be formatted by API
                     usageProfile: {
                         id: subscriberData.profileId || '1',
-                        name: subscriberData.profile || 'רגיל'
+                        name: subscriberData.profile || '׳¨׳’׳™׳'
                     },
                     present: false
                 },
@@ -1481,7 +1564,7 @@ class ParkingUIIntegrationXML {
                 // Calculate next available subscriber number
                 if (!subscriberData.subscriberNum || subscriberData.subscriberNum === '') {
                     // Check if this is a guest
-                    if (subscriberData.isGuest || subscriberData.firstName === 'אורח') {
+                    if (subscriberData.isGuest || subscriberData.firstName === '׳׳•׳¨׳—') {
                         // Guest numbers start from 40001
                         const existingGuests = this.subscribers.filter(s => {
                             const num = parseInt(s.subscriberNum);
@@ -1574,7 +1657,7 @@ class ParkingUIIntegrationXML {
                         
                         if (result.success) {
                             console.log('Consumer updated successfully with minimal data');
-                            this.showNotification('✅ הנתונים הבסיסיים נשמרו בהצלחה', 'success');
+                            this.showNotification('ג… ׳”׳ ׳×׳•׳ ׳™׳ ׳”׳‘׳¡׳™׳¡׳™׳™׳ ׳ ׳©׳׳¨׳• ׳‘׳”׳¦׳׳—׳”', 'success');
                         }
                     }
                     
@@ -1603,7 +1686,7 @@ class ParkingUIIntegrationXML {
                         
                         if (result.success) {
                             console.log('Consumer updated successfully without usage profile');
-                            this.showNotification('⚠️ הנתונים נשמרו ללא פרופיל שימוש', 'warning');
+                            this.showNotification('ג ן¸ ׳”׳ ׳×׳•׳ ׳™׳ ׳ ׳©׳׳¨׳• ׳׳׳ ׳₪׳¨׳•׳₪׳™׳ ׳©׳™׳׳•׳©', 'warning');
                         }
                     }
                 }
@@ -1614,16 +1697,16 @@ class ParkingUIIntegrationXML {
             }
             
             if (result.success) {
-                this.showNotification('הנתונים נשמרו בהצלחה', 'success');
+                this.showNotification('׳”׳ ׳×׳•׳ ׳™׳ ׳ ׳©׳׳¨׳• ׳‘׳”׳¦׳׳—׳”', 'success');
                 await this.loadSubscribers(); // Refresh the list
                 return true;
             } else {
-                this.showNotification('שגיאה בשמירת הנתונים: ' + result.error, 'error');
+                this.showNotification('׳©׳’׳™׳׳” ׳‘׳©׳׳™׳¨׳× ׳”׳ ׳×׳•׳ ׳™׳: ' + result.error, 'error');
                 return false;
             }
         } catch (error) {
             console.error('Error saving subscriber:', error);
-            this.showNotification('שגיאה בשמירת הנתונים', 'error');
+            this.showNotification('׳©׳’׳™׳׳” ׳‘׳©׳׳™׳¨׳× ׳”׳ ׳×׳•׳ ׳™׳', 'error');
             return false;
         } finally {
             this.setLoading(false);
@@ -1636,7 +1719,7 @@ class ParkingUIIntegrationXML {
     async deleteSubscriber(subscriberId) {
         if (!this.currentContract) return;
         
-        if (!confirm('האם אתה בטוח שברצונך למחוק מנוי זה?')) {
+        if (!confirm('׳”׳׳ ׳׳×׳” ׳‘׳˜׳•׳— ׳©׳‘׳¨׳¦׳•׳ ׳ ׳׳׳—׳•׳§ ׳׳ ׳•׳™ ׳–׳”?')) {
             return;
         }
         
@@ -1646,14 +1729,14 @@ class ParkingUIIntegrationXML {
             const result = await this.api.deleteConsumer(this.currentContract.id, subscriberId);
             
             if (result.success) {
-                this.showNotification('המנוי נמחק בהצלחה', 'success');
+                this.showNotification('׳”׳׳ ׳•׳™ ׳ ׳׳—׳§ ׳‘׳”׳¦׳׳—׳”', 'success');
                 await this.loadSubscribers(); // Refresh the list
             } else {
-                this.showNotification('שגיאה במחיקת המנוי', 'error');
+                this.showNotification('׳©׳’׳™׳׳” ׳‘׳׳—׳™׳§׳× ׳”׳׳ ׳•׳™', 'error');
             }
         } catch (error) {
             console.error('Error deleting subscriber:', error);
-            this.showNotification('שגיאה במחיקת המנוי', 'error');
+            this.showNotification('׳©׳’׳™׳׳” ׳‘׳׳—׳™׳§׳× ׳”׳׳ ׳•׳™', 'error');
         } finally {
             this.setLoading(false);
         }
@@ -1664,25 +1747,25 @@ class ParkingUIIntegrationXML {
      */
     exportToCSV() {
         if (!this.subscribers || this.subscribers.length === 0) {
-            this.showNotification('אין נתונים לייצוא', 'warning');
+            this.showNotification('׳׳™׳ ׳ ׳×׳•׳ ׳™׳ ׳׳™׳™׳¦׳•׳', 'warning');
             return;
         }
         
         // Create CSV content
         const headers = [
-            'מספר חברה',
-            'שם חברה', 
-            'מספר מנוי',
-            'שם פרטי',
-            'שם משפחה',
-            'מספר תג',
-            'רכב 1',
-            'רכב 2', 
-            'רכב 3',
-            'תחילת תוקף',
-            'בתוקף עד',
-            'פרופיל',
-            'נוכחות'
+            '׳׳¡׳₪׳¨ ׳—׳‘׳¨׳”',
+            '׳©׳ ׳—׳‘׳¨׳”', 
+            '׳׳¡׳₪׳¨ ׳׳ ׳•׳™',
+            '׳©׳ ׳₪׳¨׳˜׳™',
+            '׳©׳ ׳׳©׳₪׳—׳”',
+            '׳׳¡׳₪׳¨ ׳×׳’',
+            '׳¨׳›׳‘ 1',
+            '׳¨׳›׳‘ 2', 
+            '׳¨׳›׳‘ 3',
+            '׳×׳—׳™׳׳× ׳×׳•׳§׳£',
+            '׳‘׳×׳•׳§׳£ ׳¢׳“',
+            '׳₪׳¨׳•׳₪׳™׳',
+            '׳ ׳•׳›׳—׳•׳×'
         ];
         
         // Create CSV rows
@@ -1699,7 +1782,7 @@ class ParkingUIIntegrationXML {
             this.formatDate(subscriber.validFrom) || '',
             this.formatDate(subscriber.validUntil) || '',
             subscriber.profile || '',
-            subscriber.presence ? 'נוכח' : 'לא נוכח'
+            subscriber.presence ? '׳ ׳•׳›׳—' : '׳׳ ׳ ׳•׳›׳—'
         ]);
         
         // Combine headers and rows
@@ -1731,7 +1814,7 @@ class ParkingUIIntegrationXML {
         link.click();
         document.body.removeChild(link);
         
-        this.showNotification(`הקובץ ${filename} יוצא בהצלחה`, 'success');
+        this.showNotification(`׳”׳§׳•׳‘׳¥ ${filename} ׳™׳•׳¦׳ ׳‘׳”׳¦׳׳—׳”`, 'success');
     }
     
     /**
@@ -1792,12 +1875,12 @@ class ParkingUIIntegrationXML {
     
     getProfileText(profile) {
         const profiles = {
-            'regular': 'רגיל',
+            'regular': '׳¨׳’׳™׳',
             'vip': 'VIP',
-            'disabled': 'נכה',
-            'guest': 'אורח'
+            'disabled': '׳ ׳›׳”',
+            'guest': '׳׳•׳¨׳—'
         };
-        return profiles[profile] || profile || 'רגיל';
+        return profiles[profile] || profile || '׳¨׳’׳™׳';
     }
     
     /**
@@ -1844,7 +1927,7 @@ class ParkingUIIntegrationXML {
                     notes: document.getElementById('editNotes').value || '',
                     ignorePresence: document.getElementById('editIgnorePresence')?.checked ? '1' : '0',
                     isNew: !window.editingSubscriber,  // New subscriber if editingSubscriber is null
-                    isGuest: document.getElementById('editFirstName').value === 'אורח' || 
+                    isGuest: document.getElementById('editFirstName').value === '׳׳•׳¨׳—' || 
                             document.getElementById('editModal')?.classList.contains('guest-mode')
                 };
                 
