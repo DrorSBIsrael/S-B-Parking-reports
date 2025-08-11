@@ -2923,23 +2923,12 @@ def company_manager_get_parkings():
         if 'R' not in permissions and 'P' not in permissions:
             return jsonify({'success': False, 'message': 'אין הרשאת דוחות'}), 403
         
-        # פענוח רשימת החברות
-        allowed_companies = []
-        if company_list:
-            parts = company_list.split(',')
-            for part in parts:
-                part = part.strip()
-                if '-' in part:
-                    try:
-                        start, end = part.split('-')
-                        allowed_companies.extend(range(int(start), int(end) + 1))
-                    except:
-                        pass
-                else:
-                    try:
-                        allowed_companies.append(int(part))
-                    except:
-                        pass
+        # לא צריך לפענח את company_list כאן - זה חברות בתוך החניון, לא חניונים
+        # company_list משמש למטרות אחרות (חברות בתוך החניון)
+        
+        # קבלת project_number של המשתמש
+        user_project_number = user_data.get('project_number')
+        access_level = user_data.get('access_level', '')
         
         # חיפוש חניונים בטבלת parkings
         parkings_result = supabase.table('parkings').select(
@@ -2948,10 +2937,23 @@ def company_manager_get_parkings():
         
         parkings = []
         for parking in parkings_result.data:
-            # בדיקה אם החניון ברשימת החברות המורשות
             try:
                 parking_number = int(parking.get('description', 0))
-                if not allowed_companies or parking_number in allowed_companies:
+                
+                # לוגיקה מתוקנת: בדיקה אם למשתמש יש גישה לחניון
+                has_access = False
+                
+                # אופציה 1: זה החניון של המשתמש
+                if user_project_number and str(parking_number) == str(user_project_number):
+                    has_access = True
+                
+                # אופציה 2: למשתמש יש גישת מנהל חברה/מאסטר
+                elif access_level in ['company_manager', 'master']:
+                    # מנהל חברה רואה את כל החניונים
+                    # אפשר להוסיף כאן לוגיקה נוספת לפי company_type אם צריך
+                    has_access = True
+                
+                if has_access:
                     parkings.append({
                         'id': parking['id'],
                         'name': parking['name'],
@@ -2962,7 +2964,8 @@ def company_manager_get_parkings():
                         'is_active': parking.get('is_active', False),
                         'api_url': f"https://{parking.get('ip_address', '')}:{parking.get('port', 443)}"
                     })
-            except:
+            except Exception as e:
+                print(f"Error processing parking {parking.get('name', 'unknown')}: {e}")
                 pass
         
         return jsonify({
