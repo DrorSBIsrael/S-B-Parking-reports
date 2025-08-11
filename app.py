@@ -2904,8 +2904,15 @@ def company_manager_page():
 def company_manager_get_parkings():
     """קבלת רשימת חניונים עבור מנהל חברה"""
     try:
+        print("\n" + "="*60)
+        print("🔍 DEBUG: /api/company-manager/get-parkings called")
+        print("="*60)
+        
         if 'user_email' not in session:
+            print("❌ No user in session")
             return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        print(f"✅ User: {session['user_email']}")
         
         # קבלת נתוני המשתמש
         user_result = supabase.table('user_parkings').select(
@@ -2913,14 +2920,22 @@ def company_manager_get_parkings():
         ).eq('email', session['user_email']).execute()
         
         if not user_result.data:
+            print("❌ User not found in DB")
             return jsonify({'success': False, 'message': 'משתמש לא נמצא'}), 404
         
         user_data = user_result.data[0]
         company_list = user_data.get('company_list', '')
         permissions = user_data.get('permissions', '')
         
+        print(f"📋 User data:")
+        print(f"   project_number: {user_data.get('project_number')}")
+        print(f"   company_list: {company_list}")
+        print(f"   access_level: {user_data.get('access_level')}")
+        print(f"   permissions: {permissions}")
+        
         # בדיקת הרשאות
         if 'R' not in permissions and 'P' not in permissions:
+            print("❌ No R or P permissions")
             return jsonify({'success': False, 'message': 'אין הרשאת דוחות'}), 403
         
         # לא צריך לפענח את company_list כאן - זה חברות בתוך החניון, לא חניונים
@@ -2931,27 +2946,38 @@ def company_manager_get_parkings():
         access_level = user_data.get('access_level', '')
         
         # חיפוש חניונים בטבלת parkings
+        print("\n🔍 Fetching parkings from DB...")
         parkings_result = supabase.table('parkings').select(
             'id, name, location, description, ip_address, port, is_active'
         ).execute()
         
+        print(f"📦 Found {len(parkings_result.data)} parkings in DB")
+        
         parkings = []
-        for parking in parkings_result.data:
+        for idx, parking in enumerate(parkings_result.data):
             try:
+                print(f"\n🏢 Parking #{idx + 1}: {parking.get('name')}")
+                print(f"   description: {parking.get('description')}")
+                print(f"   ip: {parking.get('ip_address')}:{parking.get('port')}")
+                
                 parking_number = int(parking.get('description', 0))
+                print(f"   parsed number: {parking_number}")
                 
                 # לוגיקה מתוקנת: בדיקה אם למשתמש יש גישה לחניון
                 has_access = False
                 
                 # אופציה 1: זה החניון של המשתמש
+                print(f"   Checking: user_project={user_project_number} vs parking={parking_number}")
                 if user_project_number and str(parking_number) == str(user_project_number):
+                    print(f"   ✅ Match! User's parking")
                     has_access = True
                 
                 # אופציה 2: למשתמש יש גישת מנהל חברה/מאסטר
                 elif access_level in ['company_manager', 'master']:
-                    # מנהל חברה רואה את כל החניונים
-                    # אפשר להוסיף כאן לוגיקה נוספת לפי company_type אם צריך
+                    print(f"   ✅ Access via role: {access_level}")
                     has_access = True
+                else:
+                    print(f"   ❌ No access")
                 
                 if has_access:
                     parkings.append({
@@ -2964,9 +2990,12 @@ def company_manager_get_parkings():
                         'is_active': parking.get('is_active', False),
                         'api_url': f"https://{parking.get('ip_address', '')}:{parking.get('port', 443)}"
                     })
+                    print(f"   ✅ Added to results")
             except Exception as e:
-                print(f"Error processing parking {parking.get('name', 'unknown')}: {e}")
+                print(f"   ❌ Error: {e}")
                 pass
+        
+        print(f"\n📊 Final: {len(parkings)} accessible parkings")
         
         return jsonify({
             'success': True,
