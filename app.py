@@ -3216,20 +3216,27 @@ def company_manager_proxy():
                         xml_response = '''<?xml version="1.0" encoding="UTF-8"?>
 <response>
     <success>true</success>
-    <consumers>
-        <consumer>
-            <id>1</id>
-            <name>ישראל ישראלי</name>
-            <vehicle_number>1234567</vehicle_number>
-            <present>true</present>
-        </consumer>
-        <consumer>
-            <id>2</id>
-            <name>משה כהן</name>
-            <vehicle_number>2345678</vehicle_number>
-            <present>false</present>
-        </consumer>
-    </consumers>
+    <consumer>
+        <id>1</id>
+        <name>ישראל ישראלי</name>
+        <vehicle_number>1234567</vehicle_number>
+        <present>true</present>
+        <xValidUntil>2025-12-31</xValidUntil>
+    </consumer>
+    <consumer>
+        <id>2</id>
+        <name>משה כהן</name>
+        <vehicle_number>2345678</vehicle_number>
+        <present>false</present>
+        <xValidUntil>2025-12-31</xValidUntil>
+    </consumer>
+    <consumer>
+        <id>3</id>
+        <name>יוסף לוי</name>
+        <vehicle_number>3456789</vehicle_number>
+        <present>true</present>
+        <xValidUntil>2025-12-31</xValidUntil>
+    </consumer>
     <total>120</total>
     <active>100</active>
     <present>15</present>
@@ -3238,14 +3245,20 @@ def company_manager_proxy():
                         xml_response = '''<?xml version="1.0" encoding="UTF-8"?>
 <response>
     <success>true</success>
-    <consumers>
-        <consumer>
-            <id>1</id>
-            <name>דוד לוי</name>
-            <vehicle_number>3456789</vehicle_number>
-            <present>true</present>
-        </consumer>
-    </consumers>
+    <consumer>
+        <id>1</id>
+        <name>דוד לוי</name>
+        <vehicle_number>3456789</vehicle_number>
+        <present>true</present>
+        <xValidUntil>2025-12-31</xValidUntil>
+    </consumer>
+    <consumer>
+        <id>2</id>
+        <name>רחל כהן</name>
+        <vehicle_number>4567890</vehicle_number>
+        <present>false</present>
+        <xValidUntil>2025-12-31</xValidUntil>
+    </consumer>
     <total>45</total>
     <active>40</active>
     <present>8</present>
