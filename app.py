@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response
 from flask_mail import Mail, Message
 from supabase.client import create_client, Client
 from dotenv import load_dotenv
@@ -3150,49 +3150,98 @@ def company_manager_proxy():
             
             # נתוני דמה לפי סוג ה-endpoint
             if endpoint == 'contracts':
-                # רשימת חברות
-                mock_companies = [
-                    {'id': '2', 'name': 'חברה בדיקה א', 'contract_number': '2'},
-                    {'id': '1000', 'name': 'חברה בדיקה ב', 'contract_number': '1000'}
-                ]
-                response = jsonify({
-                    'success': True,
-                    'data': {'contracts': mock_companies}
-                })
-                response.headers['Content-Type'] = 'application/json; charset=utf-8'
+                # רשימת חברות בפורמט XML - מתאים ל-company_list: '2,1000'
+                xml_response = '''<?xml version="1.0" encoding="UTF-8"?>
+<response>
+    <success>true</success>
+    <contracts>
+        <contract>
+            <id>2</id>
+            <name>חברה בדיקה א</name>
+            <contract_number>2</contract_number>
+        </contract>
+        <contract>
+            <id>1000</id>
+            <name>חברה בדיקה ב</name>
+            <contract_number>1000</contract_number>
+        </contract>
+    </contracts>
+</response>'''
+                response = make_response(xml_response)
+                response.headers['Content-Type'] = 'application/xml; charset=utf-8'
                 return response
             elif endpoint.startswith('contracts/'):
                 # פרטי חברה ספציפית
                 company_id = endpoint.split('/')[-1]
+                if 'detail' in endpoint:
+                    company_id = endpoint.split('/')[-2]
+                
                 if company_id == '2':
-                    response = jsonify({
-                        'success': True,
-                        'data': {
-                            'id': '2',
-                            'name': 'חברה בדיקה א',
-                            'contract_number': '2',
-                            'active_cards': 15,
-                            'total_cards': 20
-                        }
-                    })
-                    response.headers['Content-Type'] = 'application/json; charset=utf-8'
-                    return response
+                    xml_response = '''<?xml version="1.0" encoding="UTF-8"?>
+<response>
+    <success>true</success>
+    <contract>
+        <id>2</id>
+        <name>חברה בדיקה א</name>
+        <contract_number>2</contract_number>
+        <active_cards>15</active_cards>
+        <total_cards>20</total_cards>
+    </contract>
+</response>'''
                 elif company_id == '1000':
-                    response = jsonify({
-                        'success': True,
-                        'data': {
-                            'id': '1000',
-                            'name': 'חברה בדיקה ב', 
-                            'contract_number': '1000',
-                            'active_cards': 8,
-                            'total_cards': 10
-                        }
-                    })
-                    response.headers['Content-Type'] = 'application/json; charset=utf-8'
-                    return response
+                    xml_response = '''<?xml version="1.0" encoding="UTF-8"?>
+<response>
+    <success>true</success>
+    <contract>
+        <id>1000</id>
+        <name>חברה בדיקה ב</name>
+        <contract_number>1000</contract_number>
+        <active_cards>8</active_cards>
+        <total_cards>10</total_cards>
+    </contract>
+</response>'''
+                else:
+                    # חברות נוספות למטרות בדיקה
+                    companies_data = {
+                        '3': {'name': 'חברה 3', 'active': 10, 'total': 25},
+                        '4': {'name': 'חברה 4', 'active': 15, 'total': 30},
+                        '5': {'name': 'חברה 5', 'active': 25, 'total': 50},
+                        '6': {'name': 'חברה 6', 'active': 33, 'total': 67}
+                    }
+                    
+                    if company_id in companies_data:
+                        comp = companies_data[company_id]
+                        xml_response = f'''<?xml version="1.0" encoding="UTF-8"?>
+<response>
+    <success>true</success>
+    <contract>
+        <id>{company_id}</id>
+        <name>{comp['name']}</name>
+        <contract_number>{company_id}</contract_number>
+        <active_cards>{comp['active']}</active_cards>
+        <total_cards>{comp['total']}</total_cards>
+    </contract>
+</response>'''
+                    else:
+                        xml_response = '''<?xml version="1.0" encoding="UTF-8"?>
+<response>
+    <success>false</success>
+    <message>Company not found</message>
+</response>'''
+                
+                response = make_response(xml_response)
+                response.headers['Content-Type'] = 'application/xml; charset=utf-8'
+                return response
             
-            # ברירת מחדל
-            return jsonify({'success': True, 'data': {}})
+            # ברירת מחדל - החזר XML ריק
+            xml_response = '''<?xml version="1.0" encoding="UTF-8"?>
+<response>
+    <success>true</success>
+    <data></data>
+</response>'''
+            response = make_response(xml_response)
+            response.headers['Content-Type'] = 'application/xml; charset=utf-8'
+            return response
         
         try:
             # הגדלת timeout ל-30 שניות
