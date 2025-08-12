@@ -2903,6 +2903,47 @@ def company_manager_page():
     
 # ========== API למנהל חברה - חניונים ומנויים ==========
 
+@app.route('/api/get-current-user', methods=['GET'])
+def get_current_user():
+    """קבלת פרטי המשתמש המחובר"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        # קבלת נתוני המשתמש
+        user_result = supabase.table('user_parkings').select(
+            'username, email, parking_name, company_type'
+        ).eq('email', session['user_email']).execute()
+        
+        if user_result.data:
+            user_data = user_result.data[0]
+            return jsonify({
+                'success': True,
+                'user': {
+                    'username': user_data.get('username', session['user_email']),
+                    'email': session['user_email'],
+                    'parking_name': user_data.get('parking_name', ''),
+                    'company_type': user_data.get('company_type', '')
+                }
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'user': {
+                    'username': session['user_email'],
+                    'email': session['user_email']
+                }
+            })
+    except Exception as e:
+        print(f"❌ Error getting current user: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני משתמש'}), 500
+
+@app.route('/logout')
+def logout():
+    """התנתקות מהמערכת"""
+    session.clear()
+    return redirect(url_for('login_page'))
+
 @app.route('/api/company-manager/get-parkings', methods=['GET'])
 def company_manager_get_parkings():
     """קבלת רשימת חניונים עבור מנהל חברה"""
