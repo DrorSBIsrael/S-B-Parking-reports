@@ -3179,10 +3179,17 @@ def company_manager_proxy():
         # ביצוע הקריאה
         headers = {'Content-Type': 'application/json'}
         
-        # בדיקה אם זה חניון בדיקות - אם כן, החזר נתוני דמה
-        # הערה: מנוטרל - משתמש בחיבור אמיתי
-        if False and parking_data.get('description') == 478131051:
-            print("   ⚠️ Test parking detected - returning mock data")
+        # בדיקה אם IP פנימי - החזר נתוני דמה
+        ip_address = parking_data.get('ip_address', '')
+        # בדיקה אם זה IP פנימי (10.x.x.x או 192.168.x.x או 172.16-31.x.x)
+        is_private_ip = (
+            ip_address.startswith('10.') or 
+            ip_address.startswith('192.168.') or
+            ip_address.startswith('172.')
+        )
+        
+        if is_private_ip:
+            print(f"   ⚠️ Private IP detected ({ip_address}) - returning mock data")
             
             # נתוני דמה לפי סוג ה-endpoint
             if endpoint == 'contracts':
@@ -3350,15 +3357,18 @@ def company_manager_proxy():
             return response
         
         try:
-            # הגדלת timeout ל-30 שניות
+            # timeout מוגבל ל-10 שניות כדי למנוע worker timeout
+            timeout_seconds = 10
+            print(f"   ⏱️ Attempting connection with {timeout_seconds}s timeout...")
+            
             if method == 'GET':
-                response = requests.get(url, headers=headers, verify=False, timeout=30)
+                response = requests.get(url, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'POST':
-                response = requests.post(url, json=payload, headers=headers, verify=False, timeout=30)
+                response = requests.post(url, json=payload, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'PUT':
-                response = requests.put(url, json=payload, headers=headers, verify=False, timeout=30)
+                response = requests.put(url, json=payload, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'DELETE':
-                response = requests.delete(url, headers=headers, verify=False, timeout=30)
+                response = requests.delete(url, headers=headers, verify=False, timeout=timeout_seconds)
             else:
                 return jsonify({'success': False, 'message': 'שיטה לא נתמכת'}), 400
             
