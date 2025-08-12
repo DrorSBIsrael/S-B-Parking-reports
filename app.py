@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_mail import Mail, Message
 from supabase.client import create_client, Client
@@ -50,6 +51,8 @@ print("🚀 S&B Parking Application Starting...")
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
+app.config['JSON_AS_ASCII'] = False  # תמיכה בעברית ב-JSON
+app.config['JSONIFY_MIMETYPE'] = 'application/json; charset=utf-8'  # קידוד UTF-8
 
 # Supabase configuration
 SUPABASE_URL = os.environ.get('SUPABASE_URL')
@@ -3152,15 +3155,17 @@ def company_manager_proxy():
                     {'id': '2', 'name': 'חברה בדיקה א', 'contract_number': '2'},
                     {'id': '1000', 'name': 'חברה בדיקה ב', 'contract_number': '1000'}
                 ]
-                return jsonify({
+                response = jsonify({
                     'success': True,
                     'data': {'contracts': mock_companies}
                 })
+                response.headers['Content-Type'] = 'application/json; charset=utf-8'
+                return response
             elif endpoint.startswith('contracts/'):
                 # פרטי חברה ספציפית
                 company_id = endpoint.split('/')[-1]
                 if company_id == '2':
-                    return jsonify({
+                    response = jsonify({
                         'success': True,
                         'data': {
                             'id': '2',
@@ -3170,8 +3175,10 @@ def company_manager_proxy():
                             'total_cards': 20
                         }
                     })
+                    response.headers['Content-Type'] = 'application/json; charset=utf-8'
+                    return response
                 elif company_id == '1000':
-                    return jsonify({
+                    response = jsonify({
                         'success': True,
                         'data': {
                             'id': '1000',
@@ -3181,6 +3188,8 @@ def company_manager_proxy():
                             'total_cards': 10
                         }
                     })
+                    response.headers['Content-Type'] = 'application/json; charset=utf-8'
+                    return response
             
             # ברירת מחדל
             return jsonify({'success': True, 'data': {}})
