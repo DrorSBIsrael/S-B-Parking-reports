@@ -5,9 +5,9 @@
 const config = {
     // Development mode settings
     development: {
-        useProxy: true, // Use proxy through Flask server
-        proxyUrl: '/api/company-manager/proxy', // Use Flask proxy endpoint
-        apiUrl: '', // Will be set dynamically per parking
+        useProxy: true, // Use proxy for CORS
+        proxyUrl: 'http://localhost:8080',
+        apiUrl: '/api/company-manager/proxy', // Use Flask proxy
         username: '2022',
         password: '2022',
         mockData: false, // Use real server
@@ -17,23 +17,13 @@ const config = {
     
     // Production settings
     production: {
-        useProxy: true, // Always use Flask proxy to avoid CORS
-        proxyUrl: '/api/company-manager/proxy', // Use Flask proxy endpoint
-        apiUrl: '', // Will be set dynamically per parking
+        useProxy: false,
+        apiUrl: '/api/company-manager/proxy', // Use Flask proxy
         username: '', // Will be set from login
         password: '', // Will be set from login
         mockData: false,
         cacheEnabled: true,
         cacheDuration: 300000 // 5 minutes
-    },
-    
-    // Current parking configuration (will be set dynamically)
-    currentParking: {
-        id: null,
-        name: null,
-        ip_address: null,
-        port: null,
-        api_url: null
     },
     
     // Current environment
