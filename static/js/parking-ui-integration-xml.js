@@ -18,6 +18,8 @@ class ParkingUIIntegrationXML {
         this.companyToContract = {
             '1000': '1000',
             '2': '2',
+            '3': '3',
+            '4': '4',
         };
         
         // Initialize API configuration
@@ -190,7 +192,7 @@ class ParkingUIIntegrationXML {
             }
         } catch (error) {
             console.error('[loadCompanies] Error loading parkings:', error);
-            this.showNotification('׳©׳’׳™׳׳” ׳‘׳˜׳¢׳™׳ ׳× ׳—׳ ׳™׳•׳ ׳™׳', 'error');
+            this.showNotification('שגיאה בטעינת חניונים', 'error');
             await this.loadMockParkings();
         } finally {
             this.setLoading(false);
@@ -205,8 +207,8 @@ class ParkingUIIntegrationXML {
         const mockParkings = [
             { 
                 id: 'mock-1', 
-                name: '׳—׳ ׳™׳•׳ ׳‘׳“׳™׳§׳•׳×', 
-                location: '׳×׳ ׳׳‘׳™׳‘',
+                name: 'חניון בדיקות', 
+                location: 'תל אביב',
                 project_number: '1000',
                 ip_address: '10.0.0.1',
                 port: 8443,
@@ -243,12 +245,12 @@ class ParkingUIIntegrationXML {
                 </div>
                 <div class="stats-row">
                     <div class="stat-item">
-                        <span class="stat-label">׳׳™׳§׳•׳</span>
-                        <span class="stat-value">${parking.location || '׳׳ ׳™׳“׳•׳¢'}</span>
+                        <span class="stat-label">מיקום</span>
+                        <span class="stat-value">${parking.location || 'לא ידוע'}</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">׳¡׳˜׳˜׳•׳¡</span>
-                        <span class="stat-value">${parking.is_active ? 'נ¢ ׳₪׳¢׳™׳' : 'נ”´ ׳׳ ׳₪׳¢׳™׳'}</span>
+                        <span class="stat-label">סטטוס</span>
+                        <span class="stat-value">${parking.is_active ? '🟢 פעיל' : '🔴 לא פעיל'}</span>
                     </div>
                 </div>
                 <div class="facilities-info" style="font-size: 12px; margin-top: 10px; color: #666;">
@@ -313,8 +315,8 @@ class ParkingUIIntegrationXML {
                 // Convert to company format
                 const companies = contracts.map(contract => ({
                     id: contract.id,
-                    name: contract.name || `׳—׳‘׳¨׳” ${contract.id}`,
-                    companyName: contract.name || `׳—׳‘׳¨׳” ${contract.id}`,
+                    name: contract.name || `חברה ${contract.id}`,
+                    companyName: contract.name || `חברה ${contract.id}`,
                     subscribersCount: 0
                 }));
                 
@@ -341,12 +343,10 @@ class ParkingUIIntegrationXML {
     async loadMockCompanies() {
         console.log('[loadMockCompanies] Using mock companies data');
         const mockCompanies = [
-            { id: '1000', name: '׳—׳‘׳¨׳” 1000', companyName: '׳—׳‘׳¨׳” 1000', subscribersCount: 45 },
-            { id: '2', name: '׳—׳‘׳¨׳” 2', companyName: '׳—׳‘׳¨׳” 2', subscribersCount: 120 },
-            { id: '3', name: '׳—׳‘׳¨׳” 3', companyName: '׳—׳‘׳¨׳” 3', subscribersCount: 25 },
-            { id: '4', name: '׳—׳‘׳¨׳” 4', companyName: '׳—׳‘׳¨׳” 4', subscribersCount: 30 },
-            { id: '5', name: '׳—׳‘׳¨׳” 5', companyName: '׳—׳‘׳¨׳” 5', subscribersCount: 50 },
-            { id: '6', name: '׳—׳‘׳¨׳” 6', companyName: '׳—׳‘׳¨׳” 6', subscribersCount: 67 }
+            { id: '1000', name: 'חברה 1000', companyName: 'חברה 1000', subscribersCount: 45 },
+            { id: '2', name: 'חברה 2', companyName: 'חברה 2', subscribersCount: 120 },
+            { id: '3', name: 'חברה 3', companyName: 'חברה 3', subscribersCount: 25 },
+            { id: '4', name: 'חברה 4', companyName: 'חברה 4', subscribersCount: 30 },
         ];
         this.displayCompanies(mockCompanies);
         
@@ -379,19 +379,19 @@ class ParkingUIIntegrationXML {
                 </div>
                 <div class="stats-row">
                     <div class="stat-item">
-                        <span class="stat-label">׳׳ ׳•׳™׳™׳</span>
+                        <span class="stat-label">מנויים</span>
                         <span class="stat-value">${company.subscribersCount || 0}</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">׳¨׳›׳‘׳™׳</span>
+                        <span class="stat-label">רכבים</span>
                         <span class="stat-value" id="vehicles-${company.id}">-</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">׳ ׳•׳›׳—׳™׳</span>
+                        <span class="stat-label">נוכחים</span>
                         <span class="stat-value" id="present-${company.id}">-</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">׳׳§׳¡׳™׳׳•׳</span>
+                        <span class="stat-label">מקסימום</span>
                         <span class="stat-value" id="max-${company.id}">-</span>
                     </div>
                 </div>
@@ -544,13 +544,13 @@ class ParkingUIIntegrationXML {
                         const facilitiesEl = document.getElementById(`facilities-${company.id}`);
                         if (facilitiesEl) {
                             facilitiesEl.style.display = 'block';
-                            facilitiesEl.innerHTML = '<strong>׳—׳ ׳™׳•׳ ׳™׳:</strong>';
+                            facilitiesEl.innerHTML = '<strong>חניונים:</strong>';
                             subFacilities.forEach(f => {
                                 const fPresent = parseInt(f.presentCounter) || 0;
                                 const fMax = parseInt(f.maxCounter) || 0;
                                 facilitiesEl.innerHTML += `
                                     <div class="facility-item">
-                                        <span>׳—׳ ׳™׳•׳ ${f.facility}</span>
+                                        <span>חניון ${f.facility}</span>
                                         <span>${fPresent}/${fMax}</span>
                                     </div>
                                 `;
@@ -664,7 +664,7 @@ class ParkingUIIntegrationXML {
         if (!this.currentContract) return;
         
         this.setLoading(true, 'loadingState');
-        this.showProgressMessage('׳˜׳•׳¢׳ ׳¨׳©׳™׳׳× ׳׳ ׳•׳™׳™׳...');
+        this.showProgressMessage('טוען רשימת מנויים...');
         
         try {
             // Get performance settings from config
@@ -699,7 +699,7 @@ class ParkingUIIntegrationXML {
                     }, 100);
                     
                     // Show subtle progress indicator
-                    this.showBackgroundProgress('׳˜׳•׳¢׳ ׳₪׳¨׳˜׳™׳ ׳׳׳׳™׳ ׳‘׳¨׳§׳¢...');
+                    this.showBackgroundProgress('טוען פרטים מלאים ברקע...');
                 },
                 
                 // Callback when each detail is loaded
@@ -713,12 +713,12 @@ class ParkingUIIntegrationXML {
                 // Progress callback
                 onProgress: (progress) => {
                     // Check if this is a large company notification
-                    if (progress.message && progress.message.includes('׳—׳‘׳¨׳” ׳’׳“׳•׳׳”')) {
+                    if (progress.message && progress.message.includes('חברה גדולה')) {
                         this.updateBackgroundProgress(progress.message);
                         // Show a special notification for large companies
                         setTimeout(() => {
                             this.showNotification(
-                                `ג ן¸ ${progress.message}\nנ’¡ ׳¢׳׳•׳“ ׳¢׳ ׳׳ ׳•׳™ ׳׳• ׳¢׳¨׳•׳ ׳›׳“׳™ ׳׳˜׳¢׳•׳ ׳₪׳¨׳˜׳™׳ ׳׳׳׳™׳`,
+                                `⚠️ ${progress.message}\n💡 עמוד על מנוי או ערוך כדי לטעון פרטים מלאים`,
                                 'warning',
                                 5000 // Show for 5 seconds
                             );
@@ -726,7 +726,7 @@ class ParkingUIIntegrationXML {
                         }, 500);
                     } else if (progress.current && progress.total) {
                         this.updateBackgroundProgress(
-                            `׳˜׳•׳¢׳ ׳₪׳¨׳˜׳™׳... ${progress.current}/${progress.total} (${progress.percent}%)`
+                            `טוען פרטים... ${progress.current}/${progress.total} (${progress.percent}%)`
                         );
                         
                         if (progress.percent === 100) {
@@ -743,7 +743,7 @@ class ParkingUIIntegrationXML {
             }
         } catch (error) {
             console.error('Error loading subscribers:', error);
-            this.showNotification('׳©׳’׳™׳׳” ׳‘׳˜׳¢׳™׳ ׳× ׳׳ ׳•׳™׳™׳', 'error');
+            this.showNotification('שגיאה בטעינת מנויים', 'error');
             this.loadMockSubscribers();
         } finally {
             this.hideProgressMessage();
@@ -757,7 +757,7 @@ class ParkingUIIntegrationXML {
         try {
             const companyResult = await this.api.getContractDetails(this.currentContract.id);
             if (companyResult.success) {
-                const companyName = companyResult.data.name || `׳—׳‘׳¨׳” ${this.currentContract.id}`;
+                const companyName = companyResult.data.name || `חברה ${this.currentContract.id}`;
                 
                 // Update company name in subscribers
                 this.subscribers.forEach(sub => {
@@ -772,12 +772,12 @@ class ParkingUIIntegrationXML {
                 if (companyNameElement) {
                     // Check if this is a large company
                     const isLargeCompany = this.subscribers.length > 300;
-                    const statusText = isLargeCompany ? ' נ€ ׳׳¦׳‘ ׳׳”׳™׳¨' : '';
-                    companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} ׳׳ ׳•׳™׳™׳${presentCount > 0 ? ` | ${presentCount} ׳ ׳•׳›׳—׳™׳` : ''}${statusText})`;
+                    const statusText = isLargeCompany ? ' 🚀 מצב מהיר' : '';
+                    companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''}${statusText})`;
                     
                     // Add tooltip for large companies
                     if (isLargeCompany) {
-                        companyNameElement.title = '׳—׳‘׳¨׳” ׳’׳“׳•׳׳” - ׳₪׳¨׳˜׳™ ׳׳ ׳•׳™׳™׳ ׳ ׳˜׳¢׳ ׳™׳ ׳׳₪׳™ ׳“׳¨׳™׳©׳” (׳¢׳¨׳•׳ ׳׳• ׳—׳₪׳© ׳׳ ׳•׳™ ׳׳˜׳¢׳™׳ ׳× ׳₪׳¨׳˜׳™׳)';
+                        companyNameElement.title = 'חברה גדולה - פרטי מנויים נטענים לפי דרישה (ערוך או חפש מנוי לטעינת פרטים)';
                     }
                 }
             }
@@ -794,16 +794,16 @@ class ParkingUIIntegrationXML {
         const companyNameElement = document.getElementById('companyName');
         if (companyNameElement) {
             const currentText = companyNameElement.textContent;
-            const companyName = currentText.split('(')[0].trim().replace('- ', '').replace(' נ€', '');
+            const companyName = currentText.split('(')[0].trim().replace('- ', '').replace(' 🚀', '');
             
             // Check if this is a large company
             const isLargeCompany = this.subscribers.length > 300;
-            const statusText = isLargeCompany ? ' נ€ ׳׳¦׳‘ ׳׳”׳™׳¨' : '';
-            companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} ׳׳ ׳•׳™׳™׳${presentCount > 0 ? ` | ${presentCount} ׳ ׳•׳›׳—׳™׳` : ''}${statusText})`;
+            const statusText = isLargeCompany ? ' 🚀 מצב מהיר' : '';
+            companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''}${statusText})`;
             
             // Add tooltip for large companies
             if (isLargeCompany) {
-                companyNameElement.title = '׳—׳‘׳¨׳” ׳’׳“׳•׳׳” - ׳₪׳¨׳˜׳™ ׳׳ ׳•׳™׳™׳ ׳ ׳˜׳¢׳ ׳™׳ ׳׳₪׳™ ׳“׳¨׳™׳©׳” (׳¢׳¨׳•׳ ׳׳• ׳—׳₪׳© ׳׳ ׳•׳™ ׳׳˜׳¢׳™׳ ׳× ׳₪׳¨׳˜׳™׳)';
+                companyNameElement.title = 'חברה גדולה - פרטי מנויים נטענים לפי דרישה (ערוך או חפש מנוי לטעינת פרטים)';
             }
         }
     }
@@ -847,7 +847,7 @@ class ParkingUIIntegrationXML {
                 this.updatePresentCount();
                 
                 // Show success notification
-                this.showNotification('׳”׳׳ ׳•׳™ ׳¢׳•׳“׳›׳ ׳‘׳”׳¦׳׳—׳”', 'success');
+                this.showNotification('המנוי עודכן בהצלחה', 'success');
             } else {
                 // If we can't get the specific subscriber, just refresh the display
                 this.displaySubscribers(this.subscribers);
@@ -887,7 +887,7 @@ class ParkingUIIntegrationXML {
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil)}</td>
                 <td style="color: #888;">${subscriber.profile || ''}</td>
                 <td>${this.formatDate(subscriber.validFrom) || ''}</td>
-                <td style="text-align: center; font-size: 18px;">${subscriber.presence ? 'ג…' : 'ג'}</td>
+                <td style="text-align: center; font-size: 18px;">${subscriber.presence ? '✅' : '❌'}</td>
             `;
             
             // Add subtle animation to show update
@@ -1005,8 +1005,8 @@ class ParkingUIIntegrationXML {
                 companyNum: this.currentContract.id,
                 companyName: this.currentContract.name,
                 subscriberNum: '1',
-                firstName: '׳“׳•׳“',
-                lastName: '׳›׳”׳',
+                firstName: 'דוד',
+                lastName: 'כהן',
                 tagNum: 'TAG001',
                 vehicle1: '12-345-67',
                 vehicle2: '98-765-43',
@@ -1020,8 +1020,8 @@ class ParkingUIIntegrationXML {
                 companyNum: this.currentContract.id,
                 companyName: this.currentContract.name,
                 subscriberNum: '2',
-                firstName: '׳¨׳—׳',
-                lastName: '׳׳•׳™',
+                firstName: 'רחל',
+                lastName: 'לוי',
                 tagNum: 'TAG002',
                 vehicle1: '55-666-77',
                 vehicle2: '',
@@ -1050,7 +1050,7 @@ class ParkingUIIntegrationXML {
                 sortableHeaders.forEach(h => {
                     h.classList.remove('sort-asc', 'sort-desc');
                     const icon = h.querySelector('.sort-icon');
-                    if (icon) icon.innerHTML = 'ג‡…';
+                    if (icon) icon.innerHTML = '⇅';
                 });
                 
                 // Update sort direction
@@ -1067,7 +1067,7 @@ class ParkingUIIntegrationXML {
                 // Update sort icon
                 const icon = header.querySelector('.sort-icon');
                 if (icon) {
-                    icon.innerHTML = this.currentSortDirection === 'asc' ? 'ג†‘' : 'ג†“';
+                    icon.innerHTML = this.currentSortDirection === 'asc' ? '↑' : '↓';
                 }
                 
                 // Sort and redisplay
@@ -1160,13 +1160,13 @@ class ParkingUIIntegrationXML {
                 
                 // Update title
                 const originalTitle = row.title;
-                row.title = 'ג³ ׳˜׳•׳¢׳ ׳₪׳¨׳˜׳™׳...';
+                row.title = '⏳ טוען פרטים...';
                 
                 // Add loading icon to first cell
                 const firstCell = row.querySelector('td:first-child');
                 const originalFirstCellContent = firstCell ? firstCell.innerHTML : '';
                 if (firstCell) {
-                    firstCell.innerHTML = `<span style="display: inline-block; animation: spin 1s linear infinite;">ג³</span> ${originalFirstCellContent}`;
+                    firstCell.innerHTML = `<span style="display: inline-block; animation: spin 1s linear infinite;">⏳</span> ${originalFirstCellContent}`;
                 }
                 
                 try {
@@ -1253,7 +1253,7 @@ class ParkingUIIntegrationXML {
         if (tableHead && !tableHead.querySelector('th[data-translate="actions"]')) {
             const actionsHeader = document.createElement('th');
             actionsHeader.setAttribute('data-translate', 'actions');
-            actionsHeader.textContent = '׳₪׳¢׳•׳׳•׳×';
+            actionsHeader.textContent = 'פעולות';
             tableHead.appendChild(actionsHeader);
         }
         
@@ -1272,12 +1272,12 @@ class ParkingUIIntegrationXML {
                 
                 // Add hover loading for subscribers without full details
                 if (subscriber.isLargeCompany) {
-                    row.title = '׳ ׳×׳•׳ ׳™׳ ׳‘׳¡׳™׳¡׳™׳™׳ - ׳¢׳׳•׳“ ׳¢׳ ׳”׳¢׳›׳‘׳¨ ׳׳˜׳¢׳™׳ ׳× ׳₪׳¨׳˜׳™׳';
+                    row.title = 'נתונים בסיסיים - עמוד עם העכבר לטעינת פרטים';
                     row.setAttribute('data-hover-loadable', 'true');
                     this.setupHoverLoading(row, subscriber, index);
                 } else {
                     // For small companies, details should already be loading in background
-                    row.title = '׳ ׳×׳•׳ ׳™׳ ׳‘׳¡׳™׳¡׳™׳™׳ - ׳˜׳•׳¢׳ ׳₪׳¨׳˜׳™׳...';
+                    row.title = 'נתונים בסיסיים - טוען פרטים...';
                 }
             }
             
@@ -1297,7 +1297,7 @@ class ParkingUIIntegrationXML {
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil) || ''}</td>
                 <td style="color: #888;">${subscriber.profile || ''}</td>
                 <td>${this.formatDate(subscriber.validFrom) || ''}</td>
-                <td style="text-align: center; font-size: 18px;">${subscriber.presence ? 'ג…' : 'ג'}</td>
+                <td style="text-align: center; font-size: 18px;">${subscriber.presence ? '✅' : '❌'}</td>
             `;
             tbody.appendChild(row);
         });
@@ -1335,14 +1335,14 @@ class ParkingUIIntegrationXML {
             }
             
             // If no profiles in use, return a default based on company
-            // Company 2 typically uses profile 2 (׳₪׳׳׳–׳” ׳׳–׳¨׳—)
+            // Company 2 typically uses profile 2 (פלאזה מזרח)
             console.log('[getCompanyProfiles] No profiles found in use, returning default');
-            return [{ id: '2', name: '׳₪׳׳׳–׳” ׳׳–׳¨׳—' }];
+            return [{ id: '2', name: 'פלאזה מזרח' }];
             
         } catch (error) {
             console.error('[getCompanyProfiles] Error:', error);
             // Return default profile on error
-            return [{ id: '2', name: '׳₪׳׳׳–׳” ׳׳–׳¨׳—' }];
+            return [{ id: '2', name: 'פלאזה מזרח' }];
         }
     }
     
@@ -1383,7 +1383,7 @@ class ParkingUIIntegrationXML {
                         
                         const profileHelpText = document.getElementById('profileHelpText');
                         if (profileHelpText) {
-                            profileHelpText.textContent = '* ׳₪׳¨׳•׳₪׳™׳ ׳™׳—׳™׳“ ׳‘׳—׳‘׳¨׳”';
+                            profileHelpText.textContent = '* פרופיל יחיד בחברה';
                             profileHelpText.style.color = '#666';
                         }
                     } else {
@@ -1395,7 +1395,7 @@ class ParkingUIIntegrationXML {
                         
                         const profileHelpText = document.getElementById('profileHelpText');
                         if (profileHelpText) {
-                            profileHelpText.textContent = '* ׳‘׳—׳¨ ׳₪׳¨׳•׳₪׳™׳ ׳׳”׳¨׳©׳™׳׳”';
+                            profileHelpText.textContent = '* בחר פרופיל מהרשימה';
                             profileHelpText.style.color = '#666';
                         }
                     }
@@ -1403,7 +1403,7 @@ class ParkingUIIntegrationXML {
                     // No profiles - shouldn't happen but add fallback
                     const option = document.createElement('option');
                     option.value = '2';
-                    option.textContent = '׳₪׳׳׳–׳” ׳׳–׳¨׳—';
+                    option.textContent = 'פלאזה מזרח';
                     profileSelect.appendChild(option);
                     profileSelect.disabled = true;
                 }
@@ -1418,7 +1418,7 @@ class ParkingUIIntegrationXML {
                 
                 const profileHelpText = document.getElementById('profileHelpText');
                 if (profileHelpText) {
-                    profileHelpText.textContent = '* ׳׳ ׳ ׳™׳×׳ ׳׳©׳™׳ ׳•׳™ ׳׳׳ ׳•׳™׳™׳ ׳§׳™׳™׳׳™׳';
+                    profileHelpText.textContent = '* לא ניתן לשינוי למנויים קיימים';
                     profileHelpText.style.color = '#888';
                 }
             }
@@ -1436,7 +1436,7 @@ class ParkingUIIntegrationXML {
             console.log(`[UI] Loading full details for subscriber ${subscriber.subscriberNum}`);
             
             // Show loading indicator
-            this.showProgressMessage('׳˜׳•׳¢׳ ׳₪׳¨׳˜׳™ ׳׳ ׳•׳™...');
+            this.showProgressMessage('טוען פרטי מנוי...');
             
             try {
                 // Check if this is from a large company
@@ -1469,7 +1469,7 @@ class ParkingUIIntegrationXML {
                 }
             } catch (error) {
                 console.error('Error loading subscriber details:', error);
-                this.showNotification('׳©׳’׳™׳׳” ׳‘׳˜׳¢׳™׳ ׳× ׳₪׳¨׳˜׳™ ׳׳ ׳•׳™', 'error');
+                this.showNotification('שגיאה בטעינת פרטי מנוי', 'error');
             } finally {
                 this.hideProgressMessage();
             }
@@ -1536,7 +1536,7 @@ class ParkingUIIntegrationXML {
                     validUntil: subscriberData.validUntil,  // Will be formatted by API
                     usageProfile: {
                         id: subscriberData.profileId || '1',
-                        name: subscriberData.profile || '׳¨׳’׳™׳'
+                        name: subscriberData.profile || 'רגיל'
                     },
                     present: false
                 },
@@ -1564,7 +1564,7 @@ class ParkingUIIntegrationXML {
                 // Calculate next available subscriber number
                 if (!subscriberData.subscriberNum || subscriberData.subscriberNum === '') {
                     // Check if this is a guest
-                    if (subscriberData.isGuest || subscriberData.firstName === '׳׳•׳¨׳—') {
+                    if (subscriberData.isGuest || subscriberData.firstName === 'אורח') {
                         // Guest numbers start from 40001
                         const existingGuests = this.subscribers.filter(s => {
                             const num = parseInt(s.subscriberNum);
@@ -1657,7 +1657,7 @@ class ParkingUIIntegrationXML {
                         
                         if (result.success) {
                             console.log('Consumer updated successfully with minimal data');
-                            this.showNotification('ג… ׳”׳ ׳×׳•׳ ׳™׳ ׳”׳‘׳¡׳™׳¡׳™׳™׳ ׳ ׳©׳׳¨׳• ׳‘׳”׳¦׳׳—׳”', 'success');
+                            this.showNotification('✅ הנתונים הבסיסיים נשמרו בהצלחה', 'success');
                         }
                     }
                     
@@ -1686,7 +1686,7 @@ class ParkingUIIntegrationXML {
                         
                         if (result.success) {
                             console.log('Consumer updated successfully without usage profile');
-                            this.showNotification('ג ן¸ ׳”׳ ׳×׳•׳ ׳™׳ ׳ ׳©׳׳¨׳• ׳׳׳ ׳₪׳¨׳•׳₪׳™׳ ׳©׳™׳׳•׳©', 'warning');
+                            this.showNotification('⚠️ הנתונים נשמרו ללא פרופיל שימוש', 'warning');
                         }
                     }
                 }
@@ -1697,16 +1697,16 @@ class ParkingUIIntegrationXML {
             }
             
             if (result.success) {
-                this.showNotification('׳”׳ ׳×׳•׳ ׳™׳ ׳ ׳©׳׳¨׳• ׳‘׳”׳¦׳׳—׳”', 'success');
+                this.showNotification('הנתונים נשמרו בהצלחה', 'success');
                 await this.loadSubscribers(); // Refresh the list
                 return true;
             } else {
-                this.showNotification('׳©׳’׳™׳׳” ׳‘׳©׳׳™׳¨׳× ׳”׳ ׳×׳•׳ ׳™׳: ' + result.error, 'error');
+                this.showNotification('שגיאה בשמירת הנתונים: ' + result.error, 'error');
                 return false;
             }
         } catch (error) {
             console.error('Error saving subscriber:', error);
-            this.showNotification('׳©׳’׳™׳׳” ׳‘׳©׳׳™׳¨׳× ׳”׳ ׳×׳•׳ ׳™׳', 'error');
+            this.showNotification('שגיאה בשמירת הנתונים', 'error');
             return false;
         } finally {
             this.setLoading(false);
@@ -1719,7 +1719,7 @@ class ParkingUIIntegrationXML {
     async deleteSubscriber(subscriberId) {
         if (!this.currentContract) return;
         
-        if (!confirm('׳”׳׳ ׳׳×׳” ׳‘׳˜׳•׳— ׳©׳‘׳¨׳¦׳•׳ ׳ ׳׳׳—׳•׳§ ׳׳ ׳•׳™ ׳–׳”?')) {
+        if (!confirm('האם אתה בטוח שברצונך למחוק מנוי זה?')) {
             return;
         }
         
@@ -1729,14 +1729,14 @@ class ParkingUIIntegrationXML {
             const result = await this.api.deleteConsumer(this.currentContract.id, subscriberId);
             
             if (result.success) {
-                this.showNotification('׳”׳׳ ׳•׳™ ׳ ׳׳—׳§ ׳‘׳”׳¦׳׳—׳”', 'success');
+                this.showNotification('המנוי נמחק בהצלחה', 'success');
                 await this.loadSubscribers(); // Refresh the list
             } else {
-                this.showNotification('׳©׳’׳™׳׳” ׳‘׳׳—׳™׳§׳× ׳”׳׳ ׳•׳™', 'error');
+                this.showNotification('שגיאה במחיקת המנוי', 'error');
             }
         } catch (error) {
             console.error('Error deleting subscriber:', error);
-            this.showNotification('׳©׳’׳™׳׳” ׳‘׳׳—׳™׳§׳× ׳”׳׳ ׳•׳™', 'error');
+            this.showNotification('שגיאה במחיקת המנוי', 'error');
         } finally {
             this.setLoading(false);
         }
@@ -1747,25 +1747,25 @@ class ParkingUIIntegrationXML {
      */
     exportToCSV() {
         if (!this.subscribers || this.subscribers.length === 0) {
-            this.showNotification('׳׳™׳ ׳ ׳×׳•׳ ׳™׳ ׳׳™׳™׳¦׳•׳', 'warning');
+            this.showNotification('אין נתונים לייצוא', 'warning');
             return;
         }
         
         // Create CSV content
         const headers = [
-            '׳׳¡׳₪׳¨ ׳—׳‘׳¨׳”',
-            '׳©׳ ׳—׳‘׳¨׳”', 
-            '׳׳¡׳₪׳¨ ׳׳ ׳•׳™',
-            '׳©׳ ׳₪׳¨׳˜׳™',
-            '׳©׳ ׳׳©׳₪׳—׳”',
-            '׳׳¡׳₪׳¨ ׳×׳’',
-            '׳¨׳›׳‘ 1',
-            '׳¨׳›׳‘ 2', 
-            '׳¨׳›׳‘ 3',
-            '׳×׳—׳™׳׳× ׳×׳•׳§׳£',
-            '׳‘׳×׳•׳§׳£ ׳¢׳“',
-            '׳₪׳¨׳•׳₪׳™׳',
-            '׳ ׳•׳›׳—׳•׳×'
+            'מספר חברה',
+            'שם חברה', 
+            'מספר מנוי',
+            'שם פרטי',
+            'שם משפחה',
+            'מספר תג',
+            'רכב 1',
+            'רכב 2', 
+            'רכב 3',
+            'תחילת תוקף',
+            'בתוקף עד',
+            'פרופיל',
+            'נוכחות'
         ];
         
         // Create CSV rows
@@ -1782,7 +1782,7 @@ class ParkingUIIntegrationXML {
             this.formatDate(subscriber.validFrom) || '',
             this.formatDate(subscriber.validUntil) || '',
             subscriber.profile || '',
-            subscriber.presence ? '׳ ׳•׳›׳—' : '׳׳ ׳ ׳•׳›׳—'
+            subscriber.presence ? 'נוכח' : 'לא נוכח'
         ]);
         
         // Combine headers and rows
@@ -1814,7 +1814,7 @@ class ParkingUIIntegrationXML {
         link.click();
         document.body.removeChild(link);
         
-        this.showNotification(`׳”׳§׳•׳‘׳¥ ${filename} ׳™׳•׳¦׳ ׳‘׳”׳¦׳׳—׳”`, 'success');
+        this.showNotification(`הקובץ ${filename} יוצא בהצלחה`, 'success');
     }
     
     /**
@@ -1875,12 +1875,12 @@ class ParkingUIIntegrationXML {
     
     getProfileText(profile) {
         const profiles = {
-            'regular': '׳¨׳’׳™׳',
+            'regular': 'רגיל',
             'vip': 'VIP',
-            'disabled': '׳ ׳›׳”',
-            'guest': '׳׳•׳¨׳—'
+            'disabled': 'נכה',
+            'guest': 'אורח'
         };
-        return profiles[profile] || profile || '׳¨׳’׳™׳';
+        return profiles[profile] || profile || 'רגיל';
     }
     
     /**
@@ -1927,7 +1927,7 @@ class ParkingUIIntegrationXML {
                     notes: document.getElementById('editNotes').value || '',
                     ignorePresence: document.getElementById('editIgnorePresence')?.checked ? '1' : '0',
                     isNew: !window.editingSubscriber,  // New subscriber if editingSubscriber is null
-                    isGuest: document.getElementById('editFirstName').value === '׳׳•׳¨׳—' || 
+                    isGuest: document.getElementById('editFirstName').value === 'אורח' || 
                             document.getElementById('editModal')?.classList.contains('guest-mode')
                 };
                 
