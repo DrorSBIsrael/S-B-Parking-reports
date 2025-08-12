@@ -2945,6 +2945,10 @@ def company_manager_get_parkings():
         user_project_number = user_data.get('project_number')
         access_level = user_data.get('access_level', '')
         
+        print(f"\n🔑 Access control:")
+        print(f"   User project_number: {user_project_number} (type: {type(user_project_number)})")
+        print(f"   User access_level: '{access_level}'")
+        
         # חיפוש חניונים בטבלת parkings
         print("\n🔍 Fetching parkings from DB...")
         parkings_result = supabase.table('parkings').select(
@@ -2960,24 +2964,32 @@ def company_manager_get_parkings():
                 print(f"   description: {parking.get('description')}")
                 print(f"   ip: {parking.get('ip_address')}:{parking.get('port')}")
                 
-                parking_number = int(parking.get('description', 0))
-                print(f"   parsed number: {parking_number}")
+                parking_number = parking.get('description', 0)
+                print(f"   parsed number: {parking_number} (type: {type(parking_number)})")
                 
                 # לוגיקה מתוקנת: בדיקה אם למשתמש יש גישה לחניון
                 has_access = False
                 
-                # אופציה 1: זה החניון של המשתמש
+                # אופציה 1: זה החניון של המשתמש - השוואה גמישה של טיפוסים
                 print(f"   Checking: user_project={user_project_number} vs parking={parking_number}")
-                if user_project_number and str(parking_number) == str(user_project_number):
-                    print(f"   ✅ Match! User's parking")
-                    has_access = True
                 
-                # אופציה 2: למשתמש יש גישת מנהל חברה/מאסטר
-                elif access_level in ['company_manager', 'master']:
-                    print(f"   ✅ Access via role: {access_level}")
-                    has_access = True
-                else:
-                    print(f"   ❌ No access")
+                # המרה לאותו טיפוס לצורך השוואה
+                try:
+                    user_proj_str = str(user_project_number) if user_project_number else ""
+                    parking_num_str = str(parking_number) if parking_number else ""
+                    
+                    if user_proj_str and parking_num_str and user_proj_str == parking_num_str:
+                        print(f"   ✅ Match! User's parking")
+                        has_access = True
+                    # אופציה 2: למשתמש יש גישת מאסטר בלבד  
+                    elif access_level == 'master':
+                        print(f"   ✅ Access via MASTER role")
+                        has_access = True
+                    else:
+                        print(f"   ❌ No access (access_level: {access_level})")
+                        
+                except Exception as e:
+                    print(f"   ⚠️ Error comparing: {e}")
                 
                 if has_access:
                     parkings.append({
