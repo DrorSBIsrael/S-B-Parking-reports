@@ -2898,7 +2898,12 @@ def company_manager_page():
         print(f"❌ Error checking company manager permissions: {str(e)}")
         return redirect(url_for('dashboard'))
     
-    return render_template('parking_subscribers.html')
+    response = make_response(render_template('parking_subscribers.html'))
+    # Add no-cache headers to prevent browser caching issues
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
     
     
 # ========== API למנהל חברה - חניונים ומנויים ==========
