@@ -909,9 +909,13 @@
             </h1>
             <div class="header-controls">
                 <div class="user-info" style="padding: 5px 10px; background: var(--light-bg); border-radius: 6px; margin-right: 10px;">
-                    <span>👤 משתמש: 2022</span>
+                    <span>👤 משתמש: <span id="currentUsername">טוען...</span></span>
                     <span style="margin: 0 10px;">|</span>
                     <span id="userRole">מנהל חברה</span>
+                    <span style="margin: 0 10px;">|</span>
+                    <button class="btn btn-danger" onclick="logout()" style="background: #dc3545; color: white; padding: 5px 10px; border-radius: 6px;">
+                        🚪 התנתק
+                    </button>
                 </div>
                 <div class="lang-switch">
                     <button class="btn btn-secondary" onclick="toggleLanguage()">
@@ -3144,18 +3148,51 @@
     <script src="/static/js/parking-api-xml.js"></script>
     <script src="/static/js/parking-ui-integration-xml.js"></script>
     
-    <script>
+        <script>
         // Override init function to use XML API
         const originalInit = init;
         init = async function() {
             originalInit();
-            
+
             // Use XML API integration
             if (window.parkingUIXML) {
                 console.log('XML API Integration available, connecting to parking server');
                 // The parkingUIXML will handle loading companies and subscribers
             }
         };
+
+        // Load current user info
+        async function loadCurrentUser() {
+            try {
+                const response = await fetch('/api/get-current-user');
+                const data = await response.json();
+                
+                if (data.success && data.user) {
+                    const usernameElement = document.getElementById('currentUsername');
+                    if (usernameElement) {
+                        usernameElement.textContent = data.user.username || data.user.email;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading user info:', error);
+                const usernameElement = document.getElementById('currentUsername');
+                if (usernameElement) {
+                    usernameElement.textContent = 'משתמש';
+                }
+            }
+        }
+
+        // Logout function
+        function logout() {
+            if (confirm('האם אתה בטוח שברצונך להתנתק?')) {
+                window.location.href = '/logout';
+            }
+        }
+
+        // Load user info on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCurrentUser();
+        });
     </script>
 </body>
 </html>
