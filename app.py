@@ -3129,21 +3129,72 @@ def company_manager_proxy():
             return jsonify({'success': False, 'message': 'חסרים נתוני חיבור'}), 500
         
         # בניית URL
-        protocol = "https" if port == 443 or port == 8443 else "http"
+        protocol = "https" if port == 443 or port == 8443 or port == 8240 else "http"
         url = f"{protocol}://{ip_address}:{port}/api/{endpoint}"
+        
+        print(f"\n🔌 Proxy Request:")
+        print(f"   Parking ID: {parking_id}")
+        print(f"   URL: {url}")
+        print(f"   Method: {method}")
+        print(f"   Endpoint: {endpoint}")
         
         # ביצוע הקריאה
         headers = {'Content-Type': 'application/json'}
         
+        # בדיקה אם זה חניון בדיקות - אם כן, החזר נתוני דמה
+        if parking_data.get('description') == 478131051:
+            print("   ⚠️ Test parking detected - returning mock data")
+            
+            # נתוני דמה לפי סוג ה-endpoint
+            if endpoint == 'contracts':
+                # רשימת חברות
+                mock_companies = [
+                    {'id': '2', 'name': 'חברה בדיקה א', 'contract_number': '2'},
+                    {'id': '1000', 'name': 'חברה בדיקה ב', 'contract_number': '1000'}
+                ]
+                return jsonify({
+                    'success': True,
+                    'data': {'contracts': mock_companies}
+                })
+            elif endpoint.startswith('contracts/'):
+                # פרטי חברה ספציפית
+                company_id = endpoint.split('/')[-1]
+                if company_id == '2':
+                    return jsonify({
+                        'success': True,
+                        'data': {
+                            'id': '2',
+                            'name': 'חברה בדיקה א',
+                            'contract_number': '2',
+                            'active_cards': 15,
+                            'total_cards': 20
+                        }
+                    })
+                elif company_id == '1000':
+                    return jsonify({
+                        'success': True,
+                        'data': {
+                            'id': '1000',
+                            'name': 'חברה בדיקה ב', 
+                            'contract_number': '1000',
+                            'active_cards': 8,
+                            'total_cards': 10
+                        }
+                    })
+            
+            # ברירת מחדל
+            return jsonify({'success': True, 'data': {}})
+        
         try:
+            # הגדלת timeout ל-30 שניות
             if method == 'GET':
-                response = requests.get(url, headers=headers, verify=False, timeout=10)
+                response = requests.get(url, headers=headers, verify=False, timeout=30)
             elif method == 'POST':
-                response = requests.post(url, json=payload, headers=headers, verify=False, timeout=10)
+                response = requests.post(url, json=payload, headers=headers, verify=False, timeout=30)
             elif method == 'PUT':
-                response = requests.put(url, json=payload, headers=headers, verify=False, timeout=10)
+                response = requests.put(url, json=payload, headers=headers, verify=False, timeout=30)
             elif method == 'DELETE':
-                response = requests.delete(url, headers=headers, verify=False, timeout=10)
+                response = requests.delete(url, headers=headers, verify=False, timeout=30)
             else:
                 return jsonify({'success': False, 'message': 'שיטה לא נתמכת'}), 400
             
