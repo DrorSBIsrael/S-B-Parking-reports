@@ -49,10 +49,11 @@ AUTHORIZED_SENDERS = [
 
 print("🚀 S&B Parking Application Starting...")
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 app.config['JSON_AS_ASCII'] = False  # תמיכה בעברית ב-JSON
 app.config['JSONIFY_MIMETYPE'] = 'application/json; charset=utf-8'  # קידוד UTF-8
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable caching for development
 
 # Supabase configuration
 SUPABASE_URL = os.environ.get('SUPABASE_URL')
@@ -1497,6 +1498,15 @@ def test_email_system():
             'message': f'Test error: {str(e)}'
         })
 # ======================== נקודות קצה (Routes) ========================
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """Serve static files with no-cache headers"""
+    response = make_response(app.send_static_file(filename))
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
 
 @app.route('/')
 def index():
