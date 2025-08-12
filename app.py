@@ -3208,6 +3208,59 @@ def company_manager_proxy():
             elif endpoint.startswith('contracts/'):
                 # פרטי חברה ספציפית
                 company_id = endpoint.split('/')[-1]
+                
+                # בדיקה אם זה בקשת consumers
+                if 'consumers' in endpoint:
+                    company_id = endpoint.split('/')[-2]
+                    if company_id == '2':
+                        xml_response = '''<?xml version="1.0" encoding="UTF-8"?>
+<response>
+    <success>true</success>
+    <consumers>
+        <consumer>
+            <id>1</id>
+            <name>ישראל ישראלי</name>
+            <vehicle_number>1234567</vehicle_number>
+            <present>true</present>
+        </consumer>
+        <consumer>
+            <id>2</id>
+            <name>משה כהן</name>
+            <vehicle_number>2345678</vehicle_number>
+            <present>false</present>
+        </consumer>
+    </consumers>
+    <total>120</total>
+    <active>100</active>
+    <present>15</present>
+</response>'''
+                    elif company_id == '1000':
+                        xml_response = '''<?xml version="1.0" encoding="UTF-8"?>
+<response>
+    <success>true</success>
+    <consumers>
+        <consumer>
+            <id>1</id>
+            <name>דוד לוי</name>
+            <vehicle_number>3456789</vehicle_number>
+            <present>true</present>
+        </consumer>
+    </consumers>
+    <total>45</total>
+    <active>40</active>
+    <present>8</present>
+</response>'''
+                    else:
+                        xml_response = '''<?xml version="1.0" encoding="UTF-8"?>
+<response>
+    <success>false</success>
+    <message>Company not found</message>
+</response>'''
+                    response = make_response(xml_response)
+                    response.headers['Content-Type'] = 'application/xml; charset=utf-8'
+                    return response
+                
+                # בדיקה אם זה בקשת detail
                 if 'detail' in endpoint:
                     company_id = endpoint.split('/')[-2]
                 
@@ -3221,6 +3274,8 @@ def company_manager_proxy():
         <contract_number>2</contract_number>
         <active_cards>15</active_cards>
         <total_cards>20</total_cards>
+        <subscribers_count>120</subscribers_count>
+        <vehicles_count>240</vehicles_count>
     </contract>
 </response>'''
                 elif company_id == '1000':
@@ -3233,6 +3288,8 @@ def company_manager_proxy():
         <contract_number>1000</contract_number>
         <active_cards>8</active_cards>
         <total_cards>10</total_cards>
+        <subscribers_count>45</subscribers_count>
+        <vehicles_count>90</vehicles_count>
     </contract>
 </response>'''
                 else:
