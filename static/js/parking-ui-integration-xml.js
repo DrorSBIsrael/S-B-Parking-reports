@@ -305,10 +305,28 @@ class ParkingUIIntegrationXML {
             const result = await this.api.getContracts();
             
             if (result.success && result.data) {
-                // Process contracts/companies
-                const contracts = Array.isArray(result.data.contract) 
-                    ? result.data.contract 
-                    : [result.data.contract];
+                console.log('[loadCompaniesFromParking] Raw result.data:', JSON.stringify(result.data, null, 2));
+                
+                // Process contracts/companies - handle both 'contracts' and 'contract'
+                let contracts = [];
+                
+                // Check for 'contracts' (plural) first
+                if (result.data.contracts) {
+                    console.log('[loadCompaniesFromParking] Found contracts object:', result.data.contracts);
+                    // If contracts.contract exists, use it
+                    if (result.data.contracts.contract) {
+                        contracts = Array.isArray(result.data.contracts.contract) 
+                            ? result.data.contracts.contract 
+                            : [result.data.contracts.contract];
+                    }
+                } 
+                // Fallback to 'contract' (singular)
+                else if (result.data.contract) {
+                    console.log('[loadCompaniesFromParking] Found contract object:', result.data.contract);
+                    contracts = Array.isArray(result.data.contract) 
+                        ? result.data.contract 
+                        : [result.data.contract];
+                }
                 
                 console.log(`[loadCompaniesFromParking] Found ${contracts.length} companies`);
                 
@@ -342,11 +360,10 @@ class ParkingUIIntegrationXML {
      */
     async loadMockCompanies() {
         console.log('[loadMockCompanies] Using mock companies data');
+        // Only show companies 2 and 1000 that match user's company_list
         const mockCompanies = [
-            { id: '1000', name: 'חברה 1000', companyName: 'חברה 1000', subscribersCount: 45 },
-            { id: '2', name: 'חברה 2', companyName: 'חברה 2', subscribersCount: 120 },
-            { id: '3', name: 'חברה 3', companyName: 'חברה 3', subscribersCount: 25 },
-            { id: '4', name: 'חברה 4', companyName: 'חברה 4', subscribersCount: 30 },
+            { id: '2', name: 'חברה בדיקה א', companyName: 'חברה בדיקה א', subscribersCount: 120 },
+            { id: '1000', name: 'חברה בדיקה ב', companyName: 'חברה בדיקה ב', subscribersCount: 45 }
         ];
         this.displayCompanies(mockCompanies);
         
