@@ -9,17 +9,20 @@ class ParkingAPIXML {
         // Get configuration from config.js if available
         const globalConfig = window.parkingConfig?.current || {};
         
-        // ALWAYS use Flask proxy to handle CORS and dynamic IPs
-        const useProxy = true; // Always use Flask proxy
+        // Check if we should use proxy based on config or auto-detect
+        const useProxy = globalConfig.useProxy !== undefined 
+            ? globalConfig.useProxy 
+            : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
         
         this.config = {
-            baseUrl: '/api/company-manager/proxy', // Always use Flask proxy endpoint
-            servicePath: '', // Path will be handled by Flask
+            baseUrl: useProxy 
+                ? (globalConfig.proxyUrl || '/api/company-manager/proxy')
+                : (globalConfig.apiUrl || '/api/company-manager/proxy'),
+            servicePath: useProxy ? '' : '/CustomerMediaWebService',
             username: globalConfig.username || '2022',
             password: globalConfig.password || '2022',
             timeout: globalConfig.timeout || 30000,
-            useProxy: true,
-            currentParkingId: null // Will be set when selecting a parking
+            useProxy: useProxy
         };
         
         this.xmlNamespace = 'http://gsph.sub.com/cust/types';
@@ -27,8 +30,7 @@ class ParkingAPIXML {
         console.log('Parking API XML Configuration:', {
             baseUrl: this.config.baseUrl,
             useProxy: this.config.useProxy,
-            username: this.config.username,
-            note: 'Using Flask proxy for all requests'
+            username: this.config.username
         });
     }
     
@@ -40,20 +42,10 @@ class ParkingAPIXML {
     }
     
     /**
-     * Set current parking ID for API calls
-     */
-    setCurrentParking(parkingId) {
-        this.config.currentParkingId = parkingId;
-        console.log('Current parking set to:', parkingId);
-    }
-    
-    /**
      * Get full URL for endpoint
-     * Note: When using Flask proxy, this just returns the proxy URL
      */
     getUrl(endpoint) {
-        // When using proxy, we send the endpoint as part of the request body
-        return this.config.baseUrl;
+        return `${this.config.baseUrl}${this.config.servicePath}${endpoint}`;
     }
     
     /**
@@ -233,39 +225,21 @@ class ParkingAPIXML {
      * Make API request with XML
      */
     async makeRequest(endpoint, options = {}) {
-        // Check if parking is selected
-        if (!this.config.currentParkingId) {
-            throw new Error('No parking selected. Please select a parking first.');
-        }
-        
-        const url = this.config.baseUrl; // Always use Flask proxy
-        const method = options.method || 'GET';
-        
-        console.log(`[API] Making ${method} request via Flask proxy`);
-        console.log(`[API] Parking ID: ${this.config.currentParkingId}`);
-        console.log(`[API] Endpoint: ${endpoint}`);
-        
-        // Prepare proxy request body
-        const proxyBody = {
-            parking_id: this.config.currentParkingId,
-            endpoint: endpoint.replace('/CustomerMediaWebService/', '').replace('/', ''),
-            method: method,
-            payload: options.body ? options.body : {}
-        };
+        const url = this.getUrl(endpoint);
+        console.log(`[API] Making ${options.method || 'GET'} request to: ${url}`);
         
         // Log the body for PUT/POST requests
-        if (options.body && (method === 'PUT' || method === 'POST')) {
-            console.log('[API] Original request body:', options.body);
+        if (options.body && (options.method === 'PUT' || options.method === 'POST')) {
+            console.log('[API] Request body:', options.body);
         }
         
         try {
             const response = await fetch(url, {
-                method: 'POST', // Always POST to Flask proxy
+                ...options,
                 headers: {
-                    'Content-Type': 'application/json',
+                    ...this.getAuthHeaders(),
                     ...options.headers
-                },
-                body: JSON.stringify(proxyBody)
+                }
             });
             
             console.log(`[API] Response status: ${response.status}`);
@@ -1084,9 +1058,4 @@ const parkingAPIXML = new ParkingAPIXML();
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = parkingAPIXML;
-}
-
-// Make available globally in browser
-if (typeof window !== 'undefined') {
-    window.parkingAPIXML = parkingAPIXML;
 }
