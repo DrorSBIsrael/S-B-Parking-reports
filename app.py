@@ -3180,7 +3180,8 @@ def company_manager_proxy():
         headers = {'Content-Type': 'application/json'}
         
         # בדיקה אם זה חניון בדיקות - אם כן, החזר נתוני דמה
-        if parking_data.get('description') == 478131051:
+        # הערה: מנוטרל - משתמש בחיבור אמיתי
+        if False and parking_data.get('description') == 478131051:
             print("   ⚠️ Test parking detected - returning mock data")
             
             # נתוני דמה לפי סוג ה-endpoint
@@ -3374,11 +3375,15 @@ def company_manager_proxy():
                 }), response.status_code
                 
         except requests.exceptions.Timeout:
+            print(f"⏱️ Timeout connecting to {url}")
             return jsonify({'success': False, 'message': 'זמן ההמתנה לשרת החניון פג'}), 504
-        except requests.exceptions.ConnectionError:
-            return jsonify({'success': False, 'message': 'לא ניתן להתחבר לשרת החניון'}), 503
+        except requests.exceptions.ConnectionError as e:
+            print(f"🔌 Connection error to {url}: {str(e)}")
+            print(f"   Note: IP {ip_address} might be internal/unreachable from cloud")
+            return jsonify({'success': False, 'message': 'לא ניתן להתחבר לשרת החניון - ייתכן שהכתובת פנימית'}), 503
         except Exception as e:
             print(f"❌ Proxy error: {str(e)}")
+            print(f"   URL attempted: {url}")
             return jsonify({'success': False, 'message': 'שגיאה בחיבור לשרת החניון'}), 500
             
     except Exception as e:
