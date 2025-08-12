@@ -2938,12 +2938,6 @@ def get_current_user():
         print(f"❌ Error getting current user: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני משתמש'}), 500
 
-@app.route('/logout')
-def logout():
-    """התנתקות מהמערכת"""
-    session.clear()
-    return redirect(url_for('login_page'))
-
 @app.route('/api/company-manager/get-parkings', methods=['GET'])
 def company_manager_get_parkings():
     """קבלת רשימת חניונים עבור מנהל חברה"""
