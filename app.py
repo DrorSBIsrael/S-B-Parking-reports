@@ -3188,6 +3188,7 @@ def company_manager_proxy():
     
     # Debug log
     print(f"🎯 PROXY ENDPOINT HIT: {request.method}")
+    print(f"🔥 FIXED VERSION - ENDPOINT EXISTS!")
     
     # Handle CORS preflight
     if request.method == 'OPTIONS':
@@ -3202,7 +3203,7 @@ def company_manager_proxy():
         return jsonify({
             'success': True,
             'message': 'Proxy endpoint is working!',
-            'version': '2.0.8',
+            'version': '2.0.9-FIXED',
             'method': 'GET',
             'timestamp': datetime.now().isoformat()
         })
@@ -3307,7 +3308,6 @@ def company_manager_proxy():
         return jsonify({'success': False, 'error': 'שגיאה כללית במערכת'}), 500
 
 # ========== API למנהל חניון ==========
-@app.route('/api/parking-manager/get-parking-info', methods=['GET'])
 @app.route('/api/parking-manager/get-parking-info', methods=['GET'])
 def parking_manager_get_info():
     """קבלת נתוני החניון של המנהל"""
