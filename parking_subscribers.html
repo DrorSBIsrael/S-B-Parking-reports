@@ -1,0 +1,3198 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מערכת ניהול מנויי חניון | שיידט את בכמן ישראל</title>
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+            --light-bg: #f8f9fa;
+            --dark-text: #2c3e50;
+            --border-color: #dee2e6;
+            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            min-height: 100vh;
+            direction: rtl;
+            font-size: 14px;
+            transition: font-size 0.3s ease;
+        }
+
+        body.small-font {
+            font-size: 12px;
+        }
+
+        body.large-font {
+            font-size: 18px;
+        }
+
+        body.xlarge-font {
+            font-size: 22px;
+        }
+
+        body[lang="en"] {
+            direction: ltr;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header Section */
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header h1 {
+            color: var(--dark-text);
+            font-size: 1.75em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* Language & Accessibility Controls */
+        .lang-switch, .font-controls, .accessibility-btn {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 600;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-info {
+            background: #17a2b8 !important;
+            color: white !important;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            min-width: 35px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-info:hover {
+            background: #138496 !important;
+            transform: scale(1.1);
+        }
+
+        .btn-success {
+            background: #28a745 !important;
+            color: white !important;
+            border: none !important;
+            padding: 5px 10px !important;
+            border-radius: 4px !important;
+            cursor: pointer !important;
+            font-size: 16px !important;
+            min-width: 35px !important;
+            height: 30px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        .btn-success:hover {
+            background: #218838 !important;
+            transform: scale(1.1);
+        }
+        
+        /* Force button visibility in table */
+        td .btn-success {
+            display: inline-flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+
+        
+        /* Uniform action buttons styling */
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .action-btn {
+            padding: 10px 20px !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            border-radius: 6px !important;
+            border: none !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            height: 38px !important;
+            min-width: 120px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            white-space: nowrap !important;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .action-btn.btn-success {
+            background: #28a745 !important;
+            color: white !important;
+        }
+        
+        .action-btn.btn-warning {
+            background: #ffc107 !important;
+            color: #212529 !important;
+        }
+        
+        .action-btn.btn-primary {
+            background: #007bff !important;
+            color: white !important;
+        }
+        
+        .action-btn.btn-info {
+            background: #17a2b8 !important;
+            color: white !important;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: #212529;
+        }
+
+        .btn-icon {
+            padding: 8px 12px;
+            font-size: 1.2em;
+        }
+
+        /* Company Selection */
+        .company-selector {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+
+        .company-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .company-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .company-card.selected {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .company-card.selected .company-number {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        .company-card.selected .stat-label,
+        .company-card.selected .stat-value,
+        .company-card.selected .facility-item {
+            color: white;
+        }
+
+        .company-card p {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow-x: auto;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .section-title {
+            color: var(--dark-text);
+            font-size: 1.5em;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 5px;
+        }
+
+        /* Search and Filter */
+        .search-filter-container {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.95em;
+        }
+
+        .filter-select {
+            padding: 10px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.95em;
+            min-width: 150px;
+        }
+
+        /* Subscribers Table */
+        .table-container {
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .subscribers-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1000px;
+        }
+
+        .subscribers-table th,
+        .subscribers-table td {
+            padding: 10px 8px;
+            text-align: right;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+            font-size: inherit;
+        }
+
+        body[lang="en"] .subscribers-table th,
+        body[lang="en"] .subscribers-table td {
+            text-align: left;
+        }
+
+        .subscribers-table th {
+            background: var(--light-bg);
+            font-weight: 600;
+            color: var(--dark-text);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .subscribers-table tr:hover {
+            background: #f0f0f0;
+            cursor: pointer;
+        }
+
+        .subscribers-table tr.selected {
+            background: #e7f3ff;
+        }
+
+        .tag-badge {
+            background: var(--info-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+
+        .status-active {
+            color: var(--success-color);
+        }
+
+        .status-inactive {
+            color: var(--danger-color);
+        }
+        
+        /* Sortable Headers */
+        .sortable {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            transition: background 0.2s;
+        }
+        
+        .sortable:hover {
+            background: rgba(0, 102, 204, 0.05);
+        }
+        
+        .sort-icon {
+            font-size: 0.8em;
+            margin-left: 5px;
+            color: #999;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+        
+        .sortable.sort-asc .sort-icon {
+            color: var(--primary-color);
+            transform: rotate(0deg);
+        }
+        
+        .sortable.sort-desc .sort-icon {
+            color: var(--primary-color);
+            transform: rotate(180deg);
+        }
+
+        /* Edit Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        /* הבטחת הצגת הכפתורים */
+        .modal-content .btn {
+            display: inline-flex !important;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .modal-content button[style*="display: none"] {
+            display: inline-flex !important;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-actions-top {
+            display: flex !important;
+            justify-content: flex-end;
+            gap: 15px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            background: #f8f9fa;
+            margin-left: -25px;
+            margin-right: -25px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .modal-actions-top .btn {
+            display: inline-flex !important;
+            align-items: center;
+            gap: 5px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            min-width: 100px;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        .modal-actions-top .btn span {
+            display: inline-block;
+        }
+        
+        .modal-actions-top .btn span:first-child {
+            font-size: 18px;
+        }
+
+        .modal-title {
+            font-size: 1.5em;
+            color: var(--dark-text);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark-text);
+        }
+
+        .form-group input,
+        .form-group         select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.95em;
+        }
+        
+        select:disabled {
+            background-color: #f0f0f0;
+            color: #888;
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group input[readonly] {
+            background: var(--light-bg);
+            cursor: not-allowed;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        /* Loading Spinner */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid var(--light-bg);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Accessibility Features */
+        .accessibility-panel {
+            display: none;
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            z-index: 999;
+            min-width: 250px;
+        }
+
+        body[lang="en"] .accessibility-panel {
+            right: auto;
+            left: 20px;
+        }
+
+        .accessibility-panel.show {
+            display: block;
+        }
+
+        .accessibility-panel h3 {
+            margin-bottom: 15px;
+            color: var(--dark-text);
+        }
+
+        .accessibility-option {
+            margin-bottom: 15px;
+        }
+
+        .accessibility-option label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+        }
+
+        body[lang="en"] .toast-container {
+            right: auto;
+            left: 20px;
+        }
+
+        .toast {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Hover loading animation */
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+            100% {
+                background-position: 200% 0;
+            }
+        }
+        
+        /* Loading row style */
+        tr.loading-details {
+            background: linear-gradient(90deg, #f0f0f0 0%, #ffffff 50%, #f0f0f0 100%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            opacity: 0.7;
+        }
+        
+        /* Hover effect for loadable rows */
+        tbody tr[data-hover-loadable="true"]:not(.loading-details):hover {
+            background-color: #f8f9fa;
+            transition: background-color 0.2s ease;
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--danger-color);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .header h1 {
+                font-size: 1.5em;
+            }
+
+            .company-list {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                padding: 20px;
+            }
+
+            .subscribers-table {
+                font-size: 0.85em;
+            }
+
+            .subscribers-table th,
+            .subscribers-table td {
+                padding: 8px;
+            }
+
+            .search-filter-container {
+                flex-direction: column;
+            }
+
+            .search-box,
+            .filter-select {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-controls {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .btn {
+                padding: 8px 16px;
+                font-size: 0.85em;
+            }
+        }
+
+        /* Enhanced Company Card Styles */
+        .company-card {
+            background: var(--light-bg);
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: right;
+            position: relative;
+        }
+        
+        .company-card .company-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .company-card h3 {
+            font-size: 1.1em;
+            margin: 0;
+            color: var(--dark-text);
+        }
+        
+        .company-card .company-number {
+            font-size: 0.9em;
+            color: #666;
+            background: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        
+        .company-card .stats-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 0.9em;
+        }
+        
+        .company-card .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+        
+        .company-card .stat-label {
+            color: #666;
+            font-size: 0.85em;
+            margin-bottom: 2px;
+        }
+        
+        .company-card .stat-value {
+            font-weight: 600;
+            color: var(--dark-text);
+            font-size: 1.1em;
+        }
+        
+        .company-card .occupancy-bar {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .company-card .occupancy-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success-color), var(--primary-color));
+            transition: width 0.5s ease;
+        }
+        
+        .company-card .facilities-info {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+            font-size: 0.85em;
+        }
+        
+        .company-card .facility-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            color: #666;
+        }
+        
+        /* Force modal buttons to be visible */
+        #cancelTopBtn, #saveTopBtn {
+            display: inline-flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: relative !important;
+            z-index: 1000 !important;
+        }
+        
+        .modal.show .modal-actions-top {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        .modal.show .modal-actions-top * {
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white;
+            }
+
+            .header-controls,
+            .accessibility-panel,
+            .modal,
+            .toast-container {
+                display: none !important;
+            }
+
+            .main-content {
+                box-shadow: none;
+                padding: 0;
+            }
+
+            .subscribers-table {
+                border: 1px solid #000;
+            }
+        }
+        
+        /* Footer styles */
+        .footer {
+            text-align: center;
+            padding: 30px 20px;
+            margin-top: 50px;
+            border-top: 2px solid #e0e0e0;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .footer .credit {
+            margin-top: 12px;
+            font-size: 16px;
+            color: #333;
+        }
+        
+        .footer .company {
+            font-weight: 600;
+            color: #444;
+            font-size: 15px;
+            margin-bottom: 8px;
+        }
+        
+        .footer .developer {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+            font-size: 17px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>
+                <span>🅿️</span>
+                <span data-translate="title">מערכת ניהול מנויי חניון</span>
+                <br>
+                <span style="font-size: 0.5em; font-weight: normal; color: #e0e0e0;">מבית שיידט את בכמן ישראל</span>
+            </h1>
+            <div class="header-controls">
+                <div class="user-info" style="padding: 5px 10px; background: var(--light-bg); border-radius: 6px; margin-right: 10px;">
+                    <span>👤 משתמש: <span id="currentUsername">טוען...</span></span>
+                    <span style="margin: 0 10px;">|</span>
+                    <span id="userRole">מנהל חברה</span>
+                    <span style="margin: 0 10px;">|</span>
+                    <button class="btn btn-danger" onclick="logout()" style="background: #dc3545; color: white; padding: 5px 10px; border-radius: 6px;">
+                        🚪 התנתק
+                    </button>
+                </div>
+                <div class="lang-switch">
+                    <button class="btn btn-secondary" onclick="toggleLanguage()">
+                        <span data-translate="lang">English</span>
+                    </button>
+                </div>
+                <div class="font-controls">
+                    <button class="btn btn-icon" onclick="changeFontSize('small')" title="גודל קטן">A-</button>
+                    <button class="btn btn-icon" onclick="changeFontSize('normal')" title="גודל רגיל">A</button>
+                    <button class="btn btn-icon" onclick="changeFontSize('large')" title="גודל בינוני">A+</button>
+                    <button class="btn btn-icon" onclick="changeFontSize('xlarge')" title="גודל גדול">A++</button>
+                </div>
+                <button class="btn btn-warning" onclick="toggleAccessibility()" title="נגישות">
+                    ♿ <span data-translate="accessibility">נגישות</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Accessibility Panel -->
+        <div class="accessibility-panel" id="accessibilityPanel">
+            <h3 data-translate="accessibilityOptions">אפשרויות נגישות</h3>
+            <div class="accessibility-option">
+                <label>
+                    <input type="checkbox" id="highContrast" onchange="toggleHighContrast()">
+                    <span data-translate="highContrast">ניגודיות גבוהה</span>
+                </label>
+            </div>
+            <div class="accessibility-option">
+                <label>
+                    <input type="checkbox" id="underlineLinks" onchange="toggleUnderlineLinks()">
+                    <span data-translate="underlineLinks">הדגשת קישורים</span>
+                </label>
+            </div>
+            <div class="accessibility-option">
+                <label>
+                    <input type="checkbox" id="focusHighlight" onchange="toggleFocusHighlight()">
+                    <span data-translate="focusHighlight">הדגשת פוקוס</span>
+                </label>
+            </div>
+            <div class="accessibility-option">
+                <button class="btn btn-primary" onclick="resetAccessibility()">
+                    <span data-translate="reset">איפוס</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Company Selector -->
+        <div class="company-selector" id="companySelector">
+            <h2 class="section-title" data-translate="selectCompany">בחר חברה</h2>
+            <div class="company-list" id="companyList">
+                <!-- Companies will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content" id="mainContent" style="display: none;">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span data-translate="subscribers">מנויים</span>
+                    <span id="companyName"></span>
+                </h2>
+                <div class="action-buttons">
+                    <button class="btn btn-success action-btn" onclick="addNewSubscriber()">
+                        <span data-translate="addNew">+ הוסף מנוי חדש</span>
+                    </button>
+                    <button class="btn btn-warning action-btn" onclick="addGuestSubscriber()">
+                        <span data-translate="addGuest">+ הוסף אורח</span>
+                    </button>
+                    <button class="btn btn-info action-btn" onclick="openReportsModal()">
+                        <span data-translate="reports">📊 דוחות</span>
+                    </button>
+                    <button class="btn btn-primary action-btn" onclick="exportToExcel()">
+                        <span data-translate="export">📥 ייצוא לאקסל</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search and Filter -->
+            <div class="search-filter-container">
+                <input type="text" class="search-box" id="searchBox" 
+                       placeholder="חיפוש לפי שם, מספר מנוי, מספר רכב..." 
+                       data-translate-placeholder="searchPlaceholder">
+                <select class="filter-select" id="filterPresence">
+                    <option value="" data-translate="allPresence">הכל</option>
+                    <option value="present" data-translate="presentOnly">נוכחים בלבד</option>
+                    <option value="absent" data-translate="absentOnly">לא נוכחים</option>
+                </select>
+                <select class="filter-select" id="filterDate">
+                    <option value="" data-translate="allDates">כל התאריכים</option>
+                    <option value="valid" data-translate="validOnly">בתוקף</option>
+                    <option value="expired" data-translate="expiredOnly">פג תוקף</option>
+                    <option value="expiring30" data-translate="expiring30">פג בעוד 30 יום</option>
+                    <option value="expiring7" data-translate="expiring7">פג בעוד 7 ימים</option>
+                </select>
+            </div>
+
+            <!-- Loading State -->
+            <div class="loading" id="loadingState" style="display: none;">
+                <div class="spinner"></div>
+                <p data-translate="loading">טוען נתונים...</p>
+            </div>
+
+            <!-- Subscribers Table -->
+            <div class="table-container" id="tableContainer">
+                <table class="subscribers-table" id="subscribersTable">
+                    <thead>
+                        <tr>
+                            <th data-translate="companyNum" data-sort="companyNum" class="sortable">מס' חברה <span class="sort-icon">⇅</span></th>
+                            <th data-translate="companyName" data-sort="companyName" class="sortable">שם חברה <span class="sort-icon">⇅</span></th>
+                            <th data-translate="subscriberNum" data-sort="subscriberNum" class="sortable">מס' מנוי <span class="sort-icon">⇅</span></th>
+                            <th data-translate="firstName" data-sort="firstName" class="sortable">שם פרטי <span class="sort-icon">⇅</span></th>
+                            <th data-translate="lastName" data-sort="lastName" class="sortable">שם משפחה <span class="sort-icon">⇅</span></th>
+                            <th data-translate="tagNum" data-sort="tagNum" class="sortable">מס' תג <span class="sort-icon">⇅</span></th>
+                            <th data-translate="vehicle1" data-sort="vehicle1" class="sortable">רכב 1 <span class="sort-icon">⇅</span></th>
+                            <th data-translate="vehicle2">רכב 2</th>
+                            <th data-translate="vehicle3">רכב 3</th>
+                            <th data-translate="validUntil" data-sort="validUntil" class="sortable">בתוקף עד <span class="sort-icon">⇅</span></th>
+                            <th data-translate="profile">פרופיל</th>
+                            <th data-translate="validFrom" data-sort="validFrom" class="sortable">תחילת תוקף <span class="sort-icon">⇅</span></th>
+                            <th data-translate="presence" data-sort="presence" class="sortable">נוכחות <span class="sort-icon">⇅</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="subscribersTableBody">
+                        <!-- Data will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Edit Modal -->
+        <div class="modal" id="editModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" data-translate="editSubscriber">עריכת מנוי</h2>
+                    <button class="close-btn" onclick="closeModal()">&times;</button>
+                </div>
+                
+                <!-- כפתורי פעולה למעלה -->
+                <div class="modal-actions-top" style="display: flex !important;">
+                    <button type="button" onclick="closeModal()" class="btn btn-secondary" id="cancelTopBtn" style="display: inline-flex !important; visibility: visible !important;">
+                        <span>❌</span>
+                        <span data-translate="cancel">ביטול</span>
+                    </button>
+                    <button type="button" onclick="saveSubscriber()" class="btn btn-primary" id="saveTopBtn" style="display: inline-flex !important; visibility: visible !important;">
+                        <span>💾</span>
+                        <span data-translate="save">שמור שינויים</span>
+                    </button>
+                </div>
+                
+                <form id="editForm">
+                    <div style="color: #666; margin-bottom: 15px; font-size: 0.9em;">
+                        * שדות חובה: שם משפחה, תחילת תוקף, בתוקף עד
+                    </div>
+                    <div class="form-group">
+                        <label for="editCompanyNum" data-translate="companyNum">מספר חברה</label>
+                        <input type="text" id="editCompanyNum" readonly style="background-color: #f0f0f0; cursor: not-allowed;">
+                    </div>
+                    <div class="form-group">
+                        <label for="editCompanyName" data-translate="companyName">שם חברה</label>
+                        <input type="text" id="editCompanyName" readonly style="background-color: #f0f0f0; cursor: not-allowed;">
+                    </div>
+                    <div class="form-group">
+                        <label for="editSubscriberNum" data-translate="subscriberNum">מספר מנוי</label>
+                        <input type="text" id="editSubscriberNum" readonly style="background-color: #f0f0f0; cursor: not-allowed;" placeholder="יוקצה אוטומטית">
+                        <small style="color: #666;">* המספר יוקצה אוטומטית ע"י השרת</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="editFirstName" data-translate="firstName">שם פרטי</label>
+                        <input type="text" id="editFirstName" placeholder="הכנס שם פרטי (לדוגמה: דוד)">
+                    </div>
+                    <div class="form-group">
+                        <label for="editLastName" data-translate="lastName">שם משפחה *</label>
+                        <input type="text" id="editLastName" placeholder="הכנס שם משפחה (לדוגמה: כהן) שדה חובה" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editTagNum" data-translate="tagNum">מספר תג</label>
+                        <input type="text" id="editTagNum" placeholder="מספר תג (יווצר אוטומטית למנוי חדש)">
+                        <small style="color: #666;" id="tagHelpText">* לא ניתן לשנות למנויים קיימים</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="editVehicle1" data-translate="vehicle1">רכב 1</label>
+                        <input type="text" id="editVehicle1" placeholder="מספר רכב (לדוגמה: 12-345-67) ניתן להשאיר ריק">
+                    </div>
+                    <div class="form-group">
+                        <label for="editVehicle2" data-translate="vehicle2">רכב 2</label>
+                        <input type="text" id="editVehicle2" placeholder="מספר רכב, ניתן להשאיר ריק">
+                    </div>
+                    <div class="form-group">
+                        <label for="editVehicle3" data-translate="vehicle3">רכב 3</label>
+                        <input type="text" id="editVehicle3" placeholder="מספר רכב, ניתן להשאיר ריק">
+                    </div>
+                    <div class="form-group">
+                        <label for="editValidFrom" data-translate="validFrom">תחילת תוקף *</label>
+                        <input type="text" id="editValidFrom" placeholder="DD/MM/YYYY (שדה חובה)" required>
+                        <small style="color: #666;">פורמט: יום/חודש/שנה</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="editValidUntil" data-translate="validUntil">בתוקף עד *</label>
+                        <input type="text" id="editValidUntil" placeholder="DD/MM/YYYY שדה חובה (מקסימום 31/12/3035)" required>
+                        <small style="color: #666;">פורמט: יום/חודש/שנה • מקסימום: 31/12/3035</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="editProfile" data-translate="profile">פרופיל כרטיס</label>
+                        <select id="editProfile" disabled style="background-color: #f0f0f0; color: #888; cursor: not-allowed;">
+                            <option value="1" data-profile-name="regular" data-translate="regular">רגיל</option>
+                            <option value="2" data-profile-name="vip" data-translate="vip">VIP</option>
+                            <option value="3" data-profile-name="disabled" data-translate="disabled">נכה</option>
+                        </select>
+                        <small style="color: #888;" id="profileHelpText">* לא ניתן לשינוי למנויים קיימים</small>
+                    </div>
+                    
+                    <div class="form-group" id="emailGroup">
+                        <label for="editEmail" data-translate="email">אימייל</label>
+                        <input type="email" id="editEmail" placeholder="כתובת אימייל (אופציונלי)">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editNotes" data-translate="notes">הערות</label>
+                        <textarea id="editNotes" rows="3" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.95em; resize: vertical;"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="editIgnorePresence" checked style="width: auto;">
+                            <span data-translate="ignorePresence">ללא בדיקת נוכחות</span>
+                        </label>
+                        <small style="color: #666;">* סמן אם המנוי פטור מבדיקת נוכחות</small>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">
+                            <span>❌</span>
+                            <span data-translate="cancel">ביטול</span>
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <span>💾</span>
+                            <span data-translate="save">שמור שינויים</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Transactions Modal -->
+        <div class="modal" id="transactionsModal" style="display: none;">
+            <div class="modal-content" style="max-width: 1200px; width: 90%;">
+                <div class="modal-header">
+                    <h2 class="modal-title">📊 תנועות מנוי</h2>
+                    <button class="close-btn" onclick="closeTransactionsModal()">&times;</button>
+                </div>
+                
+                <div class="alert alert-info" style="margin: 20px 0; padding: 15px; background: #d1ecf1; border-left: 4px solid #0c5460; color: #0c5460;">
+                    <strong>הערה:</strong> בעתיד, גישה לדוח זה תהיה מוגבלת למשתמשים עם הרשאות מתאימות בלבד.
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <label>טווח תאריכים:</label>
+                    <input type="date" id="transStartDate" style="margin: 0 10px; padding: 5px;">
+                    <label>עד</label>
+                    <input type="date" id="transEndDate" style="margin: 0 10px; padding: 5px;">
+                    <button class="btn btn-primary" onclick="loadTransactions()">טען תנועות</button>
+                    <button class="btn btn-secondary" onclick="exportTransactions()">📥 ייצא לאקסל</button>
+                </div>
+                
+                <div id="transactionsLoading" style="display: none; text-align: center; padding: 40px;">
+                    <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+                    <p>טוען תנועות...</p>
+                </div>
+                
+                <div id="transactionsSummary" style="display: none; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <span style="margin-right: 20px;"><strong>סה"כ תנועות:</strong> <span id="totalTrans">0</span></span>
+                    <span style="margin-right: 20px;"><strong>כניסות:</strong> <span id="totalEntries">0</span></span>
+                    <span style="margin-right: 20px;"><strong>יציאות:</strong> <span id="totalExits">0</span></span>
+                </div>
+                
+                <div id="transactionsTableContainer" style="max-height: 500px; overflow-y: auto; display: none;">
+                    <table class="subscribers-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>תאריך ושעה</th>
+                                <th>סוג תנועה</th>
+                                <th>מספר רכב</th>
+                                <th>חניון</th>
+                                <th>יחידה</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="noTransactions" style="display: none; text-align: center; padding: 40px; color: #666;">
+                    <p>לא נמצאו תנועות בתקופה המבוקשת</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <div class="company">שיידט את בכמן ישראל</div>
+            <div class="credit">
+                נוצר ע"י <span class="developer">דרור פרינץ</span>
+            </div>
+            <div style="margin-top: 10px; font-size: 12px; color: #999;">
+                © 2024 כל הזכויות שמורות
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // Mock data for demonstration - updated for new server
+        const mockCompanies = [
+            { id: '1000', name: 'חברה 1000', subscribersCount: 45 },
+            { id: '2', name: 'חברה 2', subscribersCount: 120 },
+            { id: '3', name: 'חברה 3', subscribersCount: 25 },
+            { id: '4', name: 'חברה 4', subscribersCount: 30 },
+            { id: '5', name: 'חברה 5', subscribersCount: 50 },
+            { id: '6', name: 'חברה 6', subscribersCount: 67 }
+        ];
+
+        const mockSubscribers = [
+            {
+                companyNum: '1001',
+                companyName: '2222',
+                subscriberNum: '10001',
+                firstName: 'דוד',
+                lastName: 'כהן',
+                tagNum: 'TAG001',
+                vehicle1: '12-345-67',
+                vehicle2: '98-765-43',
+                vehicle3: '',
+                validFrom: '2024-01-01',
+                validUntil: '2025-12-31',
+                profile: 'regular',
+                notes: 'מנוי ותיק',
+                presence: true,
+                lastEntry: '2025-01-13 08:30'
+            },
+            {
+                companyNum: '1001',
+                companyName: '2222',
+                subscriberNum: '10002',
+                firstName: 'רחל',
+                lastName: 'לוי',
+                tagNum: 'TAG002',
+                vehicle1: '5566677',
+                vehicle2: '',
+                vehicle3: '',
+                validFrom: '2024-06-01',
+                validUntil: '2025-06-30',
+                profile: 'vip',
+                notes: 'VIP - טיפול מיוחד',
+                presence: false,
+                lastEntry: '2025-01-12 17:45'
+            },
+            {
+                companyNum: '1001',
+                companyName: '2222',
+                subscriberNum: '10003',
+                firstName: 'משה',
+                lastName: 'פרץ',
+                tagNum: 'TAG003',
+                vehicle1: '1122233',
+                vehicle2: '4455566',
+                vehicle3: '7788899',
+                validFrom: '2024-09-15',
+                validUntil: '2025-09-15',
+                profile: 'disabled',
+                notes: 'חניית נכה - קרוב לכניסה',
+                presence: true,
+                lastEntry: '2025-01-13 09:15'
+            }
+        ];
+
+        // Translation dictionary
+        const translations = {
+            he: {
+                title: 'מערכת ניהול מנויי חניון',
+                lang: 'English',
+                accessibility: 'נגישות',
+                accessibilityOptions: 'אפשרויות נגישות',
+                highContrast: 'ניגודיות גבוהה',
+                underlineLinks: 'הדגשת קישורים',
+                focusHighlight: 'הדגשת פוקוס',
+                reset: 'איפוס',
+                selectCompany: 'בחר חברה',
+                subscribers: 'מנויים',
+                addNew: '+ הוסף מנוי חדש',
+                addGuest: '+ הוסף אורח',
+                export: '📥 ייצוא לאקסל',
+                searchPlaceholder: 'חיפוש לפי שם, מספר מנוי, מספר רכב...',
+                allPresence: 'הכל',
+                presentOnly: 'נוכחים בלבד',
+                absentOnly: 'לא נוכחים',
+                allDates: 'כל התאריכים',
+                validOnly: 'בתוקף',
+                expiredOnly: 'פג תוקף',
+                expiring30: 'פג בעוד 30 יום',
+                expiring7: 'פג בעוד 7 ימים',
+                regular: 'רגיל',
+                vip: 'VIP',
+                disabled: 'נכה',
+                loading: 'טוען נתונים...',
+                companyNum: 'מס\' חברה',
+                companyName: 'שם חברה',
+                subscriberNum: 'מס\' מנוי',
+                firstName: 'שם פרטי',
+                lastName: 'שם משפחה',
+                tagNum: 'מס\' תג',
+                vehicle1: 'רכב 1',
+                vehicle2: 'רכב 2',
+                vehicle3: 'רכב 3',
+                validUntil: 'בתוקף עד',
+                profile: 'פרופיל',
+                validFrom: 'תחילת תוקף',
+                notes: 'הערות',
+                email: 'אימייל',
+                ignorePresence: 'ללא בדיקת נוכחות',
+                presence: 'נוכחות',
+                lastEntry: 'כניסה אחרונה',
+                editSubscriber: 'עריכת מנוי',
+                cancel: 'ביטול',
+                save: 'שמור',
+                present: 'נוכח',
+                absent: 'לא נוכח',
+                subscribersText: 'מנויים'
+            },
+            en: {
+                title: 'Parking Subscribers Management System',
+                lang: 'עברית',
+                accessibility: 'Accessibility',
+                accessibilityOptions: 'Accessibility Options',
+                highContrast: 'High Contrast',
+                underlineLinks: 'Underline Links',
+                focusHighlight: 'Focus Highlight',
+                reset: 'Reset',
+                selectCompany: 'Select Company',
+                subscribers: 'Subscribers',
+                addNew: '+ Add New Subscriber',
+                addGuest: '+ Add Guest',
+                export: '📥 Export to Excel',
+                searchPlaceholder: 'Search by name, subscriber number, vehicle number...',
+                allPresence: 'All',
+                presentOnly: 'Present Only',
+                absentOnly: 'Absent Only',
+                allDates: 'All Dates',
+                validOnly: 'Valid',
+                expiredOnly: 'Expired',
+                expiring30: 'Expiring in 30 days',
+                expiring7: 'Expiring in 7 days',
+                regular: 'Regular',
+                vip: 'VIP',
+                disabled: 'Disabled',
+                loading: 'Loading data...',
+                companyNum: 'Company No.',
+                companyName: 'Company Name',
+                subscriberNum: 'Subscriber No.',
+                firstName: 'First Name',
+                lastName: 'Last Name',
+                tagNum: 'Tag No.',
+                vehicle1: 'Vehicle 1',
+                vehicle2: 'Vehicle 2',
+                vehicle3: 'Vehicle 3',
+                validUntil: 'Valid Until',
+                profile: 'Profile',
+                validFrom: 'Valid From',
+                notes: 'Notes',
+                email: 'Email',
+                ignorePresence: 'Ignore Presence Check',
+                presence: 'Presence',
+                lastEntry: 'Last Entry',
+                editSubscriber: 'Edit Subscriber',
+                cancel: 'Cancel',
+                save: 'Save',
+                present: 'Present',
+                absent: 'Absent',
+                subscribersText: 'subscribers'
+            }
+        };
+
+        let currentLang = 'he';
+        let currentCompany = null;
+        let currentSubscribers = [];
+        let editingSubscriber = null;
+        
+        // User permissions (hardcoded for now - will be loaded from database later)
+        const userPermissions = {
+            role: 'company_manager', // user, company_manager, admin
+            canAddSubscriber: true,
+            canEditSubscriber: true,
+            canDeleteSubscriber: true,
+            canExport: true
+        };
+        
+        // Check user permission
+        function checkUserPermission(action) {
+            switch(action) {
+                case 'add_subscriber':
+                    return userPermissions.canAddSubscriber;
+                case 'edit_subscriber':
+                    return userPermissions.canEditSubscriber;
+                case 'delete_subscriber':
+                    return userPermissions.canDeleteSubscriber;
+                case 'export':
+                    return userPermissions.canExport;
+                default:
+                    return false;
+            }
+        }
+
+        // Sorting variables
+        let currentSortField = null;
+        let currentSortDirection = 'asc';
+        
+        // Initialize application
+        function init() {
+            loadCompanies();
+            setupEventListeners();
+            setupSorting();
+            updateUIBasedOnPermissions();
+            
+            // Load saved font size
+            const savedFontSize = localStorage.getItem('fontSize');
+            if (savedFontSize) {
+                changeFontSize(savedFontSize);
+            }
+            
+            // Check if only one company
+            if (mockCompanies.length === 1) {
+                selectCompany(mockCompanies[0]);
+            }
+            
+            // Ensure modal buttons are always visible
+            ensureModalButtonsVisible();
+        }
+        
+        // Function to ensure modal buttons remain visible
+        function ensureModalButtonsVisible() {
+            // Monitor the modal for changes
+            const modalObserver = new MutationObserver(() => {
+                const topButtons = document.querySelectorAll('.modal-actions-top .btn');
+                topButtons.forEach(btn => {
+                    if (btn.style.display === 'none' || btn.style.visibility === 'hidden') {
+                        btn.style.display = 'inline-flex';
+                        btn.style.visibility = 'visible';
+                    }
+                });
+            });
+            
+            const modal = document.getElementById('editModal');
+            if (modal) {
+                modalObserver.observe(modal, {
+                    attributes: true,
+                    childList: true,
+                    subtree: true,
+                    attributeFilter: ['style', 'class']
+                });
+            }
+            
+            // Also check periodically
+            setInterval(() => {
+                const topButtons = document.querySelectorAll('.modal-actions-top .btn');
+                topButtons.forEach(btn => {
+                    if (btn && (btn.style.display === 'none' || btn.style.visibility === 'hidden')) {
+                        btn.style.display = 'inline-flex';
+                        btn.style.visibility = 'visible';
+                    }
+                });
+            }, 500);
+        }
+        
+        // Force show modal buttons
+        function forceShowModalButtons() {
+            // Get buttons
+            const cancelBtn = document.getElementById('cancelTopBtn');
+            const saveBtn = document.getElementById('saveTopBtn');
+            const modalActions = document.querySelector('.modal-actions-top');
+            
+            // Force display modal actions container
+            if (modalActions) {
+                modalActions.style.cssText = 'display: flex !important; visibility: visible !important; opacity: 1 !important; position: sticky !important; top: 0 !important; z-index: 100 !important;';
+            }
+            
+            // Force display cancel button
+            if (cancelBtn) {
+                cancelBtn.style.cssText = 'display: inline-flex !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 1000 !important;';
+                cancelBtn.removeAttribute('hidden');
+                cancelBtn.removeAttribute('disabled');
+            }
+            
+            // Force display save button
+            if (saveBtn) {
+                saveBtn.style.cssText = 'display: inline-flex !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 1000 !important;';
+                saveBtn.removeAttribute('hidden');
+                saveBtn.removeAttribute('disabled');
+            }
+            
+            // Double check after a short delay
+            setTimeout(() => {
+                const btns = document.querySelectorAll('#cancelTopBtn, #saveTopBtn');
+                btns.forEach(btn => {
+                    if (btn) {
+                        btn.style.display = 'inline-flex';
+                        btn.style.visibility = 'visible';
+                        btn.style.opacity = '1';
+                    }
+                });
+            }, 100);
+        }
+        
+        // Update UI based on user permissions
+        function updateUIBasedOnPermissions() {
+            // Update user role display
+            const roleText = {
+                'admin': 'מנהל מערכת',
+                'company_manager': 'מנהל חברה',
+                'user': 'משתמש רגיל'
+            };
+            document.getElementById('userRole').textContent = roleText[userPermissions.role] || 'משתמש';
+            
+            // Hide/show buttons based on permissions
+            const addButton = document.querySelector('[onclick="addNewSubscriber()"]');
+            const exportButton = document.querySelector('[onclick="exportToExcel()"]');
+            
+            if (addButton && !userPermissions.canAddSubscriber) {
+                addButton.style.display = 'none';
+            }
+            
+            if (exportButton && !userPermissions.canExport) {
+                exportButton.style.display = 'none';
+            }
+        }
+
+        // Load companies
+        function loadCompanies() {
+            // Skip if parkingUIXML is available - it will handle everything
+            if (window.parkingUIXML) {
+                return;
+            }
+            
+            const companyList = document.getElementById('companyList');
+            companyList.innerHTML = '';
+            
+            mockCompanies.forEach(company => {
+                const card = document.createElement('div');
+                card.className = 'company-card';
+                card.onclick = () => selectCompany(company);
+                card.innerHTML = `
+                    <h3>${company.name}</h3>
+                    <p>${company.subscribersCount} ${translations[currentLang].subscribersText}</p>
+                `;
+                companyList.appendChild(card);
+            });
+        }
+
+        // Select company
+        function selectCompany(company) {
+            // Skip if parkingUIXML is available - it will handle everything
+            if (window.parkingUIXML) {
+                return;
+            }
+            
+            currentCompany = company;
+            document.querySelectorAll('.company-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event && event.currentTarget && event.currentTarget.classList.add('selected');
+            
+            // Hide company selector if only one company
+            if (mockCompanies.length === 1) {
+                document.getElementById('companySelector').style.display = 'none';
+            }
+            
+            // Show main content
+            document.getElementById('mainContent').style.display = 'block';
+            document.getElementById('companyName').textContent = `- ${company.name}`;
+            
+            
+            // Load subscribers
+            loadSubscribers();
+        }
+
+        // Load subscribers
+        function loadSubscribers() {
+            // Skip if parkingUIXML is available - it will handle everything
+            if (window.parkingUIXML) {
+                return;
+            }
+            
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('tableContainer').style.display = 'none';
+            
+            // Simulate API call
+            setTimeout(() => {
+                currentSubscribers = mockSubscribers.filter(s => s.companyNum === currentCompany.id);
+                displaySubscribers(currentSubscribers);
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('tableContainer').style.display = 'block';
+            }, 500);
+        }
+
+        // Display subscribers in table
+        function displaySubscribers(subscribers) {
+            // Skip if parkingUIXML is available - it will handle everything
+            if (window.parkingUIXML) {
+                return;
+            }
+            
+            const tbody = document.getElementById('subscribersTableBody');
+            tbody.innerHTML = '';
+            
+            subscribers.forEach(subscriber => {
+                const row = document.createElement('tr');
+                row.onclick = (e) => {
+                    // Don't edit if clicking on button
+                    if (e.target.tagName !== 'BUTTON') {
+                        editSubscriber(subscriber);
+                    }
+                };
+                
+                const validDate = new Date(subscriber.validUntil);
+                const isExpired = validDate < new Date();
+                
+                row.innerHTML = `
+                    <td>${subscriber.companyNum}</td>
+                    <td>${subscriber.companyName}</td>
+                    <td>${subscriber.subscriberNum}</td>
+                    <td>${subscriber.firstName}</td>
+                    <td>${subscriber.lastName}</td>
+                    <td>${subscriber.tagNum ? `<span class="tag-badge">${subscriber.tagNum}</span>` : ''}</td>
+                    <td>${subscriber.vehicle1 || ''}</td>
+                    <td>${subscriber.vehicle2 || ''}</td>
+                    <td>${subscriber.vehicle3 || ''}</td>
+                    <td class="${isExpired ? 'status-inactive' : 'status-active'}">${formatDate(subscriber.validUntil) || ''}</td>
+                    <td style="color: #888;">${subscriber.profile || ''}</td>
+                    <td>${formatDate(subscriber.validFrom) || ''}</td>
+                    <td style="text-align: center; font-size: 18px;">${subscriber.presence ? '✅' : '❌'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Edit subscriber
+        async function editSubscriber(subscriber) {
+            console.log('[editSubscriber] Called with subscriber:', subscriber);
+            
+            // Check user permissions
+            if (!checkUserPermission('edit_subscriber')) {
+                showToast('אין לך הרשאה לערוך מנויים', 'error');
+                return;
+            }
+            
+            // IMPORTANT: Store the subscriber globally for saveSubscriber to check
+            // Make sure we have a valid subscriber object
+            if (!subscriber || typeof subscriber !== 'object') {
+                console.error('[editSubscriber] Invalid subscriber object:', subscriber);
+                showToast('❌ שגיאה בטעינת נתוני המנוי', 'error');
+                return;
+            }
+            
+            window.currentEditingSubscriber = subscriber;
+            editingSubscriber = subscriber;
+            console.log('[editSubscriber] Set editingSubscriber:', editingSubscriber);
+            console.log('[editSubscriber] Set window.currentEditingSubscriber:', window.currentEditingSubscriber);
+            console.log('[editSubscriber] Subscriber number:', subscriber.subscriberNum);
+            
+            // CRITICAL: Store the edit mode in the modal itself
+            const modal = document.getElementById('editModal');
+            if (modal) {
+                modal.setAttribute('data-edit-mode', 'update');
+                modal.setAttribute('data-subscriber-num', subscriber.subscriberNum);
+                console.log('[editSubscriber] Set modal data-edit-mode to UPDATE');
+            }
+            
+            // Force show buttons
+            forceShowModalButtons();
+            
+            // Don't load profiles for existing subscriber - just use what they have
+            // The profile will be set from the subscriber data below
+            
+            // Populate form
+            document.getElementById('editCompanyNum').value = subscriber.companyNum;
+            document.getElementById('editCompanyName').value = subscriber.companyName;
+            document.getElementById('editSubscriberNum').value = subscriber.subscriberNum;
+            document.getElementById('editFirstName').value = subscriber.firstName;
+            document.getElementById('editLastName').value = subscriber.lastName;
+            document.getElementById('editTagNum').value = subscriber.tagNum || '';
+            document.getElementById('editTagNum').readOnly = true; // Make tag read-only for existing subscribers
+            document.getElementById('editTagNum').style.backgroundColor = '#f0f0f0';
+            document.getElementById('editTagNum').style.cursor = 'not-allowed';
+            document.getElementById('tagHelpText').style.display = 'block';
+            // Display vehicle numbers as they come from the server
+            document.getElementById('editVehicle1').value = subscriber.vehicle1 || '';
+            document.getElementById('editVehicle2').value = subscriber.vehicle2 || '';
+            document.getElementById('editVehicle3').value = subscriber.vehicle3 || '';
+            document.getElementById('editValidFrom').value = formatDateForDisplay(subscriber.validFrom) || '';
+            document.getElementById('editValidUntil').value = formatDateForDisplay(subscriber.validUntil) || '';
+            
+            // Remove guest mode class for regular edit
+            document.getElementById('editModal').classList.remove('guest-mode');
+            
+            // Set profile for existing subscriber - show ONLY their profile
+            const profileSelect = document.getElementById('editProfile');
+            
+            // Clear all options first
+            profileSelect.innerHTML = '';
+            
+            // Add only the subscriber's profile
+            if (subscriber.profileId && subscriber.profile) {
+                const option = document.createElement('option');
+                option.value = subscriber.profileId;
+                option.setAttribute('data-profile-name', subscriber.profile);
+                option.textContent = subscriber.profile;
+                profileSelect.appendChild(option);
+                profileSelect.value = subscriber.profileId;
+            } else if (subscriber.profile) {
+                // If we only have profile name, not ID
+                const option = document.createElement('option');
+                option.value = '1'; // Default ID
+                option.setAttribute('data-profile-name', subscriber.profile);
+                option.textContent = subscriber.profile;
+                profileSelect.appendChild(option);
+                profileSelect.value = '1';
+            } else {
+                // Fallback to regular if no profile info
+                const option = document.createElement('option');
+                option.value = '1';
+                option.setAttribute('data-profile-name', 'regular');
+                option.textContent = 'רגיל';
+                profileSelect.appendChild(option);
+                profileSelect.value = '1';
+            }
+            
+            // Ensure profile select is disabled for existing subscriber
+            profileSelect.disabled = true;
+            profileSelect.style.backgroundColor = '#f0f0f0';
+            profileSelect.style.color = '#888';
+            profileSelect.style.cursor = 'not-allowed';
+            
+            // Update help text
+            const profileHelpText = document.getElementById('profileHelpText');
+            if (profileHelpText) {
+                profileHelpText.textContent = '* לא ניתן לשינוי למנויים קיימים';
+                profileHelpText.style.color = '#888';
+            }
+            
+            document.getElementById('editEmail').value = subscriber.email || '';
+            document.getElementById('editNotes').value = subscriber.notes || '';
+            
+            // Show modal
+            document.getElementById('editModal').classList.add('show');
+            
+            // Ensure buttons are visible
+            setTimeout(() => {
+                const topButtons = document.querySelectorAll('.modal-actions-top .btn');
+                topButtons.forEach(btn => {
+                    btn.style.display = 'inline-flex';
+                    btn.style.visibility = 'visible';
+                    btn.style.opacity = '1';
+                });
+                
+                const modalActions = document.querySelector('.modal-actions-top');
+                if (modalActions) {
+                    modalActions.style.display = 'flex';
+                    modalActions.style.visibility = 'visible';
+                    modalActions.style.opacity = '1';
+                }
+            }, 10);
+        }
+
+        // Add guest subscriber
+        function addGuestSubscriber() {
+            addNewSubscriber(true);
+        }
+        
+        // Open reports modal
+        function openReportsModal() {
+            console.log('[openReportsModal] Opening reports modal');
+            const modal = document.getElementById('reportsModal');
+            if (!modal) {
+                console.log('[openReportsModal] Creating modal HTML');
+                // Create modal if it doesn't exist
+                const modalHtml = `
+                    <div id="reportsModal" class="modal">
+                        <div class="modal-content" style="max-width: 700px;">
+                            <div class="modal-header">
+                                <h2>בחר מנוי לדוח תנועות</h2>
+                                <button class="close-btn" onclick="closeReportsModal()">×</button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="form-group" style="position: relative;">
+                                    <input type="text" id="reportSearchBox" class="form-control" 
+                                           placeholder="חפש לפי שם או מספר מנוי..." 
+                                           oninput="filterReportSubscribers()"
+                                           onkeypress="if(event.key === 'Enter') searchAndSelectSubscriber()"
+                                           style="width: 100%; padding: 10px 45px 10px 10px; border-radius: 4px; border: 1px solid #ddd;">
+                                    <button onclick="searchAndSelectSubscriber()" 
+                                            style="position: absolute; left: 5px; top: 50%; transform: translateY(-50%); 
+                                                   background: #17a2b8; color: white; border: none; border-radius: 4px; 
+                                                   padding: 5px 10px; cursor: pointer;">
+                                        🔍 חפש
+                                    </button>
+                                </div>
+                                <div class="subscriber-select-list" id="reportSubscriberList" 
+                                     style="max-height: 400px; overflow-y: auto; margin-top: 20px;">
+                                    <!-- Subscribers will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+            }
+            
+            // Load subscribers for current company
+            console.log('[openReportsModal] Loading report subscribers');
+            loadReportSubscribers();
+            
+            console.log('[openReportsModal] Showing modal');
+            document.getElementById('reportsModal').classList.add('show');
+        }
+        
+        function closeReportsModal() {
+            const modal = document.getElementById('reportsModal');
+            if (modal) modal.classList.remove('show');
+        }
+        
+        function loadReportSubscribers() {
+            console.log('[loadReportSubscribers] Starting to load subscribers for reports');
+            const list = document.getElementById('reportSubscriberList');
+            if (!list) {
+                console.error('[loadReportSubscribers] List element not found');
+                return;
+            }
+            
+            // Get subscribers from current company only
+            let subscribers = [];
+            
+            // Try to get from parkingUIXML first (most reliable)
+            if (window.parkingUIXML && window.parkingUIXML.subscribers) {
+                subscribers = window.parkingUIXML.subscribers;
+                console.log('[loadReportSubscribers] Using parkingUIXML.subscribers:', subscribers.length, 'subscribers');
+            } else if (currentSubscribers && currentSubscribers.length > 0) {
+                subscribers = currentSubscribers;
+                console.log('[loadReportSubscribers] Using currentSubscribers:', subscribers.length, 'subscribers');
+            } else {
+                console.warn('[loadReportSubscribers] No subscribers found');
+            }
+            
+            // Get current company
+            let currentCompanyNum = null;
+            if (window.parkingUIXML && window.parkingUIXML.currentContract) {
+                currentCompanyNum = window.parkingUIXML.currentContract.id;
+                console.log('[loadReportSubscribers] Current company:', currentCompanyNum);
+            } else if (currentCompany) {
+                currentCompanyNum = currentCompany.id;
+                console.log('[loadReportSubscribers] Current company (fallback):', currentCompanyNum);
+            }
+            
+            console.log('[loadReportSubscribers] Total subscribers before filtering:', subscribers.length);
+            
+            list.innerHTML = `
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f8f9fa;">
+                            <th style="padding: 10px; text-align: right;">מספר מנוי</th>
+                            <th style="padding: 10px; text-align: right;">שם</th>
+                            <th style="padding: 10px; text-align: right;">רכב</th>
+                            <th style="padding: 10px; text-align: center;">פעולה</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportSubscriberTableBody">
+                        ${subscribers.map(s => `
+                            <tr class="report-subscriber-row" data-name="${s.name || ''}" data-id="${s.subscriberNum}">
+                                <td style="padding: 8px; border-bottom: 1px solid #eee;">${s.subscriberNum}</td>
+                                <td style="padding: 8px; border-bottom: 1px solid #eee;">${s.name || '-'}</td>
+                                <td style="padding: 8px; border-bottom: 1px solid #eee;">${s.vehicle1 || '-'}</td>
+                                <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">
+                                    <button class="btn btn-sm btn-info" 
+                                            onclick="selectSubscriberForReport('${currentCompanyNum || s.companyNum}', '${s.subscriberNum}')"
+                                            style="padding: 5px 15px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                        בחר
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            console.log('[loadReportSubscribers] Loaded', subscribers.length, 'subscribers to report list');
+        }
+        
+        function filterReportSubscribers() {
+            const searchText = document.getElementById('reportSearchBox').value.toLowerCase();
+            const rows = document.querySelectorAll('.report-subscriber-row');
+            console.log('[filterReportSubscribers] Filtering with text:', searchText, 'Total rows:', rows.length);
+            
+            let visibleCount = 0;
+            rows.forEach(row => {
+                const name = (row.getAttribute('data-name') || '').toLowerCase();
+                const id = (row.getAttribute('data-id') || '').toLowerCase();
+                
+                if (name.includes(searchText) || id.includes(searchText)) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            console.log('[filterReportSubscribers] Visible rows after filter:', visibleCount);
+        }
+        
+        function searchAndSelectSubscriber() {
+            const searchBox = document.getElementById('reportSearchBox');
+            const searchText = searchBox.value.trim();
+            
+            if (!searchText) {
+                showToast('⚠️ יש להזין מספר מנוי או שם לחיפוש', 'warning');
+                return;
+            }
+            
+            // Try to find exact match by subscriber number first
+            const rows = document.querySelectorAll('.report-subscriber-row');
+            let foundRow = null;
+            
+            rows.forEach(row => {
+                const id = row.getAttribute('data-id');
+                const name = row.getAttribute('data-name');
+                
+                // Exact match by subscriber number
+                if (id === searchText) {
+                    foundRow = row;
+                    return;
+                }
+                
+                // Partial match by name (if no exact ID match found)
+                if (!foundRow && name.toLowerCase().includes(searchText.toLowerCase())) {
+                    foundRow = row;
+                }
+            });
+            
+            if (foundRow) {
+                // Highlight the found row
+                rows.forEach(r => r.style.background = '');
+                foundRow.style.background = '#e3f2fd';
+                
+                // Scroll to the found row
+                foundRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // If exact match, auto-select
+                const id = foundRow.getAttribute('data-id');
+                if (id === searchText) {
+                    const button = foundRow.querySelector('button');
+                    if (button) button.click();
+                }
+            } else {
+                showToast('⚠️ לא נמצא מנוי מתאים', 'warning');
+            }
+        }
+        
+        function selectSubscriberForReport(companyNum, subscriberNum) {
+            console.log('[selectSubscriberForReport] Selected:', { companyNum, subscriberNum });
+            closeReportsModal();
+            
+            if (window.viewTransactions) {
+                console.log('[selectSubscriberForReport] Calling viewTransactions');
+                window.viewTransactions(companyNum, subscriberNum);
+            } else {
+                console.error('[selectSubscriberForReport] viewTransactions function not found');
+                showToast('⚠️ פונקציית הדוחות לא זמינה', 'error');
+            }
+        }
+        
+        // Guest date handlers for week limitation
+        let guestDateChangeHandler = null;
+        
+        function setupGuestDateHandlers() {
+            const validFromInput = document.getElementById('editValidFrom');
+            const validUntilInput = document.getElementById('editValidUntil');
+            
+            // Handler function for date changes
+            guestDateChangeHandler = function() {
+                const fromValue = validFromInput.value;
+                if (!fromValue) return;
+                
+                // Parse the date (DD/MM/YYYY format)
+                const parts = fromValue.split('/');
+                if (parts.length !== 3) return;
+                
+                const day = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1; // JavaScript months are 0-based
+                const year = parseInt(parts[2]);
+                
+                if (isNaN(day) || isNaN(month) || isNaN(year)) return;
+                
+                const fromDate = new Date(year, month, day);
+                
+                // Get day of week (0 = Sunday, 6 = Saturday)
+                const dayOfWeek = fromDate.getDay();
+                
+                // Calculate days until Saturday (end of week)
+                const daysUntilSaturday = (6 - dayOfWeek + 7) % 7 || 7; // If it's Saturday, set to same day
+                
+                // Calculate end date (max Saturday of same week)
+                const maxEndDate = new Date(fromDate);
+                maxEndDate.setDate(fromDate.getDate() + daysUntilSaturday);
+                
+                // Format the date back to DD/MM/YYYY
+                const endDay = String(maxEndDate.getDate()).padStart(2, '0');
+                const endMonth = String(maxEndDate.getMonth() + 1).padStart(2, '0');
+                const endYear = maxEndDate.getFullYear();
+                
+                // Set the valid until date to the same week's Saturday
+                validUntilInput.value = `${endDay}/${endMonth}/${endYear}`;
+                
+                // Add a help text about the week limitation
+                let helpText = document.getElementById('guestWeekHelp');
+                if (!helpText) {
+                    helpText = document.createElement('small');
+                    helpText.id = 'guestWeekHelp';
+                    helpText.style.color = '#17a2b8';
+                    helpText.style.display = 'block';
+                    helpText.style.marginTop = '5px';
+                    validUntilInput.parentElement.appendChild(helpText);
+                }
+                helpText.textContent = `* אורח מוגבל לשבוע הנוכחי (עד יום שבת ${endDay}/${endMonth})`;
+            };
+            
+            // Add event listener
+            validFromInput.addEventListener('change', guestDateChangeHandler);
+            validFromInput.addEventListener('blur', guestDateChangeHandler);
+            
+            // Also limit the until date input
+            validUntilInput.addEventListener('change', function() {
+                const fromValue = validFromInput.value;
+                const untilValue = validUntilInput.value;
+                
+                if (!fromValue || !untilValue) return;
+                
+                // Parse both dates
+                const fromParts = fromValue.split('/');
+                const untilParts = untilValue.split('/');
+                
+                if (fromParts.length !== 3 || untilParts.length !== 3) return;
+                
+                const fromDate = new Date(
+                    parseInt(fromParts[2]), 
+                    parseInt(fromParts[1]) - 1, 
+                    parseInt(fromParts[0])
+                );
+                
+                const untilDate = new Date(
+                    parseInt(untilParts[2]), 
+                    parseInt(untilParts[1]) - 1, 
+                    parseInt(untilParts[0])
+                );
+                
+                // Calculate the Saturday of the from date's week
+                const dayOfWeek = fromDate.getDay();
+                const daysUntilSaturday = (6 - dayOfWeek + 7) % 7 || 7;
+                const maxEndDate = new Date(fromDate);
+                maxEndDate.setDate(fromDate.getDate() + daysUntilSaturday);
+                
+                // If the selected until date is after the week's Saturday, reset it
+                if (untilDate > maxEndDate) {
+                    const endDay = String(maxEndDate.getDate()).padStart(2, '0');
+                    const endMonth = String(maxEndDate.getMonth() + 1).padStart(2, '0');
+                    const endYear = maxEndDate.getFullYear();
+                    validUntilInput.value = `${endDay}/${endMonth}/${endYear}`;
+                    
+                    showToast('⚠️ אורח מוגבל לשבוע הנוכחי בלבד', 'warning');
+                }
+            });
+            
+            // Trigger initial calculation
+            if (validFromInput.value) {
+                guestDateChangeHandler();
+            }
+        }
+        
+        function removeGuestDateHandlers() {
+            const validFromInput = document.getElementById('editValidFrom');
+            const validUntilInput = document.getElementById('editValidUntil');
+            
+            // Remove event listeners
+            if (guestDateChangeHandler) {
+                validFromInput.removeEventListener('change', guestDateChangeHandler);
+                validFromInput.removeEventListener('blur', guestDateChangeHandler);
+            }
+            
+            // Remove help text
+            const helpText = document.getElementById('guestWeekHelp');
+            if (helpText) {
+                helpText.remove();
+            }
+            
+            // Clone and replace to remove all event listeners
+            const newUntilInput = validUntilInput.cloneNode(true);
+            validUntilInput.parentNode.replaceChild(newUntilInput, validUntilInput);
+        }
+        
+        // Add new subscriber
+        async function addNewSubscriber(isGuest = false) {
+            // Check user permissions
+            if (!checkUserPermission('add_subscriber')) {
+                showToast('אין לך הרשאה להוסיף מנויים חדשים', 'error');
+                return;
+            }
+            
+            // Get current company from parkingUIXML if available, otherwise use global
+            let companyInfo = currentCompany;
+            if (window.parkingUIXML && window.parkingUIXML.currentContract) {
+                companyInfo = window.parkingUIXML.currentContract;
+            }
+            
+            if (!companyInfo) {
+                showToast('⚠️ יש לבחור חברה תחילה', 'error');
+                return;
+            }
+            
+            // Load usage profiles from server if available (new subscriber - enabled)
+            if (window.parkingUIXML && window.parkingUIXML.loadUsageProfiles) {
+                await window.parkingUIXML.loadUsageProfiles(true); // true = new subscriber
+            }
+            
+            // Get tomorrow's date
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const tomorrowStr = formatDateForDisplay(tomorrow.toISOString().split('T')[0]);
+            
+            // Default dates
+            let defaultEndDateStr;
+            if (isGuest) {
+                // Guest - Same day as start date (for same week limitation)
+                defaultEndDateStr = tomorrowStr;
+            } else {
+                // Regular subscriber - until end of current year
+                const currentYear = new Date().getFullYear();
+                defaultEndDateStr = `31/12/${currentYear}`;
+            }
+            
+            editingSubscriber = null; // New subscriber
+            window.currentEditingSubscriber = null; // Clear global reference for new subscriber
+            console.log('[addNewSubscriber] Cleared both editingSubscriber and window.currentEditingSubscriber for new subscriber');
+            
+            // CRITICAL: Store the edit mode in the modal itself
+            const modal = document.getElementById('editModal');
+            if (modal) {
+                modal.setAttribute('data-edit-mode', 'new');
+                modal.removeAttribute('data-subscriber-num');
+                console.log('[addNewSubscriber] Set modal data-edit-mode to NEW');
+            }
+            
+            // Force show buttons
+            forceShowModalButtons();
+            
+            // Clear form
+            document.getElementById('editCompanyNum').value = companyInfo.id || '';
+            document.getElementById('editCompanyName').value = companyInfo.name || companyInfo.companyName || '';
+            // Leave subscriber number empty - will be calculated when saving
+            document.getElementById('editSubscriberNum').value = '';
+            document.getElementById('editSubscriberNum').readOnly = true;
+            document.getElementById('editSubscriberNum').placeholder = isGuest ? 'יוצר אוטומטית (40001+)' : 'יוצר אוטומטית';
+            document.getElementById('editFirstName').value = '';
+            document.getElementById('editLastName').value = '';
+            // Generate new tag number for new subscriber
+            const newTagNum = isGuest ? '' : 'TAG' + Date.now().toString().substr(-6);
+            document.getElementById('editTagNum').value = newTagNum;
+            document.getElementById('editTagNum').readOnly = false; // Allow editing tag for new subscribers
+            document.getElementById('editTagNum').style.backgroundColor = '';
+            document.getElementById('editTagNum').style.cursor = '';
+            document.getElementById('tagHelpText').style.display = 'none';
+            document.getElementById('editVehicle1').value = '';
+            document.getElementById('editVehicle2').value = '';
+            document.getElementById('editVehicle3').value = '';
+            document.getElementById('editValidFrom').value = tomorrowStr;
+            document.getElementById('editValidUntil').value = defaultEndDateStr;
+            // Profile will be set by loadUsageProfiles based on company profiles
+            // document.getElementById('editProfile').value = '1'; // Will be set automatically
+            document.getElementById('editEmail').value = '';
+            document.getElementById('editNotes').value = '';
+            
+            // If guest, disable vehicle 2 and 3
+            if (isGuest) {
+                document.getElementById('editVehicle2').disabled = true;
+                document.getElementById('editVehicle3').disabled = true;
+                
+                // Add guest mode indicator to modal
+                document.getElementById('editModal').classList.add('guest-mode');
+                
+                // For guest - profile can be selected but default to 2
+                const profileSelect = document.getElementById('editProfile');
+                // If profile 2 exists, select it
+                for (let i = 0; i < profileSelect.options.length; i++) {
+                    if (profileSelect.options[i].value === '2') {
+                        profileSelect.value = '2';
+                        break;
+                    }
+                }
+                
+                // Guest can choose profile but defaults to 2
+                profileSelect.disabled = false;
+                
+                // Update help text for guest
+                const profileHelpText = document.getElementById('profileHelpText');
+                if (profileHelpText) {
+                    profileHelpText.textContent = '* אורח - ברירת מחדל פרופיל 2';
+                    profileHelpText.style.color = '#666';
+                }
+                
+                // Setup guest date handlers for week limitation
+                setupGuestDateHandlers();
+            } else {
+                document.getElementById('editVehicle2').disabled = false;
+                document.getElementById('editVehicle3').disabled = false;
+                // Keep subscriber number readonly - always auto-generated
+                document.getElementById('editSubscriberNum').readOnly = true;
+                
+                // Remove guest mode indicator
+                document.getElementById('editModal').classList.remove('guest-mode');
+                
+                // Remove guest date handlers
+                removeGuestDateHandlers();
+            }
+            
+            // Show modal
+            document.getElementById('editModal').classList.add('show');
+            
+            // Ensure buttons are visible
+            setTimeout(() => {
+                const topButtons = document.querySelectorAll('.modal-actions-top .btn');
+                topButtons.forEach(btn => {
+                    btn.style.display = 'inline-flex';
+                    btn.style.visibility = 'visible';
+                    btn.style.opacity = '1';
+                });
+                
+                const modalActions = document.querySelector('.modal-actions-top');
+                if (modalActions) {
+                    modalActions.style.display = 'flex';
+                    modalActions.style.visibility = 'visible';
+                    modalActions.style.opacity = '1';
+                }
+            }, 10);
+        }
+
+        // Close modal
+        function closeModal() {
+            const modal = document.getElementById('editModal');
+            if (modal && modal.classList.contains('show')) {
+                modal.classList.remove('show');
+                editingSubscriber = null;
+                window.currentEditingSubscriber = null;  // Clear global reference too
+                
+                // Clear modal data attributes
+                modal.removeAttribute('data-edit-mode');
+                modal.removeAttribute('data-subscriber-num');
+                
+                console.log('[closeModal] Cleared both editingSubscriber and window.currentEditingSubscriber');
+                console.log('[closeModal] Cleared modal data attributes');
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Search functionality
+            document.getElementById('searchBox').addEventListener('input', filterSubscribers);
+            
+            // Filter listeners - trigger filtering when changed
+            document.getElementById('filterPresence').addEventListener('change', () => {
+                filterSubscribers();
+            });
+            
+            document.getElementById('filterDate').addEventListener('change', () => {
+                filterSubscribers();
+            });
+            
+            // Edit form submit
+            document.getElementById('editForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveSubscriber();
+            });
+            
+            // Close modal on outside click
+            // Modal backdrop click to close - fixed to prevent accidental closing
+            const editModal = document.getElementById('editModal');
+            if (editModal) {
+                editModal.addEventListener('click', function(e) {
+                    // Only close if clicking on the backdrop itself, not on modal content
+                    if (e.target === this && e.target.id === 'editModal') {
+                        closeModal();
+                    }
+                });
+            }
+        }
+
+        // Filter subscribers
+        function filterSubscribers() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            const presenceFilter = document.getElementById('filterPresence').value;
+            const dateFilter = document.getElementById('filterDate').value;
+            
+            let filtered = currentSubscribers;
+            
+            // Search filter
+            if (searchTerm) {
+                filtered = filtered.filter(s => 
+                    s.firstName.toLowerCase().includes(searchTerm) ||
+                    s.lastName.toLowerCase().includes(searchTerm) ||
+                    s.subscriberNum.includes(searchTerm) ||
+                    s.vehicle1?.includes(searchTerm) ||
+                    s.vehicle2?.includes(searchTerm) ||
+                    s.vehicle3?.includes(searchTerm) ||
+                    s.tagNum?.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            // Presence filter
+            if (presenceFilter) {
+                filtered = filtered.filter(s => {
+                    if (presenceFilter === 'present') return s.presence === true;
+                    if (presenceFilter === 'absent') return s.presence === false;
+                    return true;
+                });
+            }
+            
+            // Date filter
+            if (dateFilter) {
+                const now = new Date();
+                filtered = filtered.filter(s => {
+                    const validDate = new Date(s.validUntil);
+                    const daysUntilExpiry = Math.floor((validDate - now) / (1000 * 60 * 60 * 24));
+                    
+                    switch(dateFilter) {
+                        case 'valid':
+                            return validDate >= now;
+                        case 'expired':
+                            return validDate < now;
+                        case 'expiring30':
+                            return daysUntilExpiry >= 0 && daysUntilExpiry <= 30;
+                        case 'expiring7':
+                            return daysUntilExpiry >= 0 && daysUntilExpiry <= 7;
+                        default:
+                            return true;
+                    }
+                });
+            }
+            
+            // Apply sorting if active
+            if (currentSortField) {
+                filtered = sortSubscribersArray(filtered);
+            }
+            
+            displaySubscribers(filtered);
+        }
+        
+        // Helper function to sort subscribers array
+        function sortSubscribersArray(subscribers) {
+            if (!currentSortField || !subscribers) return subscribers;
+            
+            return [...subscribers].sort((a, b) => {
+                let aVal = a[currentSortField];
+                let bVal = b[currentSortField];
+                
+                // Handle dates
+                if (currentSortField === 'validUntil' || currentSortField === 'validFrom') {
+                    aVal = new Date(aVal || '1900-01-01');
+                    bVal = new Date(bVal || '1900-01-01');
+                }
+                
+                // Handle presence (boolean)
+                if (currentSortField === 'presence') {
+                    aVal = aVal ? 1 : 0;
+                    bVal = bVal ? 1 : 0;
+                }
+                
+                // Handle numbers
+                if (!isNaN(aVal) && !isNaN(bVal)) {
+                    aVal = Number(aVal);
+                    bVal = Number(bVal);
+                }
+                
+                // Handle null/undefined
+                if (aVal === null || aVal === undefined) aVal = '';
+                if (bVal === null || bVal === undefined) bVal = '';
+                
+                // Compare
+                if (aVal < bVal) return currentSortDirection === 'asc' ? -1 : 1;
+                if (aVal > bVal) return currentSortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+        
+        // Setup sorting on headers
+        function setupSorting() {
+            const sortableHeaders = document.querySelectorAll('.sortable');
+            sortableHeaders.forEach(header => {
+                header.addEventListener('click', function() {
+                    const field = this.getAttribute('data-sort');
+                    
+                    // Reset all headers
+                    sortableHeaders.forEach(h => {
+                        h.classList.remove('sort-asc', 'sort-desc');
+                        const icon = h.querySelector('.sort-icon');
+                        if (icon) icon.innerHTML = '⇅';
+                    });
+                    
+                    // Update sort direction
+                    if (currentSortField === field) {
+                        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        currentSortField = field;
+                        currentSortDirection = 'asc';
+                    }
+                    
+                    // Update header visual
+                    this.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+                    
+                    // Update sort icon
+                    const icon = this.querySelector('.sort-icon');
+                    if (icon) {
+                        icon.innerHTML = currentSortDirection === 'asc' ? '↑' : '↓';
+                    }
+                    
+                    // Sort and redisplay
+                    sortAndDisplaySubscribers();
+                });
+            });
+        }
+        
+        // Sort and display subscribers
+        function sortAndDisplaySubscribers() {
+            // Just call filter which will apply sorting too
+            filterSubscribers();
+        }
+        
+        // Get filtered subscribers (helper for sorting)
+        function getFilteredSubscribers() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            const presenceFilter = document.getElementById('filterPresence').value;
+            const dateFilter = document.getElementById('filterDate').value;
+            
+            let filtered = currentSubscribers;
+            
+            // Apply same filters as filterSubscribers
+            if (searchTerm) {
+                filtered = filtered.filter(s => 
+                    s.firstName.toLowerCase().includes(searchTerm) ||
+                    s.lastName.toLowerCase().includes(searchTerm) ||
+                    s.subscriberNum.includes(searchTerm) ||
+                    s.vehicle1?.includes(searchTerm) ||
+                    s.vehicle2?.includes(searchTerm) ||
+                    s.vehicle3?.includes(searchTerm) ||
+                    s.tagNum?.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            if (presenceFilter) {
+                filtered = filtered.filter(s => {
+                    if (presenceFilter === 'present') return s.presence === true;
+                    if (presenceFilter === 'absent') return s.presence === false;
+                    return true;
+                });
+            }
+            
+            if (dateFilter) {
+                const now = new Date();
+                filtered = filtered.filter(s => {
+                    const validDate = new Date(s.validUntil);
+                    const daysUntilExpiry = Math.floor((validDate - now) / (1000 * 60 * 60 * 24));
+                    
+                    switch(dateFilter) {
+                        case 'valid':
+                            return validDate >= now;
+                        case 'expired':
+                            return validDate < now;
+                        case 'expiring30':
+                            return daysUntilExpiry >= 0 && daysUntilExpiry <= 30;
+                        case 'expiring7':
+                            return daysUntilExpiry >= 0 && daysUntilExpiry <= 7;
+                        default:
+                            return true;
+                    }
+                });
+            }
+            
+            return filtered;
+        }
+
+        // Save subscriber
+        async function saveSubscriber() {
+            // Check if we have the UI integration
+            if (window.parkingUIXML || window.parkingUI) {
+                const uiIntegration = window.parkingUIXML || window.parkingUI;
+                
+                // Debug logging
+                console.log('[saveSubscriber] CRITICAL CHECK - editingSubscriber:', editingSubscriber);
+                console.log('[saveSubscriber] CRITICAL CHECK - window.currentEditingSubscriber:', window.currentEditingSubscriber);
+                console.log('[saveSubscriber] typeof editingSubscriber:', typeof editingSubscriber);
+                console.log('[saveSubscriber] typeof window.currentEditingSubscriber:', typeof window.currentEditingSubscriber);
+                
+                // Use both local and global to ensure we have the right value
+                const currentlyEditing = editingSubscriber || window.currentEditingSubscriber;
+                console.log('[saveSubscriber] currentlyEditing:', currentlyEditing);
+                
+                // Extra validation
+                const subscriberNumFromForm = document.getElementById('editSubscriberNum').value;
+                console.log('[saveSubscriber] Subscriber number from form:', subscriberNumFromForm);
+                
+                // If we have a subscriber number in the form and it's not empty, it's definitely an update
+                const isDefinitelyUpdate = subscriberNumFromForm && subscriberNumFromForm !== '' && subscriberNumFromForm !== '0';
+                console.log('[saveSubscriber] isDefinitelyUpdate (has subscriber number):', isDefinitelyUpdate);
+                
+                // ULTIMATE FIX: Check the modal's data attribute for edit mode
+                const modal = document.getElementById('editModal');
+                const modalEditMode = modal ? modal.getAttribute('data-edit-mode') : null;
+                const modalSubscriberNum = modal ? modal.getAttribute('data-subscriber-num') : null;
+                console.log('[saveSubscriber] Modal edit mode:', modalEditMode, 'Modal subscriber num:', modalSubscriberNum);
+                
+                // Determine if new based on multiple factors
+                let isNew = false;
+                if (modalEditMode === 'new') {
+                    isNew = true;
+                    console.log('[saveSubscriber] Modal says NEW');
+                } else if (modalEditMode === 'update') {
+                    isNew = false;
+                    console.log('[saveSubscriber] Modal says UPDATE');
+                } else if (isDefinitelyUpdate) {
+                    isNew = false;
+                    console.log('[saveSubscriber] Has subscriber number - UPDATE');
+                } else if (currentlyEditing) {
+                    isNew = false;
+                    console.log('[saveSubscriber] Has editing context - UPDATE');
+                } else {
+                    isNew = true;
+                    console.log('[saveSubscriber] No clear indication - assuming NEW');
+                }
+                
+                console.log('[saveSubscriber] FINAL isNew decision:', isNew);
+                
+                // Collect form data
+                const formData = {
+                    companyNum: document.getElementById('editCompanyNum').value,
+                    companyName: document.getElementById('editCompanyName').value,
+                    subscriberNum: document.getElementById('editSubscriberNum').value || '',  // Empty string for auto-generation
+                    firstName: document.getElementById('editFirstName').value.trim() || '',  // Allow empty first name
+                    lastName: document.getElementById('editLastName').value.trim(),  // Required field
+                    tagNum: document.getElementById('editTagNum').value || '',
+                    vehicle1: document.getElementById('editVehicle1').value || '',
+                    vehicle2: document.getElementById('editVehicle2').value || '',
+                    vehicle3: document.getElementById('editVehicle3').value || '',
+                    validFrom: document.getElementById('editValidFrom').value.trim(),
+                    validUntil: document.getElementById('editValidUntil').value.trim(),
+                    profile: document.getElementById('editProfile').selectedOptions[0]?.getAttribute('data-profile-name') || 'regular',
+                    profileId: document.getElementById('editProfile').value || '1',
+                    email: document.getElementById('editEmail').value || '',
+                    notes: document.getElementById('editNotes').value || '',
+                    ignorePresence: document.getElementById('editIgnorePresence').checked ? '1' : '0',
+                    isNew: isNew,  // Use the calculated value that considers both editing state and form data
+                    // Check if creating a guest (first name is "אורח" or modal has guest indicator)
+                    isGuest: document.getElementById('editFirstName').value.trim() === 'אורח' || 
+                            document.getElementById('editModal')?.classList.contains('guest-mode')
+                };
+                
+                console.log('[saveSubscriber] formData:', formData);
+                
+                // Validate required fields
+                // Last name is required
+                if (!formData.lastName) {
+                    showToast('⚠️ שם משפחה הוא שדה חובה!', 'error');
+                    document.getElementById('editLastName').focus();
+                    document.getElementById('editLastName').style.borderColor = 'red';
+                    return;
+                }
+                
+                // Dates are required
+                if (!formData.validFrom) {
+                    showToast('⚠️ תחילת תוקף הוא שדה חובה!', 'error');
+                    document.getElementById('editValidFrom').focus();
+                    document.getElementById('editValidFrom').style.borderColor = 'red';
+                    return;
+                }
+                
+                if (!formData.validUntil) {
+                    showToast('⚠️ תוקף עד הוא שדה חובה!', 'error');
+                    document.getElementById('editValidUntil').focus();
+                    document.getElementById('editValidUntil').style.borderColor = 'red';
+                    return;
+                }
+                
+                // Validate date format and limit - accept both DD/MM/YYYY and YYYY-MM-DD
+                const euroDateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+                const isoDateRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
+                
+                let fromDay, fromMonth, fromYear;
+                let untilDay, untilMonth, untilYear;
+                
+                // Check validFrom format
+                const fromEuroMatch = formData.validFrom.match(euroDateRegex);
+                const fromIsoMatch = formData.validFrom.match(isoDateRegex);
+                
+                if (fromEuroMatch) {
+                    fromDay = parseInt(fromEuroMatch[1]);
+                    fromMonth = parseInt(fromEuroMatch[2]);
+                    fromYear = parseInt(fromEuroMatch[3]);
+                } else if (fromIsoMatch) {
+                    fromYear = parseInt(fromIsoMatch[1]);
+                    fromMonth = parseInt(fromIsoMatch[2]);
+                    fromDay = parseInt(fromIsoMatch[3]);
+                } else {
+                    showToast('⚠️ פורמט תאריך תחילת תוקף לא תקין (DD/MM/YYYY)', 'error');
+                    document.getElementById('editValidFrom').focus();
+                    document.getElementById('editValidFrom').style.borderColor = 'red';
+                    return;
+                }
+                
+                // Check validUntil format
+                const untilEuroMatch = formData.validUntil.match(euroDateRegex);
+                const untilIsoMatch = formData.validUntil.match(isoDateRegex);
+                
+                if (untilEuroMatch) {
+                    untilDay = parseInt(untilEuroMatch[1]);
+                    untilMonth = parseInt(untilEuroMatch[2]);
+                    untilYear = parseInt(untilEuroMatch[3]);
+                } else if (untilIsoMatch) {
+                    untilYear = parseInt(untilIsoMatch[1]);
+                    untilMonth = parseInt(untilIsoMatch[2]);
+                    untilDay = parseInt(untilIsoMatch[3]);
+                } else {
+                    showToast('⚠️ פורמט תאריך תוקף עד לא תקין (DD/MM/YYYY)', 'error');
+                    document.getElementById('editValidUntil').focus();
+                    document.getElementById('editValidUntil').style.borderColor = 'red';
+                    return;
+                }
+                
+
+                
+                // Validate date values are in valid ranges
+                if (fromDay < 1 || fromDay > 31 || fromMonth < 1 || fromMonth > 12) {
+                    showToast('⚠️ תאריך תחילת תוקף לא תקין', 'error');
+                    document.getElementById('editValidFrom').focus();
+                    document.getElementById('editValidFrom').style.borderColor = 'red';
+                    return;
+                }
+                
+                if (untilDay < 1 || untilDay > 31 || untilMonth < 1 || untilMonth > 12) {
+                    showToast('⚠️ תאריך תוקף עד לא תקין', 'error');
+                    document.getElementById('editValidUntil').focus();
+                    document.getElementById('editValidUntil').style.borderColor = 'red';
+                    return;
+                }
+                
+                // Check date limit (max 31/12/3035)
+                const maxYear = 3035;
+                if (untilYear > maxYear || (untilYear === maxYear && untilMonth > 12) || 
+                    (untilYear === maxYear && untilMonth === 12 && untilDay > 31)) {
+                    showToast(`⚠️ תאריך תוקף עד לא יכול להיות אחרי 31/12/${maxYear}`, 'error');
+                    document.getElementById('editValidUntil').focus();
+                    document.getElementById('editValidUntil').style.borderColor = 'red';
+                    return;
+                }
+                
+                // Create date objects for comparison
+                const fromDate = new Date(fromYear, fromMonth - 1, fromDay);
+                const untilDate = new Date(untilYear, untilMonth - 1, untilDay);
+                
+                // Check that until date is after from date
+                if (untilDate <= fromDate) {
+                    showToast('⚠️ תאריך תוקף עד חייב להיות אחרי תאריך תחילת תוקף', 'error');
+                    document.getElementById('editValidUntil').focus();
+                    document.getElementById('editValidUntil').style.borderColor = 'red';
+                    return;
+                }
+                
+                // Allow phone numbers in names - per user request
+                
+                // Reset border colors
+                document.getElementById('editFirstName').style.borderColor = '';
+                document.getElementById('editLastName').style.borderColor = '';
+                document.getElementById('editValidFrom').style.borderColor = '';
+                document.getElementById('editValidUntil').style.borderColor = '';
+                
+                // Show loading
+                showToast('שומר נתונים...', 'info');
+                
+                // Send to server via API
+                const success = await uiIntegration.saveSubscriber(formData);
+                
+                if (success) {
+                    // Show success toast
+                    showToast('הנתונים נשמרו בהצלחה בשרת', 'success');
+                    // Close modal
+                    closeModal();
+                    
+                    // Update only the specific subscriber instead of reloading all
+                    if (window.parkingUIXML) {
+                        if (formData.isNew) {
+                            // For new subscriber, refresh only if necessary
+                            // The saveSubscriber function should have already updated the UI
+                            window.parkingUIXML.refreshSingleSubscriber(formData.subscriberNum);
+                        } else {
+                            // For existing subscriber, update the specific row
+                            const subscriberToRefresh = currentlyEditing || editingSubscriber;
+                            if (subscriberToRefresh && subscriberToRefresh.subscriberNum) {
+                                window.parkingUIXML.refreshSingleSubscriber(subscriberToRefresh.subscriberNum);
+                            } else {
+                                // Fallback to full refresh if we don't have the subscriber number
+                                window.parkingUIXML.loadSubscribers();
+                            }
+                        }
+                    }
+                } else {
+                    // Show error
+                    showToast('שגיאה בשמירת הנתונים', 'error');
+                }
+            } else {
+                // Fallback to mock save
+                showToast('מצב דמו - הנתונים נשמרו מקומית', 'info');
+                closeModal();
+                loadSubscribers();
+            }
+        }
+
+        // Language toggle
+        function toggleLanguage() {
+            currentLang = currentLang === 'he' ? 'en' : 'he';
+            document.body.lang = currentLang;
+            document.body.dir = currentLang === 'he' ? 'rtl' : 'ltr';
+            
+            // Update all translated elements
+            document.querySelectorAll('[data-translate]').forEach(element => {
+                const key = element.getAttribute('data-translate');
+                element.textContent = translations[currentLang][key];
+            });
+            
+            // Update placeholders
+            document.querySelectorAll('[data-translate-placeholder]').forEach(element => {
+                const key = element.getAttribute('data-translate-placeholder');
+                element.placeholder = translations[currentLang][key];
+            });
+            
+            // Refresh display
+            if (currentSubscribers.length > 0) {
+                displaySubscribers(currentSubscribers);
+            }
+        }
+
+        // Font size control
+        function changeFontSize(size) {
+            document.body.classList.remove('small-font', 'large-font', 'xlarge-font');
+            if (size === 'small') {
+                document.body.classList.add('small-font');
+            } else if (size === 'large') {
+                document.body.classList.add('large-font');
+            } else if (size === 'xlarge') {
+                document.body.classList.add('xlarge-font');
+            }
+            localStorage.setItem('fontSize', size);
+        }
+
+        // Accessibility panel toggle
+        function toggleAccessibility() {
+            const panel = document.getElementById('accessibilityPanel');
+            panel.classList.toggle('show');
+        }
+
+        // High contrast toggle
+        function toggleHighContrast() {
+            document.body.classList.toggle('high-contrast');
+        }
+
+        // Underline links toggle
+        function toggleUnderlineLinks() {
+            document.body.classList.toggle('underline-links');
+        }
+
+        // Focus highlight toggle
+        function toggleFocusHighlight() {
+            document.body.classList.toggle('focus-highlight');
+        }
+
+        // Reset accessibility settings
+        function resetAccessibility() {
+            document.body.classList.remove('high-contrast', 'underline-links', 'focus-highlight');
+            document.getElementById('highContrast').checked = false;
+            document.getElementById('underlineLinks').checked = false;
+            document.getElementById('focusHighlight').checked = false;
+            changeFontSize('normal');
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span>${type === 'success' ? '✅' : '❌'}</span>
+                <span>${message}</span>
+            `;
+            document.getElementById('toastContainer').appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+        
+        // Format date for display in European format (DD/MM/YYYY)
+        function formatDateForDisplay(dateStr) {
+            if (!dateStr) return '';
+            
+            // If already in DD/MM/YYYY format, return as is
+            if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
+                return dateStr;
+            }
+            
+            // If in server format (YYYY-MM-DD), convert to European
+            if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+                const parts = dateStr.split(/[-T]/);
+                const year = parts[0];
+                const month = parts[1];
+                const day = parts[2];
+                return `${day}/${month}/${year}`;
+            }
+            
+            // Try to parse as date
+            const date = new Date(dateStr);
+            if (!isNaN(date)) {
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+                return `${day}/${month}/${year}`;
+            }
+            
+            return dateStr;
+        }
+
+        // Export to Excel
+        function exportToExcel() {
+            if (!checkUserPermission('export')) {
+                showToast('אין לך הרשאה לייצא נתונים', 'error');
+                return;
+            }
+            
+            // Check if we have the UI integration
+            if (window.parkingUIXML || window.parkingUI) {
+                const uiIntegration = window.parkingUIXML || window.parkingUI;
+                uiIntegration.exportToCSV();
+                return;
+            }
+            
+            // Get current filtered/sorted data
+            const dataToExport = getFilteredSubscribers();
+            
+            if (!dataToExport || dataToExport.length === 0) {
+                showToast('אין נתונים לייצוא', 'warning');
+                return;
+            }
+            
+            // Create CSV content
+            const headers = [
+                'מספר חברה',
+                'שם חברה', 
+                'מספר מנוי',
+                'שם פרטי',
+                'שם משפחה',
+                'מספר תג',
+                'רכב 1',
+                'רכב 2', 
+                'רכב 3',
+                'תחילת תוקף',
+                'בתוקף עד',
+                'פרופיל',
+                'נוכחות'
+            ];
+            
+            // Create CSV rows
+            const rows = dataToExport.map(subscriber => [
+                subscriber.companyNum || '',
+                subscriber.companyName || '',
+                subscriber.subscriberNum || '',
+                subscriber.firstName || '',
+                subscriber.lastName || '',
+                subscriber.tagNum || '',
+                subscriber.vehicle1 || '',
+                subscriber.vehicle2 || '',
+                subscriber.vehicle3 || '',
+                formatDate(subscriber.validFrom) || '',
+                formatDate(subscriber.validUntil) || '' || '',
+                translations[currentLang][subscriber.profile] || subscriber.profile || '',
+                subscriber.presence ? 'נוכח' : 'לא נוכח'
+            ]);
+            
+            // Combine headers and rows
+            const csvContent = [
+                headers.join(','),
+                ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+            ].join('\n');
+            
+            // Add BOM for Hebrew support in Excel
+            const BOM = '\uFEFF';
+            const csvWithBOM = BOM + csvContent;
+            
+            // Create blob and download
+            const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            // Generate filename with timestamp
+            const now = new Date();
+            const dateStr = now.toISOString().split('T')[0];
+            const timeStr = now.toTimeString().split(':').slice(0,2).join('-');
+            const companyName = currentCompany ? currentCompany.name : 'all';
+            const filename = `parking_subscribers_${companyName}_${dateStr}_${timeStr}.csv`;
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showToast(`הקובץ ${filename} יוצא בהצלחה`, 'success');
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            
+            // Use formatDateForDisplay for consistency
+            return formatDateForDisplay(dateString);
+        }
+
+
+
+        
+        // Transactions Modal Functions
+        let currentTransactionCompany = null;
+        let currentTransactionSubscriber = null;
+        let allTransactions = [];
+        
+        window.viewTransactions = function(companyNum, subscriberNum) {
+            // Check permissions (for future implementation)
+            // if (!checkUserPermission('view_transactions')) {
+            //     showToast('אין לך הרשאה לצפות בתנועות', 'error');
+            //     return;
+            // }
+            
+            currentTransactionCompany = companyNum;
+            currentTransactionSubscriber = subscriberNum;
+            
+            // Set default dates
+            const today = new Date();
+            const lastMonth = new Date();
+            lastMonth.setMonth(lastMonth.getMonth() - 1);
+            
+            document.getElementById('transStartDate').value = lastMonth.toISOString().split('T')[0];
+            document.getElementById('transEndDate').value = today.toISOString().split('T')[0];
+            
+            // Show modal
+            document.getElementById('transactionsModal').style.display = 'block';
+            
+            // Auto load transactions
+            loadTransactions();
+        }
+        
+        window.closeTransactionsModal = function() {
+            document.getElementById('transactionsModal').style.display = 'none';
+            currentTransactionCompany = null;
+            currentTransactionSubscriber = null;
+            allTransactions = [];
+        }
+        
+        window.loadTransactions = async function() {
+            const startDate = document.getElementById('transStartDate').value;
+            const endDate = document.getElementById('transEndDate').value;
+            
+            // Show loading
+            document.getElementById('transactionsLoading').style.display = 'block';
+            document.getElementById('transactionsSummary').style.display = 'none';
+            document.getElementById('transactionsTableContainer').style.display = 'none';
+            document.getElementById('noTransactions').style.display = 'none';
+            
+            try {
+                const api = window.parkingAPIXML || new ParkingAPIXML();
+                const url = `/consumers/${currentTransactionCompany},${currentTransactionSubscriber}/parktrans?minDate=${startDate}&maxDate=${endDate}`;
+                
+                const result = await api.makeRequest(url);
+                
+                if (result.success && result.data && result.data.parkTransaction) {
+                    const transactions = Array.isArray(result.data.parkTransaction) 
+                        ? result.data.parkTransaction 
+                        : [result.data.parkTransaction];
+                    
+                    // Filter out code 42 and map data
+                    allTransactions = transactions
+                        .filter(t => parseInt(t.transactionType) !== 42)
+                        .map(t => {
+                            const typeNum = parseInt(t.transactionType);
+                            const isEntry = (typeNum === 1 || typeNum === 2);
+                            const isExit = (typeNum === 11 || typeNum === 12);
+                            
+                            return {
+                                time: t.transactionTime,
+                                typeNum: typeNum,
+                                lpn: t.lpn || '-',
+                                parkingLot: t.facilityin || t.facilityout || 'חניון ראשי',
+                                device: t.device || '-',
+                                direction: isEntry ? 'in' : (isExit ? 'out' : 'unknown')
+                            };
+                        });
+                    
+                    displayTransactions(allTransactions);
+                } else {
+                    // No transactions found
+                    document.getElementById('noTransactions').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error loading transactions:', error);
+                showToast('שגיאה בטעינת התנועות', 'error');
+            } finally {
+                document.getElementById('transactionsLoading').style.display = 'none';
+            }
+        }
+        
+        function displayTransactions(transactions) {
+            // Update summary
+            const entries = transactions.filter(t => t.direction === 'in').length;
+            const exits = transactions.filter(t => t.direction === 'out').length;
+            
+            document.getElementById('totalTrans').textContent = transactions.length;
+            document.getElementById('totalEntries').textContent = entries;
+            document.getElementById('totalExits').textContent = exits;
+            document.getElementById('transactionsSummary').style.display = 'block';
+            
+            // Display table
+            const tbody = document.getElementById('transactionsTableBody');
+            tbody.innerHTML = '';
+            
+            transactions.forEach(t => {
+                const row = document.createElement('tr');
+                const time = new Date(t.time);
+                const formattedTime = `${time.toLocaleDateString('he-IL')} ${time.toLocaleTimeString('he-IL')}`;
+                
+                let directionIcon = '';
+                if (t.direction === 'in') {
+                    directionIcon = '🟢 כניסה';
+                } else if (t.direction === 'out') {
+                    directionIcon = '🔴 יציאה';
+                } else {
+                    directionIcon = '⚪ אחר';
+                }
+                
+                // Device description
+                let deviceDesc = '';
+                const deviceNum = parseInt(t.device);
+                if (deviceNum >= 100 && deviceNum < 200) {
+                    deviceDesc = `יחידת כניסה ${t.device}`;
+                } else if (deviceNum >= 200 && deviceNum < 300) {
+                    deviceDesc = `יחידת יציאה ${t.device}`;
+                } else if (deviceNum >= 300 && deviceNum < 400) {
+                    deviceDesc = `יחידת מעבר ${t.device}`;
+                } else {
+                    deviceDesc = `יחידה ${t.device}`;
+                }
+                
+                row.innerHTML = `
+                    <td>${formattedTime}</td>
+                    <td>${directionIcon}</td>
+                    <td>${t.lpn}</td>
+                    <td>${t.parkingLot}</td>
+                    <td>${deviceDesc}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            document.getElementById('transactionsTableContainer').style.display = 'block';
+        }
+        
+        window.exportTransactions = function() {
+            if (!allTransactions || allTransactions.length === 0) {
+                showToast('אין תנועות לייצוא', 'error');
+                return;
+            }
+            
+            // Create CSV content
+            const headers = ['תאריך ושעה', 'סוג תנועה', 'מספר רכב', 'חניון', 'יחידה'];
+            const rows = allTransactions.map(t => {
+                const time = new Date(t.time);
+                let directionText = t.direction === 'in' ? 'כניסה' : (t.direction === 'out' ? 'יציאה' : 'אחר');
+                
+                return [
+                    `${time.toLocaleDateString('he-IL')} ${time.toLocaleTimeString('he-IL')}`,
+                    directionText,
+                    t.lpn,
+                    t.parkingLot,
+                    t.device
+                ];
+            });
+            
+            // Add BOM for Hebrew
+            const BOM = '\uFEFF';
+            const csvContent = BOM + headers.join(',') + '\n' + 
+                rows.map(row => row.join(',')).join('\n');
+            
+            // Download
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            const filename = `transactions_${currentTransactionSubscriber}_${new Date().toISOString().split('T')[0]}.csv`;
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showToast('הדוח יוצא בהצלחה', 'success');
+        }
+        
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+    
+    <!-- Load Configuration and API Integration -->
+    <script src="/static/js/config.js?v=20250812_v2"></script>
+    <script src="/static/js/parking-api-live.js?v=20251215001"></script>
+    <script src="/static/js/parking-ui-live.js?v=20251215001"></script>
+    
+        <script>
+        // Override init function to use XML API
+        const originalInit = init;
+        init = async function() {
+            originalInit();
+
+            // Use XML API integration
+            if (window.parkingUIXML) {
+                console.log('XML API Integration available, connecting to parking server');
+                // The parkingUIXML will handle loading companies and subscribers
+            }
+        };
+
+        // Load current user info
+        async function loadCurrentUser() {
+            try {
+                const response = await fetch('/api/get-current-user');
+                const data = await response.json();
+                
+                if (data.success && data.user) {
+                    const usernameElement = document.getElementById('currentUsername');
+                    if (usernameElement) {
+                        usernameElement.textContent = data.user.username || data.user.email;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading user info:', error);
+                const usernameElement = document.getElementById('currentUsername');
+                if (usernameElement) {
+                    usernameElement.textContent = 'משתמש';
+                }
+            }
+        }
+
+        // Logout function
+        function logout() {
+            if (confirm('האם אתה בטוח שברצונך להתנתק?')) {
+                window.location.href = '/logout';
+            }
+        }
+
+        // Load user info on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCurrentUser();
+        });
+    </script>
+</body>
+</html>
