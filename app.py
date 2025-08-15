@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response
 from flask_mail import Mail, Message
 from supabase.client import create_client, Client
@@ -3023,7 +3022,11 @@ def company_manager_get_parkings():
             try:
                 print(f"\n🏢 Parking #{idx + 1}: {parking.get('name')}")
                 print(f"   description: {parking.get('description')}")
-                print(f"   ip: {parking.get('ip_address')}:{parking.get('port')}")
+                ip_address = parking.get('ip_address')
+                port = parking.get('port')
+                print(f"   ip: {ip_address}:{port}")
+                print(f"   port type: {type(port)}, port value: {repr(port)}")
+                print(f"   port type: {type(port)}, port value: {repr(port)}")
                 
                 parking_number = parking.get('description', 0)
                 print(f"   parsed number: {parking_number} (type: {type(parking_number)})")
@@ -3247,9 +3250,19 @@ def company_manager_proxy():
         if not ip_address:
             return jsonify({'success': False, 'message': 'חסרים נתוני חיבור'}), 500
         
-        # בניית URL
+
+        # בניית URL - עם פורט קבוע לבדיקה
+        if port is None or port == 0:
+            port = 8240  # פורט ברירת מחדל
+            print(f"   ⚠️ Using default port: {port}")
+    
         protocol = "https" if port == 443 or port == 8443 or port == 8240 else "http"
-        url = f"{protocol}://{ip_address}:{port}/api/{endpoint}"
+        
+        # התאמת ה-endpoint - אם זה CustomerMediaWebService, לא להוסיף /api
+        if 'CustomerMediaWebService' in endpoint:
+            url = f"{protocol}://{ip_address}:{port}/{endpoint}"
+        else:
+            url = f"{protocol}://{ip_address}:{port}/api/{endpoint}"
         
         print(f"\n🔌 Proxy Request:")
         print(f"   URL: {url}")
@@ -3268,10 +3281,15 @@ def company_manager_proxy():
             # timeout מוגבל ל-25 שניות
             timeout_seconds = 25
             print(f"   ⏱️ Attempting connection with {timeout_seconds}s timeout...")
+            print(f"   🌐 Full URL: {url}")
+            print(f"   📋 Headers: {headers}")
             
             # ביצוע הקריאה
             if method == 'GET':
                 response = requests.get(url, headers=headers, verify=False, timeout=timeout_seconds)
+                print(f"   📊 Response status: {response.status_code}")
+                print(f"   📝 Response headers: {dict(response.headers)}")
+                print(f"   💾 Response content preview: {response.text[:200]}")
             elif method == 'POST':
                 response = requests.post(url, json=payload, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'PUT':
@@ -3547,6 +3565,472 @@ def auto_cleanup_reset_codes():
     cleanup_thread.start()
 
 auto_cleanup_reset_codes()
+
+@app.route('/api/debug/why-no-access', methods=['GET'])
+def debug_why_no_access():
+    """למה המשתמש לא מקבל גישה לחניון שלו?"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'})
+        
+        # קבלת נתוני המשתמש
+        user_result = supabase.table('user_parkings').select(
+            'project_number, company_list, access_level, permissions'
+        ).eq('email', session['user_email']).execute()
+        
+        if not user_result.data:
+            return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
+        
+        user_data = user_result.data[0]
+        user_project = user_data.get('project_number')
+        company_list = user_data.get('company_list', '')
+        
+        # קבלת נתוני החניון הספציפי
+        parking_result = supabase.table('parkings').select('*').eq('description', str(user_project)).execute()
+        
+        debug_info = {
+            'user_data': {
+                'email': session['user_email'],
+                'project_number': user_project,
+                'project_type': type(user_project).__name__,
+                'company_list': company_list,
+                'access_level': user_data.get('access_level'),
+                'permissions': user_data.get('permissions')
+            },
+            'parking_search': {
+                'searched_for': str(user_project),
+                'found_parkings': len(parking_result.data)
+            }
+        }
+        
+        if parking_result.data:
+            parking = parking_result.data[0]
+            debug_info['parking_found'] = {
+                'id': parking['id'],
+                'name': parking['name'],
+                'description': parking['description'],
+                'description_type': type(parking['description']).__name__,
+                'ip_address': parking.get('ip_address'),
+                'port': parking.get('port'),
+                'is_active': parking.get('is_active')
+            }
+            
+            # בדיקת השוואה
+            user_str = str(user_project)
+            parking_str = str(parking['description'])
+            debug_info['comparison'] = {
+                'user_project_str': user_str,
+                'parking_description_str': parking_str,
+                'are_equal': user_str == parking_str,
+                'user_length': len(user_str),
+                'parking_length': len(parking_str)
+            }
+            
+            # בדיקת company_list
+            if company_list:
+                allowed_companies = []
+                for part in company_list.split(','):
+                    try:
+                        allowed_companies.append(int(part.strip()))
+                    except:
+                        pass
+                
+                debug_info['company_list_check'] = {
+                    'company_list_raw': company_list,
+                    'allowed_companies': allowed_companies,
+                    'parking_number': parking['description'],
+                    'is_in_list': parking['description'] in allowed_companies
+                }
+        else:
+            debug_info['parking_found'] = None
+        
+        return jsonify({
+            'success': True,
+            'debug_info': debug_info
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+print("🔧 DEBUG ENDPOINT ADDED!")
+
+@app.route('/api/test-parking-connection', methods=['GET'])
+def test_parking_connection():
+    """בדיקה ידנית של חיבור לשרת החניון"""
+    try:
+        ip = "192.117.0.122"
+        port = 8240
+        
+        # בדיקות שונות
+        urls_to_test = [
+            f"https://{ip}:{port}",
+            f"http://{ip}:{port}",
+            f"https://{ip}:{port}/api",
+            f"http://{ip}:{port}/api",
+            f"https://{ip}:{port}/status",
+            f"http://{ip}:{port}/status"
+        ]
+        
+        results = []
+        
+        for url in urls_to_test:
+            try:
+                print(f"🔗 Testing: {url}")
+                response = requests.get(url, timeout=10, verify=False)
+                results.append({
+                    'url': url,
+                    'status': response.status_code,
+                    'success': True,
+                    'content_preview': response.text[:100]
+                })
+                print(f"✅ Success: {url} - {response.status_code}")
+            except Exception as e:
+                results.append({
+                    'url': url,
+                    'status': None,
+                    'success': False,
+                    'error': str(e)
+                })
+                print(f"❌ Failed: {url} - {str(e)}")
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@app.route('/api/test-parking-endpoints', methods=['GET'])
+def test_parking_endpoints():
+    """בדיקת endpoints ספציפיים של שרת החניון"""
+    try:
+        ip = "192.117.0.122"
+        port = 8240
+        
+        # נתיבים נפוצים לשרתי חניונים
+        endpoints_to_test = [
+            "",  # root
+            "api/status",
+            "api/info", 
+            "api/health",
+            "api/contracts",
+            "api/consumers",
+            "api/parking",
+            "status",
+            "info",
+            "contracts",
+            "consumers"
+        ]
+        
+        results = []
+        base_url = f"https://{ip}:{port}"
+        
+        for endpoint in endpoints_to_test:
+            url = f"{base_url}/{endpoint}" if endpoint else base_url
+            
+            try:
+                print(f"🔗 Testing endpoint: {url}")
+                response = requests.get(url, timeout=10, verify=False)
+                results.append({
+                    'endpoint': endpoint or "root",
+                    'url': url,
+                    'status': response.status_code,
+                    'success': response.status_code != 404,
+                    'content_preview': response.text[:200],
+                    'content_type': response.headers.get('content-type', '')
+                })
+                
+                if response.status_code != 404:
+                    print(f"✅ Found working endpoint: {endpoint} - {response.status_code}")
+                
+            except Exception as e:
+                results.append({
+                    'endpoint': endpoint or "root", 
+                    'url': url,
+                    'status': None,
+                    'success': False,
+                    'error': str(e)
+                })
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'working_endpoints': [r for r in results if r.get('success', False)],
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@app.route('/api/test-parking-auth', methods=['GET'])
+def test_parking_auth():
+    """בדיקה עם Basic Auth"""
+    try:
+        ip = "192.117.0.122"
+        port = 8240
+        
+        endpoints = ["api/contracts", "contracts", "api/consumers", "consumers"]
+        
+        # Basic Auth credentials
+        auth_string = base64.b64encode(b'2022:2022').decode('ascii')
+        headers = {
+            'Authorization': f'Basic {auth_string}',
+            'Content-Type': 'application/json'
+        }
+        
+        results = []
+        
+        for endpoint in endpoints:
+            url = f"https://{ip}:{port}/{endpoint}"
+            
+            try:
+                response = requests.get(url, headers=headers, timeout=10, verify=False)
+                results.append({
+                    'endpoint': endpoint,
+                    'url': url,
+                    'status': response.status_code,
+                    'success': response.status_code in [200, 201],
+                    'content_preview': response.text[:200],
+                    'with_auth': True
+                })
+                
+                if response.status_code in [200, 201]:
+                    print(f"✅ Success with auth: {endpoint}")
+                    
+            except Exception as e:
+                results.append({
+                    'endpoint': endpoint,
+                    'error': str(e),
+                    'with_auth': True
+                })
+        
+        return jsonify({
+            'success': True,
+            'results': results
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/test-scheidt-endpoints', methods=['GET'])
+def test_scheidt_endpoints():
+    """בדיקת endpoints של מערכת Scheidt & Bachmann"""
+    try:
+        ip = "192.117.0.122"
+        port = 8240
+        
+        # endpoints נפוצים במערכות Scheidt & Bachmann
+        scheidt_endpoints = [
+            "CustomerMediaWebService",
+            "CustomerMediaWebService/GetContractsList",
+            "CustomerMediaWebService/GetConsumerList",
+            "CustomerMediaWebService/GetOccupancy",
+            "CustomerMediaWebService/GetVehicleWhiteList",
+            "api/CustomerMediaWebService",
+            "api/CustomerMediaWebService/GetContractsList",
+            "api/CustomerMediaWebService/GetConsumerList",
+            "web",
+            "web/status",
+            "web/info",
+            "servlet",
+            "servlet/contracts",
+            "servlet/consumers",
+            "ParkonWeb",
+            "ParkonWeb/contracts", 
+            "ParkonWeb/consumers",
+            "manager",
+            "manager/status",
+            "rest/contracts",
+            "rest/consumers",
+            "rest/status",
+            "xmlapi/contracts",
+            "xmlapi/consumers"
+        ]
+        
+        results = []
+        base_url = f"https://{ip}:{port}"
+        
+        # Basic Auth
+        auth_string = base64.b64encode(b'2022:2022').decode('ascii')
+        headers = {
+            'Authorization': f'Basic {auth_string}',
+            'Content-Type': 'application/json'
+        }
+        
+        for endpoint in scheidt_endpoints:
+            url = f"{base_url}/{endpoint}"
+            
+            try:
+                response = requests.get(url, headers=headers, timeout=10, verify=False)
+                is_success = response.status_code not in [404, 403, 500]
+                
+                results.append({
+                    'endpoint': endpoint,
+                    'url': url,
+                    'status': response.status_code,
+                    'success': is_success,
+                    'content_preview': response.text[:300],
+                    'content_type': response.headers.get('content-type', '')
+                })
+                
+                if is_success:
+                    print(f"✅ Found working Scheidt endpoint: {endpoint} - {response.status_code}")
+                    
+            except Exception as e:
+                results.append({
+                    'endpoint': endpoint,
+                    'url': url,
+                    'error': str(e)
+                })
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'working_endpoints': [r for r in results if r.get('success', False)]
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/test-manager-auth', methods=['GET'])
+def test_manager_auth():
+    """בדיקת manager endpoint עם credentials שונים"""
+    try:
+        ip = "192.117.0.122"
+        port = 8240
+        
+        # credentials שונים לנסות
+        auth_combinations = [
+            ('admin', 'admin'),
+            ('manager', 'manager'), 
+            ('2022', '2022'),
+            ('scheidt', 'scheidt'),
+            ('parking', 'parking'),
+            ('operator', 'operator'),
+            ('service', 'service'),
+            ('administrator', 'administrator'),
+            ('user', 'user'),
+            ('guest', 'guest')
+        ]
+        
+        results = []
+        
+        for username, password in auth_combinations:
+            try:
+                auth_string = base64.b64encode(f'{username}:{password}'.encode()).decode('ascii')
+                headers = {
+                    'Authorization': f'Basic {auth_string}',
+                    'Content-Type': 'application/json'
+                }
+                
+                url = f"https://{ip}:{port}/manager"
+                response = requests.get(url, headers=headers, timeout=10, verify=False)
+                
+                results.append({
+                    'username': username,
+                    'password': password,
+                    'status': response.status_code,
+                    'success': response.status_code not in [401, 403, 404],
+                    'content_preview': response.text[:200],
+                    'content_type': response.headers.get('content-type', '')
+                })
+                
+                if response.status_code not in [401, 403, 404]:
+                    print(f"✅ SUCCESS with {username}:{password} - {response.status_code}")
+                    
+            except Exception as e:
+                results.append({
+                    'username': username,
+                    'password': password,
+                    'error': str(e)
+                })
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'successful_auth': [r for r in results if r.get('success', False)]
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/test-manager-paths', methods=['GET'])
+def test_manager_paths():
+    """בדיקת נתיבים תחת manager"""
+    try:
+        ip = "192.117.0.122"
+        port = 8240
+        
+        # Auth עם 2022:2022
+        auth_string = base64.b64encode(b'2022:2022').decode('ascii')
+        headers = {
+            'Authorization': f'Basic {auth_string}',
+            'Content-Type': 'application/json'
+        }
+        
+        manager_paths = [
+            "manager",
+            "manager/",
+            "manager/status",
+            "manager/info",
+            "manager/contracts",
+            "manager/consumers", 
+            "manager/api",
+            "manager/api/contracts",
+            "manager/api/consumers",
+            "manager/html",
+            "manager/xml",
+            "manager/servlet",
+            "manager/web"
+        ]
+        
+        results = []
+        
+        for path in manager_paths:
+            try:
+                url = f"https://{ip}:{port}/{path}"
+                response = requests.get(url, headers=headers, timeout=10, verify=False)
+                
+                is_success = response.status_code in [200, 201, 301, 302]
+                
+                results.append({
+                    'path': path,
+                    'url': url,
+                    'status': response.status_code,
+                    'success': is_success,
+                    'content_preview': response.text[:300],
+                    'content_type': response.headers.get('content-type', '')
+                })
+                
+                if is_success:
+                    print(f"✅ Found working path: {path} - {response.status_code}")
+                    
+            except Exception as e:
+                results.append({
+                    'path': path,
+                    'url': url,
+                    'error': str(e)
+                })
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'working_paths': [r for r in results if r.get('success', False)]
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 # הפעלה אוטומטית כשהאפליקציה מתחילה
 if __name__ == '__main__':
