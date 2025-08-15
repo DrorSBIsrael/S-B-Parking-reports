@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔥 ניקוי Cache דחוף!</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            text-align: center;
+        }
+        h1 {
+            color: #e74c3c;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+        .success-box {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .instructions {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: right;
+        }
+        .step {
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-right: 4px solid #667eea;
+            border-radius: 5px;
+        }
+        .keyboard {
+            font-family: monospace;
+            background: #333;
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 3px;
+            display: inline-block;
+            margin: 0 5px;
+        }
+        .button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+        .button:hover {
+            background: #5a67d8;
+            transform: scale(1.05);
+        }
+        .button.success {
+            background: #28a745;
+        }
+        .button.success:hover {
+            background: #218838;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔥 תיקון דחוף!</h1>
+        
+        <div class="success-box">
+            <h2 style="color: #28a745;">✅ ה-Endpoint עובד!</h2>
+            <p>הבעיה היא רק ב-Cache של הדפדפן שלך</p>
+        </div>
+
+        <div class="instructions">
+            <h2>🧹 איך לנקות Cache:</h2>
+            
+            <div class="step">
+                <strong>אפשרות 1: ניקוי מהיר (Chrome/Edge)</strong><br>
+                לחץ <span class="keyboard">Ctrl</span> + <span class="keyboard">Shift</span> + <span class="keyboard">Delete</span>
+            </div>
+            
+            <div class="step">
+                <strong>אפשרות 2: רענון חזק</strong><br>
+                באתר עצמו, לחץ <span class="keyboard">Ctrl</span> + <span class="keyboard">F5</span>
+            </div>
+            
+            <div class="step">
+                <strong>אפשרות 3: מצב גלישה בסתר</strong><br>
+                <span class="keyboard">Ctrl</span> + <span class="keyboard">Shift</span> + <span class="keyboard">N</span> (Chrome)<br>
+                <span class="keyboard">Ctrl</span> + <span class="keyboard">Shift</span> + <span class="keyboard">P</span> (Firefox)
+            </div>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ חשוב:</strong> בחלון ניקוי ה-Cache, סמן רק את "Cached images and files"
+        </div>
+
+        <div style="margin-top: 30px;">
+            <button class="button" onclick="testNow()">🧪 בדוק אם עובד</button>
+            <button class="button success" onclick="goToSite()">🚀 כנס לאתר</button>
+        </div>
+
+        <div id="test-result" style="margin-top: 20px;"></div>
+    </div>
+
+    <script>
+        async function testNow() {
+            const resultDiv = document.getElementById('test-result');
+            resultDiv.innerHTML = '<div class="warning">בודק...</div>';
+            
+            try {
+                const response = await fetch('https://s-b-parking-reports.onrender.com/api/company-manager/proxy', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success-box">
+                            <h3>🎉 מעולה! ה-Endpoint עובד!</h3>
+                            <p>Status: ${response.status}</p>
+                            <p>Version: ${data.version}</p>
+                            <p>עכשיו אפשר להיכנס לאתר!</p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="warning">
+                            Status: ${response.status}<br>
+                            נסה לנקות Cache שוב
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="warning">
+                        שגיאה: ${error.message}<br>
+                        נסה לנקות Cache
+                    </div>
+                `;
+            }
+        }
+
+        function goToSite() {
+            // פותח בחלון חדש עם פרמטר למניעת cache
+            const timestamp = new Date().getTime();
+            window.open(`https://s-b-parking-reports.onrender.com/login?nocache=${timestamp}`, '_blank');
+        }
+    </script>
+</body>
+</html>

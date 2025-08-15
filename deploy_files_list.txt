@@ -1,0 +1,50 @@
+# רשימת קבצים להעלאה ל-Render
+# ================================
+
+## קבצי Python עיקריים:
+1. appV3.py - הקובץ הראשי (מעודכן עם נתיבים חדשים)
+2. connection_config.py - מחלקות וקונפיגורציה לחיבור לבסיס נתונים
+3. requirements.txt - תלויות Python
+
+## קבצי Templates (HTML):
+4. templates/parking_subscribers.html - דף ניהול מנויים (מחליף את company_manager.html)
+5. templates/login.html - דף התחברות (אם עדיין לא קיים)
+6. templates/dashboard.html - דף דשבורד (אם קיים)
+
+## קבצי Static (JavaScript):
+7. static/js/parking-api-xml.js - API לתקשורת עם שרתי חניונים
+8. static/js/config.js - הגדרות קונפיגורציה
+9. static/js/parking-ui-integration-xml.js - אינטגרציה של UI
+
+## קבצי Proxy (אם נדרש):
+10. proxy-xml-server.js - שרת proxy לתקשורת XML
+11. package.json - תלויות Node.js (אם משתמשים ב-proxy)
+
+## משתני סביבה ב-Render:
+צריך להגדיר את המשתנים הבאים:
+- SUPABASE_URL
+- SUPABASE_ANON_KEY
+- GMAIL_USERNAME (אם יש)
+- GMAIL_APP_PASSWORD (אם יש)
+- SECRET_KEY
+- PORT (בדרך כלל 10000 ב-Render)
+
+## הוראות העלאה:
+1. העלה את כל הקבצים לריפוזיטורי GitHub
+2. חבר את Render לריפוזיטורי
+3. הגדר את משתני הסביבה ב-Render
+4. וודא שה-Build Command הוא: pip install -r requirements.txt
+5. וודא שה-Start Command הוא: gunicorn appV3:app
+
+## שינויים עיקריים שבוצעו:
+- הוספת בדיקת permissions (G, N, R, P)
+- הוספת בדיקת company_list (רשימת חברות מורשות)
+- חיפוש IP ופורט מטבלת parkings
+- החלפת company_manager.html ב-parking_subscribers.html
+- הוספת API endpoints חדשים למנהל חברה
+
+## הערות חשובות:
+- צריך להעתיק את התוכן המלא של parking_subscribers.html לקובץ templates/parking_subscribers.html
+- צריך להוסיף את הקוד מ-appV3_api_additions.py ל-appV3.py (אחרי שורה 2894)
+- וודא שטבלת parkings בבסיס הנתונים כוללת שדות: ip_address, port, description (project_number)
+

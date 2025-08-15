@@ -1,0 +1,27 @@
+{
+  "name": "parking-management-system",
+  "version": "1.0.0",
+  "description": "Web-based parking subscribers management system",
+  "main": "proxy-server.js",
+  "scripts": {
+    "start": "node proxy-server.js",
+    "dev": "node proxy-server.js",
+    "install-deps": "npm install"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {},
+  "keywords": [
+    "parking",
+    "management",
+    "subscribers",
+    "hebrew",
+    "english",
+    "accessibility"
+  ],
+  "author": "Parking Management Team",
+  "license": "MIT"
+}
+

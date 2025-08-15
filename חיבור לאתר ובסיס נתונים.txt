@@ -1,0 +1,43 @@
+לחלק החשוב ביותר , חיבור לאתר ,
+קבצים קשורים לאתר 
+appV3.py
+login.html
+requirements.txt
+
+user_parkings טבלה
+project_number  (int8)
+ompany_list (text)
+permissions (verchar)
+
+parkings טבלה
+description (text)
+ip_address (verchar)
+port (int4)
+
+מכאן יש קישור לין הטבלאות description - project_number (אולי צריך לשנות את סוג העמודה)
+מקבלים רשימת חברות לטעינה  מקבלים permissions 
+כמובן IP,PORT 
+
+| user_id | username    | email                      | password_hash                                                | role | project_number | parking_name | company_type | access_level    | created_at                 | updated_at                 | verification_code | code_expires_at | code_type       | company_list  | password_changed_at        | password_expires_at        | is_temp_password | permissions |
+| ------- | ----------- | -------------------------- | ------------------------------------------------------------ | ---- | -------------- | ------------ | ------------ | --------------- | -------------------------- | -------------------------- | ----------------- | --------------- | --------------- | ------------- | -------------------------- | -------------------------- | ---------------- | ----------- |
+| 305     | DrorParking | SBparkingReport1@gmail.com | $2a$06$.jHyzE/n3BhKEHVQrdb8RuwBKPP4cTfF1Wb5M96G.RCbe9LgVcQvG | user | 478131051      | שיידט בדיקות | שיידט        | company_manager | 2025-08-03 18:19:22.600521 | 2025-08-03 18:19:22.600521 | null              | null            | company_manager | 1,2,5-10,60 | 2025-08-03 18:20:41.835175 | 2025-11-03 18:20:41.835175 | false            | G           |
+
+
+| id                                   | name         | location | address | capacity | client_logo_url | settings | is_active | created_at                 | updated_at                 | description | ip_address    | port | future_code |
+| ------------------------------------ | ------------ | -------- | ------- | -------- | --------------- | -------- | --------- | -------------------------- | -------------------------- | ----------- | ------------- | ---- | ----------- |
+| b4954e1c-646d-4905-9ab8-9e433bed75e4 | שיידט בדיקות | לוד      | null    | null     | null            | {}       | false     | 2025-06-28 15:49:05.183873 | 2025-06-28 15:49:05.183873 | 478131051   | 10.35.152.100 | 8443 | null        |
+
+לחבר לבסיס נתונים ההרשאות-permissions 
+G guest
+N new 
+R report
+P profile
+
+‏מטבלת יוזרים וגם רשימת חברות 1,2,5-10,60
+‏מטבלת חניונים כתובת IP ופורט
+
+
+ במידה ויש שאלות נוספות תשאל ,
+
+
+

@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>דשבורד S&B Parking</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        // הגדרת טווח תאריכים מהיר
+        function setQuickRange(range) {
+            const today = new Date();
+            let startDate, endDate;
+            
+            switch(range) {
+                case 'yesterday':
+                    startDate = endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+                    break;
+                case 'week':
+                    endDate = today;
+                    startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay());
+                    break;
+                case 'lastweek':
+                    endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() - 1);
+                    startDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate() - 6);
+                    break;
+                case 'year':
+                    endDate = today;
+                    startDate = new Date(today.getFullYear(), 0, 1); // 1 בינואר השנה הנוכחית
+                    break;
+                case 'all':
+                    // טווח רחב לחיפוש נתונים - 2 שנים אחורה
+                    endDate = today;
+                    startDate = new Date(today.getFullYear() - 2, 0, 1);
+                    break;
+                default:
+                    console.error('Unknown range:', range);
+                    return;
+            }
+            
+            console.log('Quick range selection:', {
+                range: range,
+                startDate: startDate,
+                endDate: endDate,
+                startFormatted: formatDateForInput(startDate),
+                endFormatted: formatDateForInput(endDate)
+            });
+            
+            document.getElementById('startDate').value = formatDateForInput(startDate);
+            document.getElementById('endDate').value = formatDateForInput(endDate);
+            
+            // טען נתונים אוטומטית
+            loadParkingData();
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .header-title h1 {
+            font-size: 2rem;
+            color: #667eea;
+            margin: 0;
+        }
+        
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .parking-selector {
+            padding: 10px 15px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-size: 1rem;
+            background: white;
+            color: #333;
+            min-width: 200px;
+        }
+        
+        .date-range {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #667eea;
+            min-width: 350px;
+        }
+        
+        .date-input {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s;
+        }
+        
+        .date-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .logout-btn {
+            padding: 8px 15px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card .subtext {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .charts-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .chart-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .chart-title {
+            font-size: 1.2rem;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .alerts-section {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        
+        .alert.positive {
+            background: linear-gradient(45deg, #26de81, #20bf6b);
+            color: white;
+        }
+        
+        .alert.negative {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            color: white;
+        }
+        
+        .rankings {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .rank-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .rank-number {
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-left: 15px;
+        }
+        
+        .rank-info {
+            flex-grow: 1;
+        }
+        
+        .rank-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .rank-details {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .rank-value {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1rem;
+        }
+        
+        .credit {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            font-size: 10px;
+            color: rgba(255,255,255,0.7);
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .header-controls {
+                justify-content: center;
+            }
+            
+            .date-range {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-title">
+                <h1>🚗 S&B Parking</h1>
+                <span id="parkingTitle">מערכת דוחות חניות</span>
+            </div>
+            
+            <div class="header-controls">
+                <!-- בוחר חניון - מוצג רק למנהלי קבוצה -->
+                <select id="parkingSelector" class="parking-selector" style="display: none;">
+                    <option value="">טוען חניונים...</option>
+                </select>
+                
+                <!-- בחירת תאריכים -->
+                <div class="date-range">
+                    <!-- בוחר חודש מהיר -->
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <label style="font-weight: bold;">בחירה מהירה:</label>
+                        <select id="monthSelector" class="date-input" style="min-width: 150px;">
+                            <option value="">בחר חודש...</option>
+                        </select>
+                        <button id="loadMonthBtn" class="btn btn-primary" style="padding: 8px 15px; font-size: 0.8rem;">📅 חודש מלא</button>
+                    </div>
+                    
+                    <!-- בחירה מותאמת אישית -->
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <label>מתאריך:</label>
+                        <input type="text" id="startDate" class="date-input" placeholder="DD/MM/YYYY" 
+                               style="width: 120px;" maxlength="10">
+                        <label>עד תאריך:</label>
+                        <input type="text" id="endDate" class="date-input" placeholder="DD/MM/YYYY" 
+                               style="width: 120px;" maxlength="10">
+                        <button id="loadDataBtn" class="btn btn-primary">📊 טען נתונים</button>
+                    </div>
+                    
+                    <!-- כפתורי טווחים מוכנים -->
+                    <div style="display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap;">
+                        <button class="btn quick-range-btn" data-range="yesterday" 
+                                style="padding: 5px 10px; font-size: 0.7rem; background: #17a2b8;">אתמול</button>
+                        <button class="btn quick-range-btn" data-range="week" 
+                                style="padding: 5px 10px; font-size: 0.7rem; background: #ffc107; color: #000;">השבוע</button>
+                        <button class="btn quick-range-btn" data-range="lastweek" 
+                                style="padding: 5px 10px; font-size: 0.7rem; background: #6c757d;">שבוע שעבר</button>
+                        <button class="btn quick-range-btn" data-range="year" 
+                                style="padding: 5px 10px; font-size: 0.7rem; background: #28a745;">השנה כולה</button>
+                        <button class="btn quick-range-btn" data-range="all" 
+                                style="padding: 5px 10px; font-size: 0.7rem; background: #fd7e14;">🔍 חפש נתונים</button>
+                        <button id="investigateBtn" class="btn" 
+                                style="padding: 5px 10px; font-size: 0.7rem; background: #9c27b0; color: white;">🕵️ חקירה</button>
+                        <button id="debugBtn" class="btn" 
+                                style="padding: 5px 10px; font-size: 0.7rem; background: #e74c3c; color: white;">🔍 Debug</button>
+                    </div>
+                </div>
+                
+                <!-- מידע משתמש -->
+                <div class="user-info">
+                    <span id="userInfo">טוען...</span>
+                    <button id="logoutBtn" class="logout-btn">🚪 יציאה</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Loading -->
+        <div id="loadingSection" class="loading" style="display: none;">
+            <h3>טוען נתונים...</h3>
+        </div>
+        
+        <!-- Error -->
+        <div id="errorSection" class="error-message" style="display: none;">
+            <h3>שגיאה בטעינת הנתונים</h3>
+            <p id="errorMessage"></p>
+        </div>
+        
+        <!-- Dashboard Content -->
+        <div id="dashboardContent" style="display: none;">
+            <!-- Statistics Cards -->
+            <div class="stats-grid" id="statsGrid">
+                <!-- יתמלא בקוד JS -->
+            </div>
+            
+            <!-- Alerts Section -->
+            <div class="alerts-section">
+                <div class="chart-title">🚨 זיהוי מגמות - השוואה לאותו יום בשבוע הקודם</div>
+                <div id="alertsContainer">
+                    <!-- התראות יתמלאו כאן -->
+                </div>
+            </div>
+            
+            <!-- Charts -->
+            <div class="charts-section">
+                <div class="chart-card">
+                    <div class="chart-title">מגמות הכנסות יומיות</div>
+                    <canvas id="revenueChart"></canvas>
+                </div>
+                
+                <div class="chart-card">
+                    <div class="chart-title">התפלגות תשלומים</div>
+                    <canvas id="paymentChart"></canvas>
+                </div>
+                
+                <div class="chart-card">
+                    <div class="chart-title">כניסות ויציאות יומיות</div>
+                    <canvas id="trafficChart"></canvas>
+                </div>
+                
+                <div class="chart-card">
+                    <div class="chart-title">השוואה ימי השבוע</div>
+                    <canvas id="weeklyChart"></canvas>
+                </div>
+                
+                <div class="chart-card">
+                    <div class="chart-title">התפלגות החניונים (הכנסות)</div>
+                    <canvas id="parkingDistributionChart"></canvas>
+                </div>
+                
+                <div class="chart-card">
+                    <div class="chart-title">פתיחות מחסום יומיות</div>
+                    <canvas id="barrierChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Rankings -->
+            <div class="rankings">
+                <div class="chart-title">🏆 דירוג החניונים</div>
+                <div id="rankingsContainer">
+                    <!-- הדירוג יתמלא כאן -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="credit">נוצר ע"י דרור פרינץ</div>
+
+    <script>
+        // משתנים גלובליים
+        let userData = null;
+        let currentData = [];
+        let charts = {};
+
+        // טעינה ראשונית
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserData();
+            setupEventListeners();
+            setDefaultDates();
+        });
+
+        // הגדרת תאריכים ברירת מחדל (חודש אחרון)
+        function setDefaultDates() {
+            const today = new Date();
+            const oneMonthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+            
+            document.getElementById('endDate').value = formatDateForInput(today);
+            document.getElementById('startDate').value = formatDateForInput(oneMonthAgo);
+            
+            // הוספת לוג לבדיקה
+            console.log('Default dates set:', {
+                start: formatDateForInput(oneMonthAgo),
+                end: formatDateForInput(today),
+                startAPI: formatDateForAPI(oneMonthAgo),
+                endAPI: formatDateForAPI(today)
+            });
+            
+            populateMonthSelector();
+        }
+
+        // המרת תאריך לפורמט DD/MM/YYYY
+        function formatDateForInput(date) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        // המרת תאריך מפורמט DD/MM/YYYY לאובייקט Date
+        function parseInputDate(dateString) {
+            if (!dateString || !dateString.includes('/')) return null;
+            
+            const parts = dateString.split('/');
+            if (parts.length !== 3) return null;
+            
+            const day = parseInt(parts[0]);
+            const month = parseInt(parts[1]) - 1; // חודש מתחיל מ-0
+            const year = parseInt(parts[2]);
+            
+            if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+            
+            const date = new Date(year, month, day);
+            
+            // בדיקה שהתאריך תקין
+            if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
+                return null;
+            }
+            
+            return date;
+        }
+
+        // המרת תאריך לפורמט למסד הנתונים (YYYY-MM-DD)
+        function formatDateForAPI(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // מילוי בוחר החודשים
+        function populateMonthSelector() {
+            const monthSelector = document.getElementById('monthSelector');
+            if (!monthSelector) return;
+            
+            monthSelector.innerHTML = '<option value="">בחר חודש...</option>';
+            
+            const currentDate = new Date();
+            
+            // יצירת רשימת חודשים (6 חודשים אחורה ו-2 קדימה)
+            for (let i = -6; i <= 2; i++) {
+                const date = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1);
+                const monthKey = `${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+                
+                const monthNames = [
+                    'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+                    'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
+                ];
+                
+                const monthName = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+                
+                const option = document.createElement('option');
+                option.value = monthKey;
+                option.textContent = monthName;
+                
+                // בחירת החודש הנוכחי כברירת מחדל
+                if (i === 0) {
+                    option.selected = true;
+                }
+                
+                monthSelector.appendChild(option);
+            }
+        }
+
+        // טעינת חודש מלא
+        function loadFullMonth() {
+            const monthSelector = document.getElementById('monthSelector');
+            const selectedMonth = monthSelector.value;
+            
+            if (!selectedMonth) {
+                alert('אנא בחר חודש תחילה');
+                return;
+            }
+            
+            try {
+                const [month, year] = selectedMonth.split('/');
+                const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+                const endDate = new Date(parseInt(year), parseInt(month), 0); // יום אחרון בחודש
+                
+                console.log('Month selection:', {
+                    selected: selectedMonth,
+                    startDate: startDate,
+                    endDate: endDate,
+                    startFormatted: formatDateForInput(startDate),
+                    endFormatted: formatDateForInput(endDate)
+                });
+                
+                document.getElementById('startDate').value = formatDateForInput(startDate);
+                document.getElementById('endDate').value = formatDateForInput(endDate);
+                
+                // טען נתונים אוטומטית
+                loadParkingData();
+            } catch (error) {
+                console.error('Error setting month range:', error);
+                alert('שגיאה בהגדרת טווח החודש');
+            }
+        }
+
+        // טעינת נתוני משתמש
+        async function loadUserData() {
+            try {
+                const response = await fetch('/api/user-info');
+                const result = await response.json();
+                
+                if (result.success) {
+                    userData = result.user;
+                    updateUserInterface();
+                    loadParkingOptions();
+                } else {
+                    showError('שגיאה בטעינת נתוני משתמש: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error loading user data:', error);
+                showError('שגיאה בחיבור לשרת');
+            }
+        }
+
+        // עדכון ממשק המשתמש
+        function updateUserInterface() {
+            if (!userData) return;
+            
+            document.getElementById('userInfo').textContent = 
+                `👤 ${userData.username} | 🏢 ${userData.parking_name}`;
+            
+            document.getElementById('parkingTitle').textContent = 
+                userData.access_level === 'single_parking' ? 
+                userData.parking_name : 'מערכת דוחות חניות';
+            
+            // הצגת בוחר חניונים רק למנהלי קבוצה
+            if (userData.access_level === 'group_manager') {
+                document.getElementById('parkingSelector').style.display = 'block';
+            }
+        }
+
+        // טעינת אפשרויות חניונים (למנהלי קבוצה)
+        async function loadParkingOptions() {
+            if (userData.access_level !== 'group_manager') {
+                // למשתמש חניון בודד - נסה טעינה ראשונית עם חקירה
+                console.log('👤 משתמש חניון בודד - בודק נתונים...');
+                performInitialDataSearch();
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/user-parkings');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const selector = document.getElementById('parkingSelector');
+                    selector.innerHTML = '<option value="">כל החניונים</option>';
+                    
+                    result.parkings.forEach(parking => {
+                        const option = document.createElement('option');
+                        option.value = parking.project_number;
+                        option.textContent = parking.parking_name;
+                        selector.appendChild(option);
+                    });
+                    
+                    // טען נתונים ראשוניים
+                    performInitialDataSearch();
+                } else {
+                    showError('שגיאה בטעינת רשימת חניונים: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error loading parking options:', error);
+                showError('שגיאה בטעינת רשימת חניונים');
+            }
+        }
+
+        // חיפוש נתונים ראשוני
+        async function performInitialDataSearch() {
+            console.log('🔍 מבצע חיפוש נתונים ראשוני...');
+            
+            try {
+                // נסה עם התאריכים המוגדרים מראש
+                await loadParkingData();
+                
+                // אם לא נמצא כלום, נסה טווח רחב יותר
+                if (currentData.length === 0) {
+                    console.log('🔍 לא נמצאו נתונים בטווח הבסיסי, מרחיב חיפוש...');
+                    
+                    const endDate = new Date();
+                    const startDate = new Date(endDate.getFullYear() - 1, 0, 1); // שנה אחורה
+                    
+                    document.getElementById('startDate').value = formatDateForInput(startDate);
+                    document.getElementById('endDate').value = formatDateForInput(endDate);
+                    
+                    await loadParkingData();
+                    
+                    if (currentData.length === 0) {
+                        console.log('⚠️ לא נמצאו נתונים גם בטווח רחב - מציג הודעה');
+                        showError(`
+                            🚧 לא נמצאו נתונים עבור החניון שלך<br><br>
+                            <strong>החניון שלך:</strong> ${userData ? userData.parking_name : 'לא ידוע'}<br>
+                            <strong>מספר פרויקט:</strong> ${userData ? userData.project_number : 'לא ידוע'}<br><br>
+                            <strong>לחץ על כפתור "🕵️ חקירה" לבדיקה מתקדמת</strong>
+                        `);
+                    }
+                }
+            } catch (error) {
+                console.error('❌ שגיאה בחיפוש ראשוני:', error);
+            }
+        }
+
+        // טעינת נתוני חניון
+        async function loadParkingData() {
+            const startDateInput = document.getElementById('startDate').value;
+            const endDateInput = document.getElementById('endDate').value;
+            
+            if (!startDateInput || !endDateInput) {
+                showError('אנא הכנס טווח תאריכים');
+                return;
+            }
+            
+            // אימות ופרמוט התאריכים
+            const startDate = parseInputDate(startDateInput);
+            const endDate = parseInputDate(endDateInput);
+            
+            if (!startDate || !endDate) {
+                showError('פורמט תאריך לא תקין. השתמש בפורמט DD/MM/YYYY');
+                return;
+            }
+            
+            if (startDate > endDate) {
+                showError('תאריך התחלה חייב להיות לפני או שווה לתאריך הסיום');
+                return;
+            }
+            
+            // בדיקת טווח תאריכים סביר (לא יותר משנה)
+            const daysDiff = (endDate - startDate) / (1000 * 60 * 60 * 24);
+            if (daysDiff > 365) {
+                if (!confirm('הטווח שנבחר גדול מ-365 יום. זה עלול לקחת זמן רב. האם להמשיך?')) {
+                    return;
+                }
+            }
+            
+            showLoading(true);
+            hideError();
+            
+            try {
+                const selectedParking = document.getElementById('parkingSelector').value;
+                
+                const startDateAPI = formatDateForAPI(startDate);
+                const endDateAPI = formatDateForAPI(endDate);
+                
+                const params = new URLSearchParams({
+                    start_date: startDateAPI,
+                    end_date: endDateAPI
+                });
+                
+                if (selectedParking) {
+                    params.append('parking_id', selectedParking);
+                }
+                
+                console.log('Loading data for:', startDateAPI, 'to', endDateAPI);
+                console.log('API URL:', `/api/parking-data?${params}`);
+                
+                const response = await fetch(`/api/parking-data?${params}`);
+                const result = await response.json();
+                
+                console.log('API Response:', result);
+                
+                if (result.success) {
+                    currentData = result.data;
+                    if (currentData.length === 0) {
+                        showError(`
+                            🚧 אין נתונים זמינים לתקופה ${startDateInput} - ${endDateInput}<br><br>
+                            <strong>אפשרויות:</strong><br>
+                            • נסה טווח תאריכים רחב יותר<br>
+                            • לחץ על הכפתור "🔍 חפש נתונים" לחיפוש בטווח רחב<br>
+                            • ודא שהחניון שלך (${userData ? userData.parking_name : 'לא ידוע'}) מכיל נתונים בתאריכים האלה<br>
+                            • פנה למנהל המערכת אם הבעיה נמשכת
+                        `);
+                    } else {
+                        console.log(`Loaded ${currentData.length} records`);
+                        updateDashboard();
+                    }
+                } else {
+                    showError(result.message || 'שגיאה בטעינת הנתונים');
+                }
+            } catch (error) {
+                console.error('Error loading parking data:', error);
+                showError('שגיאה בחיבור לשרת. אנא נסה שוב.');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // עדכון הדשבורד
+        function updateDashboard() {
+            if (!currentData || currentData.length === 0) {
+                showError('לא נמצאו נתונים לטווח התאריכים שנבחר');
+                return;
+            }
+            
+            updateStatistics();
+            updateCharts();
+            updateAlerts();
+            updateRankings();
+            
+            document.getElementById('dashboardContent').style.display = 'block';
+        }
+
+        // עדכון סטטיסטיקות
+        function updateStatistics() {
+            const totalRevenue = currentData.reduce((sum, d) => sum + (d.total_revenue_shekels || 0), 0);
+            const totalEntries = currentData.reduce((sum, d) => sum + (d.t_entry_tot || 0), 0);
+            const totalExits = currentData.reduce((sum, d) => sum + (d.t_exit_tot || 0), 0);
+            const totalBarrierOpenings = currentData.reduce((sum, d) => sum + (d.t_open_b || 0), 0);
+            const totalCash = currentData.reduce((sum, d) => sum + (d.s_cash_shekels || 0), 0);
+            const totalCredit = currentData.reduce((sum, d) => sum + (d.s_credit_shekels || 0), 0);
+            const totalPango = currentData.reduce((sum, d) => sum + (d.s_pango_shekels || 0), 0);
+            const totalCelo = currentData.reduce((sum, d) => sum + (d.s_celo_shekels || 0), 0);
+            const totalCasualEntries = currentData.reduce((sum, d) => sum + (d.t_entry_s || 0), 0);
+            const totalMemberEntries = currentData.reduce((sum, d) => sum + (d.t_entry_p || 0), 0);
+            
+            const uniqueDays = [...new Set(currentData.map(d => d.report_date))].length;
+            const avgDailyRevenue = uniqueDays > 0 ? totalRevenue / uniqueDays : 0;
+            
+            const html = `
+                <div class="stat-card">
+                    <h3>סה"כ הכנסות</h3>
+                    <div class="value">₪${totalRevenue.toLocaleString()}</div>
+                    <div class="subtext">מכל החניונים</div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>סה"כ כניסות</h3>
+                    <div class="value">${totalEntries.toLocaleString()}</div>
+                    <div class="subtext">כלי רכב</div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>מזדמנים</h3>
+                    <div class="value">${totalCasualEntries.toLocaleString()}</div>
+                    <div class="subtext">${totalEntries > 0 ? ((totalCasualEntries/totalEntries)*100).toFixed(1) : 0}% מהכולל</div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>מנויים</h3>
+                    <div class="value">${totalMemberEntries.toLocaleString()}</div>
+                    <div class="subtext">${totalEntries > 0 ? ((totalMemberEntries/totalEntries)*100).toFixed(1) : 0}% מהכולל</div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>מזומן</h3>
+                    <div class="value">₪${totalCash.toLocaleString()}</div>
+                    <div class="subtext">${totalRevenue > 0 ? ((totalCash/totalRevenue)*100).toFixed(1) : 0}% מההכנסות</div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>אשראי</h3>
+                    <div class="value">₪${totalCredit.toLocaleString()}</div>
+                    <div class="subtext">${totalRevenue > 0 ? ((totalCredit/totalRevenue)*100).toFixed(1) : 0}% מההכנסות</div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>פנגו</h3>
+                    <div class="value">₪${totalPango.toLocaleString()}</div>
+                    <div class="subtext">${totalRevenue > 0 ? ((totalPango/totalRevenue)*100).toFixed(1) : 0}% מההכנסות</div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>סלו</h3>
+                    <div class="value">₪${totalCelo.toLocaleString()}</div>
+                    <div class="subtext">${totalRevenue > 0 ? ((totalCelo/totalRevenue)*100).toFixed(1) : 0}% מההכנסות</div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>פתיחות מחסום</h3>
+                    <div class="value">${totalBarrierOpenings.toLocaleString()}</div>
+                    <div class="subtext">סה"כ פתיחות</div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>ממוצע יומי</h3>
+                    <div class="value">₪${Math.round(avgDailyRevenue).toLocaleString()}</div>
+                    <div class="subtext">הכנסה יומית</div>
+                </div>
+            `;
+            
+            document.getElementById('statsGrid').innerHTML = html;
+        }
+
+        // עדכון גרפים
+        function updateCharts() {
+            createRevenueChart();
+            createPaymentChart();
+            createTrafficChart();
+            createWeeklyChart();
+            createParkingDistributionChart();
+            createBarrierChart();
+        }
+
+        // גרף 1: מגמות הכנסות יומיות
+        function createRevenueChart() {
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            
+            const dailyData = {};
+            currentData.forEach(d => {
+                if (!dailyData[d.report_date]) {
+                    dailyData[d.report_date] = 0;
+                }
+                dailyData[d.report_date] += d.total_revenue_shekels || 0;
+            });
+
+            const dates = Object.keys(dailyData).sort();
+            const revenues = dates.map(date => dailyData[date]);
+
+            if (charts.revenue) charts.revenue.destroy();
+
+            charts.revenue = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'הכנסות יומיות',
+                        data: revenues,
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        pointBorderColor: 'rgba(54, 162, 235, 1)',
+                        pointBackgroundColor: 'rgba(54, 162, 235, 0.8)',
+                        pointRadius: 5,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₪' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // גרף 2: התפלגות תשלומים
+        function createPaymentChart() {
+            const ctx = document.getElementById('paymentChart').getContext('2d');
+            
+            const totalCash = currentData.reduce((sum, d) => sum + (d.s_cash_shekels || 0), 0);
+            const totalCredit = currentData.reduce((sum, d) => sum + (d.s_credit_shekels || 0), 0);
+            const totalPango = currentData.reduce((sum, d) => sum + (d.s_pango_shekels || 0), 0);
+            const totalCelo = currentData.reduce((sum, d) => sum + (d.s_celo_shekels || 0), 0);
+
+            if (charts.payment) charts.payment.destroy();
+
+            charts.payment = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['מזומן', 'אשראי', 'פנגו', 'סלו'],
+                    datasets: [{
+                        data: [totalCash, totalCredit, totalPango, totalCelo],
+                        backgroundColor: [
+                            'rgba(54, 162, 235, 0.8)',
+                            'rgba(255, 159, 64, 0.8)',
+                            'rgba(75, 192, 192, 0.8)',
+                            'rgba(153, 102, 255, 0.8)'
+                        ],
+                        borderWidth: 3,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { 
+                        legend: { 
+                            position: 'bottom',
+                            labels: {
+                                generateLabels: function(chart) {
+                                    const data = chart.data;
+                                    if (data.labels.length && data.datasets.length) {
+                                        return data.labels.map((label, i) => {
+                                            const value = data.datasets[0].data[i];
+                                            const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                            return {
+                                                text: `${label}: ₪${value.toLocaleString()} (${percentage}%)`,
+                                                fillStyle: data.datasets[0].backgroundColor[i],
+                                                strokeStyle: '#fff',
+                                                lineWidth: 3,
+                                                hidden: isNaN(value),
+                                                index: i
+                                            };
+                                        });
+                                    }
+                                    return [];
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // גרף 3: כניסות ויציאות יומיות
+        function createTrafficChart() {
+            const ctx = document.getElementById('trafficChart').getContext('2d');
+            
+            const dailyTraffic = {};
+            currentData.forEach(d => {
+                if (!dailyTraffic[d.report_date]) {
+                    dailyTraffic[d.report_date] = { entries: 0, exits: 0 };
+                }
+                dailyTraffic[d.report_date].entries += d.t_entry_tot || 0;
+                dailyTraffic[d.report_date].exits += d.t_exit_tot || 0;
+            });
+
+            const dates = Object.keys(dailyTraffic).sort();
+            const entries = dates.map(date => dailyTraffic[date].entries);
+            const exits = dates.map(date => dailyTraffic[date].exits);
+
+            if (charts.traffic) charts.traffic.destroy();
+
+            charts.traffic = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        {
+                            label: 'כניסות',
+                            data: entries,
+                            backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'יציאות',
+                            data: exits,
+                            backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        // גרף 4: השוואה ימי השבוע
+        function createWeeklyChart() {
+            const ctx = document.getElementById('weeklyChart').getContext('2d');
+            
+            const weekdays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+            const weeklyData = {};
+            
+            weekdays.forEach(day => {
+                weeklyData[day] = { revenue: 0, count: 0, isWeekend: day === 'שישי' || day === 'שבת' };
+            });
+
+            currentData.forEach(d => {
+                const date = new Date(d.report_date);
+                const dayName = weekdays[date.getDay()];
+                if (weeklyData[dayName]) {
+                    weeklyData[dayName].revenue += d.total_revenue_shekels || 0;
+                    weeklyData[dayName].count++;
+                }
+            });
+
+            const avgRevenues = weekdays.map(day => 
+                weeklyData[day].count > 0 ? weeklyData[day].revenue / weeklyData[day].count : 0
+            );
+            
+            const colors = weekdays.map(day => 
+                weeklyData[day].isWeekend ? 'rgba(255, 99, 132, 0.8)' : 'rgba(54, 162, 235, 0.8)'
+            );
+
+            if (charts.weekly) charts.weekly.destroy();
+
+            charts.weekly = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: weekdays,
+                    datasets: [{
+                        label: 'ממוצע הכנסות',
+                        data: avgRevenues,
+                        backgroundColor: colors,
+                        borderColor: colors.map(c => c.replace('0.8', '1')),
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₪' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // גרף 5: התפלגות החניונים
+        function createParkingDistributionChart() {
+            const ctx = document.getElementById('parkingDistributionChart').getContext('2d');
+            
+            const parkingRevenues = {};
+            currentData.forEach(d => {
+                const parkingName = d.parking_name || 'חניון לא מזוהה';
+                if (!parkingRevenues[parkingName]) {
+                    parkingRevenues[parkingName] = 0;
+                }
+                parkingRevenues[parkingName] += d.total_revenue_shekels || 0;
+            });
+
+            const sortedParkings = Object.entries(parkingRevenues)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10); // מציג רק 10 החניונים הראשונים
+
+            const parkingNames = sortedParkings.map(([name]) => name);
+            const revenues = sortedParkings.map(([, revenue]) => revenue);
+
+            const colors = [
+                'rgba(54, 162, 235, 0.8)',
+                'rgba(255, 99, 132, 0.8)',
+                'rgba(255, 206, 86, 0.8)',
+                'rgba(75, 192, 192, 0.8)',
+                'rgba(153, 102, 255, 0.8)',
+                'rgba(255, 159, 64, 0.8)',
+                'rgba(199, 199, 199, 0.8)',
+                'rgba(83, 102, 255, 0.8)',
+                'rgba(255, 102, 150, 0.8)',
+                'rgba(102, 255, 178, 0.8)'
+            ];
+
+            if (charts.parkingDistribution) charts.parkingDistribution.destroy();
+
+            charts.parkingDistribution = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: parkingNames,
+                    datasets: [{
+                        data: revenues,
+                        backgroundColor: colors.slice(0, revenues.length),
+                        borderWidth: 3,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { 
+                        legend: { 
+                            position: 'bottom',
+                            labels: { 
+                                boxWidth: 12,
+                                padding: 15,
+                                font: { size: 11 },
+                                generateLabels: function(chart) {
+                                    const data = chart.data;
+                                    if (data.labels.length && data.datasets.length) {
+                                        return data.labels.map((label, i) => {
+                                            const value = data.datasets[0].data[i];
+                                            const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                            const percentage = ((value / total) * 100).toFixed(1);
+                                            return {
+                                                text: `${label}: ₪${value.toLocaleString()} (${percentage}%)`,
+                                                fillStyle: data.datasets[0].backgroundColor[i],
+                                                strokeStyle: data.datasets[0].borderColor || '#fff',
+                                                lineWidth: data.datasets[0].borderWidth || 0,
+                                                hidden: isNaN(value),
+                                                index: i
+                                            };
+                                        });
+                                    }
+                                    return [];
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // גרף 6: פתיחות מחסום יומיות
+        function createBarrierChart() {
+            const ctx = document.getElementById('barrierChart').getContext('2d');
+            
+            const dailyBarrier = {};
+            currentData.forEach(d => {
+                if (!dailyBarrier[d.report_date]) dailyBarrier[d.report_date] = 0;
+                dailyBarrier[d.report_date] += d.t_open_b || 0;
+            });
+
+            const dates = Object.keys(dailyBarrier).sort();
+            const barriers = dates.map(date => dailyBarrier[date]);
+
+            if (charts.barrier) charts.barrier.destroy();
+
+            charts.barrier = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'פתיחות מחסום',
+                        data: barriers,
+                        backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        // עדכון התראות
+        function updateAlerts() {
+            const alerts = findTrends();
+            let html = '';
+            
+            if (alerts.length === 0) {
+                html = '<div style="text-align: center; color: #28a745; font-weight: bold;">✅ לא זוהו שינויים משמעותיים (מעל 10%) בהשוואה לשבוע הקודם</div>';
+            } else {
+                alerts.slice(0, 5).forEach(alert => {
+                    const className = alert.change > 0 ? 'positive' : 'negative';
+                    const arrow = alert.change > 0 ? '📈' : '📉';
+                    
+                    html += `
+                        <div class="alert ${className}">
+                            <div>${arrow} שינוי ב${alert.type} - ${alert.parking}</div>
+                            <div style="font-size: 0.9rem; opacity: 0.9; margin-top: 5px;">
+                                ${alert.previousDate}: ${alert.previous.toLocaleString()} → 
+                                ${alert.currentDate}: ${alert.current.toLocaleString()} 
+                                (${alert.change > 0 ? '+' : ''}${alert.change.toFixed(1)}%)
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            document.getElementById('alertsContainer').innerHTML = html;
+        }
+
+        // פונקציה לזיהוי מגמות
+        function findTrends() {
+            const alerts = [];
+            const weeklyData = {};
+            
+            // קיבוץ לפי חניון ושבוע
+            currentData.forEach(d => {
+                const date = new Date(d.report_date);
+                const weekNumber = Math.floor(date.getTime() / (7 * 24 * 60 * 60 * 1000));
+                const parkingName = d.parking_name || 'חניון לא מזוהה';
+                
+                if (!weeklyData[parkingName]) weeklyData[parkingName] = {};
+                if (!weeklyData[parkingName][weekNumber]) {
+                    weeklyData[parkingName][weekNumber] = {
+                        revenue: 0,
+                        barriers: 0,
+                        entries: 0,
+                        dates: []
+                    };
+                }
+                
+                weeklyData[parkingName][weekNumber].revenue += d.total_revenue_shekels || 0;
+                weeklyData[parkingName][weekNumber].barriers += d.t_open_b || 0;
+                weeklyData[parkingName][weekNumber].entries += d.t_entry_tot || 0;
+                weeklyData[parkingName][weekNumber].dates.push(d.report_date);
+            });
+            
+            // חיפוש מגמות
+            Object.keys(weeklyData).forEach(parkingName => {
+                const weeks = Object.keys(weeklyData[parkingName]).sort((a, b) => b - a);
+                
+                if (weeks.length >= 2) {
+                    const currentWeek = weeklyData[parkingName][weeks[0]];
+                    const previousWeek = weeklyData[parkingName][weeks[1]];
+                    
+                    // בדיקת שינוי בהכנסות
+                    if (previousWeek.revenue > 0) {
+                        const revenueChange = ((currentWeek.revenue - previousWeek.revenue) / previousWeek.revenue) * 100;
+                        if (Math.abs(revenueChange) >= 10) {
+                            alerts.push({
+                                type: 'הכנסות',
+                                parking: parkingName,
+                                change: revenueChange,
+                                current: currentWeek.revenue,
+                                previous: previousWeek.revenue,
+                                currentDate: `שבוע ${weeks[0]}`,
+                                previousDate: `שבוע ${weeks[1]}`
+                            });
+                        }
+                    }
+                    
+                    // בדיקת שינוי בכניסות
+                    if (previousWeek.entries > 0) {
+                        const entriesChange = ((currentWeek.entries - previousWeek.entries) / previousWeek.entries) * 100;
+                        if (Math.abs(entriesChange) >= 10) {
+                            alerts.push({
+                                type: 'כניסות',
+                                parking: parkingName,
+                                change: entriesChange,
+                                current: currentWeek.entries,
+                                previous: previousWeek.entries,
+                                currentDate: `שבוע ${weeks[0]}`,
+                                previousDate: `שבוע ${weeks[1]}`
+                            });
+                        }
+                    }
+                }
+            });
+            
+            return alerts.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+        }
+
+        // עדכון דירוג החניונים
+        function updateRankings() {
+            const parkingStats = {};
+            
+            currentData.forEach(d => {
+                const parkingName = d.parking_name || 'חניון לא מזוהה';
+                if (!parkingStats[parkingName]) {
+                    parkingStats[parkingName] = {
+                        revenue: 0,
+                        entries: 0,
+                        barriers: 0,
+                        casualEntries: 0,
+                        memberEntries: 0
+                    };
+                }
+                
+                parkingStats[parkingName].revenue += d.total_revenue_shekels || 0;
+                parkingStats[parkingName].entries += d.t_entry_tot || 0;
+                parkingStats[parkingName].barriers += d.t_open_b || 0;
+                parkingStats[parkingName].casualEntries += d.t_entry_s || 0;
+                parkingStats[parkingName].memberEntries += d.t_entry_p || 0;
+            });
+
+            const rankings = Object.entries(parkingStats)
+                .map(([name, stats]) => ({
+                    name: name,
+                    revenue: stats.revenue,
+                    entries: stats.entries,
+                    barriers: stats.barriers,
+                    efficiency: stats.entries > 0 ? (stats.barriers / stats.entries * 100).toFixed(1) : 0,
+                    memberPercent: stats.entries > 0 ? (stats.memberEntries / stats.entries * 100).toFixed(1) : 0,
+                    avgRevenuePerEntry: stats.entries > 0 ? (stats.revenue / stats.entries).toFixed(1) : 0
+                }))
+                .sort((a, b) => b.revenue - a.revenue);
+
+            let html = '';
+            rankings.forEach((parking, index) => {
+                let medal = '';
+                if (index === 0) medal = '🥇';
+                else if (index === 1) medal = '🥈';
+                else if (index === 2) medal = '🥉';
+                
+                html += `
+                    <div class="rank-item">
+                        <div class="rank-number">${index + 1}</div>
+                        <div class="rank-info">
+                            <div class="rank-name">${medal} ${parking.name}</div>
+                            <div class="rank-details">
+                                ${parking.entries.toLocaleString()} כניסות | 
+                                ${parking.memberPercent}% מנויים | 
+                                יעילות: ${parking.efficiency}% | 
+                                ממוצע: ₪${parking.avgRevenuePerEntry}
+                            </div>
+                        </div>
+                        <div class="rank-value">
+                            ₪${parking.revenue.toLocaleString()}<br>
+                            <small>${parking.barriers.toLocaleString()} פתיחות</small>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('rankingsContainer').innerHTML = html;
+        }
+
+        // הגדרת event listeners
+        function setupEventListeners() {
+            // כפתורי טעינת נתונים
+            document.getElementById('loadDataBtn').addEventListener('click', loadParkingData);
+            document.getElementById('loadMonthBtn').addEventListener('click', loadFullMonth);
+            document.getElementById('parkingSelector').addEventListener('change', loadParkingData);
+            document.getElementById('logoutBtn').addEventListener('click', logout);
+            
+            // כפתור חקירה מתקדמת
+            document.getElementById('investigateBtn').addEventListener('click', async function() {
+                if (!userData) {
+                    alert('❌ נתוני משתמש לא נטענו עדיין');
+                    return;
+                }
+                
+                try {
+                    showLoading(true);
+                    console.log('🕵️ מתחיל חקירה מתקדמת...');
+                    
+                    // בדיקה 1: חיפוש בטווח רחב מאוד (5 שנים)
+                    const endDate = new Date();
+                    const startDate = new Date(endDate.getFullYear() - 5, 0, 1);
+                    
+                    const params = new URLSearchParams({
+                        start_date: formatDateForAPI(startDate),
+                        end_date: formatDateForAPI(endDate)
+                    });
+                    
+                    console.log('🔍 חיפוש בטווח רחב:', formatDateForAPI(startDate), 'עד', formatDateForAPI(endDate));
+                    
+                    const response = await fetch(`/api/parking-data?${params}`);
+                    const result = await response.json();
+                    
+                    let investigationReport = `
+🕵️ דוח חקירה מתקדם:
+
+👤 פרטי משתמש:
+• שם משתמש: ${userData.username}
+• אימייל: ${userData.email}
+• חניון: ${userData.parking_name}
+• מספר פרויקט: ${userData.project_number}
+• רמת גישה: ${userData.access_level}
+
+🔍 תוצאות חיפוש (${formatDateForAPI(startDate)} עד ${formatDateForAPI(endDate)}):
+• נמצאו: ${result.data ? result.data.length : 0} רשומות
+• סטטוס API: ${result.success ? '✅ תקין' : '❌ שגיאה'}
+`;
+
+                    if (result.data && result.data.length > 0) {
+                        // ניתוח התאריכים שנמצאו
+                        const dates = result.data.map(d => d.report_date).sort();
+                        const firstDate = dates[0];
+                        const lastDate = dates[dates.length - 1];
+                        
+                        investigationReport += `
+📅 טווח נתונים שנמצא:
+• תאריך ראשון: ${firstDate}
+• תאריך אחרון: ${lastDate}
+• סה"כ ימים עם נתונים: ${dates.length}
+
+💰 סיכום כספי:
+• סה"כ הכנסות: ₪${result.data.reduce((sum, d) => sum + (d.total_revenue_shekels || 0), 0).toLocaleString()}
+• סה"כ כניסות: ${result.data.reduce((sum, d) => sum + (d.t_entry_tot || 0), 0).toLocaleString()}
+
+✅ הנתונים קיימים! נסה להגדיר תאריכים בטווח ${firstDate} - ${lastDate}
+`;
+                        
+                        // עדכון השדות עם הטווח שנמצא
+                        const firstDateObj = new Date(firstDate);
+                        const lastDateObj = new Date(lastDate);
+                        document.getElementById('startDate').value = formatDateForInput(firstDateObj);
+                        document.getElementById('endDate').value = formatDateForInput(lastDateObj);
+                        
+                    } else {
+                        investigationReport += `
+❌ לא נמצאו נתונים כלל!
+
+🔍 בדיקות נוספות:
+• ודא שמספר הפרויקט נכון: ${userData.project_number}
+• ייתכן שהנתונים עדיין לא הועלו למערכת
+• פנה למנהל המערכת לבדיקה
+
+💡 הצעות:
+• בדוק שהחניון פעיל ושולח נתונים
+• ודא שההעלאה למערכת עובדת
+• בדוק עם משתמשים אחרים אם יש להם נתונים
+`;
+                    }
+                    
+                    console.log(investigationReport);
+                    alert(investigationReport);
+                    
+                    // אם נמצאו נתונים, טען אותם
+                    if (result.data && result.data.length > 0) {
+                        currentData = result.data;
+                        updateDashboard();
+                        document.getElementById('dashboardContent').style.display = 'block';
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ שגיאה בחקירה:', error);
+                    alert('❌ שגיאה בביצוע החקירה: ' + error.message);
+                } finally {
+                    showLoading(false);
+                }
+            });
+            
+            // כפתור דיבוג
+            document.getElementById('debugBtn').addEventListener('click', function() {
+                const startInput = document.getElementById('startDate').value;
+                const endInput = document.getElementById('endDate').value;
+                
+                console.log('=== DEBUG INFO ===');
+                console.log('Start Input:', startInput);
+                console.log('End Input:', endInput);
+                
+                if (startInput && endInput) {
+                    const startParsed = parseInputDate(startInput);
+                    const endParsed = parseInputDate(endInput);
+                    
+                    console.log('Start Parsed:', startParsed);
+                    console.log('End Parsed:', endParsed);
+                    
+                    if (startParsed && endParsed) {
+                        console.log('Start API:', formatDateForAPI(startParsed));
+                        console.log('End API:', formatDateForAPI(endParsed));
+                        
+                        // בדיקת URL שיישלח
+                        const params = new URLSearchParams({
+                            start_date: formatDateForAPI(startParsed),
+                            end_date: formatDateForAPI(endParsed)
+                        });
+                        console.log('Full URL:', `/api/parking-data?${params}`);
+                        
+                        // בדיקת פרטי משתמש
+                        console.log('User Data:', userData);
+                    } else {
+                        console.log('❌ Date parsing failed');
+                        if (startParsed === null) console.log('❌ Start date is invalid:', startInput);
+                        if (endParsed === null) console.log('❌ End date is invalid:', endInput);
+                    }
+                } else {
+                    console.log('❌ Missing input dates');
+                }
+                console.log('==================');
+                
+                // הצגת פרטים בחלונית
+                alert(`
+בדיקת מצב הדשבורד:
+
+📅 תאריכים:
+התחלה: ${startInput || 'חסר'}
+סיום: ${endInput || 'חסר'}
+
+👤 משתמש: ${userData ? userData.username : 'לא נטען'}
+🏢 חניון: ${userData ? userData.parking_name : 'לא נטען'}
+🔑 פרויקט: ${userData ? userData.project_number : 'לא נטען'}
+
+📊 נתונים נוכחיים: ${currentData.length} רשומות
+
+לפרטים נוספים ראה Console (F12)
+                `);
+            });
+            
+            // כפתורי טווחים מהירים
+            document.querySelectorAll('.quick-range-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    setQuickRange(this.dataset.range);
+                });
+            });
+            
+            // אימות תאריכים בזמן הקלדה - פשוט יותר
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+            
+            [startDateInput, endDateInput].forEach(input => {
+                input.addEventListener('input', function() {
+                    // הוספת סלאשים אוטומטית עם אימות
+                    let value = this.value.replace(/\D/g, ''); // רק ספרות
+                    
+                    if (value.length >= 2) {
+                        let day = value.substring(0, 2);
+                        // ווידוא שהיום לא יותר מ-31
+                        if (parseInt(day) > 31) {
+                            day = '31';
+                        }
+                        value = day + '/' + value.substring(2);
+                    }
+                    if (value.length >= 5) {
+                        let month = value.substring(3, 5);
+                        // ווידוא שהחודש לא יותר מ-12
+                        if (parseInt(month) > 12) {
+                            month = '12';
+                        }
+                        value = value.substring(0, 3) + month + '/' + value.substring(5, 9);
+                    }
+                    
+                    this.value = value;
+                    
+                    // הוספת אינדיקטור ויזואלי
+                    if (value.length === 10) {
+                        const date = parseInputDate(value);
+                        if (date) {
+                            this.style.borderColor = '#28a745'; // ירוק
+                        } else {
+                            this.style.borderColor = '#dc3545'; // אדום
+                        }
+                    } else {
+                        this.style.borderColor = '#ddd'; // ברירת מחדל
+                    }
+                });
+                
+                // טעינה עם Enter
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        loadParkingData();
+                    }
+                });
+            });
+        }
+
+        // פונקציות עזר
+        function showLoading(show) {
+            document.getElementById('loadingSection').style.display = show ? 'block' : 'none';
+            if (show) {
+                document.getElementById('dashboardContent').style.display = 'none';
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').innerHTML = message; // שינוי ל-innerHTML במקום textContent
+            document.getElementById('errorSection').style.display = 'block';
+            document.getElementById('dashboardContent').style.display = 'none';
+        }
+
+        function hideError() {
+            document.getElementById('errorSection').style.display = 'none';
+        }
+
+        function logout() {
+            if (confirm('האם אתה בטוח שברצונך להתנתק?')) {
+                window.location.href = '/logout';
+            }
+        }
+    </script>
+</body>
+</html>

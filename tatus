@@ -1,0 +1,5 @@
+[33m4048398[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m Add critical JS files and templates for parking subscribers functionality
+[33m199e58c[m Fix 404 error - Add company-manager proxy endpoint and parking_subscribers template
+[33m1dfa7b9[m Fix JavaScript cache - update version numbers
+[33maf8d69e[m Added complete email automation system with CSV processing
+[33m2dff46f[m Add S&B Parking Reports Flask system
