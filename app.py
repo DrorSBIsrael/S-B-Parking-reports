@@ -3359,35 +3359,76 @@ def company_manager_proxy():
             
             # החזרת התוצאה
             if response.status_code == 200:
-                try:
-                    data = response.json() if response.text else {}
-                    print(f"   ✅ SUCCESS! Got JSON data from parking server")
-                    print(f"   📊 Data type: {type(data)}")
-                    
-                    # לוג מפורט של התוצאה
-                    if isinstance(data, list):
-                        print(f"   📊 Got list with {len(data)} items")
-                        if len(data) > 0:
-                            print(f"   📊 First item sample: {data[0]}")
-                    elif isinstance(data, dict):
-                        print(f"   📊 Got dict with keys: {list(data.keys())}")
-                    
-                    # אם זה contracts, וודא שהמבנה נכון
-                    if 'contracts' in endpoint:
-                        if 'contracts' in data and 'contract' in data['contracts']:
-                            print(f"   📊 Found {len(data['contracts']['contract'])} contracts")
-                    
-                    return jsonify({
-                        'success': True,
-                        'data': data
-                    })
-                except Exception as e:
-                    print(f"   ⚠️ Error parsing response: {e}")
-                    # אם זה לא JSON, החזר את הטקסט
-                    return jsonify({
-                        'success': True,
-                        'data': {'raw': response.text}
-                    })
+                # בדוק אם התגובה היא XML או JSON
+                content_type = response.headers.get('content-type', '')
+                print(f"   📄 Content-Type: {content_type}")
+                
+                if 'xml' in content_type.lower() or response.text.startswith('<?xml'):
+                    # פרש XML לJSON
+                    print(f"   📄 Got XML response, parsing...")
+                    try:
+                        import xml.etree.ElementTree as ET
+                        root = ET.fromstring(response.text)
+                        
+                        # חפש contracts/consumers
+                        if 'contracts' in endpoint or 'contract' in endpoint.lower():
+                            contracts = []
+                            # חפש contract elements בכל namespaces
+                            for contract in root.findall('.//{http://gsph.sub.com/cust/types}contract'):
+                                contract_data = {}
+                                for child in contract:
+                                    tag = child.tag.replace('{http://gsph.sub.com/cust/types}', '')
+                                    contract_data[tag] = child.text
+                                contracts.append(contract_data)
+                            
+                            print(f"   ✅ SUCCESS! Parsed {len(contracts)} contracts from XML")
+                            return jsonify({'success': True, 'data': contracts})
+                            
+                        elif 'consumer' in endpoint.lower():
+                            consumers = []
+                            for consumer in root.findall('.//{http://gsph.sub.com/cust/types}consumer'):
+                                consumer_data = {}
+                                for child in consumer:
+                                    tag = child.tag.replace('{http://gsph.sub.com/cust/types}', '')
+                                    consumer_data[tag] = child.text
+                                consumers.append(consumer_data)
+                            
+                            print(f"   ✅ SUCCESS! Parsed {len(consumers)} consumers from XML")
+                            return jsonify({'success': True, 'data': consumers})
+                        else:
+                            # החזר כ-raw XML אם לא מזהים את הסוג
+                            print(f"   ⚠️ Unknown XML type, returning raw")
+                            return jsonify({'success': True, 'raw': response.text})
+                            
+                    except Exception as e:
+                        print(f"   ❌ XML parse error: {e}")
+                        return jsonify({'success': True, 'raw': response.text})
+                else:
+                    # נסה לפרש כ-JSON
+                    try:
+                        data = response.json() if response.text else {}
+                        print(f"   ✅ SUCCESS! Got JSON data from parking server")
+                        print(f"   📊 Data type: {type(data)}")
+                        
+                        # לוג מפורט של התוצאה
+                        if isinstance(data, list):
+                            print(f"   📊 Got list with {len(data)} items")
+                            if len(data) > 0:
+                                print(f"   📊 First item sample: {data[0]}")
+                        elif isinstance(data, dict):
+                            print(f"   📊 Got dict with keys: {list(data.keys())}")
+                        
+                        return jsonify({
+                            'success': True,
+                            'data': data
+                        })
+                    except Exception as e:
+                        print(f"   ⚠️ Error parsing JSON: {e}")
+                        # אם זה לא JSON, החזר את הטקסט
+                        return jsonify({
+                            'success': True,
+                            'data': {'raw': response.text}
+                        })
             else:
                 print(f"   ❌ Error from parking server: {response.status_code}")
                 print(f"   📝 Error details: {response.text[:500]}")
