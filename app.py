@@ -3310,7 +3310,11 @@ def company_manager_proxy():
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts"
             method = 'GET'  # תמיד GET לחברות
         elif endpoint == 'consumers' or endpoint == 'GetConsumerList':
-            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
+            # Add contractId as query parameter if provided
+            if payload and 'contractId' in payload:
+                url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers?contractId={payload['contractId']}"
+            else:
+                url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
             method = 'GET'  # תמיד GET למנויים
         elif 'CustomerMediaWebService' in endpoint:
             # אם כבר יש CustomerMediaWebService ב-endpoint

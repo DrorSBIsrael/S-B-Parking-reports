@@ -194,7 +194,9 @@ class ParkingAPIXML {
     }
     
     async getConsumers(companyNum, contractId) {
-        return this.makeRequest(`contracts/${contractId}/consumers`);
+        // Send just 'consumers' - the proxy will handle the full path
+        // The contractId should be sent in the payload
+        return this.makeRequest('consumers', 'GET', { contractId: contractId });
     }
     
     async addConsumer(contractId, consumerData) {
