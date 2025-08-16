@@ -21,16 +21,16 @@ class ParkingAPIXML {
             };
             console.log('🏠 LOCAL MODE: Direct connection to parking server');
         } else {
-            // PRODUCTION: Use proxy (Render can access external IP)
-            this.config = {
-                baseUrl: '/api/company-manager/proxy',
-                username: '2022',
-                password: '2022',
-                timeout: 30000,
-                useProxy: true,  // USE PROXY ON RENDER!
-                currentParkingId: null
-            };
-            console.log('☁️ PRODUCTION MODE: Using proxy');
+            // PRODUCTION: Must use proxy due to CORS
+        this.config = {
+            baseUrl: '/api/company-manager/proxy',
+            username: '2022',
+            password: '2022',
+            timeout: 30000,
+                useProxy: true,  // MUST use proxy in production (CORS)
+            currentParkingId: null
+        };
+            console.log('☁️ PRODUCTION MODE: Using proxy (CORS protection)');
         }
         
         console.log('Parking API v2 initialized:', {
@@ -107,21 +107,33 @@ class ParkingAPIXML {
             let response;
             
             if (this.config.useProxy) {
-                // PRODUCTION: Use proxy endpoint
+                // PRODUCTION: Use proxy to avoid CORS
+                console.log(`📡 Proxy request - endpoint: ${endpoint}`);
+                
+                // Make sure endpoint includes CustomerMediaWebService prefix
+                // Remove leading slash if exists
+                if (endpoint.startsWith('/')) {
+                    endpoint = endpoint.substring(1);
+                }
+                
+                if (!endpoint.startsWith('CustomerMediaWebService')) {
+                    endpoint = `CustomerMediaWebService/${endpoint}`;
+                }
+                
                 response = await fetch(this.config.baseUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        parking_id: this.config.currentParkingId,
-                        endpoint: endpoint,
-                        method: method,
-                        payload: data
-                    })
-                });
+            method: 'POST',
+            headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    parking_id: this.config.currentParkingId,
+                    endpoint: endpoint,
+                    method: method,
+                    payload: data
+                })
+            });
             } else {
-                // LOCAL: Direct connection to parking server
+                // LOCAL: Direct connection
                 const url = `${this.config.baseUrl}/${endpoint}`;
                 const headers = {
                     'Authorization': 'Basic ' + btoa(`${this.config.username}:${this.config.password}`),
@@ -235,7 +247,7 @@ class ParkingAPIXML {
             console.log('[Progressive] Starting progressive loading for company:', companyId);
             
             // Step 1: Get basic list
-            const result = await this.getConsumers(companyId, companyId);
+        const result = await this.getConsumers(companyId, companyId);
             
             if (!result.success) {
                 console.error('[Progressive] Failed to get consumers list');
@@ -289,7 +301,7 @@ class ParkingAPIXML {
                 }
             }
             
-            return { 
+            return {
                 success: true,
                 data: basicSubscribers,
                 total: consumersArray.length,
