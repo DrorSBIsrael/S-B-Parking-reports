@@ -1,5 +1,5 @@
 /**
- * Configuration file for Parking Management System
+ *  Configuration file for Parking Management System
  */
 
 const config = {
@@ -96,6 +96,7 @@ if (typeof module !== 'undefined' && module.exports) {
 if (typeof window !== 'undefined') {
     window.parkingConfig = config;
 }
+
 
 
 
