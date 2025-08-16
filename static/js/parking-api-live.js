@@ -215,6 +215,16 @@ class ParkingAPIXML {
         return this.makeRequest('usageprofiles');
     }
     
+    async getOccupancy(contractId) {
+        // Try to get occupancy data for a contract
+        return this.makeRequest(`occupancy?contractId=${contractId}`);
+    }
+    
+    async getFacilityStatus(contractId) {
+        // Alternative endpoint for facility/parking status
+        return this.makeRequest(`facilities/status?contractId=${contractId}`);
+    }
+    
     /**
      * Get detailed information for a single consumer
      */
@@ -256,24 +266,42 @@ class ParkingAPIXML {
                 return result;
             }
             
-            const consumers = result.data || [];
+            let consumers = result.data || [];
             const consumersArray = Array.isArray(consumers) ? consumers : [consumers];
             
-            console.log(`[Progressive] Found ${consumersArray.length} consumers`);
+            // Filter by contractId if API returns all consumers
+            if (consumersArray.length > 1000) {
+                console.log(`[Progressive] Got ${consumersArray.length} consumers - filtering by contractId ${companyId}`);
+                const filtered = consumersArray.filter(c => 
+                    c.contractId === companyId || 
+                    c.contractId === String(companyId) ||
+                    c.contract === companyId ||
+                    c.contract === String(companyId)
+                );
+                if (filtered.length > 0) {
+                    consumers = filtered;
+                    console.log(`[Progressive] Filtered to ${filtered.length} consumers for contract ${companyId}`);
+                } else {
+                    console.log(`[Progressive] No consumers found for contract ${companyId}, showing all`);
+                }
+            }
+            
+            const finalConsumers = Array.isArray(consumers) ? consumers : [consumers];
+            console.log(`[Progressive] Found ${finalConsumers.length} consumers`);
             
             // PERFORMANCE OPTIMIZATION: Check company size
             const LARGE_COMPANY_THRESHOLD = 300;
-            const isLargeCompany = consumersArray.length > LARGE_COMPANY_THRESHOLD;
+            const isLargeCompany = finalConsumers.length > LARGE_COMPANY_THRESHOLD;
             
             if (isLargeCompany) {
-                console.log(`[Progressive] LARGE COMPANY: ${consumersArray.length} subscribers > ${LARGE_COMPANY_THRESHOLD}`);
+                console.log(`[Progressive] LARGE COMPANY: ${finalConsumers.length} subscribers > ${LARGE_COMPANY_THRESHOLD}`);
                 console.log(`[Progressive] Will load details on-demand only (hover)`);
             } else {
                 console.log(`[Progressive] Small company - will load details in background`);
             }
             
             // Map basic data
-            const basicSubscribers = consumersArray.map(consumer => ({
+            const basicSubscribers = finalConsumers.map(consumer => ({
                 id: consumer.id || consumer.subscriberNum,
                 subscriberNum: consumer.id || consumer.subscriberNum,
                 lastName: consumer.name || consumer.lastName || '',
@@ -287,8 +315,8 @@ class ParkingAPIXML {
             onBasicLoaded(basicSubscribers);
             
             // Step 2: Load details in background ONLY for small companies
-            if (!isLargeCompany && consumersArray.length > 0) {
-                this.loadDetailsInBackground(companyId, consumersArray, basicSubscribers, {
+            if (!isLargeCompany && finalConsumers.length > 0) {
+                this.loadDetailsInBackground(companyId, finalConsumers, basicSubscribers, {
                     onDetailLoaded,
                     onProgress
                 });
@@ -296,17 +324,17 @@ class ParkingAPIXML {
                 // Notify that we're in on-demand mode
                 if (onProgress) {
                     onProgress({ 
-                        loaded: consumersArray.length, 
-                        total: consumersArray.length,
-                        message: `חברה גדולה (${consumersArray.length} מנויים) - פרטים יטענו בעת מעבר עכבר`
+                        loaded: finalConsumers.length, 
+                        total: finalConsumers.length,
+                        message: `חברה גדולה (${finalConsumers.length} מנויים) - פרטים יטענו בעת מעבר עכבר`
                     });
                 }
             }
             
-            return {
+                        return { 
                 success: true,
                 data: basicSubscribers,
-                total: consumersArray.length,
+                total: finalConsumers.length,
                 progressive: true,
                 isLargeCompany: isLargeCompany
             };

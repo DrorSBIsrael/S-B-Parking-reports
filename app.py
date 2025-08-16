@@ -3312,9 +3312,12 @@ def company_manager_proxy():
         elif endpoint == 'consumers' or endpoint == 'GetConsumerList':
             # Add contractId as query parameter if provided
             if payload and 'contractId' in payload:
-                url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers?contractId={payload['contractId']}"
+                contract_id = payload['contractId']
+                url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers?contractId={contract_id}"
+                print(f"   🔍 Getting consumers for contract ID: {contract_id}")
             else:
                 url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
+                print(f"   ⚠️ Getting ALL consumers (no contractId specified)")
             method = 'GET'  # תמיד GET למנויים
         elif 'CustomerMediaWebService' in endpoint:
             # אם כבר יש CustomerMediaWebService ב-endpoint
@@ -3375,7 +3378,9 @@ def company_manager_proxy():
                     print(f"   📄 Got XML response, parsing...")
                     try:
                         import xml.etree.ElementTree as ET
-                        root = ET.fromstring(response.text)
+                        # Fix encoding issues
+                        response.encoding = 'utf-8'
+                        root = ET.fromstring(response.text.encode('utf-8'))
                         
                         # חפש contracts/consumers
                         if 'contracts' in endpoint or 'contract' in endpoint.lower():
