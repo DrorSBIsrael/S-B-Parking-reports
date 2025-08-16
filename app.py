@@ -3463,7 +3463,7 @@ def company_manager_proxy():
                     # נסה שוב עם SSL מושבת לגמרי
                     import ssl
                     import urllib3
-                    urllib3.disable_warnings()
+                    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
                     
                     response = requests.get(url, headers=headers, verify=False, timeout=10)
                     if response.status_code == 200:
@@ -3910,8 +3910,9 @@ def test_render_connection():
     
     import base64
     import requests
-    from requests.packages.urllib3.exceptions import InsecureRequestWarning
-    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+    import urllib3
+    # Disable SSL warnings properly
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     
     # בדוק איפה אנחנו רצים
     is_local = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
