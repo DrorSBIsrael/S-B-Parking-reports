@@ -159,23 +159,162 @@ class ParkingAPIXML {
         return this.makeRequest('usageprofiles');
     }
     
-    // Progressive loading methods for large datasets
-    async getSubscribersProgressive(companyId, offset = 0, limit = 50) {
-        // For now, just return all consumers at once since the XML doesn't support pagination
-        const result = await this.getConsumers(companyId, companyId);
-        if (result.success) {
-            // Transform the data to match expected format
-            const consumers = result.data.consumer || result.data.consumers || [];
+    /**
+     * Get detailed information for a single consumer
+     */
+    async getConsumerDetail(contractId, consumerId) {
+        const parkingId = this.getCurrentParkingId();
+        
+        const response = await fetch('/api/company-manager/consumer-detail', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                parking_id: parkingId,
+                contract_id: contractId,
+                consumer_id: consumerId
+            })
+        });
+        
+        const result = await response.json();
+        return result;
+    }
+    
+    // Progressive loading methods for large datasets with optimization
+    async getSubscribersProgressive(companyId, callbacks = {}) {
+        const { 
+            onBasicLoaded = () => {}, 
+            onDetailLoaded = () => {}, 
+            onProgress = () => {} 
+        } = callbacks;
+        
+        try {
+            console.log('[Progressive] Starting progressive loading for company:', companyId);
+            
+            // Step 1: Get basic list
+            const result = await this.getConsumers(companyId, companyId);
+            
+            if (!result.success) {
+                console.error('[Progressive] Failed to get consumers list');
+                return result;
+            }
+            
+            const consumers = result.data || [];
             const consumersArray = Array.isArray(consumers) ? consumers : [consumers];
             
-            return {
+            console.log(`[Progressive] Found ${consumersArray.length} consumers`);
+            
+            // PERFORMANCE OPTIMIZATION: Check company size
+            const LARGE_COMPANY_THRESHOLD = 300;
+            const isLargeCompany = consumersArray.length > LARGE_COMPANY_THRESHOLD;
+            
+            if (isLargeCompany) {
+                console.log(`[Progressive] LARGE COMPANY: ${consumersArray.length} subscribers > ${LARGE_COMPANY_THRESHOLD}`);
+                console.log(`[Progressive] Will load details on-demand only (hover)`);
+            } else {
+                console.log(`[Progressive] Small company - will load details in background`);
+            }
+            
+            // Map basic data
+            const basicSubscribers = consumersArray.map(consumer => ({
+                id: consumer.id || consumer.subscriberNum,
+                subscriberNum: consumer.id || consumer.subscriberNum,
+                lastName: consumer.name || consumer.lastName || '',
+                vehicleNum: consumer.vehicleNum || '',
+                hasFullDetails: false,
+                isLargeCompany: isLargeCompany,
+                contractId: companyId
+            }));
+            
+            // Return basic data immediately
+            onBasicLoaded(basicSubscribers);
+            
+            // Step 2: Load details in background ONLY for small companies
+            if (!isLargeCompany && consumersArray.length > 0) {
+                this.loadDetailsInBackground(companyId, consumersArray, basicSubscribers, {
+                    onDetailLoaded,
+                    onProgress
+                });
+            } else if (isLargeCompany) {
+                // Notify that we're in on-demand mode
+                if (onProgress) {
+                    onProgress({ 
+                        loaded: consumersArray.length, 
+                        total: consumersArray.length,
+                        message: `חברה גדולה (${consumersArray.length} מנויים) - פרטים יטענו בעת מעבר עכבר`
+                    });
+                }
+            }
+            
+            return { 
                 success: true,
-                data: consumersArray.slice(offset, offset + limit),
+                data: basicSubscribers,
                 total: consumersArray.length,
-                hasMore: (offset + limit) < consumersArray.length
+                progressive: true,
+                isLargeCompany: isLargeCompany
             };
+            
+        } catch (error) {
+            console.error('[Progressive] Error:', error);
+            return { success: false, error: error.message };
         }
-        return result;
+    }
+    
+    /**
+     * Load details in background for small companies
+     */
+    async loadDetailsInBackground(contractId, consumers, subscribers, options) {
+        const { onDetailLoaded, onProgress } = options;
+        const batchSize = 10; // Load 10 at a time
+        const totalBatches = Math.ceil(consumers.length / batchSize);
+        
+        console.log(`[Background] Loading ${consumers.length} details in ${totalBatches} batches`);
+        
+        for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+            const start = batchIndex * batchSize;
+            const end = Math.min(start + batchSize, consumers.length);
+            const batch = consumers.slice(start, end);
+            
+            // Process batch
+            const batchPromises = batch.map(async (consumer) => {
+                try {
+                    const consumerId = consumer.id || consumer.subscriberNum;
+                    const detailResult = await this.getConsumerDetail(contractId, consumerId);
+                    
+                    if (detailResult.success) {
+                        // Find and update subscriber
+                        const subscriber = subscribers.find(s => s.id === consumerId);
+                        if (subscriber) {
+                            Object.assign(subscriber, detailResult.data);
+                            subscriber.hasFullDetails = true;
+                            onDetailLoaded(subscriber);
+                        }
+                    }
+                } catch (error) {
+                    console.error(`[Background] Error loading details for ${consumer.id}:`, error);
+                }
+            });
+            
+            await Promise.all(batchPromises);
+            
+            // Update progress
+            const loaded = Math.min((batchIndex + 1) * batchSize, consumers.length);
+            if (onProgress) {
+                onProgress({ 
+                    loaded, 
+                    total: consumers.length,
+                    percentage: Math.round((loaded / consumers.length) * 100)
+                });
+            }
+            
+            // Small delay between batches
+            if (batchIndex < totalBatches - 1) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+        
+        console.log('[Background] Finished loading all details');
     }
     
     // Additional helper methods

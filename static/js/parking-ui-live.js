@@ -341,8 +341,9 @@ class ParkingUIIntegrationXML {
                 
                 let filteredContracts = contracts;
                 if (userCompanyList && userCompanyList !== 'all') {
-                    const allowedIds = userCompanyList.split(',').map(id => id.trim());
-                    console.log('[loadCompaniesFromParking] Filtering for companies:', allowedIds);
+                    // Use the new parseCompanyList function that supports ranges
+                    const allowedIds = this.parseCompanyList(userCompanyList);
+                    console.log('[loadCompaniesFromParking] Filtering for companies (with ranges parsed):', allowedIds);
                     
                     filteredContracts = contracts.filter(contract => {
                         const contractId = String(contract.id?.['#text'] || contract.id || '');
@@ -744,6 +745,155 @@ class ParkingUIIntegrationXML {
         
         // Load subscribers
         await this.loadSubscribers();
+    }
+    
+    /**
+     * Parse company_list format with ranges
+     * Example: "1,2,5-10,60" => ["1", "2", "5", "6", "7", "8", "9", "10", "60"]
+     */
+    parseCompanyList(companyListString) {
+        if (!companyListString || companyListString === 'all') {
+            return 'all';
+        }
+        
+        const companies = [];
+        const parts = companyListString.split(',');
+        
+        for (const part of parts) {
+            const trimmed = part.trim();
+            
+            // Check if it's a range (e.g., "5-10")
+            if (trimmed.includes('-')) {
+                const [start, end] = trimmed.split('-').map(n => parseInt(n.trim()));
+                
+                if (!isNaN(start) && !isNaN(end)) {
+                    // Add all numbers in range
+                    for (let i = start; i <= end; i++) {
+                        companies.push(i.toString());
+                    }
+                }
+            } else {
+                // Single company ID
+                if (trimmed) {
+                    companies.push(trimmed);
+                }
+            }
+        }
+        
+        // Remove duplicates and sort
+        return [...new Set(companies)].sort((a, b) => parseInt(a) - parseInt(b));
+    }
+    
+    /**
+     * Setup hover loading for a row
+     */
+    setupHoverLoading(row, subscriber, index) {
+        let hoverTimeout = null;
+        let isLoadingDetails = false;
+        
+        // Get hover delay from config or use default
+        const hoverDelay = 500; // 500ms delay
+        
+        // Mouse enter - start timer
+        row.addEventListener('mouseenter', async (e) => {
+            // Don't load if already has full details or already loading
+            if (subscriber.hasFullDetails || isLoadingDetails) return;
+            
+            // Clear any existing timeout
+            if (hoverTimeout) {
+                clearTimeout(hoverTimeout);
+            }
+            
+            // Start loading after delay
+            hoverTimeout = setTimeout(async () => {
+                if (isLoadingDetails || subscriber.hasFullDetails) return;
+                
+                isLoadingDetails = true;
+                
+                // Add loading indicator
+                row.classList.add('loading-details');
+                row.style.opacity = '0.7';
+                
+                try {
+                    console.log(`[Hover Loading] Loading details for subscriber ${subscriber.subscriberNum}`);
+                    
+                    // Load details
+                    const detailResult = await this.api.getConsumerDetail(
+                        subscriber.contractId, 
+                        subscriber.id
+                    );
+                    
+                    if (detailResult.success && detailResult.data) {
+                        // Update subscriber with full details
+                        Object.assign(subscriber, detailResult.data);
+                        subscriber.hasFullDetails = true;
+                        
+                        // Update the row in the table
+                        this.updateSubscriberRow(subscriber, index);
+                        
+                        console.log(`[Hover Loading] Details loaded for subscriber ${subscriber.subscriberNum}`);
+                    }
+                } catch (error) {
+                    console.error('[Hover Loading] Error:', error);
+                } finally {
+                    // Remove loading indicator
+                    row.classList.remove('loading-details');
+                    row.style.opacity = '1';
+                    isLoadingDetails = false;
+                }
+            }, hoverDelay);
+        });
+        
+        // Mouse leave - cancel loading
+        row.addEventListener('mouseleave', () => {
+            if (hoverTimeout) {
+                clearTimeout(hoverTimeout);
+                hoverTimeout = null;
+            }
+        });
+    }
+    
+    /**
+     * Update a single subscriber row with new data
+     */
+    updateSubscriberRow(subscriber, index) {
+        const tbody = document.getElementById('subscribersTableBody');
+        if (!tbody) return;
+        
+        const rows = tbody.getElementsByTagName('tr');
+        if (index >= 0 && index < rows.length) {
+            const row = rows[index];
+            
+            // Update cells with new data
+            const cells = row.getElementsByTagName('td');
+            if (cells.length >= 5) {
+                cells[0].textContent = subscriber.subscriberNum || '';
+                cells[1].textContent = subscriber.lastName || '';
+                cells[2].textContent = subscriber.vehicleNum || '';
+                
+                // Update valid until with full details
+                if (subscriber.validUntil) {
+                    const validUntil = new Date(subscriber.validUntil);
+                    const isExpired = validUntil < new Date();
+                    cells[3].innerHTML = `
+                        <span class="${isExpired ? 'text-danger' : ''}">
+                            ${validUntil.toLocaleDateString('he-IL')}
+                        </span>
+                    `;
+                }
+                
+                // Update phone if available
+                if (subscriber.phone) {
+                    cells[4].textContent = subscriber.phone;
+                }
+            }
+            
+            // Remove hover indicator if has full details
+            if (subscriber.hasFullDetails) {
+                row.removeAttribute('data-hover-loadable');
+                row.title = '';
+            }
+        }
     }
     
     /**
@@ -1354,6 +1504,14 @@ class ParkingUIIntegrationXML {
             row.style.cursor = 'pointer';
             row.dataset.subscriberNum = subscriber.subscriberNum;
             row.dataset.index = index;
+            
+            // Add hover loading for large companies without full details
+            if (subscriber.isLargeCompany && !subscriber.hasFullDetails) {
+                row.setAttribute('data-hover-loadable', 'true');
+                row.title = 'עמוד עם העכבר לטעינת פרטים מלאים';
+                row.style.opacity = '0.85';
+                this.setupHoverLoading(row, subscriber, index);
+            }
             
             // Add visual indicator for basic vs full data
             if (!subscriber.hasFullDetails) {

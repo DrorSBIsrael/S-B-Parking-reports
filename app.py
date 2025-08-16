@@ -3825,6 +3825,80 @@ def debug_why_no_access():
 
 print("🔧 DEBUG ENDPOINT ADDED!")
 
+@app.route('/api/company-manager/consumer-detail', methods=['POST'])
+def get_consumer_detail():
+    """קבלת פרטי מנוי בודד - לטעינת hover"""
+    if 'user_email' not in session:
+        # בדיקה אם אנחנו במצב פיתוח מקומי
+        is_local_dev = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
+        if not is_local_dev:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+    
+    try:
+        data = request.get_json()
+        parking_id = data.get('parking_id')
+        contract_id = data.get('contract_id')
+        consumer_id = data.get('consumer_id')
+        
+        if not all([parking_id, contract_id, consumer_id]):
+            return jsonify({'success': False, 'message': 'חסרים פרמטרים'}), 400
+        
+        # קבלת נתוני החניון
+        parking_result = supabase.table('parkings').select(
+            'ip_address, port'
+        ).eq('id', parking_id).execute()
+        
+        if not parking_result.data:
+            return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
+        
+        parking_data = parking_result.data[0]
+        ip_address = parking_data.get('ip_address')
+        port = parking_data.get('port', 8240)
+        
+        # בדיקה אם מקומי או production
+        is_local_dev = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
+        if is_local_dev:
+            ip_address = '10.35.240.100'
+            port = 8443
+        
+        # בניית URL לפרטי מנוי
+        url = f"https://{ip_address}:{port}/CustomerMediaWebService/consumers/{consumer_id}"
+        
+        # Basic Auth
+        auth_string = base64.b64encode(b'2022:2022').decode('ascii')
+        headers = {
+            'Authorization': f'Basic {auth_string}',
+            'Accept': 'application/xml'
+        }
+        
+        # ביצוע הקריאה
+        response = requests.get(url, headers=headers, verify=False, timeout=10)
+        
+        if response.status_code == 200:
+            # פרש XML אם צריך
+            if response.text.startswith('<?xml'):
+                import xml.etree.ElementTree as ET
+                root = ET.fromstring(response.text)
+                
+                # חפש consumer element
+                consumer_data = {}
+                for consumer in root.findall('.//{http://gsph.sub.com/cust/types}consumer'):
+                    for child in consumer:
+                        tag = child.tag.replace('{http://gsph.sub.com/cust/types}', '')
+                        consumer_data[tag] = child.text
+                    break  # רק המנוי הראשון
+                
+                return jsonify({'success': True, 'data': consumer_data})
+            else:
+                # JSON response
+                return jsonify({'success': True, 'data': response.json()})
+        else:
+            return jsonify({'success': False, 'error': f'Error {response.status_code}'}), response.status_code
+            
+    except Exception as e:
+        print(f"Error in get_consumer_detail: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/test-render-connection', methods=['GET'])
 def test_render_connection():
     """בדיקת חיבור לשרת החניון מ-Render"""
