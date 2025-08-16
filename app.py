@@ -3189,9 +3189,15 @@ def test_proxy():
 def company_manager_proxy():
     """Proxy לקריאות API לשרתי החניונים"""
     
-    # Debug log
+    # Debug log מפורט
+    print(f"\n{'='*70}")
     print(f"🎯 PROXY ENDPOINT HIT: {request.method}")
-    print(f"🔥 FIXED VERSION - ENDPOINT EXISTS!")
+    print(f"🔥 FIXED VERSION - FULL DEBUG LOGGING ENABLED!")
+    print(f"⏰ Time: {datetime.now()}")
+    print(f"🌐 Host: {request.host}")
+    print(f"📍 Remote Address: {request.remote_addr}")
+    print(f"📦 Headers: {dict(request.headers)}")
+    print(f"{'='*70}")
     
     # Handle CORS preflight
     if request.method == 'OPTIONS':
@@ -3214,9 +3220,17 @@ def company_manager_proxy():
     try:
         print(f"\n📨 Proxy request received: {request.method} {request.path}")
         
+        # בדיקה אם אנחנו במצב פיתוח מקומי
+        is_local_dev = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
+        
         if 'user_email' not in session:
-            print("   ❌ User not logged in")
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            if is_local_dev:
+                # במצב פיתוח - דלג על בדיקת login
+                print("   ⚠️ LOCAL DEV MODE - Skipping login check")
+                session['user_email'] = 'test@local.dev'  # משתמש דמה לבדיקות
+            else:
+                print("   ❌ User not logged in")
+                return jsonify({'success': False, 'message': 'לא מחובר'}), 401
         
         data = request.get_json()
         if not data:
@@ -3247,6 +3261,34 @@ def company_manager_proxy():
         ip_address = parking_data.get('ip_address')
         port = parking_data.get('port', 443)
         
+        # בדיקה אם אנחנו בסביבת פיתוח או production
+        is_local_dev = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
+        
+        if is_local_dev:
+            # בסביבת פיתוח - השתמש בשרת המקומי
+            print(f"   🏠 LOCAL DEV MODE - Using local parking server")
+            ip_address = '10.35.240.100'
+            port = 8443
+        else:
+            # ב-Production (Render) - השתמש בשרת החיצוני
+            print(f"   🌐 PRODUCTION MODE (Render)")
+            print(f"   📊 From Database - IP: {ip_address}, Port: {port}")
+            
+            # וודא שיש כתובת נכונה
+            if not ip_address or ip_address == 'None':
+                # אם אין בdatabase, השתמש בברירת מחדל
+                ip_address = '192.117.0.122'
+                port = 8240
+                print(f"   ⚠️ No IP in database, using default: {ip_address}:{port}")
+            else:
+                # השתמש בכתובת מה-database
+                print(f"   ✅ Using database server: {ip_address}:{port}")
+            
+            # וודא שהפורט נכון
+            if not port or port == 0:
+                port = 8240
+                print(f"   📍 Fixed port to: {port}")
+        
         if not ip_address:
             return jsonify({'success': False, 'message': 'חסרים נתוני חיבור'}), 500
         
@@ -3256,12 +3298,22 @@ def company_manager_proxy():
             port = 8240  # פורט ברירת מחדל
             print(f"   ⚠️ Using default port: {port}")
     
-        protocol = "https" if port == 443 or port == 8443 or port == 8240 else "http"
+        # השתמש תמיד ב-HTTPS לשרתי החניון
+        protocol = "https"
+        print(f"   🔒 Protocol: {protocol}")
         
-        # התאמת ה-endpoint - אם זה CustomerMediaWebService, לא להוסיף /api
-        if 'CustomerMediaWebService' in endpoint:
+        # בניית URL - תיקון לפי מה שעובד!
+        if endpoint == 'contracts' or endpoint == 'GetContractsList':
+            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts"
+            method = 'GET'  # תמיד GET לחברות
+        elif endpoint == 'consumers' or endpoint == 'GetConsumerList':
+            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
+            method = 'GET'  # תמיד GET למנויים
+        elif 'CustomerMediaWebService' in endpoint:
+            # אם כבר יש CustomerMediaWebService ב-endpoint
             url = f"{protocol}://{ip_address}:{port}/{endpoint}"
         else:
+            # אחרת, נסה עם /api
             url = f"{protocol}://{ip_address}:{port}/api/{endpoint}"
         
         print(f"\n🔌 Proxy Request:")
@@ -3271,55 +3323,127 @@ def company_manager_proxy():
         # הכנת headers
         headers = {'Content-Type': 'application/json'}
         
-        # Basic Auth אם צריך
-        if 'contracts' in endpoint or 'consumer' in endpoint:
-            auth_string = base64.b64encode(b'2022:2022').decode('ascii')
+        # Basic Auth - תמיד לשרת החניון
+        if 'CustomerMediaWebService' in endpoint or 'contracts' in endpoint or 'consumer' in endpoint:
+            # TODO: החלף עם ה-credentials הנכונים!
+            auth_string = base64.b64encode(b'2022:2022').decode('ascii')  
             headers['Authorization'] = f'Basic {auth_string}'
-            print(f"   🔐 Added Basic Auth")
+            print(f"   🔐 Added Basic Auth: 2022:2022")
         
         try:
-            # timeout מוגבל ל-25 שניות
-            timeout_seconds = 25
+            # timeout מוגבר ל-30 שניות ב-production
+            timeout_seconds = 30 if not is_local_dev else 25
             print(f"   ⏱️ Attempting connection with {timeout_seconds}s timeout...")
             print(f"   🌐 Full URL: {url}")
+            print(f"   🔑 Auth: {'Basic Auth (2022:2022)' if 'Authorization' in headers else 'No Auth'}")
             print(f"   📋 Headers: {headers}")
             
-            # ביצוע הקריאה
+            # ביצוע הקריאה - פשוט כמו שהיה
+            print(f"   🚀 Executing {method} request...")
             if method == 'GET':
                 response = requests.get(url, headers=headers, verify=False, timeout=timeout_seconds)
-                print(f"   📊 Response status: {response.status_code}")
-                print(f"   📝 Response headers: {dict(response.headers)}")
-                print(f"   💾 Response content preview: {response.text[:200]}")
             elif method == 'POST':
+                print(f"   📦 POST payload: {payload}")
                 response = requests.post(url, json=payload, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'PUT':
+                print(f"   📦 PUT payload: {payload}")
                 response = requests.put(url, json=payload, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'DELETE':
                 response = requests.delete(url, headers=headers, verify=False, timeout=timeout_seconds)
             else:
                 return jsonify({'success': False, 'message': 'שיטה לא נתמכת'}), 400
             
+            print(f"   📊 Response status: {response.status_code}")
+            print(f"   📊 Response headers: {dict(response.headers)}")
+            print(f"   📝 Full response text: {response.text[:1000] if response.text else 'Empty'}")
+            
             # החזרת התוצאה
             if response.status_code == 200:
-                return jsonify({
-                    'success': True,
-                    'data': response.json() if response.text else {}
-                })
+                try:
+                    data = response.json() if response.text else {}
+                    print(f"   ✅ SUCCESS! Got JSON data from parking server")
+                    print(f"   📊 Data type: {type(data)}")
+                    
+                    # לוג מפורט של התוצאה
+                    if isinstance(data, list):
+                        print(f"   📊 Got list with {len(data)} items")
+                        if len(data) > 0:
+                            print(f"   📊 First item sample: {data[0]}")
+                    elif isinstance(data, dict):
+                        print(f"   📊 Got dict with keys: {list(data.keys())}")
+                    
+                    # אם זה contracts, וודא שהמבנה נכון
+                    if 'contracts' in endpoint:
+                        if 'contracts' in data and 'contract' in data['contracts']:
+                            print(f"   📊 Found {len(data['contracts']['contract'])} contracts")
+                    
+                    return jsonify({
+                        'success': True,
+                        'data': data
+                    })
+                except Exception as e:
+                    print(f"   ⚠️ Error parsing response: {e}")
+                    # אם זה לא JSON, החזר את הטקסט
+                    return jsonify({
+                        'success': True,
+                        'data': {'raw': response.text}
+                    })
             else:
+                print(f"   ❌ Error from parking server: {response.status_code}")
+                print(f"   📝 Error details: {response.text[:500]}")
                 return jsonify({
                     'success': False,
                     'message': f'שגיאה בקריאה לשרת החניון: {response.status_code}'
                 }), response.status_code
                 
         except requests.exceptions.Timeout:
-            print(f"⏱️ Timeout after {timeout_seconds}s")
-            return jsonify({'success': False, 'error': 'זמן ההמתנה לשרת החניון פג'}), 504
+            print(f"   ⏱️ TIMEOUT after {timeout_seconds}s")
+            print(f"   ⏱️ Failed URL: {url}")
+            print(f"   ⏱️ Server: {ip_address}:{port}")
+            return jsonify({
+                'success': False, 
+                'error': 'זמן ההמתנה לשרת החניון פג',
+                'timeout': timeout_seconds,
+                'server': f"{ip_address}:{port}"
+            }), 504
         except requests.exceptions.ConnectionError as e:
-            print(f"🔌 Connection error: {str(e)}")
-            return jsonify({'success': False, 'error': 'לא ניתן להתחבר לשרת החניון'}), 503
+            error_msg = str(e)
+            print(f"   🔌 CONNECTION ERROR: {error_msg[:500]}")
+            print(f"   🔌 Failed URL: {url}")
+            print(f"   🔌 Server: {ip_address}:{port}")
+            
+            # בדוק אם זה בעיית SSL
+            if 'SSL' in error_msg or 'certificate' in error_msg.lower():
+                print(f"   🔐 Possible SSL issue, retrying without verification...")
+                try:
+                    # נסה שוב עם SSL מושבת לגמרי
+                    import ssl
+                    import urllib3
+                    urllib3.disable_warnings()
+                    
+                    response = requests.get(url, headers=headers, verify=False, timeout=10)
+                    if response.status_code == 200:
+                        print(f"   ✅ Worked without SSL verification!")
+                        data = response.json() if response.text else {}
+                        return jsonify({'success': True, 'data': data})
+                except:
+                    pass
+            
+            return jsonify({
+                'success': False, 
+                'error': 'לא ניתן להתחבר לשרת החניון',
+                'details': error_msg[:200],
+                'server': f"{ip_address}:{port}"
+            }), 503
         except Exception as e:
-            print(f"❌ Unexpected error: {str(e)}")
-            return jsonify({'success': False, 'error': str(e)}), 500
+            print(f"   ❌ UNEXPECTED ERROR: {str(e)[:500]}")
+            print(f"   ❌ Failed URL: {url}")
+            print(f"   ❌ Server: {ip_address}:{port}")
+            return jsonify({
+                'success': False, 
+                'error': str(e)[:200],
+                'server': f"{ip_address}:{port}"
+            }), 500
             
     except Exception as e:
         print(f"❌ General proxy error: {str(e)}")
@@ -3657,6 +3781,183 @@ def debug_why_no_access():
 
 print("🔧 DEBUG ENDPOINT ADDED!")
 
+@app.route('/api/test-render-connection', methods=['GET'])
+def test_render_connection():
+    """בדיקת חיבור לשרת החניון מ-Render"""
+    print(f"\n{'='*70}")
+    print(f"🧪 TESTING CONNECTION FROM RENDER")
+    print(f"⏰ Time: {datetime.now()}")
+    print(f"🌐 Host: {request.host}")
+    print(f"{'='*70}")
+    
+    import base64
+    import requests
+    from requests.packages.urllib3.exceptions import InsecureRequestWarning
+    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+    
+    # בדוק איפה אנחנו רצים
+    is_local = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
+    
+    if is_local:
+        server = '10.35.240.100'
+        port = 8443
+        print(f"📍 Running locally, testing local server: {server}:{port}")
+    else:
+        server = '192.117.0.122'
+        port = 8240
+        print(f"🌍 Running on Render, testing external server: {server}:{port}")
+    
+    # Basic Auth
+    auth = base64.b64encode(b'2022:2022').decode('ascii')
+    headers = {'Authorization': f'Basic {auth}'}
+    
+    results = []
+    
+    # בדוק endpoints
+    endpoints = [
+        'CustomerMediaWebService/contracts',
+        'CustomerMediaWebService/consumers'
+    ]
+    
+    for endpoint in endpoints:
+        url = f"https://{server}:{port}/{endpoint}"
+        print(f"\n🔗 Testing: {url}")
+        
+        try:
+            response = requests.get(url, headers=headers, verify=False, timeout=15)
+            print(f"   ✅ Status: {response.status_code}")
+            
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    count = len(data) if isinstance(data, list) else 1
+                    print(f"   📊 Got {count} items")
+                    results.append({
+                        'endpoint': endpoint,
+                        'status': 200,
+                        'success': True,
+                        'count': count
+                    })
+                except:
+                    results.append({
+                        'endpoint': endpoint,
+                        'status': 200,
+                        'success': True,
+                        'type': 'non-json'
+                    })
+            else:
+                results.append({
+                    'endpoint': endpoint,
+                    'status': response.status_code,
+                    'success': False
+                })
+                
+        except requests.exceptions.Timeout:
+            print(f"   ⏱️ TIMEOUT")
+            results.append({
+                'endpoint': endpoint,
+                'error': 'timeout',
+                'success': False
+            })
+        except requests.exceptions.ConnectionError as e:
+            print(f"   🔌 CONNECTION ERROR: {str(e)[:100]}")
+            results.append({
+                'endpoint': endpoint,
+                'error': 'connection_error',
+                'success': False
+            })
+        except Exception as e:
+            print(f"   ❌ ERROR: {str(e)[:100]}")
+            results.append({
+                'endpoint': endpoint,
+                'error': str(e)[:100],
+                'success': False
+            })
+    
+    success = any(r.get('success') for r in results)
+    
+    print(f"\n{'='*70}")
+    print(f"📊 SUMMARY: {'✅ SUCCESS' if success else '❌ FAILED'}")
+    print(f"{'='*70}")
+    
+    return jsonify({
+        'environment': 'local' if is_local else 'render',
+        'server': f"{server}:{port}",
+        'results': results,
+        'success': success
+    })
+
+@app.route('/api/test-direct-parking', methods=['GET'])
+def test_direct_parking_no_login():
+    """בדיקה ישירה לחניון בלי login - רק לבדיקות!"""
+    try:
+        import base64
+        
+        # חיבור ישיר לשרת המקומי
+        ip = "10.35.240.100"
+        port = 8443
+        
+        # Basic Auth
+        auth_string = base64.b64encode(b'2022:2022').decode('ascii')
+        headers = {
+            'Authorization': f'Basic {auth_string}',
+            'Accept': 'application/json'
+        }
+        
+        results = {}
+        
+        # בדוק contracts
+        try:
+            url = f"https://{ip}:{port}/CustomerMediaWebService/contracts"
+            response = requests.get(url, headers=headers, verify=False, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'contracts' in data and 'contract' in data['contracts']:
+                    contracts = data['contracts']['contract']
+                    results['contracts'] = {
+                        'success': True,
+                        'count': len(contracts),
+                        'data': contracts[:5]  # רק 5 הראשונים
+                    }
+                else:
+                    results['contracts'] = {'success': False, 'message': 'No contracts found'}
+            else:
+                results['contracts'] = {'success': False, 'status': response.status_code}
+        except Exception as e:
+            results['contracts'] = {'success': False, 'error': str(e)}
+        
+        # בדוק consumers
+        try:
+            url = f"https://{ip}:{port}/CustomerMediaWebService/consumers"
+            response = requests.get(url, headers=headers, verify=False, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'consumers' in data and 'consumer' in data['consumers']:
+                    consumers = data['consumers']['consumer']
+                    results['consumers'] = {
+                        'success': True,
+                        'count': len(consumers),
+                        'data': consumers[:5]  # רק 5 הראשונים
+                    }
+                else:
+                    results['consumers'] = {'success': False, 'message': 'No consumers found'}
+            else:
+                results['consumers'] = {'success': False, 'status': response.status_code}
+        except Exception as e:
+            results['consumers'] = {'success': False, 'error': str(e)}
+        
+        return jsonify({
+            'success': True,
+            'message': 'Direct parking test - NO LOGIN REQUIRED',
+            'server': f'{ip}:{port}',
+            'results': results
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.route('/api/test-parking-connection', methods=['GET'])
 def test_parking_connection():
     """בדיקה ידנית של חיבור לשרת החניון"""
@@ -3960,6 +4261,99 @@ def test_manager_auth():
             'success': True,
             'results': results,
             'successful_auth': [r for r in results if r.get('success', False)]
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/find-working-endpoint', methods=['GET'])
+def find_working_endpoint():
+    """מחפש את ה-endpoint הנכון של שרת החניון"""
+    try:
+        ip = "192.117.0.122"
+        port = 8240
+        
+        # רשימה של כל האפשרויות
+        possible_endpoints = [
+            # SOAP/WSDL
+            "CustomerMediaWebService.asmx",
+            "CustomerMediaWebService.asmx?wsdl",
+            "CustomerMediaWebService.asmx/GetContractsList",
+            "CustomerMediaWebService.svc",
+            "CustomerMediaWebService.svc?wsdl",
+            
+            # Standard paths
+            "CustomerMediaWebService",
+            "CustomerMediaWebService/GetContractsList",
+            "CustomerMediaWebService/GetConsumerList",
+            
+            # With prefixes
+            "api/CustomerMediaWebService",
+            "ws/CustomerMediaWebService",
+            "webservice/CustomerMediaWebService",
+            "services/CustomerMediaWebService",
+            
+            # Try POST with SOAP
+            "CustomerMediaWebService.asmx"
+        ]
+        
+        results = []
+        working = []
+        
+        for endpoint in possible_endpoints:
+            url = f"https://{ip}:{port}/{endpoint}"
+            
+            # Try GET
+            try:
+                response = requests.get(url, timeout=5, verify=False)
+                if response.status_code != 404:
+                    results.append({
+                        'endpoint': endpoint,
+                        'method': 'GET',
+                        'status': response.status_code,
+                        'content_type': response.headers.get('content-type', ''),
+                        'preview': response.text[:200]
+                    })
+                    if response.status_code in [200, 405, 500]:  # 405/500 might mean it exists but needs POST
+                        working.append(endpoint)
+            except:
+                pass
+            
+            # Try POST with SOAP envelope
+            if '.asmx' in endpoint or '.svc' in endpoint:
+                try:
+                    soap_body = '''<?xml version="1.0" encoding="utf-8"?>
+                    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+                        <soap:Body>
+                            <GetContractsList xmlns="http://tempuri.org/">
+                            </GetContractsList>
+                        </soap:Body>
+                    </soap:Envelope>'''
+                    
+                    headers = {
+                        'Content-Type': 'text/xml; charset=utf-8',
+                        'SOAPAction': '"http://tempuri.org/GetContractsList"'
+                    }
+                    
+                    response = requests.post(url, data=soap_body, headers=headers, timeout=5, verify=False)
+                    if response.status_code != 404:
+                        results.append({
+                            'endpoint': endpoint,
+                            'method': 'POST-SOAP',
+                            'status': response.status_code,
+                            'content_type': response.headers.get('content-type', ''),
+                            'preview': response.text[:200]
+                        })
+                        if response.status_code in [200, 500]:  # 500 might be SOAP fault
+                            working.append(f"{endpoint} (SOAP)")
+                except:
+                    pass
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'working_endpoints': list(set(working)),
+            'recommendation': working[0] if working else None
         })
         
     except Exception as e:
