@@ -4,27 +4,48 @@
 
 class ParkingAPIXML {
     constructor() {
-        this.config = {
-            baseUrl: '/api/company-manager/proxy',
-            username: '2022',
-            password: '2022',
-            timeout: 30000,
-            useProxy: true,
-            currentParkingId: null
-        };
+        // Check if we're running locally or on production
+        const isLocal = window.location.hostname === 'localhost' || 
+                       window.location.hostname === '127.0.0.1';
+        
+        // CRITICAL FIX: Different endpoints for local vs production
+        if (isLocal) {
+            // LOCAL: Direct connection to parking server
+            this.config = {
+                baseUrl: 'https://10.35.240.100:8443/CustomerMediaWebService',
+                username: '2022',
+                password: '2022',
+                timeout: 30000,
+                useProxy: false,  // NO PROXY LOCALLY!
+                currentParkingId: null
+            };
+            console.log('🏠 LOCAL MODE: Direct connection to parking server');
+        } else {
+            // PRODUCTION: Use proxy (Render can access external IP)
+            this.config = {
+                baseUrl: '/api/company-manager/proxy',
+                username: '2022',
+                password: '2022',
+                timeout: 30000,
+                useProxy: true,  // USE PROXY ON RENDER!
+                currentParkingId: null
+            };
+            console.log('☁️ PRODUCTION MODE: Using proxy');
+        }
         
         console.log('Parking API v2 initialized:', {
             baseUrl: this.config.baseUrl,
-            useProxy: true
+            useProxy: this.config.useProxy,
+            mode: isLocal ? 'LOCAL' : 'PRODUCTION'
         });
     }
     
     setConfig(config) {
+        // Don't override baseUrl and useProxy - they're set based on environment
+        const { baseUrl, useProxy, ...otherConfig } = config;
         this.config = { 
             ...this.config, 
-            ...config,
-            baseUrl: '/api/company-manager/proxy',
-            useProxy: true
+            ...otherConfig
         };
     }
     
@@ -83,18 +104,39 @@ class ParkingAPIXML {
     
     async makeRequest(endpoint, method = 'GET', data = null) {
         try {
-            const response = await fetch(this.config.baseUrl, {
-            method: 'POST',
-            headers: {
+            let response;
+            
+            if (this.config.useProxy) {
+                // PRODUCTION: Use proxy endpoint
+                response = await fetch(this.config.baseUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        parking_id: this.config.currentParkingId,
+                        endpoint: endpoint,
+                        method: method,
+                        payload: data
+                    })
+                });
+            } else {
+                // LOCAL: Direct connection to parking server
+                const url = `${this.config.baseUrl}/${endpoint}`;
+                const headers = {
+                    'Authorization': 'Basic ' + btoa(`${this.config.username}:${this.config.password}`),
+                    'Accept': 'application/xml',
                     'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    parking_id: this.config.currentParkingId,
-                    endpoint: endpoint,
+                };
+                
+                console.log(`🔗 Direct request to: ${url}`);
+                
+                response = await fetch(url, {
                     method: method,
-                    payload: data
-                })
-            });
+                    headers: headers,
+                    body: data ? JSON.stringify(data) : null
+                });
+            }
             
             const contentType = response.headers.get('content-type');
             let result;
