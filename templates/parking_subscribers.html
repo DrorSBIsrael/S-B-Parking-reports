@@ -3144,9 +3144,18 @@
     </script>
     
     <!-- Load Configuration and API Integration -->
-    <script src="/static/js/config.js?v=20251215_fixed"></script>
-    <script src="/static/js/parking-api-live.js?v=20251215_fixed"></script>
-    <script src="/static/js/parking-ui-live.js?v=20251215_fixed"></script>
+    <!-- Pass user data to JavaScript -->
+    <script>
+        // Pass company_list from Flask to JavaScript
+        window.userCompanyList = "{{ company_list }}";
+        window.userPermissions = "{{ permissions }}";
+        console.log('[Init] User company_list:', window.userCompanyList);
+        console.log('[Init] User permissions:', window.userPermissions);
+    </script>
+    
+    <script src="/static/js/config.js?v=20251216_filtered"></script>
+    <script src="/static/js/parking-api-live.js?v=20251216_filtered"></script>
+    <script src="/static/js/parking-ui-live.js?v=20251216_filtered"></script>
     
         <script>
         // Override init function to use XML API

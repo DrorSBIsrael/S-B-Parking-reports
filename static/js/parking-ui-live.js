@@ -307,11 +307,16 @@ class ParkingUIIntegrationXML {
             if (result.success && result.data) {
                 console.log('[loadCompaniesFromParking] Raw result.data:', JSON.stringify(result.data, null, 2));
                 
-                // Process contracts/companies - handle both 'contracts' and 'contract'
+                // Process contracts/companies - handle array, 'contracts' and 'contract'
                 let contracts = [];
                 
-                // Check for 'contracts' (plural) first
-                if (result.data.contracts) {
+                // Check if result.data is already an array (from XML parser)
+                if (Array.isArray(result.data)) {
+                    console.log('[loadCompaniesFromParking] Data is already an array with', result.data.length, 'items');
+                    contracts = result.data;
+                }
+                // Check for 'contracts' (plural)
+                else if (result.data.contracts) {
                     console.log('[loadCompaniesFromParking] Found contracts object:', result.data.contracts);
                     // If contracts.contract exists, use it
                     if (result.data.contracts.contract) {
@@ -328,10 +333,31 @@ class ParkingUIIntegrationXML {
                         : [result.data.contract];
                 }
                 
-                console.log(`[loadCompaniesFromParking] Found ${contracts.length} companies`);
+                console.log(`[loadCompaniesFromParking] Total contracts found: ${contracts.length}`);
+                
+                // Filter companies based on user's company_list (if provided)
+                const userCompanyList = window.userCompanyList || localStorage.getItem('company_list') || '';
+                console.log('[loadCompaniesFromParking] User company_list:', userCompanyList);
+                
+                let filteredContracts = contracts;
+                if (userCompanyList && userCompanyList !== 'all') {
+                    const allowedIds = userCompanyList.split(',').map(id => id.trim());
+                    console.log('[loadCompaniesFromParking] Filtering for companies:', allowedIds);
+                    
+                    filteredContracts = contracts.filter(contract => {
+                        const contractId = String(contract.id?.['#text'] || contract.id || '');
+                        const isAllowed = allowedIds.includes(contractId);
+                        if (!isAllowed && contractId) {
+                            console.log(`[loadCompaniesFromParking] Filtering out company ${contractId} - ${contract.name}`);
+                        }
+                        return isAllowed;
+                    });
+                    
+                    console.log(`[loadCompaniesFromParking] After filtering: ${filteredContracts.length} companies`);
+                }
                 
                 // Convert to company format - extract the actual values from XML structure
-                const companies = contracts.map(contract => {
+                const companies = filteredContracts.map(contract => {
                     // Extract values from XML structure (they come as {#text: "value"})
                     const id = contract.id?.['#text'] || contract.id || '';
                     const name = contract.name?.['#text'] || contract.name || `חברה ${id}`;
@@ -344,6 +370,7 @@ class ParkingUIIntegrationXML {
                     };
                 });
                 
+                console.log(`[loadCompaniesFromParking] Displaying ${companies.length} companies`);
                 this.displayCompanies(companies);
                 
                 if (companies.length === 1) {
