@@ -1,0 +1,355 @@
+Consol 
+
+parking-api-live.js?v=20251215001:16 Parking API v2 initialized: Object
+parking-ui-live.js?v=20251215001:142 XML API configured for parking server: Object
+parking-ui-live.js?v=20251215001:1954 Initializing Parking XML UI Integration...
+parking-ui-live.js?v=20251215001:154 [loadCompanies] Starting to load parkings from Flask...
+parking-ui-live.js?v=20251215001:158 [loadCompanies] Calling Flask API /api/company-manager/get-parkings...
+parking-ui-live.js?v=20251215001:161 [loadCompanies] Flask API result: Object
+parking-ui-live.js?v=20251215001:164 [loadCompanies] Got parkings from Flask: Array(1)
+parking-ui-live.js?v=20251215001:175 [loadCompanies] Found 1 parkings: Array(1)
+parking-ui-live.js?v=20251215001:182 [loadCompanies] Auto-selecting single parking: Object
+parking-ui-live.js?v=20251215001:269 [selectParking] Selected parking: Object
+parking-api-live.js?v=20251215001:33 Current parking set to: b4954e1c-646d-4905-9ab8-9e433bed75e4
+parking-ui-live.js?v=20251215001:301 [loadCompaniesFromParking] Loading companies from parking: שיידט בדיקות
+api/company-manager/proxy:1  Failed to load resource: the server responded with a status of 404 ()
+parking-ui-live.js?v=20251215001:353 [loadCompaniesFromParking] Using mock companies
+parking-ui-live.js?v=20251215001:368 [loadMockCompanies] Using mock companies data
+parking-ui-live.js?v=20251215001:441 Loading detailed data for company 2
+parking-ui-live.js?v=20251215001:441 Loading detailed data for company 1000
+parking-ui-live.js?v=20251215001:1962 Parking XML UI Integration initialized
+api/company-manager/proxy:1  Failed to load resource: the server responded with a status of 404 ()
+parking-ui-live.js?v=20251215001:445 Company 2 - Direct API response: Object
+api/company-manager/proxy:1  Failed to load resource: the server responded with a status of 404 ()
+parking-ui-live.js?v=20251215001:445 Company 1000 - Direct API response: Object
+api/company-manager/proxy:1  Failed to load resource: the server responded with a status of 404 ()
+parking-ui-live.js?v=20251215001:654 Company 1000 - No contract data in response, checking for API data
+parking-ui-live.js?v=20251215001:668 Company 1000 - Using enhanced API data: present=0, max=0
+api/company-manager/proxy:1  Failed to load resource: the server responded with a status of 404 ()
+parking-ui-live.js?v=20251215001:654 Company 2 - No contract data in response, checking for API data
+parking-ui-live.js?v=20251215001:668 Company 2 - Using enhanced API data: present=0, max=0
+
+
+logs Render 
+2025-08-15T12:42:57Z clientIP="104.23.217.4" requestID="e4ebabaf-49bc-44c1" responseTimeMS=16 responseBytes=2208 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+2025-08-15T12:43:07Z clientIP="104.23.217.5" requestID="b8657a27-f11b-44ea" responseTimeMS=4 responseBytes=2208 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+2025-08-15T12:43:07.159739253Z 10.214.30.88 - - [15/Aug/2025 12:43:07] "GET /login HTTP/1.1" 200 -
+2025-08-15T12:43:14.976832401Z ==> Deploying...
+2025-08-15T12:43:27.614118755Z ==> Running 'python app.py'
+2025-08-15T12:43:30Z clientIP="54.191.253.12" requestID="0d5e5d2c-405d-4e44" responseTimeMS=3 responseBytes=322 userAgent="python-requests/2.31.0"
+2025-08-15T12:43:30.660095012Z ✅ Email monitoring libraries loaded successfully
+2025-08-15T12:43:30.660116913Z 🚀 S&B Parking Application Starting...
+2025-08-15T12:43:30.660120873Z 🔍 Supabase URL: ✅ SET
+2025-08-15T12:43:30.660123553Z 🔍 Supabase KEY: ✅ SET
+2025-08-15T12:43:30.660126423Z ✅ Supabase connection established
+2025-08-15T12:43:30.660129144Z 📧 Gmail Username: ✅ SET
+2025-08-15T12:43:30.660131814Z 🔑 Gmail Password: ✅ SET
+2025-08-15T12:43:30.660134714Z ✅ Mail system initialized
+2025-08-15T12:43:30.660136904Z 
+2025-08-15T12:43:30.660139574Z 🔧 Pre-flight email system check...
+2025-08-15T12:43:30.660142484Z 🔧 Verifying email system configuration...
+2025-08-15T12:43:30.660145004Z 📧 Gmail Username: ✅ SET
+2025-08-15T12:43:30.660146714Z 🔑 Gmail Password: ✅ SET
+2025-08-15T12:43:30.660148334Z 🌐 Gmail IMAP connection: ✅ SUCCESS
+2025-08-15T12:43:30.660150094Z ✅ Email system ready - starting background monitoring
+2025-08-15T12:43:30.660152065Z 📧 Initializing background email monitoring...
+2025-08-15T12:43:30.660153835Z 📧 Background email monitoring initialization started
+2025-08-15T12:43:30.660155455Z 
+2025-08-15T12:43:30.660157185Z 🌐 Starting Flask web server...
+2025-08-15T12:43:30.660158965Z 🔍 Port: 5000
+2025-08-15T12:43:30.660161315Z 🔍 Debug mode: False
+2025-08-15T12:43:30.660162975Z 🏓 Keep-alive service started
+2025-08-15T12:43:30.660165375Z 🏓 Sending keep-alive ping to https://s-b-parking-reports.onrender.com
+2025-08-15T12:43:30.660167065Z 🏓 Keep-alive service initialized
+2025-08-15T12:43:30.660168775Z  * Serving Flask app 'app'
+2025-08-15T12:43:30.660170446Z  * Debug mode: off
+2025-08-15T12:43:30.660835417Z WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+2025-08-15T12:43:30.660868599Z  * Running on all addresses (0.0.0.0)
+2025-08-15T12:43:30.660871819Z  * Running on http://127.0.0.1:5000
+2025-08-15T12:43:30.660874879Z  * Running on http://10.214.216.228:5000
+2025-08-15T12:43:30.660884289Z Press CTRL+C to quit
+2025-08-15T12:43:30.740336289Z 10.214.188.201 - - [15/Aug/2025 12:43:30] "GET /ping HTTP/1.1" 200 -
+2025-08-15T12:43:31.381499105Z 127.0.0.1 - - [15/Aug/2025 12:43:31] "HEAD / HTTP/1.1" 302 -
+2025-08-15T12:43:36.427946038Z ==> Your service is live 🎉
+2025-08-15T12:43:36.460283968Z ==> 
+2025-08-15T12:43:36.496774237Z ==> ///////////////////////////////////////////////////////////
+2025-08-15T12:43:36.524822437Z ==> 
+2025-08-15T12:43:36.556104047Z ==> Available at your primary URL https://s-b-parking-reports.onrender.com
+2025-08-15T12:43:36.587327907Z ==> 
+2025-08-15T12:43:36.625152187Z ==> ///////////////////////////////////////////////////////////
+2025-08-15T12:43:38Z clientIP="34.82.29.197" requestID="a82dd8b3-82d8-4f04" responseTimeMS=2 responseBytes=396 userAgent="Go-http-client/2.0"
+2025-08-15T12:43:38Z clientIP="34.82.29.197" requestID="2857c20e-c299-4230" responseTimeMS=19 responseBytes=2208 userAgent="Go-http-client/2.0"
+2025-08-15T12:43:38.06393655Z 10.214.194.56 - - [15/Aug/2025 12:43:38] "GET / HTTP/1.1" 302 -
+2025-08-15T12:43:38.13832214Z 10.214.24.169 - - [15/Aug/2025 12:43:38] "GET /login HTTP/1.1" 200 -
+2025-08-15T12:44:27Z clientIP="207.190.16.188" requestID="d93630a9-c3fc-4381" responseTimeMS=7 responseBytes=2208 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+2025-08-15T12:44:27.058872921Z 10.214.194.56 - - [15/Aug/2025 12:44:27] "GET /login HTTP/1.1" 200 -
+2025-08-15T12:44:50Z clientIP="207.190.16.188" requestID="821b3718-cf0e-4d18" responseTimeMS=4 responseBytes=2208 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+2025-08-15T12:44:50.525420493Z 10.214.188.201 - - [15/Aug/2025 12:44:50] "GET /login HTTP/1.1" 200 -
+2025-08-15T12:44:56.710135397Z send: 'ehlo [10.214.216.228]\r\n'
+2025-08-15T12:44:56.724443091Z reply: b'250-smtp.gmail.com at your service, [54.191.253.12]\r\n'
+2025-08-15T12:44:56.724468092Z reply: b'250-SIZE 35882577\r\n'
+2025-08-15T12:44:56.724474643Z reply: b'250-8BITMIME\r\n'
+2025-08-15T12:44:56.724480023Z reply: b'250-STARTTLS\r\n'
+2025-08-15T12:44:56.724486053Z reply: b'250-ENHANCEDSTATUSCODES\r\n'
+2025-08-15T12:44:56.724491304Z reply: b'250-PIPELINING\r\n'
+2025-08-15T12:44:56.724496664Z reply: b'250-CHUNKING\r\n'
+2025-08-15T12:44:56.724509264Z reply: b'250 SMTPUTF8\r\n'
+2025-08-15T12:44:56.724518425Z reply: retcode (250); Msg: b'smtp.gmail.com at your service, [54.191.253.12]\nSIZE 35882577\n8BITMIME\nSTARTTLS\nENHANCEDSTATUSCODES\nPIPELINING\nCHUNKING\nSMTPUTF8'
+2025-08-15T12:44:56.724870282Z send: 'STARTTLS\r\n'
+2025-08-15T12:44:56.737704815Z reply: b'220 2.0.0 Ready to start TLS\r\n'
+2025-08-15T12:44:56.737726296Z reply: retcode (220); Msg: b'2.0.0 Ready to start TLS'
+2025-08-15T12:44:56.751243472Z send: 'ehlo [10.214.216.228]\r\n'
+2025-08-15T12:44:56.778823821Z reply: b'250-smtp.gmail.com at your service, [54.191.253.12]\r\n'
+2025-08-15T12:44:56.778866943Z reply: b'250-SIZE 35882577\r\n'
+2025-08-15T12:44:56.778870833Z reply: b'250-8BITMIME\r\n'
+2025-08-15T12:44:56.778873983Z reply: b'250-AUTH LOGIN PLAIN XOAUTH2 PLAIN-CLIENTTOKEN OAUTHBEARER XOAUTH\r\n'
+2025-08-15T12:44:56.778877273Z reply: b'250-ENHANCEDSTATUSCODES\r\n'
+2025-08-15T12:44:56.778879773Z reply: b'250-PIPELINING\r\n'
+2025-08-15T12:44:56.778882373Z reply: b'250-CHUNKING\r\n'
+2025-08-15T12:44:56.778884993Z reply: b'250 SMTPUTF8\r\n'
+2025-08-15T12:44:56.778887993Z reply: retcode (250); Msg: b'smtp.gmail.com at your service, [54.191.253.12]\nSIZE 35882577\n8BITMIME\nAUTH LOGIN PLAIN XOAUTH2 PLAIN-CLIENTTOKEN OAUTHBEARER XOAUTH\nENHANCEDSTATUSCODES\nPIPELINING\nCHUNKING\nSMTPUTF8'
+2025-08-15T12:44:56.778940796Z send: 'AUTH PLAIN AHJlcG9ydHNAc2JwYXJraW5nYWkuY29tAGFyaWogeGN3biBzampoIGRrdGE=\r\n'
+2025-08-15T12:44:57.012589244Z reply: b'235 2.7.0 Accepted\r\n'
+2025-08-15T12:44:57.012617676Z reply: retcode (235); Msg: b'2.7.0 Accepted'
+2025-08-15T12:44:57.016484761Z send: 'mail from:<reports@sbparkingai.com> size=1692\r\n'
+2025-08-15T12:44:57.028548267Z reply: b'250 2.1.0 OK d9443c01a7336-2446d548e59sm13467775ad.122 - gsmtp\r\n'
+2025-08-15T12:44:57.028591789Z reply: retcode (250); Msg: b'2.1.0 OK d9443c01a7336-2446d548e59sm13467775ad.122 - gsmtp'
+2025-08-15T12:44:57.02861136Z send: 'rcpt to:<reports@sbparkingai.com>\r\n'
+2025-08-15T12:44:57.041452794Z reply: b'250 2.1.5 OK d9443c01a7336-2446d548e59sm13467775ad.122 - gsmtp\r\n'
+2025-08-15T12:44:57.041475875Z reply: retcode (250); Msg: b'2.1.5 OK d9443c01a7336-2446d548e59sm13467775ad.122 - gsmtp'
+2025-08-15T12:44:57.041478715Z send: 'data\r\n'
+2025-08-15T12:44:57.241328408Z reply: b'354 Go ahead d9443c01a7336-2446d548e59sm13467775ad.122 - gsmtp\r\n'
+2025-08-15T12:44:57.241348989Z reply: retcode (354); Msg: b'Go ahead d9443c01a7336-2446d548e59sm13467775ad.122 - gsmtp'
+2025-08-15T12:44:57.241351869Z data: (354, b'Go ahead d9443c01a7336-2446d548e59sm13467775ad.122 - gsmtp')
+2025-08-15T12:44:57.241509656Z send: b'Content-Type: multipart/mixed; boundary="===============2023069699320813416=="\r\nMIME-Version: 1.0\r\nSubject: =?utf-8?b?16fXldeTINeQ15nXnteV16ogLSBTJkIgUGFya2luZw==?=\r\nFrom: reports@sbparkingai.com\r\nTo: reports@sbparkingai.com\r\nDate: Fri, 15 Aug 2025 12:44:57 +0000\r\nMessage-ID: <175526189664.72.5590041383029232515@srv-d1i6bore5dus73a59id0-fd7c78775-wc6tl>\r\n\r\n--===============2023069699320813416==\r\nContent-Type: multipart/alternative;\r\n boundary="===============7255099569312311198=="\r\nMIME-Version: 1.0\r\n\r\n--===============7255099569312311198==\r\nContent-Type: text/plain; charset="utf-8"\r\nMIME-Version: 1.0\r\nContent-Transfer-Encoding: 7bit\r\n\r\n\r\n--===============7255099569312311198==\r\nContent-Type: text/html; charset="utf-8"\r\nMIME-Version: 1.0\r\nContent-Transfer-Encoding: 8bit\r\n\r\n\r\n            <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">\r\n                <h2 style="color: #667eea;">\xd7\xa9\xd7\x99\xd7\x99\xd7\x93\xd7\x98 \xd7\x90\xd7\xaa \xd7\x91\xd7\x9b\xd7\x9e\xd7\x9f \xd7\x99\xd7\xa9\xd7\xa8\xd7\x90\xd7\x9c</h2>\r\n                <h3>\xd7\xa7\xd7\x95\xd7\x93 \xd7\x94\xd7\x90\xd7\x99\xd7\x9e\xd7\x95\xd7\xaa \xd7\xa9\xd7\x9c\xd7\x9a:</h3>\r\n                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">\r\n                    <span style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px;">573901</span>\r\n                </div>\r\n                <p>\xd7\x94\xd7\xa7\xd7\x95\xd7\x93 \xd7\xaa\xd7\xa7\xd7\xa3 \xd7\x9c-10 \xd7\x93\xd7\xa7\xd7\x95\xd7\xaa \xd7\x91\xd7\x9c\xd7\x91\xd7\x93.</p>\r\n                <p>\xd7\x90\xd7\x9d \xd7\x9c\xd7\x90 \xd7\x91\xd7\x99\xd7\xa7\xd7\xa9\xd7\xaa \xd7\xa7\xd7\x95\xd7\x93 \xd7\x96\xd7\x94, \xd7\x94\xd7\xaa\xd7\xa2\xd7\x9c\xd7\x9d \xd7\x9e\xd7\x94\xd7\x95\xd7\x93\xd7\xa2\xd7\x94 \xd7\x96\xd7\x95.</p>\r\n                <hr>\r\n                <p style="color: #666; font-size: 12px;">S&B Parking - \xd7\x9e\xd7\xa2\xd7\xa8\xd7\x9b\xd7\xaa \xd7\x93\xd7\x95\xd7\x97\xd7\x95\xd7\xaa \xd7\x97\xd7\xa0\xd7\x99\xd7\x95\xd7\xaa</p>\r\n            </div>\r\n            \r\n--===============7255099569312311198==--\r\n\r\n--===============2023069699320813416==--\r\n.\r\n'
+2025-08-15T12:44:57.915314164Z reply: b'250 2.0.0 OK  1755261897 d9443c01a7336-2446d548e59sm13467775ad.122 - gsmtp\r\n'
+2025-08-15T12:44:57.915348515Z reply: retcode (250); Msg: b'2.0.0 OK  1755261897 d9443c01a7336-2446d548e59sm13467775ad.122 - gsmtp'
+2025-08-15T12:44:57.915354466Z data: (250, b'2.0.0 OK  1755261897 d9443c01a7336-2446d548e59sm13467775ad.122 - gsmtp')
+2025-08-15T12:44:57.915491682Z send: 'quit\r\n'
+2025-08-15T12:44:57.927655294Z reply: b'221 2.0.0 closing connection d9443c01a7336-2446d548e59sm13467775ad.122 - gsmtp\r\n'
+2025-08-15T12:44:57.927685495Z reply: retcode (221); Msg: b'2.0.0 closing connection d9443c01a7336-2446d548e59sm13467775ad.122 - gsmtp'
+2025-08-15T12:44:57.928924734Z 10.214.188.201 - - [15/Aug/2025 12:44:57] "POST /api/login HTTP/1.1" 200 -
+2025-08-15T12:44:58.099058707Z 10.214.194.56 - - [15/Aug/2025 12:44:58] "GET /verify HTTP/1.1" 200 -
+2025-08-15T12:44:57Z clientIP="207.190.16.188" requestID="672dcb86-7148-4203" responseTimeMS=3073 responseBytes=424 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+2025-08-15T12:44:58Z clientIP="207.190.16.188" requestID="dd104066-c5d4-44c8" responseTimeMS=5 responseBytes=2329 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+2025-08-15T12:45:16Z clientIP="207.190.16.188" requestID="52175e9c-ec16-4169" responseTimeMS=684 responseBytes=445 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+2025-08-15T12:45:17Z clientIP="207.190.16.188" requestID="52f0b2f4-c5e4-44c5" responseTimeMS=6 responseBytes=1754 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+2025-08-15T12:45:17Z clientIP="207.190.16.188" requestID="4e5f02f7-e176-48ad" responseTimeMS=189 responseBytes=382 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+2025-08-15T12:45:16.769844092Z 10.214.9.115 - - [15/Aug/2025 12:45:16] "POST /api/verify-code HTTP/1.1" 200 -
+2025-08-15T12:45:17.17712337Z 10.214.188.201 - - [15/Aug/2025 12:45:17] "GET /company-manager HTTP/1.1" 200 -
+2025-08-15T12:45:17.348172436Z 10.214.9.115 - - [15/Aug/2025 12:45:17] "GET /static/js/config.js?v=20251215_v3 HTTP/1.1" 200 -
+2025-08-15T12:45:17.362661318Z 10.214.87.242 - - [15/Aug/2025 12:45:17] "GET /static/js/parking-api-live.js?v=20251215001 HTTP/1.1" 200 -
+2025-08-15T12:45:17.543971445Z 10.214.87.242 - - [15/Aug/2025 12:45:17] "GET /static/js/parking-ui-live.js?v=20251215001 HTTP/1.1" 200 -
+2025-08-15T12:45:17Z clientIP="207.190.16.188" requestID="72609be1-132c-472c" responseTimeMS=249 responseBytes=25223 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+2025-08-15T12:45:17.964265654Z 10.214.9.115 - - [15/Aug/2025 12:45:17] "GET /api/get-current-user HTTP/1.1" 200 -
+2025-08-15T12:45:17Z clientIP="207.190.16.188" requestID="66be4a56-d753-4c79" responseTimeMS=6 responseBytes=2470 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+2025-08-15T12:45:17Z clientIP="207.190.16.188" requestID="9fca7010-92f6-4264" responseTimeMS=8 responseBytes=18220 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+2025-08-15T12:45:18.34430165Z 🏓 Keep-alive ping successful: 200
+2025-08-15T12:45:18.344326931Z 📧 About to start email monitoring with logs...
+2025-08-15T12:45:18.344331501Z 🚀 Starting email monitoring system...
+2025-08-15T12:45:18.344335761Z 🔧 Verifying email system configuration...
+2025-08-15T12:45:18.344340502Z 📧 Gmail Username: ✅ SET
+2025-08-15T12:45:18.344344302Z 🔑 Gmail Password: ✅ SET
+2025-08-15T12:45:18.344348362Z 🌐 Gmail IMAP connection: ✅ SUCCESS
+2025-08-15T12:45:18.344352362Z 🔄 Email monitoring loop started
+2025-08-15T12:45:18.344356322Z ⏰ Email check triggered at 2025-08-15 12:43:37.065262
+2025-08-15T12:45:18.344360223Z 🔄 Hourly cache reset completed
+2025-08-15T12:45:18.344364053Z 
+2025-08-15T12:45:18.344368923Z 🔍 ===== EMAIL CHECK STARTED at 2025-08-15 12:43:37.065282 =====
+2025-08-15T12:45:18.344372813Z 📧 Gmail user: reports@sbparkingai.com
+2025-08-15T12:45:18.344377694Z 🔑 Gmail password: ***
+2025-08-15T12:45:18.344381764Z ✅ Email monitoring started successfully in background
+2025-08-15T12:45:18.344385964Z ⏰ Email checks scheduled every 5 minutes
+2025-08-15T12:45:18.344390294Z 🚀 Running initial email check in 15 seconds...
+2025-08-15T12:45:18.344394754Z ✅ Connected to Gmail: reports@sbparkingai.com
+2025-08-15T12:45:18.344399635Z 📂 Selecting inbox...
+2025-08-15T12:45:18.344404885Z 🔍 Search criteria: OR SINCE 14-Aug-2025 SINCE 15-Aug-2025
+2025-08-15T12:45:18.344409655Z 📅 Today: 15-Aug-2025, Yesterday: 14-Aug-2025
+2025-08-15T12:45:18.344414235Z 📭 No emails found from the last 2 days
+2025-08-15T12:45:18.344418765Z 📊 Processed emails cache: 0 emails
+2025-08-15T12:45:18.344423026Z ===== EMAIL CHECK ENDED at 2025-08-15 12:43:38.994246 =====
+2025-08-15T12:45:18.344435656Z 
+2025-08-15T12:45:18.344437456Z 
+2025-08-15T12:45:18.344439226Z 🔍 ===== EMAIL CHECK STARTED at 2025-08-15 12:43:52.065633 =====
+2025-08-15T12:45:18.344441097Z 📧 Gmail user: reports@sbparkingai.com
+2025-08-15T12:45:18.344442837Z 🔑 Gmail password: ***
+2025-08-15T12:45:18.344444487Z ✅ Connected to Gmail: reports@sbparkingai.com
+2025-08-15T12:45:18.344446117Z 📂 Selecting inbox...
+2025-08-15T12:45:18.344447837Z 🔍 Search criteria: OR SINCE 14-Aug-2025 SINCE 15-Aug-2025
+2025-08-15T12:45:18.344449547Z 📅 Today: 15-Aug-2025, Yesterday: 14-Aug-2025
+2025-08-15T12:45:18.344451197Z 📭 No emails found from the last 2 days
+2025-08-15T12:45:18.344453047Z 📊 Processed emails cache: 0 emails
+2025-08-15T12:45:18.344455127Z ===== EMAIL CHECK ENDED at 2025-08-15 12:43:53.974054 =====
+2025-08-15T12:45:18.344456697Z 
+2025-08-15T12:45:18.344458357Z 🔍 === LOGIN FUNCTION STARTED ===
+2025-08-15T12:45:18.344460017Z 🔍 Step 1: Checking supabase...
+2025-08-15T12:45:18.344461658Z 🔍 Step 2: Getting JSON data...
+2025-08-15T12:45:18.344463318Z 🔍 Step 3: Validating input...
+2025-08-15T12:45:18.344465228Z 🔑 Login attempt: DrorParking
+2025-08-15T12:45:18.344466888Z 🔍 About to call RPC function...
+2025-08-15T12:45:18.344469318Z 🔍 RPC Exception: {'success': True, 'message': 'התחברות הושלמה', 'username': 'DrorParking'}
+2025-08-15T12:45:18.344472388Z 🔐 From exception: {'success': True, 'message': 'התחברות הושלמה', 'username': 'DrorParking'}
+2025-08-15T12:45:18.344474508Z 🔐 Type: <class 'str'>
+2025-08-15T12:45:18.344476278Z 🔍 Raw string: "{'success': True, 'message': 'התחברות הושלמה', 'username': 'DrorParking'}"
+2025-08-15T12:45:18.344478628Z 🔐 Converted with literal_eval: {'success': True, 'message': 'התחברות הושלמה', 'username': 'DrorParking'}
+2025-08-15T12:45:18.344480268Z 🔍 Final result: {'success': True, 'message': 'התחברות הושלמה', 'username': 'DrorParking'}
+2025-08-15T12:45:18.344481919Z ✅ Email found: reports@sbparkingai.com
+2025-08-15T12:45:18.344483568Z 🎯 Generated code: 573901
+2025-08-15T12:45:18.344485348Z 🔄 Updating user_parkings for reports@sbparkingai.com with code 573901
+2025-08-15T12:45:18.344489819Z ✅ Update result: [{'user_id': 305, 'username': 'DrorParking', 'email': 'reports@sbparkingai.com', 'password_hash': '$2a$06$0GMT3W91hdz.hUJRk.yM9.pvu8GAE8g0tsTJZyJCdVOXKkQEpUWqy', 'role': 'user', 'project_number': 478131051, 'parking_name': 'שיידט בדיקות', 'company_type': 'שיידט', 'access_level': 'company_manager', 'created_at': '2025-08-03T18:19:22.600521', 'updated_at': '2025-08-11T10:44:43.250848', 'verification_code': '573901', 'code_expires_at': '2025-08-15T12:54:56', 'code_type': 'company_manager', 'company_list': '2,1000', 'password_changed_at': '2025-08-11T10:44:43.250848', 'password_expires_at': '2025-11-03T18:20:41.835175', 'is_temp_password': False, 'permissions': 'G/N/R/P'}]
+2025-08-15T12:45:18.344492029Z ✅ Code saved: 573901 expires at 2025-08-15 12:54:56
+2025-08-15T12:45:18.344493729Z 🚀 Attempting to send email to reports@sbparkingai.com...
+2025-08-15T12:45:18.344495369Z 🚀 Starting Gmail send to reports@sbparkingai.com...
+2025-08-15T12:45:18.344497019Z 🔄 Sending via Gmail...
+2025-08-15T12:45:18.344498679Z ✅ Gmail email sent successfully to reports@sbparkingai.com
+2025-08-15T12:45:18.344500329Z 📧 Email send result: True
+2025-08-15T12:45:18.344502009Z 📧 Code ready for reports@sbparkingai.com: 573901
+2025-08-15T12:45:18.344503709Z 🔍 Verify attempt: code=573901, email=reports@sbparkingai.com
+2025-08-15T12:45:18.344505349Z 🔍 Code verification attempt for reports@sbparkingai.com
+2025-08-15T12:45:18.34451005Z ✅ Code verified and cleared for reports@sbparkingai.com
+2025-08-15T12:45:18.3445118Z ✅ SUCCESS - User type: company_manager
+2025-08-15T12:45:18.34451352Z 🏢 Redirecting COMPANY MANAGER to: /company-manager
+2025-08-15T12:45:18.3445151Z 
+2025-08-15T12:45:18.3445168Z ============================================================
+2025-08-15T12:45:18.34451907Z 🔍 DEBUG: /api/company-manager/get-parkings called
+2025-08-15T12:45:18.34452083Z ============================================================
+2025-08-15T12:45:18.34452253Z ✅ User: reports@sbparkingai.com
+2025-08-15T12:45:18.34452427Z 📋 User data:
+2025-08-15T12:45:18.344525981Z    project_number: 478131051
+2025-08-15T12:45:18.344527641Z    company_list: 2,1000
+2025-08-15T12:45:18.344529291Z    access_level: company_manager
+2025-08-15T12:45:18.344530961Z    permissions: G/N/R/P
+2025-08-15T12:45:18.344532551Z 
+2025-08-15T12:45:18.344534651Z 🔑 Access control:
+2025-08-15T12:45:18.344560352Z    User project_number: 478131051 (type: <class 'int'>)
+2025-08-15T12:45:18.344563922Z    User access_level: 'company_manager'
+2025-08-15T12:45:18.344566623Z 
+2025-08-15T12:45:18.344589324Z 🔍 Fetching parkings from DB...
+2025-08-15T12:45:18.344597634Z 📦 Found 34 parkings in DB
+2025-08-15T12:45:18.344600104Z 
+2025-08-15T12:45:18.344605894Z 🏢 Parking #1: עזריאלי הוד השרון
+2025-08-15T12:45:18.344608714Z    description: 471441446
+2025-08-15T12:45:18.344611615Z    ip: None:None
+2025-08-15T12:45:18.344614635Z    parsed number: 471441446 (type: <class 'int'>)
+2025-08-15T12:45:18.344617385Z    Checking: user_project=478131051 vs parking=471441446
+2025-08-15T12:45:18.344620065Z    ❌ No access (access_level: company_manager)
+2025-08-15T12:45:18.344622465Z 
+2025-08-15T12:45:18.344625205Z 🏢 Parking #2: עזריאלי רזרבה 1
+2025-08-15T12:45:18.344627975Z    description: 491021012
+2025-08-15T12:45:18.344630866Z    ip: None:None
+2025-08-15T12:45:18.344633476Z    parsed number: 491021012 (type: <class 'int'>)
+2025-08-15T12:45:18.344635946Z    Checking: user_project=478131051 vs parking=491021012
+2025-08-15T12:45:18.344638486Z    ❌ No access (access_level: company_manager)
+2025-08-15T12:45:18.344640596Z 
+2025-08-15T12:45:18.344643146Z 🏢 Parking #3: עזריאלי תל אביב
+2025-08-15T12:45:18.344645626Z    description: 991961020
+2025-08-15T12:45:18.344647876Z    ip: None:None
+2025-08-15T12:45:18.344650247Z    parsed number: 991961020 (type: <class 'int'>)
+2025-08-15T12:45:18.344652616Z    Checking: user_project=478131051 vs parking=991961020
+2025-08-15T12:45:18.344654957Z    ❌ No access (access_level: company_manager)
+2025-08-15T12:45:18.344657447Z 
+2025-08-15T12:45:18.344660127Z 🏢 Parking #4: עזריאלי מלחה
+2025-08-15T12:45:18.344662577Z    description: 461001121
+2025-08-15T12:45:18.344665277Z    ip: None:None
+2025-08-15T12:45:18.344667917Z    parsed number: 461001121 (type: <class 'int'>)
+2025-08-15T12:45:18.344670717Z    Checking: user_project=478131051 vs parking=461001121
+2025-08-15T12:45:18.344673368Z    ❌ No access (access_level: company_manager)
+2025-08-15T12:45:18.344675768Z 
+2025-08-15T12:45:18.344678338Z 🏢 Parking #5: עזריאלי גבעתיים
+2025-08-15T12:45:18.344680818Z    description: 470091025
+2025-08-15T12:45:18.344683358Z    ip: None:None
+2025-08-15T12:45:18.344685728Z    parsed number: 470091025 (type: <class 'int'>)
+2025-08-15T12:45:18.344688188Z    Checking: user_project=478131051 vs parking=470091025
+2025-08-15T12:45:18.344690749Z    ❌ No access (access_level: company_manager)
+2025-08-15T12:45:18.344701129Z 
+2025-08-15T12:45:18.344703619Z 🏢 Parking #6: עזריאלי שרונה
+2025-08-15T12:45:18.344706069Z    description: 471231510
+2025-08-15T12:45:18.344708409Z    ip: None:None
+2025-08-15T12:45:18.344710739Z    parsed number: 471231510 (type: <class 'int'>)
+2025-08-15T12:45:18.34471321Z    Checking: user_project=478131051 vs parking=471231510
+2025-08-15T12:45:18.34471567Z    ❌ No access (access_level: company_manager)
+2025-08-15T12:45:18.34471778Z 
+2025-08-15T12:45:18.34472005Z 🏢 Parking #7: עזריאלי רמלה
+2025-08-15T12:45:18.34472251Z    description: 471982000
+2025-08-15T12:45:18.34472496Z    ip: None:None
+2025-08-15T12:45:18.34472732Z    parsed number: 471982000 (type: <class 'int'>)
+2025-08-15T12:45:18.34472969Z    Checking: user_project=478131051 vs parking=471982000
+2025-08-15T12:45:18.34473207Z    ❌ No access (access_level: company_manager)
+2025-08-15T12:45:18.344734331Z 
+2025-08-15T12:45:18.344736671Z 🏢 Parking #8: עזריאלי באר שבע
+2025-08-15T12:45:18.344739061Z    description: 990031004
+2025-08-15T12:45:18.344741411Z    ip: None:None
+2025-08-15T12:45:18.344743781Z    parsed number: 990031004 (type: <class 'int'>)
+2025-08-15T12:45:18.344744731Z 10.214.87.242 - - [15/Aug/2025 12:45:18] "GET /api/company-manager/get-parkings HTTP/1.1" 200 -
+2025-08-15T12:45:18.344746171Z    Checking: user_project=478131051 vs parking=990031004
+2025-08-15T12:45:18.344757272Z    ❌ No access (access_level: company_manager)
+2025-08-15T12:45:18.344759162Z 
+2025-08-15T12:45:18.344760992Z 🏢 Parking #9: עזריאלי מודיעין
+2025-08-15T12:45:18.344763642Z    description: 990251027
+2025-08-15T12:45:18.344765282Z    ip: None:None
+2025-08-15T12:45:18.344767932Z    parsed number: 990251027 (type: <class 'int'>)
+2025-08-15T12:45:18.344769682Z    Checking: user_project=478131051 vs parking=990251027
+2025-08-15T12:45:18.344771472Z    ❌ No access (access_level: company_manager)
+2025-08-15T12:45:18.344773102Z 
+2025-08-15T12:45:18.344774873Z 🏢 Parking #10: עזריאלי ביזנס הרצליה
+2025-08-15T12:45:18.344776553Z    description: 487811019
+2025-08-15T12:45:18.344778202Z    ip: None:None
+2025-08-15T12:45:18.344779843Z    parsed number: 487811019 (type: <class 'int'>)
+2025-08-15T12:45:18.344781563Z    Checking: user_project=478131051 vs parking=487811019
+2025-08-15T12:45:18.344783183Z    ❌ No access (access_level: company_manager)
+2025-08-15T12:45:18.344784733Z 
+2025-08-15T12:45:18.344786463Z 🏢 Parking #11: עזריאלי טאון
+2025-08-15T12:45:18.344788153Z    description: 471821183
+2025-08-15T12:45:18.344789913Z    ip: None:None
+2025-08-15T12:45:18.344791583Z    parsed number: 471821183 (type: <class 'int'>)
+2025-08-15T12:45:18.344793253Z    Checking: user_project=478131051 vs parking=471821183
+2025-08-15T12:45:18.344795093Z    ❌ No access (access_level: company_manager)
+2025-08-15T12:45:18.344796674Z 
+2025-08-15T12:45:18.344798394Z 🏢 Parking #12: עזריאלי עכו
+2025-08-15T12:45:18.344800104Z    description: 471992000
+2025-08-15T12:45:18.344809744Z    ip: None:None
+2025-08-15T12:45:18.344811464Z    parsed number: 471992000 (type: <class 'int'>)
+2025-08-15T12:45:18.344813114Z    Checking: user_project=478131051 vs parking=471992000
+2025-08-15T12:45:18.344814774Z    ❌ No access (access_level: company_manager)
+2025-08-15T12:45:18.344816294Z 
+2025-08-15T12:45:18.344817924Z 🏢 Parking #13: עזריאלי עסקים חולון
+2025-08-15T12:45:18.344819595Z    description: 460801090
+2025-08-15T12:45:18.344821285Z    ip: None:None
+2025-08-15T12:45:18.344822945Z    parsed number: 460801090 (type: <class 'int'>)
+2025-08-15T12:45:18.344832725Z    Checking: user_project=478131051 vs parking=460801090
+2025-08-15T12:45:18.344834535Z    ❌ No access (access_level: company_manager)
+2025-08-15T12:45:18.344836065Z 
+2025-08-15T12:45:18.344837676Z 🏢 Parking #14: עזריאלי המנור
+2025-08-15T12:45:18.344839356Z    description: 461761186
+2025-08-15T12:45:18.344840996Z    ip: None:None
+2025-08-15T12:45:18.344842696Z    parsed number: 461761186 (type: <class 'int'>)
+2025-08-15T12:45:18.344844416Z    Checking: user_project=478131051 vs parking=461761186
+2025-08-15T12:45:18.344846106Z    ❌ No access (access_level: company_manager)
+2025-08-15T12:45:18.344847646Z 
+2025-08-15T12:45:18.344849376Z 🏢 Parking #15: עזריאלי פתח תקווה
+2025-08-15T12:45:18.344851046Z    description: 471971198
+2025-08-15T12:45:18.344852686Z    ip: None:None
+2025-08-15T12:45:18.344854416Z    parsed number: 471971198 (type: <class 'int'>)
+2025-08-15T12:45:18.344856096Z    Checking: user_project=478131051 vs parking=471971198
+2025-08-15T12:45:18.344857756Z    ❌ No access (access_level: company_manager)
+2025-08-15T12:45:18.344859317Z 
+2025-08-15T12:45:18.344860926Z 🏢 Parking #16: עזריאלי רזרבה 4
+2025-08-15T12:45:18.344862637Z    description: 491041014
+2025-08-15T12:45:18.344864317Z    ip: None:None
+2025-08-15T12:45:18.344866047Z    parsed number: 491041014 (type: <class 'int'>)
+2025-08-15T12:45:18.344867697Z    Checking: user_project=478131051 vs parking=491041014
+2025-08-15T12:45:18.344878277Z    ❌ No access (access_level: company_manager)
+2025-08-15T12:45:18.344880007Z 
+2025-08-15T12:45:18Z clientIP="207.190.16.188" requestID="a8a9459a-df8d-4ca7" responseTimeMS=560 responseBytes=488 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+2025-08-15T12:45:19.719689232Z 10.214.87.242 - - [15/Aug/2025 12:45:19] "POST /api/company-manager/proxy HTTP/1.1" 404 -
+2025-08-15T12:45:19Z clientIP="207.190.16.188" requestID="62b9ca5e-c8aa-4b54" responseTimeMS=1238 responseBytes=328 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+2025-08-15T12:45:21.103484306Z 10.214.9.115 - - [15/Aug/2025 12:45:21] "POST /api/company-manager/proxy HTTP/1.1" 404 -
+2025-08-15T12:45:21.137559194Z 10.214.30.88 - - [15/Aug/2025 12:45:21] "POST /api/company-manager/proxy HTTP/1.1" 404 -
+2025-08-15T12:45:21Z clientIP="207.190.16.188" requestID="8bca01df-e6bf-4268" responseTimeMS=1281 responseBytes=328 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+2025-08-15T12:45:21Z clientIP="207.190.16.188" requestID="6d38c4a3-0020-48dc" responseTimeMS=1242 responseBytes=328 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+2025-08-15T12:45:22Z clientIP="207.190.16.188" requestID="9c401f2e-e0ba-4f78" responseTimeMS=1208 responseBytes=328 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+2025-08-15T12:45:22.468341755Z 10.214.9.115 - - [15/Aug/2025 12:45:22] "POST /api/company-manager/proxy HTTP/1.1" 404 -
+2025-08-15T12:45:22.533231486Z 10.214.181.205 - - [15/Aug/2025 12:45:22] "POST /api/company-manager/proxy HTTP/1.1" 404 -
+2025-08-15T12:45:22Z clientIP="207.190.16.188" requestID="8603dc02-5711-414e" responseTimeMS=1223 responseBytes=328 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+2025-08-15T12:46:35Z clientIP="216.144.248.21" requestID="bb584bd2-b240-42f9" responseTimeMS=3 responseBytes=236 userAgent="Mozilla/5.0+(compatible; UptimeRobot/2.0; http://www.uptimerobot.com/)"
+2025-08-15T12:46:35.460786021Z 10.214.181.205 - - [15/Aug/2025 12:46:35] "HEAD /ping HTTP/1.1" 200 -

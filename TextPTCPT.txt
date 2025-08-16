@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<consumerDetail xmlns="http://gsph.sub.com/cust/types">
+  <consumer href="/consumers/2,10">
+    <id>10</id>
+    <contractid>2</contractid>
+    <name>
+    </name>
+    <filialId>2240</filialId>
+  </consumer>
+  <person>
+    <firstName>משה</firstName>
+    <surname>לוי</surname>
+  </person>
+  <firstName>משה</firstName>
+  <surname>לוי</surname>
+  <identification>
+    <ptcptType>2</ptcptType>
+    <cardclass>0</cardclass>
+    <identificationType>54</identificationType>
+    <validFrom>2023-12-01</validFrom>
+    <validUntil>2026-12-31</validUntil>
+    <usageProfile href="/usageProfile/2">
+      <id>2</id>
+      <name>פלאזה מזרח</name>
+      <description>
+      </description>
+    </usageProfile>
+    <admission/>
+    <ignorePresence>1</ignorePresence>
+    <present>false</present>
+    <status>0</status>
+    <ptcptGrpNo>-1</ptcptGrpNo>
+    <chrgOvdrftAcct>0</chrgOvdrftAcct>
+  </identification>
+  <consumerAtributes>
+    <productionDate>1970-01-01</productionDate>
+    <productionCount>0</productionCount>
+    <flatFeeFirstCharge>0</flatFeeFirstCharge>
+    <flatFeeLastCharge>0</flatFeeLastCharge>
+    <flatFeeCalc>0</flatFeeCalc>
+    <flatFeeCalcUntil>1970-01-01</flatFeeCalcUntil>
+    <individualInvoicing>0</individualInvoicing>
+    <flatRateAmt>0</flatRateAmt>
+    <flatFeeTax>A</flatFeeTax>
+    <invoiceType>0</invoiceType>
+  </consumerAtributes>
+  <displayText>-1</displayText>
+  <limit>9999900</limit>
+  <status>0</status>
+  <delete>0</delete>
+  <ignorePresence>1</ignorePresence>
+  <lpn1>82740101</lpn1>
+  <lpn2>98-765-43</lpn2>
+  <lpn3>11-222-33</lpn3>
+</consumerDetail>
+
+
+
+
+
+
+

@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ניהול משתמשים - מנהל חניון</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            direction: rtl;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            font-size: 28px;
+        }
+        
+        .back-btn {
+            background: #6c757d;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .back-btn:hover {
+            background: #5a6268;
+        }
+        
+        .parking-info {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .parking-info h2 {
+            color: #495057;
+            margin-bottom: 10px;
+        }
+        
+        .parking-details {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 15px;
+        }
+        
+        .parking-detail {
+            text-align: center;
+        }
+        
+        .parking-detail .label {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+        
+        .parking-detail .value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+        }
+        
+        .create-user-section {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+        
+        .users-list-section {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .section-title {
+            color: #495057;
+            font-size: 22px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+        
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .users-table th,
+        .users-table td {
+            padding: 12px;
+            text-align: right;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .users-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .users-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-temp {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+        
+        .search-box {
+            width: 300px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        
+        .info-note {
+            background: #e7f3ff;
+            border: 1px solid #b3d7ff;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            color: #004085;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .parking-details {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .users-table {
+                font-size: 14px;
+            }
+            
+            .users-table th,
+            .users-table td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🅿️ ניהול משתמשים - מנהל חניון</h1>
+            <a href="/dashboard" class="back-btn">חזרה לדשבורד</a>
+        </div>
+        
+        <!-- מידע על החניון -->
+        <div class="parking-info">
+            <h2 id="parkingTitle">🔄 טוען נתוני חניון...</h2>
+            <div class="parking-details" id="parkingDetails" style="display: none;">
+                <div class="parking-detail">
+                    <div class="label">מספר פרויקט</div>
+                    <div class="value" id="projectNumber">-</div>
+                </div>
+                <div class="parking-detail">
+                    <div class="label">שם חניון</div>
+                    <div class="value" id="parkingName">-</div>
+                </div>
+                <div class="parking-detail">
+                    <div class="label">סוג חברה</div>
+                    <div class="value" id="companyType">-</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <!-- יצירת משתמש חדש -->
+            <div class="create-user-section">
+                <h2 class="section-title">➕ הוספת משתמש לחניון</h2>
+                
+                <div class="info-note">
+                    💡 <strong>הערה:</strong> המשתמש החדש יתווסף לחניון שלך בלבד ויקבל גישה לנתונים של החניון הזה.
+                </div>
+                
+                <div id="createAlert" style="display: none;"></div>
+                
+                <form id="createUserForm">
+                    <div class="form-group">
+                        <label for="username">שם משתמש *</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">כתובת אימייל *</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    
+	<div class="form-group">
+	    <label for="companyList">רשימת מספרי חברות</label>
+	    <input type="text" id="companyList" name="companyList" 
+	           placeholder="לדוגמה: 100-2-55">
+	    <small style="color: #6c757d; font-size: 12px;">
+ 	       הזינו מספרי חברות מופרדים במקף (-) בלבד. השאירו ריק אם לא רלוונטי.
+ 	   </small>
+	</div>
+
+	<div class="form-group">
+	    <label for="accessLevel">רמת גישה</label>
+	    <select id="accessLevel" name="accessLevel">
+	        <option value="single_parking">גישה לחניון בלבד</option>
+ 	   </select>
+	</div>
+                    
+                    <button type="submit" class="btn btn-primary" id="createBtn">
+                        ✅ הוסף משתמש לחניון
+                    </button>
+                </form>
+            </div>
+            
+            <!-- רשימת משתמשי החניון -->
+            <div class="users-list-section">
+                <h2 class="section-title">👥 משתמשי החניון</h2>
+                
+                <input type="text" class="search-box" id="searchBox" placeholder="🔍 חפש לפי שם משתמש או אימייל...">
+                
+                <div id="usersLoading" class="loading">🔄 טוען רשימת משתמשים...</div>
+                <div id="usersContent" style="display: none;">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>שם משתמש</th>
+                                <th>אימייל</th>
+                                <th>תפקיד</th>
+                                <th>רמת גישה</th>
+                                <th>תאריך יצירה</th>
+                                <th>סטטוס</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let parkingInfo = null;
+        let allUsers = [];
+        
+        // טעינת נתוני החניון ורשימת המשתמשים
+        async function loadParkingInfo() {
+            try {
+                const response = await fetch('/api/parking-manager/get-parking-info');
+                const data = await response.json();
+                
+                if (data.success) {
+                    parkingInfo = data.parking_info;
+                    allUsers = data.users;
+                    
+                    // הצגת פרטי החניון
+                    document.getElementById('parkingTitle').textContent = `החניון שלך: ${parkingInfo.parking_name}`;
+                    document.getElementById('projectNumber').textContent = parkingInfo.project_number;
+                    document.getElementById('parkingName').textContent = parkingInfo.parking_name;
+                    document.getElementById('companyType').textContent = parkingInfo.company_type || 'לא צוין';
+                    document.getElementById('parkingDetails').style.display = 'flex';
+                    
+                    // הצגת רשימת המשתמשים
+                    displayUsers(allUsers);
+                    document.getElementById('usersLoading').style.display = 'none';
+                    document.getElementById('usersContent').style.display = 'block';
+                } else {
+                    showAlert('createAlert', 'error', data.message);
+                }
+            } catch (error) {
+                showAlert('createAlert', 'error', 'שגיאה בטעינת נתוני החניון');
+            }
+        }
+        
+        // הצגת משתמשים
+        function displayUsers(users) {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+            
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #6c757d;">אין משתמשים עדיין בחניון זה</td></tr>';
+                return;
+            }
+            
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                
+                const statusClass = user.is_temp_password ? 'status-temp' : 'status-active';
+                const statusText = user.is_temp_password ? 'סיסמה זמנית' : 'פעיל';
+                
+                const createdDate = new Date(user.created_at).toLocaleDateString('he-IL');
+                
+                row.innerHTML = `
+                    <td><strong>${user.username}</strong></td>
+                    <td>${user.email}</td>
+                    <td>${user.role}</td>
+                    <td>${user.access_level}</td>
+                    <td>${createdDate}</td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        // חיפוש משתמשים
+        document.getElementById('searchBox').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const filteredUsers = allUsers.filter(user => 
+                user.username.toLowerCase().includes(searchTerm) ||
+                user.email.toLowerCase().includes(searchTerm)
+            );
+            displayUsers(filteredUsers);
+        });
+        
+        // יצירת משתמש חדש
+        document.getElementById('createUserForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const createBtn = document.getElementById('createBtn');
+            const originalText = createBtn.textContent;
+            createBtn.textContent = '🔄 מוסיף משתמש...';
+            createBtn.disabled = true;
+            
+            const formData = new FormData(e.target);
+	const userData = {
+	    username: formData.get('username'),
+	    email: formData.get('email'),
+	    access_level: formData.get('accessLevel'),
+	    company_list: formData.get('companyList')
+	};
+            
+            try {
+                const response = await fetch('/api/parking-manager/create-user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('createAlert', 'success', data.message);
+                    e.target.reset();
+                    loadParkingInfo(); // רענון רשימת המשתמשים
+                } else {
+                    showAlert('createAlert', 'error', data.message);
+                }
+            } catch (error) {
+                showAlert('createAlert', 'error', 'שגיאה בהוספת משתמש');
+            }
+            
+            createBtn.textContent = originalText;
+            createBtn.disabled = false;
+        });
+        
+        // הצגת התראות
+        function showAlert(elementId, type, message) {
+            const alertDiv = document.getElementById(elementId);
+            alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'}`;
+            alertDiv.textContent = message;
+            alertDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                alertDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        // טעינה ראשונית
+        window.addEventListener('load', loadParkingInfo);
+    </script>
+</body>
+</html>

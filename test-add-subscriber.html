@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בדיקת הוספת מנוי חדש</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 20px;
+            direction: rtl;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102,126,234,0.3);
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-right: 10px;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .required {
+            color: red;
+        }
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 3px;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+            display: block;
+        }
+        .response-box {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🅿️ בדיקת הוספת מנוי חדש</h1>
+        
+        <!-- Company Selection -->
+        <div class="section">
+            <h2>1. בחר חברה</h2>
+            <div class="form-group">
+                <label>חברה <span class="required">*</span></label>
+                <select id="companySelect" onchange="onCompanyChange()">
+                    <option value="">-- בחר חברה --</option>
+                </select>
+            </div>
+            <button class="btn btn-secondary" onclick="loadCompanies()">🔄 טען חברות מחדש</button>
+            <button class="btn btn-secondary" onclick="testDirectSelect()">🧪 בחר חברה 2 ישירות</button>
+        </div>
+        
+        <!-- Subscriber Type -->
+        <div class="section">
+            <h2>2. בחר סוג מנוי</h2>
+            <button class="btn btn-primary" onclick="setupRegular()">👤 מנוי רגיל</button>
+            <button class="btn btn-warning" onclick="setupGuest()">🎫 אורח</button>
+                    </div>
+                    
+        <!-- Form -->
+        <div class="section" id="formSection" style="display:none;">
+            <h2 id="formTitle">3. פרטי המנוי</h2>
+            
+            <div style="background: #ffe6e6; padding: 10px; border-radius: 5px; margin-bottom: 20px; color: #721c24;">
+                <strong>שדות חובה:</strong> שם משפחה, תחילת תוקף, בתוקף עד
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>מספר מנוי</label>
+                    <input type="text" id="subscriberNum" placeholder="יווצר אוטומטית" readonly style="background-color: #f0f0f0; cursor: not-allowed;">
+                    <small class="help-text">המספר יוקצה אוטומטית</small>
+                    </div>
+                    <div class="form-group">
+                        <label>מספר תג</label>
+                    <input type="text" id="tagNum" placeholder="יווצר אוטומטית">
+                </div>
+            </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>שם פרטי</label>
+                        <input type="text" id="firstName" placeholder="אופציונלי">
+                    </div>
+                    <div class="form-group">
+                        <label>שם משפחה <span class="required">*</span></label>
+                        <input type="text" id="lastName" placeholder="חובה" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                <label>אימייל</label>
+                <input type="email" id="email">
+            </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>רכב 1</label>
+                    <input type="text" id="vehicle1" placeholder="12-345-67">
+                </div>
+                <div class="form-group">
+                    <label>רכב 2</label>
+                    <input type="text" id="vehicle2">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>רכב 3</label>
+                <input type="text" id="vehicle3">
+            </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                    <label>תחילת תוקף <span class="required">*</span></label>
+                        <input type="text" id="validFrom" placeholder="DD/MM/YYYY" required>
+                    </div>
+                    <div class="form-group">
+                    <label>בתוקף עד <span class="required">*</span></label>
+                        <input type="text" id="validUntil" placeholder="DD/MM/YYYY" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>פרופיל</label>
+                    <select id="profile">
+                        <option value="1">רגיל</option>
+                    </select>
+                <div class="help-text">פרופילים יטענו מהשרת</div>
+            </div>
+            
+            <div class="form-group">
+                <label>הערות</label>
+                <textarea id="notes" rows="3"></textarea>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <button class="btn btn-success" onclick="createSubscriber()">✅ צור מנוי</button>
+                <button class="btn btn-secondary" onclick="resetForm()">🔄 נקה</button>
+            </div>
+        </div>
+        
+        <!-- Status -->
+        <div id="status" class="status"></div>
+        
+        <!-- Response -->
+        <div id="response" class="response-box"></div>
+    </div>
+    
+    <script src="config.js"></script>
+    <script src="parking-api-xml.js"></script>
+    <script src="parking-ui-integration-xml.js"></script>
+    
+    <script>
+        let currentCompany = null;
+        let subscriberType = 'regular';
+        
+        // Initialize
+        async function init() {
+            console.log('Initializing test page...');
+            
+            // Wait a bit for all scripts to load
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Check if API is available
+            if (!window.parkingAPIXML) {
+                console.error('parkingAPIXML not found, creating instance...');
+                // Create instance if not exists
+                if (typeof ParkingAPIXML !== 'undefined') {
+                    window.parkingAPIXML = new ParkingAPIXML();
+                }
+            }
+            
+            // Also initialize UI integration if available
+            if (!window.parkingUIXML && typeof ParkingUIIntegrationXML !== 'undefined') {
+                window.parkingUIXML = new ParkingUIIntegrationXML();
+            }
+            
+            if (window.parkingAPIXML) {
+                const config = window.parkingConfig?.current || {};
+                window.parkingAPIXML.setConfig({
+                    baseUrl: config.useProxy 
+                        ? (config.proxyUrl || 'http://localhost:8080')
+                        : (config.apiUrl || 'https://10.35.240.100:8443'),
+                    username: config.username || '2022',
+                    password: config.password || '2022'
+                });
+                
+                console.log('API configured, loading companies...');
+                await loadCompanies();
+            } else {
+                showStatus('API not available!', 'error');
+                console.error('Failed to initialize parking API');
+            }
+        }
+        
+        // Load companies
+        async function loadCompanies() {
+            showStatus('טוען חברות...', 'info');
+            
+            try {
+                const result = await window.parkingAPIXML.getContracts();
+                console.log('Contracts result:', result);
+                
+                if (result) {
+                    // Check different possible data structures
+                    let contracts = [];
+                    
+                    if (result.success && result.data) {
+                        contracts = Array.isArray(result.data.contract) 
+                            ? result.data.contract 
+                            : [result.data.contract];
+                    } else if (result.contract) {
+                        contracts = Array.isArray(result.contract) 
+                            ? result.contract 
+                            : [result.contract];
+                    } else if (Array.isArray(result)) {
+                        contracts = result;
+                    }
+                    
+                    console.log('Contracts array:', contracts);
+                    
+                    const select = document.getElementById('companySelect');
+                    select.innerHTML = '<option value="">-- בחר חברה --</option>';
+                    
+                    if (contracts && contracts.length > 0) {
+                        contracts.forEach(contract => {
+                            console.log('Contract item:', contract);
+                            const option = document.createElement('option');
+                            option.value = contract.id || contract;
+                            // Try different field names for the company name
+                            const contractName = contract.name || contract.contractName || contract.description || `חברה ${contract.id || contract}`;
+                            option.textContent = `${contractName} (${contract.id || contract})`;
+                            select.appendChild(option);
+                        });
+                        
+                        showStatus(`נטענו ${contracts.length} חברות`, 'success');
+                    } else {
+                        showStatus('לא נמצאו חברות', 'warning');
+                        // Add manual companies for testing
+                        const manualCompanies = [
+                            {id: '2', name: 'חברה 2'},
+                            {id: '3', name: 'חברה 3'},
+                            {id: '4', name: 'חברה 4'}
+                        ];
+                        
+                        manualCompanies.forEach(company => {
+                            const option = document.createElement('option');
+                            option.value = company.id;
+                            option.textContent = `${company.name} (ידני)`;
+                            select.appendChild(option);
+                        });
+                        
+                        showStatus('נוספו חברות ידניות לבדיקה', 'info');
+                    }
+                } else {
+                    showStatus('לא התקבלה תגובה מהשרת', 'error');
+                }
+            } catch (error) {
+                showStatus(`שגיאה: ${error.message}`, 'error');
+            }
+        }
+        
+        // Company changed
+        async function onCompanyChange() {
+            const select = document.getElementById('companySelect');
+            if (select.value) {
+                currentCompany = {
+                    id: select.value,
+                    name: select.options[select.selectedIndex].text
+                };
+                
+                // Load profiles - get company-specific profiles if possible
+                try {
+                    // First try to get company-specific profiles from UI integration
+                    let profiles = [];
+                    
+                    if (window.parkingUIXML && window.parkingUIXML.getCompanyProfiles) {
+                        // Set current contract for the UI integration
+                        window.parkingUIXML.currentContract = currentCompany;
+                        profiles = await window.parkingUIXML.getCompanyProfiles();
+                    }
+                    
+                    // If no company profiles, get all from server
+                    if (profiles.length === 0) {
+                        const result = await window.parkingAPIXML.getUsageProfiles();
+                        if (result.success && result.data) {
+                            profiles = result.data;
+                        }
+                    }
+                    
+                    // Populate profile select
+                    const profileSelect = document.getElementById('profile');
+                    profileSelect.innerHTML = '';
+                    
+                    profiles.forEach(profile => {
+                        const option = document.createElement('option');
+                        option.value = profile.id;
+                        option.textContent = profile.name;
+                        profileSelect.appendChild(option);
+                    });
+                    
+                    console.log('Loaded profiles:', profiles);
+                } catch (error) {
+                    console.error('Error loading profiles:', error);
+                }
+                
+                showStatus(`נבחרה: ${currentCompany.name}`, 'info');
+            } else {
+                currentCompany = null;
+            }
+        }
+        
+                // Setup regular subscriber
+        async function setupRegular() {
+            if (!currentCompany) {
+                showStatus('בחר חברה תחילה', 'error');
+                return;
+            }
+            
+            subscriberType = 'regular';
+            document.getElementById('formTitle').textContent = '3. פרטי מנוי רגיל';
+            document.getElementById('formSection').style.display = 'block';
+            
+            // Set defaults
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const year = new Date().getFullYear();
+            
+            // Leave subscriber number empty - will be auto-generated
+            document.getElementById('subscriberNum').value = '';
+            document.getElementById('subscriberNum').readOnly = true;
+            document.getElementById('tagNum').value = 'TAG' + Date.now().toString().substr(-6);
+            document.getElementById('firstName').value = '';
+            document.getElementById('lastName').value = '';
+            document.getElementById('email').value = '';
+            document.getElementById('vehicle1').value = '';
+            document.getElementById('vehicle2').value = '';
+            document.getElementById('vehicle2').disabled = false;
+            document.getElementById('vehicle3').value = '';
+            document.getElementById('vehicle3').disabled = false;
+            document.getElementById('validFrom').value = formatDate(tomorrow);
+            document.getElementById('validUntil').value = `31/12/${year}`;
+            document.getElementById('notes').value = '';
+            
+            // Enable profile select for regular subscriber
+            const profileSelect = document.getElementById('profile');
+            profileSelect.disabled = false;
+            
+            showStatus('טופס מנוי רגיל מוכן', 'info');
+        }
+        
+        // Setup guest
+        async function setupGuest() {
+            if (!currentCompany) {
+                showStatus('בחר חברה תחילה', 'error');
+                return;
+            }
+            
+            subscriberType = 'guest';
+            document.getElementById('formTitle').textContent = '3. פרטי אורח';
+            document.getElementById('formSection').style.display = 'block';
+            
+            // Set defaults
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const dayAfter = new Date(tomorrow);
+            dayAfter.setDate(dayAfter.getDate() + 1);
+            
+            // Get next available guest number
+            // Guest numbers will be auto-generated on server, leave empty
+            document.getElementById('subscriberNum').value = '';
+            document.getElementById('subscriberNum').readOnly = true;
+            document.getElementById('subscriberNum').placeholder = 'יוקצה אוטומטית - אורח';
+            
+            document.getElementById('tagNum').value = '';
+            document.getElementById('firstName').value = 'אורח';
+            document.getElementById('lastName').value = '';
+            document.getElementById('email').value = '';
+            document.getElementById('vehicle1').value = '';
+            document.getElementById('vehicle2').value = '';
+            document.getElementById('vehicle2').disabled = true;
+            document.getElementById('vehicle3').value = '';
+            document.getElementById('vehicle3').disabled = true;
+            document.getElementById('validFrom').value = formatDate(tomorrow);
+            document.getElementById('validUntil').value = formatDate(dayAfter);
+            document.getElementById('notes').value = 'אורח ליום אחד';
+            
+            // Guest can choose profile - default to profile 2
+            const profileSelect = document.getElementById('profile');
+            profileSelect.disabled = false;
+            
+            // If profile 2 exists, select it
+            for (let i = 0; i < profileSelect.options.length; i++) {
+                if (profileSelect.options[i].value === '2') {
+                    profileSelect.value = '2';
+                    break;
+                }
+            }
+            
+            showStatus('טופס אורח מוכן', 'info');
+        }
+        
+        // Create subscriber
+        async function createSubscriber() {
+            // Validate required fields
+            const lastName = document.getElementById('lastName').value.trim();
+            if (!lastName) {
+                showStatus('⚠️ שם משפחה הוא שדה חובה!', 'error');
+                document.getElementById('lastName').focus();
+                document.getElementById('lastName').style.borderColor = 'red';
+                return;
+            }
+            document.getElementById('lastName').style.borderColor = '';
+            
+            const validFrom = document.getElementById('validFrom').value.trim();
+            const validUntil = document.getElementById('validUntil').value.trim();
+            
+            if (!validFrom || !validUntil) {
+                showStatus('תאריכי תוקף הם שדות חובה', 'error');
+                return;
+            }
+            
+            // Validate date format DD/MM/YYYY
+            const dateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+            if (!dateRegex.test(validFrom) || !dateRegex.test(validUntil)) {
+                showStatus('פורמט תאריך לא תקין (DD/MM/YYYY)', 'error');
+                return;
+            }
+            
+            const profileSelect = document.getElementById('profile');
+            const profileId = profileSelect.value || '2';
+            const profileName = profileSelect.options[profileSelect.selectedIndex]?.text || 'פלאזה מזרח';
+            
+            // Prepare subscriber data - firstName can be empty, surname is required
+            const firstName = document.getElementById('firstName').value.trim();
+            
+            const subscriberData = {
+                firstName: firstName || '',  // Allow empty first name
+                surname: lastName,  // Required
+                lpn1: document.getElementById('vehicle1').value.trim(),
+                lpn2: document.getElementById('vehicle2').value.trim(),
+                lpn3: document.getElementById('vehicle3').value.trim(),
+                identification: {
+                    ptcptType: '2',
+                    cardclass: '0',
+                    identificationType: '54',
+                    ignorePresence: '1',
+                    cardno: document.getElementById('tagNum').value.trim(),
+                    validFrom: document.getElementById('validFrom').value.trim(),
+                    validUntil: document.getElementById('validUntil').value.trim(),
+                    usageProfile: {
+                        href: `/usageProfile/${profileId}`,
+                        id: profileId,
+                        name: profileName
+                    },
+                    present: false
+                },
+                consumer: {
+                    // Don't send ID - let backend calculate it
+                    contractid: currentCompany.id,
+                    filialId: '2240'
+                },
+                email: document.getElementById('email').value.trim(),
+                notes: document.getElementById('notes').value.trim(),
+                isNew: true  // Flag for new subscriber
+            };
+            
+            // Set type indicator
+            if (subscriberType === 'guest') {
+                subscriberData.isGuest = true;
+                // Guest numbering starts from 40001
+                console.log('Creating guest subscriber - will be numbered from 40001+');
+            } else {
+                subscriberData.isGuest = false;
+                // Regular subscriber - will get next number in company
+                console.log('Creating regular subscriber - will get next available number');
+            }
+            
+            showStatus('יוצר מנוי...', 'info');
+            console.log('Creating subscriber with data:', subscriberData);
+            
+            try {
+                // Use parkingUIXML if available, otherwise direct API
+                let result;
+                if (window.parkingUIXML) {
+                    // Use UI integration which handles numbering and formatting
+                    subscriberData.lastName = subscriberData.surname; // Ensure lastName field
+                    result = await window.parkingUIXML.saveSubscriber(subscriberData);
+                    result = { success: result, data: {} };
+                } else {
+                    // Direct API call
+                    result = await window.parkingAPIXML.createConsumer(
+                        currentCompany.id,
+                        subscriberData
+                    );
+                }
+                
+                console.log('Create result:', result);
+                
+                if (result.success) {
+                    showStatus('✅ המנוי נוצר בהצלחה!', 'success');
+                    document.getElementById('response').style.display = 'block';
+                    document.getElementById('response').textContent = JSON.stringify(result.data, null, 2);
+                    
+                    // Optionally reset form after success
+                    setTimeout(() => {
+                        if (confirm('האם לנקות את הטופס להוספת מנוי נוסף?')) {
+                            resetForm();
+                            // Keep the company selected
+                            document.getElementById('companySelect').value = currentCompany.id;
+                        }
+                    }, 1000);
+                } else {
+                    showStatus(`❌ שגיאה: ${result.error || 'שגיאה לא ידועה'}`, 'error');
+                    document.getElementById('response').style.display = 'block';
+                    document.getElementById('response').textContent = JSON.stringify(result, null, 2);
+                }
+            } catch (error) {
+                showStatus(`❌ שגיאה: ${error.message}`, 'error');
+                console.error('Error creating subscriber:', error);
+                document.getElementById('response').style.display = 'block';
+                document.getElementById('response').textContent = error.toString();
+            }
+        }
+        
+        // Reset form
+        function resetForm() {
+            // Clear all form fields
+            document.getElementById('subscriberNum').value = '';
+            document.getElementById('subscriberNum').placeholder = 'יווצר אוטומטית';
+            document.getElementById('tagNum').value = '';
+            document.getElementById('firstName').value = '';
+            document.getElementById('lastName').value = '';
+            document.getElementById('email').value = '';
+            document.getElementById('vehicle1').value = '';
+            document.getElementById('vehicle2').value = '';
+            document.getElementById('vehicle3').value = '';
+            document.getElementById('validFrom').value = '';
+            document.getElementById('validUntil').value = '';
+            document.getElementById('notes').value = '';
+            
+            // Keep subscriber number as readonly (always auto-generated)
+            document.getElementById('subscriberNum').readOnly = true;
+            
+            // Re-enable other fields that might have been disabled
+            document.getElementById('vehicle2').disabled = false;
+            document.getElementById('vehicle3').disabled = false;
+            document.getElementById('profile').disabled = false;
+            
+            // Hide form and response
+            document.getElementById('formSection').style.display = 'none';
+            document.getElementById('response').style.display = 'none';
+            showStatus('הטופס נוקה', 'info');
+        }
+        
+        // Show status
+        function showStatus(msg, type) {
+            const status = document.getElementById('status');
+            status.textContent = msg;
+            status.className = 'status';
+            if (msg) status.classList.add(type);
+        }
+        
+        // Format date
+        function formatDate(date) {
+            const d = new Date(date);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+        
+        // Test direct select
+        function testDirectSelect() {
+            // Directly set company 2
+            currentCompany = {
+                id: '2',
+                name: 'חברה 2 (בדיקה ישירה)'
+            };
+            
+            const select = document.getElementById('companySelect');
+            
+            // Check if option exists
+            let optionExists = false;
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].value === '2') {
+                    optionExists = true;
+                    break;
+                }
+            }
+            
+            // Add option if it doesn't exist
+            if (!optionExists) {
+                const option = document.createElement('option');
+                option.value = '2';
+                option.textContent = 'חברה 2 (בדיקה ישירה)';
+                select.appendChild(option);
+            }
+            
+            select.value = '2';
+            showStatus('נבחרה חברה 2 ישירות', 'success');
+            
+            // Load profiles for this company
+            if (window.parkingAPIXML) {
+                window.parkingAPIXML.getUsageProfiles().then(result => {
+                    if (result.success && result.data) {
+                        const profileSelect = document.getElementById('profile');
+                        profileSelect.innerHTML = '';
+                        
+                        result.data.forEach(profile => {
+                            const option = document.createElement('option');
+                            option.value = profile.id;
+                            option.textContent = profile.name;
+                            profileSelect.appendChild(option);
+                        });
+                        
+                        console.log('Profiles loaded:', result.data);
+                    }
+                }).catch(error => {
+                    console.error('Error loading profiles:', error);
+                });
+            } else {
+                // Fallback - set default profile
+                const profileSelect = document.getElementById('profile');
+                profileSelect.innerHTML = '';
+                const option = document.createElement('option');
+                option.value = '2';
+                option.textContent = 'פלאזה מזרח';
+                profileSelect.appendChild(option);
+            }
+        }
+        
+        // Initialize
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
+

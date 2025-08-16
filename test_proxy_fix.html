@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בדיקת תיקון Proxy Endpoint</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .test-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #5a67d8;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .loading {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 בדיקת תיקון Proxy Endpoint</h1>
+        
+        <div class="test-section">
+            <h2>1. בדיקת קיום ה-Endpoint</h2>
+            <button class="test-button" onclick="testEndpointExists()">בדוק GET Request</button>
+            <button class="test-button" onclick="testOptionsRequest()">בדוק OPTIONS (CORS)</button>
+            <div id="endpoint-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>2. בדיקת POST Request</h2>
+            <button class="test-button" onclick="testPostRequest()">שלח POST בדיקה</button>
+            <div id="post-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>3. בדיקת קריאה אמיתית לחניון</h2>
+            <button class="test-button" onclick="testRealParkingCall()">קרא נתוני חברות</button>
+            <div id="parking-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>4. מידע על השרת</h2>
+            <button class="test-button" onclick="checkServerStatus()">בדוק סטטוס שרת</button>
+            <div id="server-result" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const RENDER_URL = 'https://s-b-parking-reports.onrender.com';
+        const LOCAL_URL = window.location.origin;
+        const BASE_URL = window.location.hostname === 'localhost' || 
+                         window.location.hostname === '127.0.0.1' ? 
+                         LOCAL_URL : RENDER_URL;
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = message;
+        }
+
+        async function testEndpointExists() {
+            showResult('endpoint-result', 'בודק...', 'loading');
+            try {
+                const response = await fetch(`${BASE_URL}/api/company-manager/proxy`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('endpoint-result', 
+                        `✅ SUCCESS! Endpoint קיים ועובד!\n` +
+                        `Status: ${response.status}\n` +
+                        `Response: ${JSON.stringify(data, null, 2)}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('endpoint-result', 
+                        `❌ שגיאה ${response.status}\n${JSON.stringify(data, null, 2)}`, 
+                        'error'
+                    );
+                }
+            } catch (error) {
+                showResult('endpoint-result', 
+                    `❌ שגיאת רשת: ${error.message}`, 
+                    'error'
+                );
+            }
+        }
+
+        async function testOptionsRequest() {
+            showResult('endpoint-result', 'בודק CORS...', 'loading');
+            try {
+                const response = await fetch(`${BASE_URL}/api/company-manager/proxy`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': window.location.origin,
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type'
+                    }
+                });
+                
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                    'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                    'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers')
+                };
+                
+                showResult('endpoint-result', 
+                    `✅ CORS Headers:\n${JSON.stringify(corsHeaders, null, 2)}`, 
+                    'success'
+                );
+            } catch (error) {
+                showResult('endpoint-result', 
+                    `❌ CORS Error: ${error.message}`, 
+                    'error'
+                );
+            }
+        }
+
+        async function testPostRequest() {
+            showResult('post-result', 'שולח POST request...', 'loading');
+            try {
+                const testData = {
+                    parking_id: 'b4954e1c-646d-4905-9ab8-9e433bed75e4',
+                    endpoint: 'test',
+                    method: 'GET'
+                };
+                
+                const response = await fetch(`${BASE_URL}/api/company-manager/proxy`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('post-result', 
+                        `✅ POST request הצליח!\n${JSON.stringify(data, null, 2)}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('post-result', 
+                        `⚠️ Response ${response.status}:\n${JSON.stringify(data, null, 2)}`, 
+                        response.status === 401 ? 'info' : 'error'
+                    );
+                }
+            } catch (error) {
+                showResult('post-result', 
+                    `❌ Error: ${error.message}`, 
+                    'error'
+                );
+            }
+        }
+
+        async function testRealParkingCall() {
+            showResult('parking-result', 'מנסה להתחבר לחניון...', 'loading');
+            try {
+                // First get parkings
+                const parkingsResponse = await fetch(`${BASE_URL}/api/company-manager/get-parkings`, {
+                    credentials: 'include'
+                });
+                
+                if (!parkingsResponse.ok) {
+                    showResult('parking-result', 
+                        '⚠️ צריך להתחבר למערכת קודם', 
+                        'info'
+                    );
+                    return;
+                }
+                
+                const parkings = await parkingsResponse.json();
+                
+                if (parkings.success && parkings.parkings && parkings.parkings.length > 0) {
+                    const parkingId = parkings.parkings[0].id;
+                    
+                    // Now try to get companies
+                    const proxyResponse = await fetch(`${BASE_URL}/api/company-manager/proxy`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            parking_id: parkingId,
+                            endpoint: 'CustomerMediaWebService/GetContractsList',
+                            method: 'GET'
+                        })
+                    });
+                    
+                    const data = await proxyResponse.json();
+                    
+                    showResult('parking-result', 
+                        `📊 תוצאה מהחניון:\n${JSON.stringify(data, null, 2)}`, 
+                        proxyResponse.ok ? 'success' : 'info'
+                    );
+                } else {
+                    showResult('parking-result', 
+                        '⚠️ לא נמצאו חניונים או צריך להתחבר', 
+                        'info'
+                    );
+                }
+            } catch (error) {
+                showResult('parking-result', 
+                    `❌ Error: ${error.message}`, 
+                    'error'
+                );
+            }
+        }
+
+        async function checkServerStatus() {
+            showResult('server-result', 'בודק סטטוס שרת...', 'loading');
+            try {
+                const response = await fetch(`${BASE_URL}/ping`);
+                const data = await response.json();
+                
+                showResult('server-result', 
+                    `✅ השרת פעיל!\n` +
+                    `URL: ${BASE_URL}\n` +
+                    `Response: ${JSON.stringify(data, null, 2)}`, 
+                    'success'
+                );
+            } catch (error) {
+                showResult('server-result', 
+                    `❌ השרת לא זמין: ${error.message}`, 
+                    'error'
+                );
+            }
+        }
+
+        // Auto-check on load
+        window.onload = () => {
+            console.log('🔍 Testing URL:', BASE_URL);
+            checkServerStatus();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <title>בדיקת חיבור לחניון</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .pending { background: #fff3cd; color: #856404; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔍 בדיקת חיבור לחניון</h1>
+        <p>כתובת: <strong>192.117.0.122:8240</strong></p>
+        
+        <button onclick="testConnections()">התחל בדיקה</button>
+        
+        <div id="results"></div>
+        
+        <h3>💡 מה לעשות אם כל הבדיקות נכשלות:</h3>
+        <ol>
+            <li><strong>בדוק שהחניון פעיל:</strong> האם השירות רץ על השרת?</li>
+            <li><strong>בדוק פיירוול:</strong> האם פורט 8240 פתוח לגישה חיצונית?</li>
+            <li><strong>בדוק binding:</strong> האם השירות מאזין על 0.0.0.0 או רק על 127.0.0.1?</li>
+            <li><strong>בדוק הגבלות IP:</strong> האם יש whitelist של כתובות IP?</li>
+        </ol>
+    </div>
+
+    <script>
+        async function testConnections() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<h2>תוצאות הבדיקה:</h2>';
+            
+            const tests = [
+                { name: 'HTTP על פורט 8240', url: 'http://192.117.0.122:8240/api/contracts' },
+                { name: 'HTTPS על פורט 8240', url: 'https://192.117.0.122:8240/api/contracts' },
+                { name: 'HTTP על פורט 80', url: 'http://192.117.0.122/api/contracts' },
+                { name: 'HTTP בלי /api', url: 'http://192.117.0.122:8240/contracts' },
+            ];
+            
+            for (const test of tests) {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'result pending';
+                resultDiv.innerHTML = `⏳ בודק: ${test.name}...`;
+                resultsDiv.appendChild(resultDiv);
+                
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
+                    
+                    const response = await fetch(test.url, {
+                        mode: 'no-cors',
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    // no-cors means we can't read the response, but if we got here without error, something responded
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `✅ ${test.name}: משהו הגיב (אבל יש CORS)`;
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        resultDiv.className = 'result error';
+                        resultDiv.innerHTML = `❌ ${test.name}: Timeout - אין תגובה`;
+                    } else {
+                        resultDiv.className = 'result error';
+                        resultDiv.innerHTML = `❌ ${test.name}: ${error.message}`;
+                    }
+                }
+            }
+            
+            resultsDiv.innerHTML += '<hr><p><strong>סיום הבדיקה.</strong> אם כל הבדיקות נכשלו, החניון לא נגיש מהאינטרנט.</p>';
+        }
+    </script>
+</body>
+</html>

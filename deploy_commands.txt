@@ -1,0 +1,13 @@
+# פקודות להעלאת הקבצים ל-Render
+
+# אם אתה משתמש ב-Git:
+git add appV3.py static/js/parking-ui-live.js
+git commit -m "Fix 404 error and JavaScript contractData issue"
+git push
+
+# אם אתה מעלה ישירות ל-Render:
+# העלה את הקבצים הבאים:
+# 1. appV3.py
+# 2. static/js/parking-ui-live.js
+
+# אחרי ההעלאה, Render יעשה restart אוטומטי

@@ -1,0 +1,105 @@
+
+שאילתא  1
+
+| table_name              |
+| ----------------------- |
+| csv_field_mapping       |
+| csv_import_shekels      |
+| debug_logs              |
+| file_uploads            |
+| parking_data            |
+| parkings                |
+| project_parking_mapping |
+| user_parkings           |
+| users                   |
+| whatsapp_codes          |
+
+
+
+שאילתא 2
+| column_name         | data_type                   |
+| ------------------- | --------------------------- |
+| user_id             | integer                     |
+| username            | text                        |
+| email               | text                        |
+| password_hash       | text                        |
+| role                | text                        |
+| project_number      | bigint                      |
+| parking_name        | text                        |
+| company_type        | text                        |
+| access_level        | text                        |
+| created_at          | timestamp without time zone |
+| updated_at          | timestamp without time zone |
+| verification_code   | character varying           |
+| code_expires_at     | timestamp without time zone |
+| code_type           | character varying           |
+| company_list        | text                        |
+| password_changed_at | timestamp without time zone |
+| password_expires_at | timestamp without time zone |
+| is_temp_password    | boolean                     |
+| permissions         | character varying           |
+
+
+
+שאילתא 3
+| column_name     | data_type                   |
+| --------------- | --------------------------- |
+| id              | uuid                        |
+| name            | character varying           |
+| location        | character varying           |
+| address         | text                        |
+| capacity        | integer                     |
+| client_logo_url | text                        |
+| settings        | jsonb                       |
+| is_active       | boolean                     |
+| created_at      | timestamp without time zone |
+| updated_at      | timestamp without time zone |
+| description     | bigint                      |
+| ip_address      | character varying           |
+| port            | integer                     |
+| future_code     | character varying           |
+
+
+
+| indexname                             |
+| ------------------------------------- |
+| user_parkings_username_parking_unique |
+| idx_user_parkings_code_type           |
+| user_parkings_pkey                    |
+| user_parkings_username_key            |
+| idx_user_parkings_project_number      |
+| idx_user_parkings_email               |
+| idx_user_parkings_username            |
+| parkings_pkey                         |
+
+
+
+| routine_name                      |
+| --------------------------------- |
+| import_parking_data_from_shekels  |
+| master_create_user                |
+| master_reset_password             |
+| parking_manager_create_user       |
+| verify_loaded_data                |
+| create_user_with_temp_password    |
+| change_user_password              |
+| check_password                    |
+| user_login                        |
+| get_email_by_username             |
+| reset_user_password               |
+| send_verification_code            |
+| verify_code                       |
+| get_expired_passwords             |
+| login_with_password_and_send_code |
+| create_new_user                   |
+| parse_ttcret_date                 |
+| import_csv_row                    |
+| get_parking_stats_final           |
+| import_real_csv_row               |
+| parse_ttcret_date_new             |
+| get_parking_by_project            |
+| import_single_parking_data        |
+| import_company_group_data         |
+| get_user_allowed_parkings         |
+| get_parking_data_for_user         |
+| get_user_revenue_summary_simple   |
