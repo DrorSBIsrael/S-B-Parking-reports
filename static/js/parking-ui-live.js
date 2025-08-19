@@ -593,6 +593,19 @@ class ParkingUIIntegrationXML {
                         });
                     }
                     
+                    // Store facilities breakdown for tooltip/details
+                    const facilitiesBreakdown = facilities
+                        .filter(f => f.facility !== "0" && f.facility !== 0) // Skip the summary
+                        .map(f => ({
+                            id: f.facility,
+                            present: parseInt(f.presentCounter) || 0,
+                            max: parseInt(f.maxCounter) || 0
+                        }));
+                    
+                    if (facilitiesBreakdown.length > 0) {
+                        console.log(`Company ${company.id} - Parking lots breakdown:`, facilitiesBreakdown);
+                    }
+                    
                     // Update presence data - show 0 as valid value
                     const presentEl = document.getElementById(`present-${company.id}`);
                     const maxEl = document.getElementById(`max-${company.id}`);

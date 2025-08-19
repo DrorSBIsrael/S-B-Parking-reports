@@ -3319,6 +3319,16 @@ def company_manager_proxy():
                 url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
                 print(f"   ⚠️ Getting ALL consumers (no contractId specified)")
             method = 'GET'  # תמיד GET למנויים
+        elif endpoint.startswith('consumers/'):
+            # Alternative format: consumers/{contractId}
+            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
+            method = 'GET'
+            print(f"   🔍 Getting consumers using alternative format: {endpoint}")
+        elif 'contracts/' in endpoint and '/detail' in endpoint:
+            # Handle contracts/X/detail endpoint
+            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
+            method = 'GET'
+            print(f"   📊 Getting contract details with pooling data: {endpoint}")
         elif 'CustomerMediaWebService' in endpoint:
             # אם כבר יש CustomerMediaWebService ב-endpoint
             url = f"{protocol}://{ip_address}:{port}/{endpoint}"
@@ -3407,6 +3417,53 @@ def company_manager_proxy():
                             
                             print(f"   ✅ SUCCESS! Parsed {len(consumers)} consumers from XML")
                             return jsonify({'success': True, 'data': consumers})
+                        elif '/detail' in endpoint:
+                            # Parse contract detail with pooling data
+                            def parse_element(element):
+                                """Recursively parse XML element to dict"""
+                                result = {}
+                                # Add text content if exists
+                                if element.text and element.text.strip():
+                                    result = element.text
+                                
+                                # Add attributes
+                                for key, value in element.attrib.items():
+                                    clean_key = key.replace('{http://gsph.sub.com/cust/types}', '')
+                                    result[f"@{clean_key}"] = value
+                                
+                                # Add child elements
+                                children = {}
+                                for child in element:
+                                    tag = child.tag.replace('{http://gsph.sub.com/cust/types}', '')
+                                    
+                                    # Check if this tag already exists (for arrays)
+                                    if tag in children:
+                                        # Convert to list if not already
+                                        if not isinstance(children[tag], list):
+                                            children[tag] = [children[tag]]
+                                        children[tag].append(parse_element(child))
+                                    else:
+                                        # Check if there are multiple children with same tag
+                                        same_tag_count = len([c for c in element if c.tag == child.tag])
+                                        if same_tag_count > 1:
+                                            if tag not in children:
+                                                children[tag] = []
+                                            children[tag].append(parse_element(child))
+                                        else:
+                                            children[tag] = parse_element(child)
+                                
+                                # If we have children, add them to result
+                                if children:
+                                    if isinstance(result, dict):
+                                        result.update(children)
+                                    else:
+                                        result = children
+                                        
+                                return result
+                            
+                            contract_detail = parse_element(root)
+                            print(f"   ✅ SUCCESS! Parsed contract detail with pooling data")
+                            return jsonify({'success': True, 'data': contract_detail})
                         else:
                             # החזר כ-raw XML אם לא מזהים את הסוג
                             print(f"   ⚠️ Unknown XML type, returning raw")

@@ -194,9 +194,24 @@ class ParkingAPIXML {
     }
     
     async getConsumers(companyNum, contractId) {
-        // Send just 'consumers' - the proxy will handle the full path
-        // The contractId should be sent in the payload
-        return this.makeRequest('consumers', 'GET', { contractId: contractId });
+        // Try both approaches - with query param and without
+        console.log(`[getConsumers] Fetching consumers for contract ${contractId}`);
+        
+        // First try with contractId in payload (proxy will convert to query param)
+        const result = await this.makeRequest('consumers', 'GET', { contractId: contractId });
+        
+        // If we got too many results, it means filtering didn't work
+        if (result.success && result.data && Array.isArray(result.data) && result.data.length > 1000) {
+            console.log(`[getConsumers] Got ${result.data.length} consumers - API might not support filtering`);
+            // Try alternative endpoint format: consumers/{contractId}
+            const altResult = await this.makeRequest(`consumers/${contractId}`, 'GET');
+            if (altResult.success && altResult.data) {
+                console.log(`[getConsumers] Alternative endpoint returned ${altResult.data.length} consumers`);
+                return altResult;
+            }
+        }
+        
+        return result;
     }
     
     async addConsumer(contractId, consumerData) {
