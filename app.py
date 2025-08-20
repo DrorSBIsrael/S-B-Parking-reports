@@ -3314,7 +3314,7 @@ def company_manager_proxy():
             if payload and 'contractId' in payload:
                 contract_id = payload['contractId']
                 # Try the correct format: contracts/{id}/consumers
-                url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/2/consumers"
+                url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts/{contract_id}/consumers"
                 print(f"   🔍 Getting consumers for contract ID: {contract_id} using contracts/{contract_id}/consumers")
             else:
                 url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
