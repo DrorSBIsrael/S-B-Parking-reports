@@ -262,6 +262,16 @@ class ParkingAPIXML {
         return result;
     }
     
+    /**
+     * Get detailed information on-demand (for hover loading)
+     * Used when hovering over subscribers in large companies
+     */
+    async getConsumerDetailOnDemand(contractId, consumerId) {
+        console.log(`[getConsumerDetailOnDemand] Loading details for consumer ${consumerId} in contract ${contractId}`);
+        // Call the regular getConsumerDetail method
+        return this.getConsumerDetail(contractId, consumerId);
+    }
+    
     // Progressive loading methods for large datasets with optimization
     async getSubscribersProgressive(companyId, callbacks = {}) {
         const { 
