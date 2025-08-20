@@ -3307,14 +3307,14 @@ def company_manager_proxy():
         
         # בניית URL - תיקון לפי מה שעובד!
         if endpoint == 'contracts' or endpoint == 'GetContractsList':
-            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts/{contract_id}"
+            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts"
             method = 'GET'  # תמיד GET לחברות
         elif endpoint == 'consumers' or endpoint == 'GetConsumerList':
             # Add contractId as query parameter if provided
             if payload and 'contractId' in payload:
                 contract_id = payload['contractId']
                 # Try the correct format: contracts/{id}/consumers
-                url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts/{contract_id}/consumers"
+                url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/2/consumers"
                 print(f"   🔍 Getting consumers for contract ID: {contract_id} using contracts/{contract_id}/consumers")
             else:
                 url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
