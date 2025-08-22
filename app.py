@@ -3325,11 +3325,13 @@ def company_manager_proxy():
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
             method = 'GET'
             print(f"   🔍 Getting consumers using alternative format: {endpoint}")
-        elif 'contracts/' in endpoint and '/detail' in endpoint:
-            # Handle contracts/X/detail endpoint
-            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
+        elif '/detail' in endpoint:
+            # Handle contracts/X/detail endpoint - check this BEFORE CustomerMediaWebService
+            # Remove CustomerMediaWebService prefix if exists
+            clean_endpoint = endpoint.replace('CustomerMediaWebService/', '')
+            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{clean_endpoint}"
             method = 'GET'
-            print(f"   📊 Getting contract details with pooling data: {endpoint}")
+            print(f"   📊 Getting contract details with pooling data: {clean_endpoint}")
         elif 'CustomerMediaWebService' in endpoint:
             # אם כבר יש CustomerMediaWebService ב-endpoint
             url = f"{protocol}://{ip_address}:{port}/{endpoint}"
@@ -3347,7 +3349,7 @@ def company_manager_proxy():
         # Basic Auth - תמיד לשרת החניון
         if 'CustomerMediaWebService' in endpoint or 'contracts' in endpoint or 'consumer' in endpoint:
             # TODO: החלף עם ה-credentials הנכונים!
-            auth_string = base64.b64encode(b'2022:2022').decode('ascii')  
+            auth_string = base64.b64encode(b'2022:2022').decode('ascii')
             headers['Authorization'] = f'Basic {auth_string}'
             print(f"   🔐 Added Basic Auth: 2022:2022")
         
