@@ -1,6 +1,0 @@
-דוח בדיקת app.py - # -*- coding: utf-8 -*-
-from flask import Flask, render_template, request, jsonify, session, redirec...
-גודל: 162327 bytes
-שורות: 3581
-Routes: 38
-Proxy endpoint: נמצא
