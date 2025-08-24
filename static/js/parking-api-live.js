@@ -227,7 +227,9 @@ class ParkingAPIXML {
                            c.contract === contractId ||
                            c.contract === String(contractId) ||
                            c.contractNum === contractId ||
-                           c.contractNum === String(contractId);
+                           c.contractNum === String(contractId) ||
+                           c.companyId === contractId ||
+                           c.companyId === String(contractId);
                 });
                 
                 if (filtered.length > 0) {
@@ -235,6 +237,8 @@ class ParkingAPIXML {
                     return { success: true, data: filtered };
                 } else {
                     console.log(`[getConsumers] Warning: No consumers found for contract ${contractId} after filtering`);
+                    // Return empty array instead of all consumers
+                    return { success: true, data: [] };
                 }
             }
         }
@@ -329,13 +333,19 @@ class ParkingAPIXML {
                     c.contractId === companyId || 
                     c.contractId === String(companyId) ||
                     c.contract === companyId ||
-                    c.contract === String(companyId)
+                    c.contract === String(companyId) ||
+                    c.contractNum === companyId ||
+                    c.contractNum === String(companyId) ||
+                    c.companyId === companyId ||
+                    c.companyId === String(companyId)
                 );
                 if (filtered.length > 0) {
                     consumers = filtered;
                     console.log(`[Progressive] Filtered to ${filtered.length} consumers for contract ${companyId}`);
                 } else {
-                    console.log(`[Progressive] No consumers found for contract ${companyId}, showing all`);
+                    console.log(`[Progressive] No consumers found for contract ${companyId} - returning empty`);
+                    // Don't show all - return empty array
+                    consumers = [];
                 }
             }
             
