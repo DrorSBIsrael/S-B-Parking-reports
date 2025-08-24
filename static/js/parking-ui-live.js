@@ -553,11 +553,15 @@ class ParkingUIIntegrationXML {
                 if (contractData.pooling && contractData.pooling.poolingDetail) {
                     facilityData = contractData.pooling.poolingDetail;
                     console.log(`Company ${company.id} - Found facility data in pooling.poolingDetail:`, facilityData);
+                } else if (contractData.pooling && contractData.pooling.poolingDetail) {
+                    // Sometimes poolingDetail might be nested differently
+                    facilityData = contractData.pooling.poolingDetail;
+                    console.log(`Company ${company.id} - Found facility data in alternate pooling structure:`, facilityData);
                 } else if (directResult.success && directResult.data && directResult.data.pooling && directResult.data.pooling.poolingDetail) {
                     facilityData = directResult.data.pooling.poolingDetail;
                     console.log(`Company ${company.id} - Found facility data in direct response pooling:`, facilityData);
                 } else {
-                    console.log(`Company ${company.id} - No pooling data found`);
+                    console.log(`Company ${company.id} - No pooling data found in response:`, contractData);
                 }
                 
                 if (facilityData) {
