@@ -11,6 +11,7 @@ import html
 import bcrypt
 import base64
 import urllib3
+import json
 from datetime import datetime, timedelta, timezone
 
 # ביטול אזהרות SSL
@@ -32,10 +33,10 @@ try:
     from email.mime.multipart import MIMEMultipart
     import smtplib
     EMAIL_MONITORING_AVAILABLE = True
-    print("✅ Email monitoring libraries loaded successfully")
+    # Email monitoring libraries loaded successfully
 except ImportError as e:
     EMAIL_MONITORING_AVAILABLE = False
-    print(f"⚠️ Email monitoring not available: {e}")
+    # Email monitoring not available
 
 ERROR_EMAILS_DISABLED = True
 # הגדרות מיילים אוטומטיים - להוסיף אחרי ההגדרות הקיימות:
@@ -53,7 +54,7 @@ AUTHORIZED_SENDERS = [
     'report@sbparking.co.il'  # case insensitive
 ]
 
-print("🚀 S&B Parking Application Starting...")
+# S&B Parking Application Starting
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
@@ -65,20 +66,18 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable caching for development
 SUPABASE_URL = os.environ.get('SUPABASE_URL')
 SUPABASE_KEY = os.environ.get('SUPABASE_ANON_KEY')
 
-print(f"🔍 Supabase URL: {'✅ SET' if SUPABASE_URL else '❌ MISSING'}")
-print(f"🔍 Supabase KEY: {'✅ SET' if SUPABASE_KEY else '❌ MISSING'}")
+# Supabase configuration check
 
 if not SUPABASE_URL or not SUPABASE_KEY:
-    print("❌ CRITICAL: Supabase credentials missing!")
-    print("⚠️ Starting anyway to show error page...")
+    # CRITICAL: Supabase credentials missing
     supabase = None
 else:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        print("✅ Supabase connection established")
+        # Supabase connection established
             
     except Exception as e:
-        print(f"❌ Supabase connection failed: {e}")
+        # Supabase connection failed
         supabase = None
 
 # הגדרות מייל עם Gmail + Environment Variables
@@ -90,16 +89,15 @@ app.config['MAIL_USERNAME'] = os.environ.get('GMAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('GMAIL_APP_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('GMAIL_USERNAME')
 app.config['MAIL_SUPPRESS_SEND'] = False
-app.config['MAIL_DEBUG'] = True
+app.config['MAIL_DEBUG'] = False
 
-print(f"📧 Gmail Username: {'✅ SET' if app.config['MAIL_USERNAME'] else '❌ MISSING'}")
-print(f"🔑 Gmail Password: {'✅ SET' if app.config['MAIL_PASSWORD'] else '❌ MISSING'}")
+# Gmail configuration check
 
 try:
     mail = Mail(app)
-    print("✅ Mail system initialized")
+    # Mail system initialized
 except Exception as e:
-    print(f"⚠️ Mail system initialization failed: {e}")
+    # Mail system initialization failed
     mail = None
 
 # הגנות אבטחה
@@ -124,14 +122,14 @@ def validate_input(input_text, input_type="general"):
     lower_input = input_text.lower()
     for word in dangerous_words:
         if word in lower_input:
-            print(f"🚨 Security threat detected: '{word}' in input")
+            # Security threat detected
             return False, f"קלט לא חוקי - מכיל מילה אסורה: {word}"
     
     # בדיקת תווים מסוכנים
     dangerous_chars = ["'", '"', ';', '--', '/*', '*/', '<', '>', '&', '|', '`']
     for char in dangerous_chars:
         if char in input_text:
-            print(f"🚨 Security threat detected: '{char}' character in input")
+            # Security threat detected
             return False, f"קלט לא חוקי - מכיל תו אסור: {char}"
     
     # אימות לפי סוג הקלט
@@ -158,7 +156,7 @@ def validate_input(input_text, input_type="general"):
 
 def rate_limit_check(identifier, max_attempts=5, time_window=300):
     """בדיקת הגבלת קצב - מונע התקפות brute force"""
-    print(f"🔍 Rate limit check for: {identifier}")
+    # Rate limit check
     return True
 
 def generate_verification_code():
@@ -168,21 +166,21 @@ def generate_verification_code():
 def store_verification_code(email, code):
     """שמירת קוד אימות בטבלת user_parkings הקיימת"""
     if not supabase:
-        print("❌ Supabase not available")
+        # Supabase not available
         return False
         
     try:
         # אימות אימייל לפני שמירה
         is_valid, validated_email = validate_input(email, "email")
         if not is_valid:
-            print(f"❌ Invalid email format: {email}")
+            # Invalid email format
             return False
         
         # חישוב זמן תפוגה (10 דקות מעכשיו)
         expires_at = datetime.now() + timedelta(minutes=10)
         expires_str = expires_at.strftime('%Y-%m-%d %H:%M:%S')
         
-        print(f"🔄 Updating user_parkings for {validated_email} with code {code}")
+        # Updating user_parkings
         
         # שימוש ב-Supabase עם פרמטרים בטוחים
         result = supabase.table('user_parkings').update({
@@ -190,36 +188,33 @@ def store_verification_code(email, code):
             'code_expires_at': expires_str
         }).eq('email', validated_email).execute()
         
-        print(f"✅ Update result: {result.data}")
-        print(f"✅ Code saved: {code} expires at {expires_str}")
+        # Code saved successfully
         return True
         
     except Exception as e:
-        print(f"❌ Failed to save code: {str(e)}")
+        # Failed to save code
         return False
 
 def send_verification_email(email, code):
     """שליחת מייל עם Gmail + App Password מ-Environment Variables"""
     
     if not mail:
-        print(f"❌ Mail system not available")
-        print(f"📱 BACKUP CODE for {email}: {code}")
+        # Mail system not available
         return False
     
     # אימות אימייל
     is_valid, validated_email = validate_input(email, "email")
     if not is_valid:
-        print(f"❌ Invalid email format: {email}")
+        # Invalid email format
         return False
     
     # בדיקה שיש נתונים
     if not app.config['MAIL_USERNAME'] or not app.config['MAIL_PASSWORD']:
-        print(f"❌ Gmail credentials missing in environment variables")
-        print(f"📱 BACKUP CODE for {validated_email}: {code}")
+        # Gmail credentials missing
         return False
     
     try:
-        print(f"🚀 Starting Gmail send to {validated_email}...")
+        # Starting Gmail send
         
         msg = Message(
             subject='קוד אימות - S&B Parking',
@@ -240,21 +235,20 @@ def send_verification_email(email, code):
             sender=app.config['MAIL_USERNAME']
         )
         
-        print(f"🔄 Sending via Gmail...")
+        # Sending via Gmail
         mail.send(msg)
         
-        print(f"✅ Gmail email sent successfully to {validated_email}")
+        # Gmail email sent successfully
         return True
         
     except Exception as e:
-        print(f"❌ Gmail error: {str(e)}")
-        print(f"📱 BACKUP CODE for {validated_email}: {code}")
+        # Gmail error occurred
         return False
 
 def verify_code_from_database(email, code):
     """בדיקת קוד אימות מטבלת user_parkings"""
     if not supabase:
-        print("❌ Supabase not available")
+        # Supabase not available
         return False
         
     try:
@@ -263,35 +257,35 @@ def verify_code_from_database(email, code):
         is_valid_code, validated_code = validate_input(code, "verification_code")
         
         if not is_valid_email:
-            print(f"❌ Invalid email format: {email}")
+            # Invalid email format
             return False
             
         if not is_valid_code:
-            print(f"❌ Invalid code format: {code}")
+            # Invalid code format
             return False
         
         # חיפוש משתמש עם הקוד
         result = supabase.table('user_parkings').select('verification_code, code_expires_at').eq('email', validated_email).execute()
         
         if not result.data:
-            print(f"❌ No user found for {validated_email}")
+            # No user found
             return False
             
         user_data = result.data[0]
         stored_code = user_data.get('verification_code')
         expires_at_str = user_data.get('code_expires_at')
         
-        print(f"🔍 Code verification attempt for {validated_email}")
+        # Code verification attempt
         
         if not stored_code or stored_code != validated_code:
-            print(f"❌ Code mismatch")
+            # Code mismatch
             return False
             
         # בדיקת תוקף
         if expires_at_str:
             expires_at = datetime.fromisoformat(expires_at_str.replace('Z', '').replace('+00:00', ''))
             if datetime.now() > expires_at:
-                print(f"❌ Code expired")
+                # Code expired
                 return False
         
         # מחיקת הקוד אחרי שימוש מוצלח
@@ -300,11 +294,11 @@ def verify_code_from_database(email, code):
             'code_expires_at': None
         }).eq('email', validated_email).execute()
         
-        print(f"✅ Code verified and cleared for {validated_email}")
+        # Code verified and cleared
         return True
         
     except Exception as e:
-        print(f"❌ Database verification failed: {str(e)}")
+        # Database verification failed
         return False
 def connect_to_gmail_imap():
     """התחברות ל-Gmail IMAP"""
@@ -319,16 +313,16 @@ def connect_to_gmail_imap():
         
         # תיקון type checking - וידוא שהמשתנים לא None
         if not gmail_user or not gmail_password:
-            print("❌ Missing Gmail credentials in environment variables")
+            # Missing Gmail credentials
             return None
             
         mail.login(gmail_user, gmail_password)
-        print(f"✅ Connected to Gmail: {gmail_user}")
+        # Connected to Gmail
         
         return mail
         
     except Exception as e:
-        print(f"❌ Gmail IMAP connection failed: {str(e)}")
+        # Gmail IMAP connection failed
         return None
 
 def download_csv_from_email(msg):
@@ -350,18 +344,18 @@ def download_csv_from_email(msg):
                             'data': file_data  # נשאיר את זה כ-bytes
                         })
                         
-                        print(f"📎 Found CSV attachment: {filename} ({len(file_data)} bytes)")
+                        # Found CSV attachment
         
         return csv_files
         
     except Exception as e:
-        print(f"❌ Error downloading CSV: {str(e)}")
+        # Error downloading CSV
         return []
 
 def parse_csv_content(csv_content):
     """פרסור CSV עם זיהוי קידוד אוטומטי לעברית ואימות תקינות"""
     try:
-        print(f"🔍 Input type: {type(csv_content)}")
+        # Check input type
         
         # אם זה bytes, ננסה קידודים שונים
         if isinstance(csv_content, bytes):
@@ -383,14 +377,14 @@ def parse_csv_content(csv_content):
                 try:
                     decoded_content = csv_content.decode(encoding)
                     used_encoding = encoding
-                    print(f"✅ Successfully decoded with {encoding}")
+                    # Successfully decoded
                     break
                 except UnicodeDecodeError:
-                    print(f"❌ Failed to decode with {encoding}")
+                    # Failed to decode
                     continue
             
             if decoded_content is None:
-                print("❌ Could not decode with any encoding - using latin1 as fallback")
+                # Could not decode - using latin1 as fallback
                 decoded_content = csv_content.decode('latin1', errors='ignore')
                 used_encoding = 'latin1'
             
@@ -402,63 +396,62 @@ def parse_csv_content(csv_content):
         if not isinstance(csv_content, str):
             csv_content = str(csv_content)
         
-        print(f"📋 Content length: {len(csv_content)}")
-        print(f"🔤 Used encoding: {used_encoding}")
+        # Content parsed
         
         # ניקוי בסיסי
         csv_content = csv_content.strip()
         if not csv_content:
-            print("❌ Empty content after decoding")
+            # Empty content after decoding
             return None
         
         # הדפסת השורה הראשונה כדי לבדוק עברית
         first_line = csv_content.split('\n')[0]
-        print(f"📄 First line: {repr(first_line)}")
+        # Check first line
         
         # ⚠️ בדיקת תקינות CSV - אם זה קובץ SQL או לא תקין
         if any(sql_keyword in first_line.lower() for sql_keyword in ['connect', 'insert', 'select', 'values', 'create']):
-            print("🚫 INVALID FILE: This appears to be a SQL file, not a CSV file!")
-            print(f"🚫 First line contains SQL keywords: {first_line}")
+            # Invalid file: SQL detected, not CSV
             return None
         
         # בדיקה שיש כותרות CSV תקינות
         if 'ProjectNumber' not in first_line:
-            print("🚫 INVALID CSV: Missing expected header 'ProjectNumber'")
-            print(f"🚫 First line: {first_line}")
+            # Invalid CSV: Missing expected header
             return None
         
         # אם יש עברית בשורה הראשונה, נדווח על כך
         if any('\u0590' <= char <= '\u05FF' for char in first_line):
-            print("🇮🇱 Hebrew characters detected in header")
+            # Hebrew characters detected in header
+            pass
         
         # ניסיון פרסור פשוט עם פסיק
         try:
             reader = csv.DictReader(io.StringIO(csv_content))
             rows = list(reader)
-            print(f"📊 Parsed {len(rows)} rows with comma delimiter")
+            # Parsed rows
             
             if rows:
                 columns = list(rows[0].keys())
-                print(f"📋 Columns: {columns}")
+                # Check columns
                 
                 # בדיקה נוספת - אם השורה הראשונה ריקה או לא תקינה
                 if not rows or not any(rows[0].values()):
-                    print("🚫 INVALID CSV: First data row is empty or invalid")
+                    # Invalid CSV: First data row is empty
                     return None
                 
                 # בדיקה אם יש עברית בנתונים
                 for i, row in enumerate(rows[:3]):  # בדיקת 3 שורות ראשונות
                     for key, value in row.items():
                         if value and any('\u0590' <= char <= '\u05FF' for char in str(value)):
-                            print(f"🇮🇱 Hebrew text found in row {i+1}, column '{key}': {value}")
+                            # Hebrew text found
                             break
                 
                 return rows
         except Exception as e:
-            print(f"❌ Comma parsing failed: {e}")
+            # Comma parsing failed
+            pass
         
         # אם הגענו לכאן, הקובץ לא תקין
-        print("🚫 INVALID CSV: Could not parse as valid CSV file")
+        # Invalid CSV: Could not parse
         return None
         
     except Exception as e:
@@ -580,7 +573,7 @@ def convert_to_csv_import_format(csv_rows):
 def insert_to_csv_import_shekels(converted_data):
     """הכנסה לטבלת csv_import_shekels (שלב ביניים) - גרסה מתוקנת"""
     if not supabase:
-        print("❌ Supabase not available")
+        # Supabase not available
         return 0
         
     try:
@@ -727,7 +720,7 @@ def insert_to_csv_import_shekels(converted_data):
 def transfer_to_parking_data():
     """העברה מ csv_import_shekels ל parking_data - עם תיקונים"""
     if not supabase:
-        print("❌ Supabase not available")
+        # Supabase not available
         return 0
         
     try:
@@ -1170,10 +1163,10 @@ def verify_email_system():
         mail = imaplib.IMAP4_SSL('imap.gmail.com', timeout=10)
         mail.login(gmail_user, gmail_password)
         mail.logout()
-        print("🌐 Gmail IMAP connection: ✅ SUCCESS")
+        # Gmail IMAP connection successful
         return True
     except Exception as e:
-        print(f"❌ Gmail IMAP connection failed: {str(e)}")
+        # Gmail IMAP connection failed
         return False
 
 def start_email_monitoring_with_logs():
@@ -2150,7 +2143,7 @@ def verify_code():
                     user_data = user_result.data[0]
                     code_type = user_data.get('code_type', 'dashboard')
                     
-                    print(f"✅ SUCCESS - User type: {code_type}")
+                    # User authenticated successfully
                     
 # קביעת הפניה לפי סוג המשתמש
                     redirect_url = '/dashboard'  # ברירת מחדל
@@ -2967,15 +2960,13 @@ def get_current_user():
 def company_manager_get_parkings():
     """קבלת רשימת חניונים עבור מנהל חברה"""
     try:
-        print("\n" + "="*60)
-        print("🔍 DEBUG: /api/company-manager/get-parkings called")
-        print("="*60)
+        # Get parkings API called
         
         if 'user_email' not in session:
-            print("❌ No user in session")
+            # No user in session
             return jsonify({'success': False, 'message': 'לא מחובר'}), 401
         
-        print(f"✅ User: {session['user_email']}")
+        # User authenticated
         
         # קבלת נתוני המשתמש
         user_result = supabase.table('user_parkings').select(
@@ -2983,22 +2974,18 @@ def company_manager_get_parkings():
         ).eq('email', session['user_email']).execute()
         
         if not user_result.data:
-            print("❌ User not found in DB")
+            # User not found in DB
             return jsonify({'success': False, 'message': 'משתמש לא נמצא'}), 404
         
         user_data = user_result.data[0]
         company_list = user_data.get('company_list', '')
         permissions = user_data.get('permissions', '')
         
-        print(f"📋 User data:")
-        print(f"   project_number: {user_data.get('project_number')}")
-        print(f"   company_list: {company_list}")
-        print(f"   access_level: {user_data.get('access_level')}")
-        print(f"   permissions: {permissions}")
+        # User data loaded
         
         # בדיקת הרשאות
         if 'R' not in permissions and 'P' not in permissions:
-            print("❌ No R or P permissions")
+            # No R or P permissions
             return jsonify({'success': False, 'message': 'אין הרשאת דוחות'}), 403
         
         # לא צריך לפענח את company_list כאן - זה חברות בתוך החניון, לא חניונים
@@ -3008,37 +2995,31 @@ def company_manager_get_parkings():
         user_project_number = user_data.get('project_number')
         access_level = user_data.get('access_level', '')
         
-        print(f"\n🔑 Access control:")
-        print(f"   User project_number: {user_project_number} (type: {type(user_project_number)})")
-        print(f"   User access_level: '{access_level}'")
+        # Access control check
         
         # חיפוש חניונים בטבלת parkings
-        print("\n🔍 Fetching parkings from DB...")
+        # Fetching parkings from DB
         parkings_result = supabase.table('parkings').select(
             'id, name, location, description, ip_address, port, is_active'
         ).execute()
         
-        print(f"📦 Found {len(parkings_result.data)} parkings in DB")
+        # Found parkings in DB
         
         parkings = []
         for idx, parking in enumerate(parkings_result.data):
             try:
-                print(f"\n🏢 Parking #{idx + 1}: {parking.get('name')}")
-                print(f"   description: {parking.get('description')}")
+                # Processing parking
                 ip_address = parking.get('ip_address')
                 port = parking.get('port')
-                print(f"   ip: {ip_address}:{port}")
-                print(f"   port type: {type(port)}, port value: {repr(port)}")
-                print(f"   port type: {type(port)}, port value: {repr(port)}")
                 
                 parking_number = parking.get('description', 0)
-                print(f"   parsed number: {parking_number} (type: {type(parking_number)})")
+                # Parsed parking number
                 
                 # לוגיקה מתוקנת: בדיקה אם למשתמש יש גישה לחניון
                 has_access = False
                 
                 # אופציה 1: זה החניון של המשתמש - השוואה גמישה של טיפוסים
-                print(f"   Checking: user_project={user_project_number} vs parking={parking_number}")
+                # Checking access
                 
                 # המרה לאותו טיפוס לצורך השוואה
                 try:
@@ -3046,17 +3027,19 @@ def company_manager_get_parkings():
                     parking_num_str = str(parking_number) if parking_number else ""
                     
                     if user_proj_str and parking_num_str and user_proj_str == parking_num_str:
-                        print(f"   ✅ Match! User's parking")
+                        # Match! User's parking
                         has_access = True
                     # אופציה 2: למשתמש יש גישת מאסטר בלבד  
                     elif access_level == 'master':
-                        print(f"   ✅ Access via MASTER role")
+                        # Access via MASTER role
                         has_access = True
                     else:
-                        print(f"   ❌ No access (access_level: {access_level})")
+                        # No access
+                        pass
                         
                 except Exception as e:
-                    print(f"   ⚠️ Error comparing: {e}")
+                    # Error comparing
+                    pass
                 
                 if has_access:
                     parkings.append({
@@ -3269,28 +3252,28 @@ def company_manager_proxy():
         
         if is_local_dev:
             # בסביבת פיתוח - השתמש בשרת המקומי
-            print(f"   🏠 LOCAL DEV MODE - Using local parking server")
+            # LOCAL DEV MODE - Using local parking server
             ip_address = '10.35.240.100'
             port = 8443
         else:
             # ב-Production (Render) - השתמש בשרת החיצוני
-            print(f"   🌐 PRODUCTION MODE (Render)")
-            print(f"   📊 From Database - IP: {ip_address}, Port: {port}")
+            # PRODUCTION MODE (Render)
             
             # וודא שיש כתובת נכונה
             if not ip_address or ip_address == 'None':
                 # אם אין בdatabase, השתמש בברירת מחדל
                 ip_address = '192.117.0.122'
                 port = 8240
-                print(f"   ⚠️ No IP in database, using default: {ip_address}:{port}")
+                # No IP in database, using default
             else:
                 # השתמש בכתובת מה-database
-                print(f"   ✅ Using database server: {ip_address}:{port}")
+                # Using database server
+                pass
             
             # וודא שהפורט נכון
             if not port or port == 0:
                 port = 8240
-                print(f"   📍 Fixed port to: {port}")
+                # Fixed port
         
         if not ip_address:
             return jsonify({'success': False, 'message': 'חסרים נתוני חיבור'}), 500
@@ -3299,11 +3282,11 @@ def company_manager_proxy():
         # בניית URL - עם פורט קבוע לבדיקה
         if port is None or port == 0:
             port = 8240  # פורט ברירת מחדל
-            print(f"   ⚠️ Using default port: {port}")
+            # Using default port
     
         # השתמש תמיד ב-HTTPS לשרתי החניון
         protocol = "https"
-        print(f"   🔒 Protocol: {protocol}")
+        # Using HTTPS protocol
         
         # בניית URL - תיקון לפי מה שעובד!
         if endpoint == 'contracts' or endpoint == 'GetContractsList':
@@ -3313,25 +3296,35 @@ def company_manager_proxy():
             # Add contractId as query parameter if provided
             if payload and 'contractId' in payload:
                 contract_id = payload['contractId']
-                # Try the correct format: contracts/{id}/consumers
+                # First try the correct format: contracts/{id}/consumers
+                # This is the proper way to get consumers for a specific contract
                 url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts/{contract_id}/consumers"
-                print(f"   🔍 Getting consumers for contract ID: {contract_id} using contracts/{contract_id}/consumers")
+                # Getting consumers for specific contract
             else:
+                # Fallback: get all consumers (will need client-side filtering)
                 url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
-                print(f"   ⚠️ Getting ALL consumers (no contractId specified)")
+                # Getting ALL consumers (will need filtering)
             method = 'GET'  # תמיד GET למנויים
         elif endpoint.startswith('consumers/'):
             # Alternative format: consumers/{contractId}
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
             method = 'GET'
-            print(f"   🔍 Getting consumers using alternative format: {endpoint}")
+            # Getting consumers using alternative format
         elif '/detail' in endpoint:
             # Handle contracts/X/detail endpoint - check this BEFORE CustomerMediaWebService
             # Remove CustomerMediaWebService prefix if exists
             clean_endpoint = endpoint.replace('CustomerMediaWebService/', '')
+            # Make sure we have the proper format: contracts/{id}/detail
+            if not clean_endpoint.startswith('contracts/'):
+                # Extract contract ID if endpoint is like "contracts/123/detail"
+                import re
+                match = re.search(r'(\d+)/detail', clean_endpoint)
+                if match:
+                    contract_id = match.group(1)
+                    clean_endpoint = f"contracts/{contract_id}/detail"
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{clean_endpoint}"
             method = 'GET'
-            print(f"   📊 Getting contract details with pooling data: {clean_endpoint}")
+            # Getting contract details with pooling data
         elif 'CustomerMediaWebService' in endpoint:
             # אם כבר יש CustomerMediaWebService ב-endpoint
             url = f"{protocol}://{ip_address}:{port}/{endpoint}"
@@ -3339,9 +3332,7 @@ def company_manager_proxy():
             # אחרת, נסה עם /api
             url = f"{protocol}://{ip_address}:{port}/api/{endpoint}"
         
-        print(f"\n🔌 Proxy Request:")
-        print(f"   URL: {url}")
-        print(f"   Method: {method}")
+        # Proxy Request
         
         # הכנת headers
         headers = {'Content-Type': 'application/json'}
@@ -3351,44 +3342,39 @@ def company_manager_proxy():
             # TODO: החלף עם ה-credentials הנכונים!
             auth_string = base64.b64encode(b'2022:2022').decode('ascii')
             headers['Authorization'] = f'Basic {auth_string}'
-            print(f"   🔐 Added Basic Auth: 2022:2022")
+            # Added Basic Auth
         
         try:
             # timeout מוגבר ל-30 שניות ב-production
             timeout_seconds = 30 if not is_local_dev else 25
-            print(f"   ⏱️ Attempting connection with {timeout_seconds}s timeout...")
-            print(f"   🌐 Full URL: {url}")
-            print(f"   🔑 Auth: {'Basic Auth (2022:2022)' if 'Authorization' in headers else 'No Auth'}")
-            print(f"   📋 Headers: {headers}")
+            # Attempting connection
             
             # ביצוע הקריאה - פשוט כמו שהיה
-            print(f"   🚀 Executing {method} request...")
+            # Executing request
             if method == 'GET':
                 response = requests.get(url, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'POST':
-                print(f"   📦 POST payload: {payload}")
+                # POST request with payload
                 response = requests.post(url, json=payload, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'PUT':
-                print(f"   📦 PUT payload: {payload}")
+                # PUT request with payload
                 response = requests.put(url, json=payload, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'DELETE':
                 response = requests.delete(url, headers=headers, verify=False, timeout=timeout_seconds)
             else:
                 return jsonify({'success': False, 'message': 'שיטה לא נתמכת'}), 400
             
-            print(f"   📊 Response status: {response.status_code}")
-            print(f"   📊 Response headers: {dict(response.headers)}")
-            print(f"   📝 Full response text: {response.text[:1000] if response.text else 'Empty'}")
+            # Response received
             
             # החזרת התוצאה
             if response.status_code == 200:
                 # בדוק אם התגובה היא XML או JSON
                 content_type = response.headers.get('content-type', '')
-                print(f"   📄 Content-Type: {content_type}")
+                # Checking content type
                 
                 if 'xml' in content_type.lower() or response.text.startswith('<?xml'):
                     # פרש XML לJSON
-                    print(f"   📄 Got XML response, parsing...")
+                    # Got XML response, parsing
                     try:
                         import xml.etree.ElementTree as ET
                         # Fix encoding issues
@@ -3406,28 +3392,110 @@ def company_manager_proxy():
                                     contract_data[tag] = child.text
                                 contracts.append(contract_data)
                             
-                            print(f"   ✅ SUCCESS! Parsed {len(contracts)} contracts from XML")
+                            # Filter contracts based on user's company_list permissions
+                            company_list = session.get('user_company_list', '')
+                            if company_list and company_list != 'all':
+                                # Parse company list (e.g., "1,2,5-10,60")
+                                allowed_companies = set()
+                                parts = company_list.split(',')
+                                for part in parts:
+                                    part = part.strip()
+                                    if '-' in part:
+                                        # Handle range like "5-10"
+                                        try:
+                                            start, end = part.split('-')
+                                            for i in range(int(start), int(end) + 1):
+                                                allowed_companies.add(str(i))
+                                        except:
+                                            pass
+                                    else:
+                                        # Single company ID
+                                        allowed_companies.add(part)
+                                
+                                # Filter contracts
+                                filtered_contracts = []
+                                for contract in contracts:
+                                    contract_id = str(contract.get('id', contract.get('contractId', contract.get('contractNum', ''))))
+                                    if contract_id in allowed_companies:
+                                        filtered_contracts.append(contract)
+                                
+                                # Filtered contracts based on permissions
+                                contracts = filtered_contracts
+                            
+                            # Returning contracts from XML
                             return jsonify({'success': True, 'data': contracts})
                             
                         elif 'consumer' in endpoint.lower():
                             consumers = []
-                            for consumer in root.findall('.//{http://gsph.sub.com/cust/types}consumer'):
+                            # Try to find consumers in different XML structures
+                            # First try with namespace
+                            consumer_elements = root.findall('.//{http://gsph.sub.com/cust/types}consumer')
+                            
+                            # If not found, try without namespace
+                            if not consumer_elements:
+                                consumer_elements = root.findall('.//consumer')
+                            
+                            for consumer in consumer_elements:
                                 consumer_data = {}
+                                
+                                # Get attributes if exist
+                                for key, value in consumer.attrib.items():
+                                    clean_key = key.replace('{http://gsph.sub.com/cust/types}', '')
+                                    consumer_data[clean_key] = value
+                                
+                                # Get child elements
                                 for child in consumer:
                                     tag = child.tag.replace('{http://gsph.sub.com/cust/types}', '')
-                                    consumer_data[tag] = child.text
+                                    # Handle nested elements
+                                    if len(child) > 0:
+                                        # This is a complex element with children
+                                        child_data = {}
+                                        for subchild in child:
+                                            subtag = subchild.tag.replace('{http://gsph.sub.com/cust/types}', '')
+                                            child_data[subtag] = subchild.text
+                                        consumer_data[tag] = child_data
+                                    else:
+                                        consumer_data[tag] = child.text
                                 consumers.append(consumer_data)
                             
-                            print(f"   ✅ SUCCESS! Parsed {len(consumers)} consumers from XML")
+                            # If payload has contractId, filter consumers
+                            if payload and 'contractId' in payload:
+                                contract_id = str(payload['contractId'])
+                                # Filtering consumers for contract ID
+                                
+                                # Filter consumers by contractId
+                                filtered = []
+                                for c in consumers:
+                                    # Check different possible field names
+                                    consumer_contract = str(c.get('contractId', c.get('contract', c.get('contractNum', ''))))
+                                    if consumer_contract == contract_id:
+                                        filtered.append(c)
+                                
+                                if filtered:
+                                    # Filtered consumers for contract
+                                    consumers = filtered
+                                else:
+                                    # No consumers found for contract after filtering
+                                    pass
+                            
+                            # Returning consumers from XML
                             return jsonify({'success': True, 'data': consumers})
                         elif '/detail' in endpoint:
                             # Parse contract detail with pooling data
-                            def parse_element(element):
+                            def parse_element(element, preserve_text=False):
                                 """Recursively parse XML element to dict"""
                                 result = {}
+                                
                                 # Add text content if exists
                                 if element.text and element.text.strip():
-                                    result = element.text
+                                    text_value = element.text.strip()
+                                    if preserve_text:
+                                        result['_text'] = text_value
+                                    else:
+                                        # If element has no children and no attributes, return just the text
+                                        if not len(element) and not element.attrib:
+                                            return text_value
+                                        result = text_value
                                 
                                 # Add attributes
                                 for key, value in element.attrib.items():
@@ -3439,8 +3507,12 @@ def company_manager_proxy():
                                 for child in element:
                                     tag = child.tag.replace('{http://gsph.sub.com/cust/types}', '')
                                     
-                                    # Check if this tag already exists (for arrays)
-                                    if tag in children:
+                                    # Special handling for poolingDetail to ensure it's always an array
+                                    if tag == 'poolingDetail':
+                                        if 'poolingDetail' not in children:
+                                            children['poolingDetail'] = []
+                                        children['poolingDetail'].append(parse_element(child))
+                                    elif tag in children:
                                         # Convert to list if not already
                                         if not isinstance(children[tag], list):
                                             children[tag] = [children[tag]]
@@ -3459,13 +3531,44 @@ def company_manager_proxy():
                                 if children:
                                     if isinstance(result, dict):
                                         result.update(children)
+                                    elif isinstance(result, str) and result:
+                                        # If we had text and children, preserve both
+                                        result = {'_text': result, **children}
                                     else:
                                         result = children
                                         
                                 return result
                             
                             contract_detail = parse_element(root)
-                            print(f"   ✅ SUCCESS! Parsed contract detail with pooling data")
+                            
+                            # Calculate summary data from pooling if available
+                            if 'pooling' in contract_detail and 'poolingDetail' in contract_detail['pooling']:
+                                pooling_details = contract_detail['pooling']['poolingDetail']
+                                if not isinstance(pooling_details, list):
+                                    pooling_details = [pooling_details]
+                                
+                                # Calculate totals
+                                total_present = 0
+                                total_max = 0
+                                consumer_count = 0
+                                
+                                for detail in pooling_details:
+                                    if isinstance(detail, dict):
+                                        present = int(detail.get('presentCounter', 0))
+                                        max_count = int(detail.get('maxCounter', 0))
+                                        total_present += present
+                                        total_max += max_count
+                                        
+                                        # Facility "0" usually contains the consumer count
+                                        if detail.get('facility') == '0':
+                                            consumer_count = present
+                                
+                                # Add calculated totals to response
+                                contract_detail['consumerCount'] = consumer_count if consumer_count else total_present
+                                contract_detail['totalVehicles'] = total_max
+                                # Calculated totals
+                            
+                            # Parsed contract detail with pooling data
                             return jsonify({'success': True, 'data': contract_detail})
                         else:
                             # החזר כ-raw XML אם לא מזהים את הסוג
@@ -3479,23 +3582,62 @@ def company_manager_proxy():
                     # נסה לפרש כ-JSON
                     try:
                         data = response.json() if response.text else {}
-                        print(f"   ✅ SUCCESS! Got JSON data from parking server")
-                        print(f"   📊 Data type: {type(data)}")
+                        # Got JSON data from parking server
                         
-                        # לוג מפורט של התוצאה
-                        if isinstance(data, list):
-                            print(f"   📊 Got list with {len(data)} items")
-                            if len(data) > 0:
-                                print(f"   📊 First item sample: {data[0]}")
-                        elif isinstance(data, dict):
-                            print(f"   📊 Got dict with keys: {list(data.keys())}")
+                        # Filter contracts if we're getting contracts
+                        if ('contracts' in endpoint or 'contract' in endpoint.lower()) and not '/detail' in endpoint:
+                            # Check if data contains contracts
+                            contracts_data = data
+                            if isinstance(data, dict):
+                                # Look for contracts in different possible locations
+                                if 'contracts' in data:
+                                    contracts_data = data['contracts']
+                                elif 'contract' in data:
+                                    contracts_data = data['contract']
+                            
+                            # If we have contracts to filter
+                            if isinstance(contracts_data, list):
+                                company_list = session.get('user_company_list', '')
+                                if company_list and company_list != 'all':
+                                    # Parse company list
+                                    allowed_companies = set()
+                                    parts = company_list.split(',')
+                                    for part in parts:
+                                        part = part.strip()
+                                        if '-' in part:
+                                            try:
+                                                start, end = part.split('-')
+                                                for i in range(int(start), int(end) + 1):
+                                                    allowed_companies.add(str(i))
+                                            except:
+                                                pass
+                                        else:
+                                            allowed_companies.add(part)
+                                    
+                                    # Filter contracts
+                                    filtered = []
+                                    for contract in contracts_data:
+                                        contract_id = str(contract.get('id', contract.get('contractId', contract.get('contractNum', ''))))
+                                        if contract_id in allowed_companies:
+                                            filtered.append(contract)
+                                    
+                                    # Filtered contracts based on permissions
+                                    
+                                    # Update data with filtered contracts
+                                    if isinstance(data, dict):
+                                        if 'contracts' in data:
+                                            data['contracts'] = filtered
+                                        elif 'contract' in data:
+                                            data['contract'] = filtered
+                                    else:
+                                        data = filtered
                         
                         return jsonify({
                             'success': True,
                             'data': data
                         })
                     except Exception as e:
-                        print(f"   ⚠️ Error parsing JSON: {e}")
+                        # Error parsing JSON
                         # אם זה לא JSON, החזר את הטקסט
                         return jsonify({
                             'success': True,
@@ -4065,7 +4207,7 @@ def test_render_connection():
     success = any(r.get('success') for r in results)
     
     print(f"\n{'='*70}")
-    print(f"📊 SUMMARY: {'✅ SUCCESS' if success else '❌ FAILED'}")
+    # Test summary
     print(f"{'='*70}")
     
     return jsonify({
@@ -4436,7 +4578,8 @@ def test_manager_auth():
                 })
                 
                 if response.status_code not in [401, 403, 404]:
-                    print(f"✅ SUCCESS with {username}:{password} - {response.status_code}")
+                    # Success with credentials
+                    pass
                     
             except Exception as e:
                 results.append({
