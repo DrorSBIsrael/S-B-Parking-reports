@@ -190,24 +190,52 @@ class ParkingAPIXML {
     }
     
     async getEnhancedContractDetails(contractId) {
-        return this.makeRequest(`contracts/${contractId}/detail`);
+        console.log(`[getEnhancedContractDetails] Fetching details for contract ${contractId}`);
+        const result = await this.makeRequest(`contracts/${contractId}/detail`);
+        
+        // Log the response structure for debugging
+        if (result.success && result.data) {
+            console.log(`[getEnhancedContractDetails] Response structure:`, result.data);
+            if (result.data.pooling) {
+                console.log(`[getEnhancedContractDetails] Pooling data found:`, result.data.pooling);
+            }
+        }
+        
+        return result;
     }
     
     async getConsumers(companyNum, contractId) {
-        // Try both approaches - with query param and without
         console.log(`[getConsumers] Fetching consumers for contract ${contractId}`);
         
-        // First try with contractId in payload (proxy will convert to query param)
+        // Always pass contractId in payload for proper filtering
         const result = await this.makeRequest('consumers', 'GET', { contractId: contractId });
         
-        // If we got too many results, it means filtering didn't work
-        if (result.success && result.data && Array.isArray(result.data) && result.data.length > 1000) {
-            console.log(`[getConsumers] Got ${result.data.length} consumers - API might not support filtering`);
-            // Try alternative endpoint format: consumers/{contractId}
-            const altResult = await this.makeRequest(`consumers/${contractId}`, 'GET');
-            if (altResult.success && altResult.data) {
-                console.log(`[getConsumers] Alternative endpoint returned ${altResult.data.length} consumers`);
-                return altResult;
+        // Check if we got the consumers
+        if (result.success && result.data) {
+            // Handle both array and single object responses
+            let consumers = Array.isArray(result.data) ? result.data : [result.data];
+            console.log(`[getConsumers] Got ${consumers.length} consumers from server`);
+            
+            // If we got too many consumers, it might mean the server doesn't support filtering
+            // In that case, we'll need to filter client-side
+            if (consumers.length > 1000) {
+                console.log(`[getConsumers] Got ${consumers.length} consumers - filtering client-side for contract ${contractId}`);
+                const filtered = consumers.filter(c => {
+                    // Check different possible field names for contract ID
+                    return c.contractId === contractId || 
+                           c.contractId === String(contractId) ||
+                           c.contract === contractId ||
+                           c.contract === String(contractId) ||
+                           c.contractNum === contractId ||
+                           c.contractNum === String(contractId);
+                });
+                
+                if (filtered.length > 0) {
+                    console.log(`[getConsumers] Filtered to ${filtered.length} consumers for contract ${contractId}`);
+                    return { success: true, data: filtered };
+                } else {
+                    console.log(`[getConsumers] Warning: No consumers found for contract ${contractId} after filtering`);
+                }
             }
         }
         
