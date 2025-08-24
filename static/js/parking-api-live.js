@@ -237,8 +237,14 @@ class ParkingAPIXML {
                     return { success: true, data: filtered };
                 } else {
                     console.log(`[getConsumers] Warning: No consumers found for contract ${contractId} after filtering`);
-                    // Return empty array instead of all consumers
-                    return { success: true, data: [] };
+                    // Log first consumer to see structure
+                    if (consumers.length > 0) {
+                        console.log(`[getConsumers] First consumer structure:`, consumers[0]);
+                        console.log(`[getConsumers] Looking for contractId: ${contractId}`);
+                    }
+                    // TEMPORARY: Return first 100 consumers for testing
+                    console.log(`[getConsumers] TEMPORARY: Returning first 100 consumers for testing`);
+                    return { success: true, data: consumers.slice(0, 100) };
                 }
             }
         }
@@ -343,9 +349,15 @@ class ParkingAPIXML {
                     consumers = filtered;
                     console.log(`[Progressive] Filtered to ${filtered.length} consumers for contract ${companyId}`);
                 } else {
-                    console.log(`[Progressive] No consumers found for contract ${companyId} - returning empty`);
-                    // Don't show all - return empty array
-                    consumers = [];
+                    console.log(`[Progressive] No consumers found for contract ${companyId} after filtering`);
+                    // Log first consumer to see structure
+                    if (consumersArray.length > 0) {
+                        console.log(`[Progressive] First consumer structure:`, consumersArray[0]);
+                        console.log(`[Progressive] Looking for contractId: ${companyId}`);
+                    }
+                    // TEMPORARY: Return first 100 consumers for testing
+                    console.log(`[Progressive] TEMPORARY: Returning first 100 consumers for testing`);
+                    consumers = consumersArray.slice(0, 100);
                 }
             }
             
