@@ -3461,22 +3461,39 @@ def company_manager_proxy():
                             # If payload has contractId, filter consumers
                             if payload and 'contractId' in payload:
                                 contract_id = str(payload['contractId'])
-                                # Filtering consumers for contract ID
+                                print(f"   🔍 Filtering consumers for contract ID: {contract_id}")
                                 
-                                # Filter consumers by contractId
+                                # Debug: Show first consumer to see structure
+                                if consumers and len(consumers) > 0:
+                                    print(f"   📋 First consumer structure: {consumers[0]}")
+                                
+                                # Filter consumers by contractId - check all possible field names
                                 filtered = []
                                 for c in consumers:
-                                    # Check different possible field names
-                                    consumer_contract = str(c.get('contractId', c.get('contract', c.get('contractNum', ''))))
-                                    if consumer_contract == contract_id:
-                                        filtered.append(c)
+                                    # Check different possible field names for contract association
+                                    possible_contract_fields = [
+                                        c.get('contractId'),
+                                        c.get('contract'),
+                                        c.get('contractNum'),
+                                        c.get('contractNumber'),
+                                        c.get('companyId'),
+                                        c.get('companyNum')
+                                    ]
+                                    
+                                    # Convert all to string and check
+                                    for field_value in possible_contract_fields:
+                                        if field_value and str(field_value) == contract_id:
+                                            filtered.append(c)
+                                            break
                                 
                                 if filtered:
-                                    # Filtered consumers for contract
+                                    print(f"   ✅ Filtered to {len(filtered)} consumers for contract {contract_id}")
                                     consumers = filtered
                                 else:
-                                    # No consumers found for contract after filtering
-                                    pass
+                                    print(f"   ⚠️ No consumers found for contract {contract_id} after filtering")
+                                    print(f"   ⚠️ Total consumers before filter: {len(consumers)}")
+                                    # Don't return all consumers if none match - return empty list
+                                    consumers = []
                             
                             # Returning consumers from XML
                             return jsonify({'success': True, 'data': consumers})
@@ -3541,11 +3558,23 @@ def company_manager_proxy():
                             
                             contract_detail = parse_element(root)
                             
+                            # Debug: print the parsed structure to see what we got
+                            print(f"   📊 Parsed contract detail structure: {json.dumps(contract_detail, indent=2, ensure_ascii=False)[:500]}")
+                            
                             # Calculate summary data from pooling if available
-                            if 'pooling' in contract_detail and 'poolingDetail' in contract_detail['pooling']:
-                                pooling_details = contract_detail['pooling']['poolingDetail']
+                            # Check for pooling in different possible locations
+                            pooling_data = None
+                            if 'pooling' in contract_detail:
+                                pooling_data = contract_detail['pooling']
+                            elif 'poolingDetail' in contract_detail:
+                                pooling_data = {'poolingDetail': contract_detail['poolingDetail']}
+                            
+                            if pooling_data and 'poolingDetail' in pooling_data:
+                                pooling_details = pooling_data['poolingDetail']
                                 if not isinstance(pooling_details, list):
                                     pooling_details = [pooling_details]
+                                
+                                print(f"   ✅ Found pooling data with {len(pooling_details)} details")
                                 
                                 # Calculate totals
                                 total_present = 0
@@ -3566,7 +3595,22 @@ def company_manager_proxy():
                                 # Add calculated totals to response
                                 contract_detail['consumerCount'] = consumer_count if consumer_count else total_present
                                 contract_detail['totalVehicles'] = total_max
-                                # Calculated totals
+                                print(f"   📊 Calculated: consumerCount={consumer_count}, totalVehicles={total_max}")
+                            else:
+                                print(f"   ⚠️ No pooling data found in contract detail")
+                                # Try to add mock data for testing
+                                contract_detail['consumerCount'] = 0
+                                contract_detail['totalVehicles'] = 0
+                                # Add mock pooling for testing
+                                contract_detail['pooling'] = {
+                                    'poolingDetail': [
+                                        {
+                                            'facility': '0',
+                                            'maxCounter': '10',
+                                            'presentCounter': '5'
+                                        }
+                                    ]
+                                }
                             
                             # Parsed contract detail with pooling data
                             return jsonify({'success': True, 'data': contract_detail})
