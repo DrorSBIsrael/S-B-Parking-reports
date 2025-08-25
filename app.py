@@ -3295,9 +3295,9 @@ def company_manager_proxy():
         elif endpoint == 'consumers' or endpoint == 'GetConsumerList':
             # Always get all consumers and filter client-side
             # The contracts/{id}/consumers endpoint seems to not work properly
-                url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
-                print(f"   🔍 Getting ALL consumers (will filter client-side)")
-                method = 'GET'  # תמיד GET למנויים
+            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
+            print(f"   🔍 Getting ALL consumers (will filter client-side)")
+            method = 'GET'  # תמיד GET למנויים
         elif endpoint.startswith('consumers/'):
             # Alternative format: consumers/{contractId}
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
@@ -3383,34 +3383,10 @@ def company_manager_proxy():
                         # Check for detail endpoints FIRST
                         print(f"   🔍 CHECKING: Is '/detail' in '{endpoint}'? {'/detail' in endpoint}")
                         
-                        if '/detail' in endpoint:
-                            print(f"   ✅ DETAIL ENDPOINT DETECTED!")
-                            # This is a detail request - handle it specially
-                            if 'consumer' in endpoint:
-                                # Consumer detail
-                                print(f"   🔍 Parsing CONSUMER DETAIL XML response")
-                                print(f"   🔍 Endpoint: {endpoint}")
-                                print(f"   🔍 First 500 chars of XML: {response.text[:500]}")
-                                
-                                # Parse the consumer detail
-                                consumer_detail = {}
-                                # TODO: Implement proper consumer detail parsing
-                                
-                                return jsonify({'success': True, 'data': consumer_detail})
-                            elif 'contracts' in endpoint or 'contract' in endpoint:
-                                # Contract detail
-                                print(f"\n{'='*80}")
-                                print(f"   🔍 CONTRACT DETAIL - PARSING XML")
-                                print(f"   📥 Endpoint: {endpoint}")
-                                print(f"   📥 Response length: {len(response.text)} chars")
-                                print(f"   📥 First 1000 chars of XML:")
-                                print(f"{'='*80}")
-                                print(response.text[:1000])
-                                print(f"{'='*80}\n")
-                                # Parse contract detail with pooling data here
-                                # ... (rest of the detail parsing code will be here)
-                                return jsonify({'success': True, 'data': {'message': 'Detail endpoint reached!', 'xml_preview': response.text[:500], 'endpoint': endpoint}})
-                        elif 'contracts' in endpoint or 'contract' in endpoint.lower():
+                        # Skip the list endpoints if this is a detail request
+                        is_detail_endpoint = '/detail' in endpoint
+                        
+                        if not is_detail_endpoint and ('contracts' in endpoint or 'contract' in endpoint.lower()):
                             contracts = []
                             # חפש contract elements בכל namespaces
                             for contract in root.findall('.//{http://gsph.sub.com/cust/types}contract'):
@@ -3453,7 +3429,7 @@ def company_manager_proxy():
                             # Returning contracts from XML
                             return jsonify({'success': True, 'data': contracts})
                             
-                        elif 'consumer' in endpoint.lower():
+                        elif not is_detail_endpoint and 'consumer' in endpoint.lower():
                             consumers = []
                             # Try to find consumers in different XML structures
                             # First try with namespace
