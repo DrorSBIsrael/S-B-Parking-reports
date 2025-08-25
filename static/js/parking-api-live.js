@@ -221,8 +221,10 @@ class ParkingAPIXML {
             if (consumers.length > 1000) {
                 console.log(`[getConsumers] Got ${consumers.length} consumers - filtering client-side for contract ${contractId}`);
                 const filtered = consumers.filter(c => {
-                    // Check different possible field names for contract ID
-                    return c.contractId === contractId || 
+                    // IMPORTANT: Server returns 'contractid' in lowercase!
+                    return c.contractid === contractId ||  // lowercase version - THIS IS KEY!
+                           c.contractid === String(contractId) ||
+                           c.contractId === contractId || 
                            c.contractId === String(contractId) ||
                            c.contract === contractId ||
                            c.contract === String(contractId) ||
@@ -237,14 +239,13 @@ class ParkingAPIXML {
                     return { success: true, data: filtered };
                 } else {
                     console.log(`[getConsumers] Warning: No consumers found for contract ${contractId} after filtering`);
-                    // Log first consumer to see structure
+                    // Log first consumer to see structure for debugging
                     if (consumers.length > 0) {
                         console.log(`[getConsumers] First consumer structure:`, consumers[0]);
                         console.log(`[getConsumers] Looking for contractId: ${contractId}`);
                     }
-                    // TEMPORARY: Return first 100 consumers for testing
-                    console.log(`[getConsumers] TEMPORARY: Returning first 100 consumers for testing`);
-                    return { success: true, data: consumers.slice(0, 100) };
+                    // Return empty array if no consumers found
+                    return { success: true, data: [] };
                 }
             }
         }
@@ -282,7 +283,7 @@ class ParkingAPIXML {
      * Get detailed information for a single consumer
      */
     async getConsumerDetail(contractId, consumerId) {
-        const parkingId = this.getCurrentParkingId();
+        const parkingId = this.config.currentParkingId;
         
         const response = await fetch('/api/company-manager/consumer-detail', {
             method: 'POST',
