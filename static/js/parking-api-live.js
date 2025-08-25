@@ -4,40 +4,17 @@
 
 class ParkingAPIXML {
     constructor() {
-        // Check if we're running locally or on production
-        const isLocal = window.location.hostname === 'localhost' || 
-                       window.location.hostname === '127.0.0.1';
-        
-        // CRITICAL FIX: Different endpoints for local vs production
-        if (isLocal) {
-            // LOCAL: Direct connection to parking server
-            this.config = {
-                baseUrl: 'https://10.35.240.100:8443/CustomerMediaWebService',
-                username: '2022',
-                password: '2022',
-                timeout: 30000,
-                useProxy: false,  // NO PROXY LOCALLY!
-                currentParkingId: null
-            };
-            console.log('🏠 LOCAL MODE: Direct connection to parking server');
-        } else {
-            // PRODUCTION: Must use proxy due to CORS
+        // ALWAYS use proxy for consistency and security
         this.config = {
             baseUrl: '/api/company-manager/proxy',
             username: '2022',
             password: '2022',
             timeout: 30000,
-                useProxy: true,  // MUST use proxy in production (CORS)
+            useProxy: true,  // Always use proxy
             currentParkingId: null
         };
-            console.log('☁️ PRODUCTION MODE: Using proxy (CORS protection)');
-        }
-        
-        console.log('Parking API v2 initialized:', {
-            baseUrl: this.config.baseUrl,
-            useProxy: this.config.useProxy,
-            mode: isLocal ? 'LOCAL' : 'PRODUCTION'
-        });
+        console.log('☁️ Using secure proxy connection');
+        console.log('Parking API v2 initialized');
     }
     
     setConfig(config) {
