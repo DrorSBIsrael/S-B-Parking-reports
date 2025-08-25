@@ -3507,8 +3507,12 @@ def company_manager_proxy():
                             
                             return jsonify({'success': True, 'data': consumer_detail})
                         elif '/detail' in endpoint and 'contracts' in endpoint:
-                            print(f"   🔍 Parsing CONTRACT DETAIL XML response")
-                            print(f"   🔍 First 500 chars of XML: {response.text[:500]}")
+                            print(f"\n{'='*80}")
+                            print(f"   🔍 CONTRACT DETAIL REQUEST: {endpoint}")
+                            print(f"   📥 RAW XML RESPONSE (full):")
+                            print(f"{'='*80}")
+                            print(response.text)
+                            print(f"{'='*80}\n")
                             # Parse contract detail with pooling data
                             def parse_element(element, preserve_text=False):
                                 """Recursively parse XML element to dict"""
@@ -3626,19 +3630,8 @@ def company_manager_proxy():
                                 print(f"   📊 Calculated: consumerCount={consumer_count}, totalVehicles={total_max}")
                             else:
                                 print(f"   ⚠️ No pooling data found in contract detail")
-                                # Try to add mock data for testing
-                                contract_detail['consumerCount'] = 0
-                                contract_detail['totalVehicles'] = 0
-                                # Add mock pooling for testing
-                                contract_detail['pooling'] = {
-                                    'poolingDetail': [
-                                        {
-                                            'facility': '0',
-                                            'maxCounter': '10',
-                                            'presentCounter': '5'
-                                        }
-                                    ]
-                                }
+                                print(f"   ⚠️ Contract detail structure: {json.dumps(contract_detail, indent=2, ensure_ascii=False)}")
+                                # DO NOT add mock data - return real data only
                             
                             # Make sure we're returning the complete data including pooling
                             print(f"   🚀 Returning contract detail with pooling to client")
@@ -3657,36 +3650,12 @@ def company_manager_proxy():
                         data = response.json() if response.text else {}
                         # Got JSON data from parking server
                         
-                        # Add mock pooling data for testing if this is a detail endpoint
+                        # Log what we got if this is a detail endpoint
                         if '/detail' in endpoint:
-                            print(f"   📊 Adding mock pooling data for testing")
-                            # If data is a list with one contract, add pooling to it
-                            if isinstance(data, list) and len(data) > 0:
-                                for contract in data:
-                                    if isinstance(contract, dict):
-                                        contract['pooling'] = {
-                                            'poolingDetail': [
-                                                {
-                                                    'facility': '0',
-                                                    'maxCounter': '10',
-                                                    'presentCounter': '5'
-                                                }
-                                            ]
-                                        }
-                                        contract['consumerCount'] = 5
-                                        contract['totalVehicles'] = 10
-                        elif isinstance(data, dict):
-                                data['pooling'] = {
-                                    'poolingDetail': [
-                                        {
-                                            'facility': '0',
-                                            'maxCounter': '10',
-                                            'presentCounter': '5'
-                                        }
-                                    ]
-                                }
-                                data['consumerCount'] = 5
-                                data['totalVehicles'] = 10
+                            print(f"\n{'='*80}")
+                            print(f"   📊 Got JSON response for detail endpoint: {endpoint}")
+                            print(f"   📊 JSON data: {json.dumps(data, indent=2, ensure_ascii=False)}")
+                            print(f"{'='*80}\n")
                         
                         # Filter contracts if we're getting contracts
                         if ('contracts' in endpoint or 'contract' in endpoint.lower()) and not '/detail' in endpoint:
