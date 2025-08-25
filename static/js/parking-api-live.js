@@ -171,10 +171,23 @@ class ParkingAPIXML {
         const result = await this.makeRequest(`contracts/${contractId}/detail`);
         
         // Log the response structure for debugging
-        if (result.success && result.data) {
+        if (result.success) {
             console.log(`[getEnhancedContractDetails] Response structure:`, result.data);
-            if (result.data.pooling) {
-                console.log(`[getEnhancedContractDetails] Pooling data found:`, result.data.pooling);
+            
+            // Show debug info if available
+            if (result.debug) {
+                console.log(`\n${'='.repeat(60)}`);
+                console.log(`📋 CONTRACT ${contractId} - RAW XML FROM SERVER:`);
+                console.log(`${'='.repeat(60)}`);
+                console.log(result.debug.raw_xml);
+                console.log(`${'='.repeat(60)}`);
+                console.log(`   - Has pooling: ${result.debug.has_pooling}`);
+                console.log(`   - Parsed keys: ${result.debug.parsed_keys}`);
+                console.log(`${'='.repeat(60)}\n`);
+            }
+            
+            if (result.data && result.data.pooling) {
+                console.log(`[getEnhancedContractDetails] ✅ Pooling data found:`, result.data.pooling);
             }
         }
         
