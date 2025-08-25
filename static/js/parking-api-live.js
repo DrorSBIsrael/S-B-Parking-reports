@@ -367,13 +367,9 @@ class ParkingAPIXML {
             // Return basic data immediately
             onBasicLoaded(basicSubscribers);
             
-            // Step 2: Load details in background ONLY for small companies
-            if (!isLargeCompany && finalConsumers.length > 0) {
-                this.loadDetailsInBackground(companyId, finalConsumers, basicSubscribers, {
-                    onDetailLoaded,
-                    onProgress
-                });
-            } else if (isLargeCompany) {
+            // Skip loading details - basic data is sufficient
+            // Details can be loaded on-demand if needed
+            if (isLargeCompany) {
                 // Notify that we're in on-demand mode
                 if (onProgress) {
                     onProgress({ 
