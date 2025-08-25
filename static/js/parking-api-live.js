@@ -174,7 +174,14 @@ class ParkingAPIXML {
         if (result.success) {
             console.log(`[getEnhancedContractDetails] Response structure:`, result.data);
             
-            // Check if we got the XML preview
+            // Check if we got a message or XML preview
+            if (result.data && result.data.message) {
+                console.log(`\n${'='.repeat(60)}`);
+                console.log(`📋 CONTRACT ${contractId} - MESSAGE: ${result.data.message}`);
+                console.log(`📋 ENDPOINT WAS: ${result.data.endpoint}`);
+                console.log(`${'='.repeat(60)}\n`);
+            }
+            
             if (result.data && result.data.xml_preview) {
                 console.log(`\n${'='.repeat(60)}`);
                 console.log(`📋 CONTRACT ${contractId} - GOT XML PREVIEW!`);
