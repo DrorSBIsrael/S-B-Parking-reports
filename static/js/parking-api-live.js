@@ -390,7 +390,8 @@ class ParkingAPIXML {
                 vehicleNum: consumer.vehicleNum || '',
                 hasFullDetails: false,
                 isLargeCompany: isLargeCompany,
-                contractId: companyId
+                contractId: companyId,
+                companyNum: companyId  // Add company number for display
             }));
             
             // Return basic data immediately
