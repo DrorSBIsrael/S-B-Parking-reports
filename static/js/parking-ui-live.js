@@ -492,71 +492,11 @@ class ParkingUIIntegrationXML {
                 console.log(`Company ${company.id} - Enhanced contract data received:`, contractData);
                 console.log(`Company ${company.id} - Full structure:`, JSON.stringify(contractData, null, 2));
                 
-                // Use totalVehicles from enhanced API if available
-                let totalVehicles = contractData.totalVehicles || 0;
+                // DON'T USE totalVehicles - removed from API as it's not accurate
+                // We'll count actual subscribers later when we fetch them
                 
-                // If not available, try to calculate from consumers data
-                if (!totalVehicles && contractData.consumer) {
-                    // Note: API returns 'consumer' not 'consumers'
-                    const consumers = Array.isArray(contractData.consumer) ? contractData.consumer : [contractData.consumer];
-                    consumers.forEach(consumer => {
-                        // Count non-empty vehicle fields
-                        if (consumer.lpn1 && consumer.lpn1.trim() !== '') totalVehicles++;
-                        if (consumer.lpn2 && consumer.lpn2.trim() !== '') totalVehicles++;
-                        if (consumer.lpn3 && consumer.lpn3.trim() !== '') totalVehicles++;
-                    });
-                    console.log(`Company ${company.id} - Counted ${totalVehicles} vehicles from ${consumers.length} subscribers`);
-                }
-                
-                // If still no vehicle data, check if data is in XML structure format
-                if (totalVehicles === 0) {
-                    // Try to extract from XML structure (data comes as {#text: "value"})
-                    const xmlSubscribers = contractData.subscribers_count?.['#text'] || 
-                                         contractData.contract?.subscribers_count?.['#text'] || 
-                                         0;
-                    const xmlVehicles = contractData.vehicles_count?.['#text'] || 
-                                      contractData.contract?.vehicles_count?.['#text'] || 
-                                      0;
-                    
-                    if (xmlSubscribers || xmlVehicles) {
-                        console.log(`Company ${company.id} - Found XML data: ${xmlSubscribers} subscribers, ${xmlVehicles} vehicles`);
-                        totalVehicles = parseInt(xmlVehicles) || Math.round(parseInt(xmlSubscribers) * 2);
-                        
-                        // Update the company object with actual counts
-                        company.subscribersCount = parseInt(xmlSubscribers) || company.subscribersCount;
-                    } else {
-                        // Fallback to estimation
-                        const subscriberCount = contractData.consumerCount || contractData.activeConsumers || company.subscribersCount || 0;
-                        totalVehicles = Math.round(subscriberCount * 2); // Estimate 2 vehicles per subscriber
-                        console.log(`Company ${company.id} - Estimated ${totalVehicles} vehicles from ${subscriberCount} subscribers`);
-                    }
-                }
-                
-                // Update subscriber count if we have it from enhanced API or XML
-                const finalSubscriberCount = company.subscribersCount || 
-                                           contractData.consumerCount || 
-                                           contractData.activeConsumers || 
-                                           0;
-                
-                if (finalSubscriberCount > 0) {
-                    // Update subscribers count directly by ID
-                    const subscribersEl = document.getElementById(`subscribers-${company.id}`);
-                    if (subscribersEl) {
-                        subscribersEl.textContent = finalSubscriberCount;
-                        console.log(`Updated subscribers for company ${company.id}: ${finalSubscriberCount}`);
-                    } else {
-                        console.log(`Could not find subscribers element for company ${company.id}`);
-                    }
-                }
-                
-                // Update vehicles count
-                const vehiclesEl = document.getElementById(`vehicles-${company.id}`);
-                if (vehiclesEl) {
-                    vehiclesEl.textContent = totalVehicles || '0';
-                    console.log(`✅ Updated vehicles for company ${company.id}: ${totalVehicles}`);
-                } else {
-                    console.log(`⚠️ Could not find vehicles element for company ${company.id}`);
-                }
+                // For now, don't update subscriber count here - will be done when fetching actual subscribers
+                console.log(`Company ${company.id} - Contract detail received, pooling data available`)
                 
                 // Process facilities data - check for pooling data!
                 let facilityData = null;
@@ -576,19 +516,9 @@ class ParkingUIIntegrationXML {
                     console.log(`Company ${company.id} - Full contractData:`, contractData);
                 }
                 
-                // Also use consumerCount and totalVehicles if available
-                if (contractData.consumerCount) {
-                    console.log(`Company ${company.id} - Consumer count: ${contractData.consumerCount}`);
-                    const subscribersEl = document.getElementById(`subscribers-${company.id}`);
-                    if (subscribersEl) {
-                        subscribersEl.textContent = contractData.consumerCount;
-                    }
-                }
-                
-                if (contractData.totalVehicles) {
-                    console.log(`Company ${company.id} - Total vehicles: ${contractData.totalVehicles}`);
-                    totalVehicles = contractData.totalVehicles;
-                }
+                // DON'T use consumerCount from pooling - it's not accurate
+                // We'll count actual subscribers when we fetch them
+                // totalVehicles removed completely from API
                 
                 if (facilityData) {
                     const facilities = Array.isArray(facilityData) ? facilityData : [facilityData];
@@ -945,6 +875,13 @@ class ParkingUIIntegrationXML {
                 onBasicLoaded: (basicSubscribers) => {
                     console.log(`[UI] Displaying ${basicSubscribers.length} subscribers (basic data)`);
                     this.subscribers = basicSubscribers;
+                    
+                    // Update the actual subscriber count in the company card
+                    const subscribersEl = document.getElementById(`subscribers-${company.id}`);
+                    if (subscribersEl) {
+                        subscribersEl.textContent = basicSubscribers.length;
+                        console.log(`✅ Updated actual subscriber count for company ${company.id}: ${basicSubscribers.length}`);
+                    }
                     
                     // Get company name and display immediately
                     this.updateCompanyInfo();
