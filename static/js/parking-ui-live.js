@@ -681,40 +681,28 @@ class ParkingUIIntegrationXML {
                         }
                     }
                 } else {
-                    // No facility data - use default values for now
-                    console.log(`Company ${company.id} - No facility data found, using defaults`);
+                    // No facility data found
+                    console.log(`Company ${company.id} - ⚠️⚠️⚠️ NO FACILITY DATA FOUND`);
+                    console.log(`Company ${company.id} - Full response was:`, contractData);
+                    
                     const presentEl = document.getElementById(`present-${company.id}`);
                     const maxEl = document.getElementById(`max-${company.id}`);
                     
-                    // Use default values for display
-                    let maxValue = "10";
-                    let presentValue = "5";
-                    
-                    console.log(`Company ${company.id} - Using default data: max=${maxValue}, present=${presentValue}`);
-                    
+                    // Show real data: 0 if no data
                     if (presentEl) {
-                        presentEl.textContent = presentValue;
-                        console.log(`Updated present for company ${company.id}: ${presentValue}`);
-                    } else {
-                        console.log(`Could not find present element for company ${company.id}`);
+                        presentEl.textContent = "?";
+                        console.log(`Company ${company.id} - No data: showing ? for present`);
                     }
-                    if (maxEl) maxEl.textContent = maxValue;
+                    if (maxEl) {
+                        maxEl.textContent = "?";
+                        console.log(`Company ${company.id} - No data: showing ? for max`);
+                    }
                     
-                    // Update occupancy bar based on these values
-                    const max = parseInt(maxValue) || 0;
-                    const present = parseInt(presentValue) || 0;
-                    const occupancy = max > 0 ? Math.round((present / max) * 100) : 0;
+                    // Hide occupancy bar when no data
                     const occupancyBar = document.getElementById(`occupancy-${company.id}`);
                     if (occupancyBar) {
-                        occupancyBar.style.width = `${occupancy}%`;
-                        // Color based on occupancy
-                        if (occupancy > 80) {
-                            occupancyBar.style.background = '#dc3545'; // Red
-                        } else if (occupancy > 60) {
-                            occupancyBar.style.background = '#ffc107'; // Yellow
-                        } else {
-                            occupancyBar.style.background = '#28a745'; // Green
-                        }
+                        occupancyBar.style.width = `0%`;
+                        occupancyBar.style.background = '#ccc';
                     }
                 }
             } else {
