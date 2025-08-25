@@ -877,10 +877,10 @@ class ParkingUIIntegrationXML {
                     this.subscribers = basicSubscribers;
                     
                     // Update the actual subscriber count in the company card
-                    const subscribersEl = document.getElementById(`subscribers-${company.id}`);
+                    const subscribersEl = document.getElementById(`subscribers-${this.currentContract.id}`);
                     if (subscribersEl) {
                         subscribersEl.textContent = basicSubscribers.length;
-                        console.log(`✅ Updated actual subscriber count for company ${company.id}: ${basicSubscribers.length}`);
+                        console.log(`✅ Updated actual subscriber count for company ${this.currentContract.id}: ${basicSubscribers.length}`);
                     }
                     
                     // Get company name and display immediately
