@@ -3295,7 +3295,7 @@ def company_manager_proxy():
         elif endpoint == 'consumers' or endpoint == 'GetConsumerList':
             # Always get all consumers and filter client-side
             # The contracts/{id}/consumers endpoint seems to not work properly
-            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
+                url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
             print(f"   🔍 Getting ALL consumers (will filter client-side)")
             method = 'GET'  # תמיד GET למנויים
         elif endpoint.startswith('consumers/'):
@@ -3377,8 +3377,34 @@ def company_manager_proxy():
                         response.encoding = 'utf-8'
                         root = ET.fromstring(response.text.encode('utf-8'))
                         
-                        # חפש contracts/consumers
-                        if 'contracts' in endpoint or 'contract' in endpoint.lower():
+                        # Check for detail endpoints FIRST
+                        if '/detail' in endpoint:
+                            # This is a detail request - handle it specially
+                            if 'consumer' in endpoint:
+                                # Consumer detail
+                                print(f"   🔍 Parsing CONSUMER DETAIL XML response")
+                                print(f"   🔍 Endpoint: {endpoint}")
+                                print(f"   🔍 First 500 chars of XML: {response.text[:500]}")
+                                
+                                # Parse the consumer detail
+                                consumer_detail = {}
+                                # TODO: Implement proper consumer detail parsing
+                                
+                                return jsonify({'success': True, 'data': consumer_detail})
+                            elif 'contracts' in endpoint or 'contract' in endpoint:
+                                # Contract detail
+                                print(f"\n{'='*80}")
+                                print(f"   🔍 CONTRACT DETAIL - PARSING XML")
+                                print(f"   📥 Endpoint: {endpoint}")
+                                print(f"   📥 Response length: {len(response.text)} chars")
+                                print(f"   📥 First 1000 chars of XML:")
+                                print(f"{'='*80}")
+                                print(response.text[:1000])
+                                print(f"{'='*80}\n")
+                                # Parse contract detail with pooling data here
+                                # ... (rest of the detail parsing code will be here)
+                                return jsonify({'success': True, 'data': {'message': 'Detail endpoint reached!', 'xml_preview': response.text[:500]}})
+                        elif 'contracts' in endpoint or 'contract' in endpoint.lower():
                             contracts = []
                             # חפש contract elements בכל namespaces
                             for contract in root.findall('.//{http://gsph.sub.com/cust/types}contract'):
@@ -3451,7 +3477,7 @@ def company_manager_proxy():
                                             child_data[subtag] = subchild.text
                                         consumer_data[tag] = child_data
                                     else:
-                                        consumer_data[tag] = child.text
+                                    consumer_data[tag] = child.text
                                 consumers.append(consumer_data)
                             
                             # If payload has contractId, filter consumers
@@ -3507,20 +3533,13 @@ def company_manager_proxy():
                             
                             return jsonify({'success': True, 'data': consumer_detail})
                         elif '/detail' in endpoint and 'contracts' in endpoint:
-                            # Also write to file for easier access
-                            with open('flask_detail_log.txt', 'a', encoding='utf-8') as log_file:
-                                log_file.write(f"\n{'='*80}\n")
-                                log_file.write(f"   🔍 CONTRACT DETAIL REQUEST: {endpoint}\n")
-                                log_file.write(f"   📥 RAW XML RESPONSE (full):\n")
-                                log_file.write(f"{'='*80}\n")
-                                log_file.write(response.text + '\n')
-                                log_file.write(f"{'='*80}\n\n")
-                            
                             print(f"\n{'='*80}")
-                            print(f"   🔍 CONTRACT DETAIL REQUEST: {endpoint}")
-                            print(f"   📥 RAW XML RESPONSE (full):")
+                            print(f"   🔍 CONTRACT DETAIL - PARSING XML")
+                            print(f"   📥 Endpoint: {endpoint}")
+                            print(f"   📥 Response length: {len(response.text)} chars")
+                            print(f"   📥 First 1000 chars of XML:")
                             print(f"{'='*80}")
-                            print(response.text)
+                            print(response.text[:1000])
                             print(f"{'='*80}\n")
                             # Parse contract detail with pooling data
                             def parse_element(element, preserve_text=False):
@@ -4836,4 +4855,3 @@ else:
     if EMAIL_MONITORING_AVAILABLE:
         print("📧 Initializing email monitoring for production...")
         start_background_email_monitoring()
-
