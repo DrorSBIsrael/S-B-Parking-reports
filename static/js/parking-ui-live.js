@@ -174,13 +174,13 @@ class ParkingUIIntegrationXML {
                 
                 console.log(`[loadCompanies] Found ${parkings.length} parkings:`, parkings);
                 
-                // Display parkings as cards
-                this.displayParkings(parkings);
-                
-                // If only one parking, auto-select it
+                // If only one parking, auto-select it (without displaying it)
                 if (parkings.length === 1) {
                     console.log('[loadCompanies] Auto-selecting single parking:', parkings[0]);
                     await this.selectParking(parkings[0]);
+                } else {
+                    // Display parkings as cards only if multiple
+                    this.displayParkings(parkings);
                 }
                 
 
@@ -267,6 +267,17 @@ class ParkingUIIntegrationXML {
      */
     async selectParking(parking) {
         console.log('[selectParking] Selected parking:', parking);
+        
+        // Show loading message immediately
+        const companyList = document.getElementById('companyList');
+        if (companyList) {
+            companyList.innerHTML = `
+                <div style="text-align: center; padding: 50px; color: #666;">
+                    <div style="font-size: 48px; margin-bottom: 10px;">⏳</div>
+                    <div style="font-size: 18px;">טוען חברות מ${parking.name}...</div>
+                </div>
+            `;
+        }
         
         // Set the current parking in API
         this.api.setCurrentParking(parking.id);
@@ -425,7 +436,7 @@ class ParkingUIIntegrationXML {
             // Start with basic info
             card.innerHTML = `
                 <div class="company-header">
-                <h3>${company.name || company.companyName}</h3>
+                    <h3>${company.name || company.companyName} <span style="color: #666; font-size: 0.9em;">[${company.id}]</span></h3>
                     <span class="company-number">#${company.id}</span>
                 </div>
                 <div class="stats-row">
@@ -476,7 +487,8 @@ class ParkingUIIntegrationXML {
             const result = await this.api.getEnhancedContractDetails(company.id);
             
             if (result.success && result.data) {
-                const contractData = result.data;
+                // Handle both array and single object responses
+                let contractData = Array.isArray(result.data) ? result.data[0] : result.data;
                 console.log(`Company ${company.id} - Enhanced contract data received:`, contractData);
                 console.log(`Company ${company.id} - Full structure:`, JSON.stringify(contractData, null, 2));
                 
@@ -549,19 +561,28 @@ class ParkingUIIntegrationXML {
                 // Process facilities data - check for pooling data!
                 let facilityData = null;
                 
-                // Check for pooling.poolingDetail (this is where the data actually is!)
+                // Check for pooling data in various locations
                 if (contractData.pooling && contractData.pooling.poolingDetail) {
                     facilityData = contractData.pooling.poolingDetail;
                     console.log(`Company ${company.id} - Found facility data in pooling.poolingDetail:`, facilityData);
-                } else if (contractData.pooling && contractData.pooling.poolingDetail) {
-                    // Sometimes poolingDetail might be nested differently
-                    facilityData = contractData.pooling.poolingDetail;
-                    console.log(`Company ${company.id} - Found facility data in alternate pooling structure:`, facilityData);
-                } else if (directResult.success && directResult.data && directResult.data.pooling && directResult.data.pooling.poolingDetail) {
-                    facilityData = directResult.data.pooling.poolingDetail;
-                    console.log(`Company ${company.id} - Found facility data in direct response pooling:`, facilityData);
-                } else {
-                    console.log(`Company ${company.id} - No pooling data found in response:`, contractData);
+                } else if (contractData.poolingDetail) {
+                    // Sometimes poolingDetail is at the root level
+                    facilityData = contractData.poolingDetail;
+                    console.log(`Company ${company.id} - Found facility data at root level:`, facilityData);
+                } else if (directResult.success && directResult.data) {
+                    // Check direct result
+                    const directData = Array.isArray(directResult.data) ? directResult.data[0] : directResult.data;
+                    if (directData.pooling && directData.pooling.poolingDetail) {
+                        facilityData = directData.pooling.poolingDetail;
+                        console.log(`Company ${company.id} - Found facility data in direct response:`, facilityData);
+                    } else if (directData.poolingDetail) {
+                        facilityData = directData.poolingDetail;
+                        console.log(`Company ${company.id} - Found facility data in direct response root:`, facilityData);
+                    }
+                }
+                
+                if (!facilityData) {
+                    console.log(`Company ${company.id} - No pooling data found. Contract data keys:`, Object.keys(contractData));
                 }
                 
                 if (facilityData) {
@@ -1029,7 +1050,7 @@ class ParkingUIIntegrationXML {
                     // Check if this is a large company
                     const isLargeCompany = this.subscribers.length > 300;
                     const statusText = isLargeCompany ? ' 🚀 מצב מהיר' : '';
-                    companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''}${statusText})`;
+                    companyNameElement.textContent = `- ${companyName} [${this.selectedCompany.id}] (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''}${statusText})`;
                     
                     // Add tooltip for large companies
                     if (isLargeCompany) {
@@ -1055,7 +1076,7 @@ class ParkingUIIntegrationXML {
             // Check if this is a large company
             const isLargeCompany = this.subscribers.length > 300;
             const statusText = isLargeCompany ? ' 🚀 מצב מהיר' : '';
-            companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''}${statusText})`;
+            companyNameElement.textContent = `- ${companyName} [${this.selectedCompany.id}] (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''}${statusText})`;
             
             // Add tooltip for large companies
             if (isLargeCompany) {
