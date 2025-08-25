@@ -3317,6 +3317,7 @@ def company_manager_proxy():
                     clean_endpoint = f"contracts/{contract_id}/detail"
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{clean_endpoint}"
             method = 'GET'
+            print(f"   🔍 DETAIL REQUEST: {url}")
             # Getting contract details with pooling data
         elif 'CustomerMediaWebService' in endpoint:
             # אם כבר יש CustomerMediaWebService ב-endpoint
@@ -3358,6 +3359,8 @@ def company_manager_proxy():
                 return jsonify({'success': False, 'message': 'שיטה לא נתמכת'}), 400
             
             # Response received
+            print(f"   📦 Response status: {response.status_code}")
+            print(f"   📦 Response headers: {response.headers.get('Content-Type')}")
             
             # החזרת התוצאה
             if response.status_code == 200:
@@ -3492,7 +3495,20 @@ def company_manager_proxy():
                             
                             # Returning consumers from XML
                             return jsonify({'success': True, 'data': consumers})
-                        elif '/detail' in endpoint:
+                        elif '/detail' in endpoint and 'consumer' in endpoint:
+                            # Parse consumer DETAIL from XML
+                            print(f"   🔍 Parsing CONSUMER DETAIL XML response")
+                            print(f"   🔍 Endpoint: {endpoint}")
+                            print(f"   🔍 First 500 chars of XML: {response.text[:500]}")
+                            
+                            # Parse the consumer detail
+                            consumer_detail = {}
+                            # TODO: Implement proper consumer detail parsing
+                            
+                            return jsonify({'success': True, 'data': consumer_detail})
+                        elif '/detail' in endpoint and 'contracts' in endpoint:
+                            print(f"   🔍 Parsing CONTRACT DETAIL XML response")
+                            print(f"   🔍 First 500 chars of XML: {response.text[:500]}")
                             # Parse contract detail with pooling data
                             def parse_element(element, preserve_text=False):
                                 """Recursively parse XML element to dict"""
@@ -3551,10 +3567,27 @@ def company_manager_proxy():
                                         
                                 return result
                             
+                            # Check root tag
+                            print(f"   📊 Root tag: {root.tag}")
+                            print(f"   📊 Root children: {[child.tag for child in root]}")
+                            
                             contract_detail = parse_element(root)
                             
                             # Debug: print the parsed structure to see what we got
-                            print(f"   📊 Parsed contract detail structure: {json.dumps(contract_detail, indent=2, ensure_ascii=False)[:500]}")
+                            print(f"   📊 Parsed contract detail - keys: {list(contract_detail.keys()) if isinstance(contract_detail, dict) else 'NOT A DICT'}")
+                            
+                            # Log only first 2000 chars to avoid huge logs
+                            full_json = json.dumps(contract_detail, indent=2, ensure_ascii=False)
+                            print(f"   📊 Structure preview (first 2000 chars): {full_json[:2000]}")
+                            
+                            # Check if we have the critical fields
+                            if isinstance(contract_detail, dict):
+                                print(f"   ✅ Has 'pooling'? {'pooling' in contract_detail}")
+                                print(f"   ✅ Has 'consumerCount'? {'consumerCount' in contract_detail}")
+                                print(f"   ✅ Has 'totalVehicles'? {'totalVehicles' in contract_detail}")
+                                
+                                if 'pooling' in contract_detail:
+                                    print(f"   📊 Pooling data: {contract_detail['pooling']}")
                             
                             # Calculate summary data from pooling if available
                             # Check for pooling in different possible locations
@@ -3607,7 +3640,8 @@ def company_manager_proxy():
                                     ]
                                 }
                             
-                            # Parsed contract detail with pooling data
+                            # Make sure we're returning the complete data including pooling
+                            print(f"   🚀 Returning contract detail with pooling to client")
                             return jsonify({'success': True, 'data': contract_detail})
                         else:
                             # החזר כ-raw XML אם לא מזהים את הסוג
