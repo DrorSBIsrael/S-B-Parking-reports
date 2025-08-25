@@ -3597,8 +3597,6 @@ def company_manager_proxy():
                             # Check if we have the critical fields
                             if isinstance(contract_detail, dict):
                                 print(f"   ✅ Has 'pooling'? {'pooling' in contract_detail}")
-                                print(f"   ✅ Has 'consumerCount'? {'consumerCount' in contract_detail}")
-                                print(f"   ✅ Has 'totalVehicles'? {'totalVehicles' in contract_detail}")
                                 
                                 if 'pooling' in contract_detail:
                                     print(f"   📊 Pooling data: {contract_detail['pooling']}")
@@ -3634,10 +3632,9 @@ def company_manager_proxy():
                                         if detail.get('facility') == '0':
                                             consumer_count = present
                                 
-                                # Add calculated totals to response
-                                contract_detail['consumerCount'] = consumer_count if consumer_count else total_present
-                                contract_detail['totalVehicles'] = total_max
-                                print(f"   📊 Calculated: consumerCount={consumer_count}, totalVehicles={total_max}")
+                                # Don't add consumerCount here - will be calculated from actual consumers
+                                # Remove totalVehicles as it's not accurate
+                                print(f"   📊 Facility data: presentCounter={total_present}, maxCounter={total_max}")
                             else:
                                 print(f"   ⚠️ No pooling data found in contract detail")
                                 print(f"   ⚠️ Contract detail structure: {json.dumps(contract_detail, indent=2, ensure_ascii=False)}")
