@@ -3507,6 +3507,15 @@ def company_manager_proxy():
                             
                             return jsonify({'success': True, 'data': consumer_detail})
                         elif '/detail' in endpoint and 'contracts' in endpoint:
+                            # Also write to file for easier access
+                            with open('flask_detail_log.txt', 'a', encoding='utf-8') as log_file:
+                                log_file.write(f"\n{'='*80}\n")
+                                log_file.write(f"   🔍 CONTRACT DETAIL REQUEST: {endpoint}\n")
+                                log_file.write(f"   📥 RAW XML RESPONSE (full):\n")
+                                log_file.write(f"{'='*80}\n")
+                                log_file.write(response.text + '\n')
+                                log_file.write(f"{'='*80}\n\n")
+                            
                             print(f"\n{'='*80}")
                             print(f"   🔍 CONTRACT DETAIL REQUEST: {endpoint}")
                             print(f"   📥 RAW XML RESPONSE (full):")
@@ -3635,7 +3644,17 @@ def company_manager_proxy():
                             
                             # Make sure we're returning the complete data including pooling
                             print(f"   🚀 Returning contract detail with pooling to client")
-                            return jsonify({'success': True, 'data': contract_detail})
+                            
+                            # ALSO return the raw XML for debugging
+                            return jsonify({
+                                'success': True, 
+                                'data': contract_detail,
+                                'debug': {
+                                    'raw_xml': response.text[:5000],  # First 5000 chars of XML
+                                    'parsed_keys': list(contract_detail.keys()) if isinstance(contract_detail, dict) else 'NOT_DICT',
+                                    'has_pooling': 'pooling' in contract_detail if isinstance(contract_detail, dict) else False
+                                }
+                            })
                         else:
                             # החזר כ-raw XML אם לא מזהים את הסוג
                             print(f"   ⚠️ Unknown XML type, returning raw")
