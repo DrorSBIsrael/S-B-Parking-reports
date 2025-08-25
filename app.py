@@ -3296,8 +3296,8 @@ def company_manager_proxy():
             # Always get all consumers and filter client-side
             # The contracts/{id}/consumers endpoint seems to not work properly
                 url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
-            print(f"   🔍 Getting ALL consumers (will filter client-side)")
-            method = 'GET'  # תמיד GET למנויים
+                print(f"   🔍 Getting ALL consumers (will filter client-side)")
+                method = 'GET'  # תמיד GET למנויים
         elif endpoint.startswith('consumers/'):
             # Alternative format: consumers/{contractId}
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
@@ -3371,6 +3371,9 @@ def company_manager_proxy():
                 if 'xml' in content_type.lower() or response.text.startswith('<?xml'):
                     # פרש XML לJSON
                     # Got XML response, parsing
+                    print(f"   🔍 XML PARSER - Endpoint: {endpoint}")
+                    print(f"   🔍 XML PARSER - '/detail' in endpoint? {'/detail' in endpoint}")
+                    
                     try:
                         import xml.etree.ElementTree as ET
                         # Fix encoding issues
@@ -3378,7 +3381,10 @@ def company_manager_proxy():
                         root = ET.fromstring(response.text.encode('utf-8'))
                         
                         # Check for detail endpoints FIRST
+                        print(f"   🔍 CHECKING: Is '/detail' in '{endpoint}'? {'/detail' in endpoint}")
+                        
                         if '/detail' in endpoint:
+                            print(f"   ✅ DETAIL ENDPOINT DETECTED!")
                             # This is a detail request - handle it specially
                             if 'consumer' in endpoint:
                                 # Consumer detail
@@ -3403,7 +3409,7 @@ def company_manager_proxy():
                                 print(f"{'='*80}\n")
                                 # Parse contract detail with pooling data here
                                 # ... (rest of the detail parsing code will be here)
-                                return jsonify({'success': True, 'data': {'message': 'Detail endpoint reached!', 'xml_preview': response.text[:500]}})
+                                return jsonify({'success': True, 'data': {'message': 'Detail endpoint reached!', 'xml_preview': response.text[:500], 'endpoint': endpoint}})
                         elif 'contracts' in endpoint or 'contract' in endpoint.lower():
                             contracts = []
                             # חפש contract elements בכל namespaces
@@ -3477,7 +3483,7 @@ def company_manager_proxy():
                                             child_data[subtag] = subchild.text
                                         consumer_data[tag] = child_data
                                     else:
-                                    consumer_data[tag] = child.text
+                                        consumer_data[tag] = child.text
                                 consumers.append(consumer_data)
                             
                             # If payload has contractId, filter consumers
