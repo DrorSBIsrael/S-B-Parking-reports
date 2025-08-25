@@ -1,5 +1,5 @@
 /**
- * Parking API v2 -  Complete version with all methods
+ * Parking API v2 - Complete version with all methods
  */
 
 class ParkingAPIXML {
