@@ -222,6 +222,11 @@ class ParkingAPIXML {
             let consumers = Array.isArray(result.data) ? result.data : [result.data];
             console.log(`[getConsumers] Got ${consumers.length} consumers from server`);
             
+            // Debug: Show first consumer to see what fields we have
+            if (consumers.length > 0) {
+                console.log(`[getConsumers] First consumer data:`, consumers[0]);
+            }
+            
             // If we got too many consumers, it might mean the server doesn't support filtering
             // In that case, we'll need to filter client-side
             if (consumers.length > 1000) {
@@ -375,16 +380,45 @@ class ParkingAPIXML {
                 console.log(`[Progressive] Small company - will load details in background`);
             }
             
-            // Map basic data
+            // Map ALL available data from consumer list
             const basicSubscribers = finalConsumers.map(consumer => ({
+                // IDs
                 id: consumer.id || consumer.subscriberNum,
                 subscriberNum: consumer.id || consumer.subscriberNum,
-                lastName: consumer.name || consumer.lastName || '',
-                vehicleNum: consumer.vehicleNum || '',
-                hasFullDetails: false,
-                isLargeCompany: isLargeCompany,
                 contractId: companyId,
-                companyNum: companyId  // Add company number for display
+                companyNum: companyId,
+                
+                // Names
+                firstName: consumer.firstName || consumer.name?.split(' ')[0] || '',
+                lastName: consumer.lastName || consumer.name || '',
+                name: consumer.name || '',
+                
+                // Vehicles
+                vehicleNum: consumer.vehicleNum || consumer.lpn1 || '',
+                lpn1: consumer.lpn1 || consumer.vehicleNum || '',
+                lpn2: consumer.lpn2 || '',
+                lpn3: consumer.lpn3 || '',
+                vehicle1: consumer.lpn1 || consumer.vehicleNum || '',
+                vehicle2: consumer.lpn2 || '',
+                vehicle3: consumer.lpn3 || '',
+                
+                // Dates
+                validFrom: consumer.xValidFrom || consumer.validFrom || '2024-01-01',
+                validUntil: consumer.xValidUntil || consumer.validUntil || '2030-12-31',
+                xValidFrom: consumer.xValidFrom || consumer.validFrom || '2024-01-01',
+                xValidUntil: consumer.xValidUntil || consumer.validUntil || '2030-12-31',
+                
+                // Other fields
+                tagNum: consumer.tagNum || consumer.cardNum || '',
+                profile: consumer.profile || consumer.extCardProfile || '0',
+                extCardProfile: consumer.extCardProfile || consumer.profile || '0',
+                facility: consumer.facility || '0',
+                filialId: consumer.filialId || '2240',
+                
+                // Status
+                presence: consumer.presence || false,
+                hasFullDetails: true,  // We have all the data we need!
+                isLargeCompany: isLargeCompany
             }));
             
             // Return basic data immediately
