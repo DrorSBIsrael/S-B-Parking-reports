@@ -291,6 +291,9 @@ class ParkingAPIXML {
     async getConsumerDetail(contractId, consumerId) {
         const parkingId = this.config.currentParkingId;
         
+        console.log(`[getConsumerDetail] Fetching detail for consumer ${consumerId} in contract ${contractId}`);
+        console.log(`[getConsumerDetail] Using parking ID: ${parkingId}`);
+        
         const response = await fetch('/api/company-manager/consumer-detail', {
             method: 'POST',
             headers: {
@@ -303,7 +306,9 @@ class ParkingAPIXML {
             })
         });
         
+        console.log(`[getConsumerDetail] Response status: ${response.status}`);
         const result = await response.json();
+        console.log(`[getConsumerDetail] Result:`, result);
         return result;
     }
     
@@ -443,16 +448,23 @@ class ParkingAPIXML {
             const batchPromises = batch.map(async (consumer) => {
                 try {
                     const consumerId = consumer.id || consumer.subscriberNum;
+                    console.log(`[Background] Loading details for consumer ${consumerId} in contract ${contractId}`);
                     const detailResult = await this.getConsumerDetail(contractId, consumerId);
                     
                     if (detailResult.success) {
+                        console.log(`[Background] Got details for consumer ${consumerId}:`, detailResult.data);
                         // Find and update subscriber
                         const subscriber = subscribers.find(s => s.id === consumerId);
                         if (subscriber) {
                             Object.assign(subscriber, detailResult.data);
                             subscriber.hasFullDetails = true;
                             onDetailLoaded(subscriber);
+                            console.log(`[Background] Updated subscriber ${consumerId} with full details`);
+                        } else {
+                            console.warn(`[Background] Could not find subscriber ${consumerId} to update`);
                         }
+                    } else {
+                        console.warn(`[Background] Failed to get details for consumer ${consumerId}:`, detailResult);
                     }
                 } catch (error) {
                     console.error(`[Background] Error loading details for ${consumer.id}:`, error);
