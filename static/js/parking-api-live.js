@@ -289,27 +289,15 @@ class ParkingAPIXML {
      * Get detailed information for a single consumer
      */
     async getConsumerDetail(contractId, consumerId) {
-        const parkingId = this.config.currentParkingId;
-        
-        console.log(`[getConsumerDetail] Fetching detail for consumer ${consumerId} in contract ${contractId}`);
-        console.log(`[getConsumerDetail] Using parking ID: ${parkingId}`);
-        
-        const response = await fetch('/api/company-manager/consumer-detail', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                parking_id: parkingId,
-                contract_id: contractId,
-                consumer_id: consumerId
-            })
-        });
-        
-        console.log(`[getConsumerDetail] Response status: ${response.status}`);
-        const result = await response.json();
-        console.log(`[getConsumerDetail] Result:`, result);
-        return result;
+        // DISABLED - not needed anymore
+        return { 
+            success: true, 
+            data: { 
+                id: consumerId,
+                contractId: contractId,
+                hasFullDetails: true 
+            } 
+        };
     }
     
     /**
@@ -402,18 +390,9 @@ class ParkingAPIXML {
             // Return basic data immediately
             onBasicLoaded(basicSubscribers);
             
-            // Skip loading details - basic data is sufficient
-            // Details can be loaded on-demand if needed
-            if (isLargeCompany) {
-                // Notify that we're in on-demand mode
-                if (onProgress) {
-                    onProgress({ 
-                        loaded: finalConsumers.length, 
-                        total: finalConsumers.length,
-                        message: `חברה גדולה (${finalConsumers.length} מנויים) - פרטים יטענו בעת מעבר עכבר`
-                    });
-                }
-            }
+            // SKIP ALL DETAIL LOADING - not needed!
+            // The basic data from the list is sufficient
+            console.log('[Progressive] Skipping detail loading - basic data is enough');
             
                         return { 
                 success: true,
@@ -433,63 +412,9 @@ class ParkingAPIXML {
      * Load details in background for small companies
      */
     async loadDetailsInBackground(contractId, consumers, subscribers, options) {
-        const { onDetailLoaded, onProgress } = options;
-        const batchSize = 10; // Load 10 at a time
-        const totalBatches = Math.ceil(consumers.length / batchSize);
-        
-        console.log(`[Background] Loading ${consumers.length} details in ${totalBatches} batches`);
-        
-        for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-            const start = batchIndex * batchSize;
-            const end = Math.min(start + batchSize, consumers.length);
-            const batch = consumers.slice(start, end);
-            
-            // Process batch
-            const batchPromises = batch.map(async (consumer) => {
-                try {
-                    const consumerId = consumer.id || consumer.subscriberNum;
-                    console.log(`[Background] Loading details for consumer ${consumerId} in contract ${contractId}`);
-                    const detailResult = await this.getConsumerDetail(contractId, consumerId);
-                    
-                    if (detailResult.success) {
-                        console.log(`[Background] Got details for consumer ${consumerId}:`, detailResult.data);
-                        // Find and update subscriber
-                        const subscriber = subscribers.find(s => s.id === consumerId);
-                        if (subscriber) {
-                            Object.assign(subscriber, detailResult.data);
-                            subscriber.hasFullDetails = true;
-                            onDetailLoaded(subscriber);
-                            console.log(`[Background] Updated subscriber ${consumerId} with full details`);
-                        } else {
-                            console.warn(`[Background] Could not find subscriber ${consumerId} to update`);
-                        }
-                    } else {
-                        console.warn(`[Background] Failed to get details for consumer ${consumerId}:`, detailResult);
-                    }
-                } catch (error) {
-                    console.error(`[Background] Error loading details for ${consumer.id}:`, error);
-                }
-            });
-            
-            await Promise.all(batchPromises);
-            
-            // Update progress
-            const loaded = Math.min((batchIndex + 1) * batchSize, consumers.length);
-            if (onProgress) {
-                onProgress({ 
-                    loaded, 
-                    total: consumers.length,
-                    percentage: Math.round((loaded / consumers.length) * 100)
-                });
-            }
-            
-            // Small delay between batches
-            if (batchIndex < totalBatches - 1) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-        }
-        
-        console.log('[Background] Finished loading all details');
+        // DISABLED - we don't need details loading, basic data is sufficient
+        console.log('[Background] Detail loading is DISABLED - basic data is enough');
+        return;
     }
     
     // Additional helper methods
