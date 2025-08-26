@@ -955,14 +955,16 @@ class ParkingUIIntegrationXML {
             });
             
             if (!result.success) {
-                // Fallback to mock data
-                console.log('Using mock subscribers data');
-                this.loadMockSubscribers();
+                console.error('Failed to load subscribers:', result);
+                this.showNotification('לא נמצאו מנויים לחברה זו', 'warning');
+                this.subscribers = [];
+                this.displaySubscribers([]);
             }
         } catch (error) {
             console.error('Error loading subscribers:', error);
             this.showNotification('שגיאה בטעינת מנויים', 'error');
-            this.loadMockSubscribers();
+            this.subscribers = [];
+            this.displaySubscribers([]);
         } finally {
             this.hideProgressMessage();
         }
@@ -1463,6 +1465,11 @@ class ParkingUIIntegrationXML {
      * Display subscribers in table
      */
     displaySubscribers(subscribers) {
+        console.log(`[displaySubscribers] Displaying ${subscribers.length} subscribers`);
+        if (subscribers.length > 0) {
+            console.log(`[displaySubscribers] First subscriber:`, subscribers[0]);
+        }
+        
         const tbody = document.getElementById('subscribersTableBody');
         if (!tbody) return;
         
@@ -1507,22 +1514,22 @@ class ParkingUIIntegrationXML {
                 }
             }
             
-            const validUntil = new Date(subscriber.validUntil);
+            const validUntil = new Date(subscriber.validUntil || subscriber.xValidUntil || '2030-12-31');
             const isExpired = validUntil < new Date();
             
             row.innerHTML = `
-                <td>${subscriber.companyNum}</td>
-                <td>${subscriber.companyName || this.currentContract.name}</td>
-                <td>${subscriber.subscriberNum}</td>
+                <td>${subscriber.companyNum || ''}</td>
+                <td>${subscriber.companyName || this.currentContract?.name || ''}</td>
+                <td>${subscriber.subscriberNum || subscriber.id || ''}</td>
                 <td>${subscriber.firstName || ''}</td>
-                <td>${subscriber.lastName}</td>
+                <td>${subscriber.lastName || subscriber.name || ''}</td>
                 <td>${subscriber.tagNum ? `<span class="tag-badge">${subscriber.tagNum}</span>` : ''}</td>
-                <td>${subscriber.vehicle1 || ''}</td>
-                <td>${subscriber.vehicle2 || ''}</td>
-                <td>${subscriber.vehicle3 || ''}</td>
-                <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil) || ''}</td>
-                <td style="color: #888;">${subscriber.profile || ''}</td>
-                <td>${this.formatDate(subscriber.validFrom) || ''}</td>
+                <td>${subscriber.vehicle1 || subscriber.lpn1 || ''}</td>
+                <td>${subscriber.vehicle2 || subscriber.lpn2 || ''}</td>
+                <td>${subscriber.vehicle3 || subscriber.lpn3 || ''}</td>
+                <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil || subscriber.xValidUntil) || ''}</td>
+                <td style="color: #888;">${subscriber.profile || subscriber.extCardProfile || ''}</td>
+                <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                 <td style="text-align: center; font-size: 18px;">${subscriber.presence ? '✅' : '❌'}</td>
             `;
             tbody.appendChild(row);
