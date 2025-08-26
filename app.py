@@ -3466,10 +3466,26 @@ def company_manager_proxy():
                             if payload and 'contractId' in payload:
                                 contract_id = str(payload['contractId'])
                                 print(f"   🔍 Filtering consumers for contract ID: {contract_id}")
+                            
+                            # Debug: Show ALL fields from first few consumers
+                            if consumers and len(consumers) > 0:
+                                print(f"   📋 === FULL CONSUMER DATA FROM XML ===")
+                                print(f"   📋 Total consumers before filtering: {len(consumers)}")
                                 
-                                # Debug: Show first consumer to see structure
-                                if consumers and len(consumers) > 0:
-                                    print(f"   📋 First consumer structure: {consumers[0]}")
+                                # Show first consumer with all fields
+                                consumer = consumers[0]
+                                print(f"   📋 First consumer - ALL FIELDS:")
+                                for key in sorted(consumer.keys()):
+                                    value = consumer.get(key, '')
+                                    if isinstance(value, str) and len(value) > 50:
+                                        value = value[:50] + '...'
+                                    print(f"      {key}: {value}")
+                                
+                                # List all unique fields across all consumers
+                                all_fields = set()
+                                for c in consumers:
+                                    all_fields.update(c.keys())
+                                print(f"   📋 All unique fields found: {sorted(all_fields)}")
                                 
                                 # Filter consumers by contractId - check all possible field names
                                 filtered = []
