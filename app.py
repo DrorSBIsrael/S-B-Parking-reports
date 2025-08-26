@@ -3475,8 +3475,10 @@ def company_manager_proxy():
                                 filtered = []
                                 for c in consumers:
                                     # Check different possible field names for contract association
+                                    # NOTE: The XML returns 'contractid' in lowercase!
                                     possible_contract_fields = [
-                                        c.get('contractId'),
+                                        c.get('contractid'),  # lowercase - this is what XML returns!
+                                        c.get('contractId'),  # camelCase - just in case
                                         c.get('contract'),
                                         c.get('contractNum'),
                                         c.get('contractNumber'),
