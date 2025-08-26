@@ -222,9 +222,20 @@ class ParkingAPIXML {
             let consumers = Array.isArray(result.data) ? result.data : [result.data];
             console.log(`[getConsumers] Got ${consumers.length} consumers from server`);
             
-            // Debug: Show first consumer to see what fields we have
+            // Debug: Show ALL fields from first 3 consumers
             if (consumers.length > 0) {
-                console.log(`[getConsumers] First consumer data:`, consumers[0]);
+                console.log(`[getConsumers] === FULL CONSUMER DATA DEBUG ===`);
+                console.log(`[getConsumers] Total consumers: ${consumers.length}`);
+                
+                // Show first 3 consumers with all fields
+                consumers.slice(0, 3).forEach((consumer, idx) => {
+                    console.log(`[getConsumers] Consumer ${idx + 1}:`, JSON.stringify(consumer, null, 2));
+                });
+                
+                // List all unique fields across all consumers
+                const allFields = new Set();
+                consumers.forEach(c => Object.keys(c).forEach(key => allFields.add(key)));
+                console.log(`[getConsumers] All unique fields found:`, Array.from(allFields).sort());
             }
             
             // If we got too many consumers, it might mean the server doesn't support filtering
@@ -387,6 +398,7 @@ class ParkingAPIXML {
                 subscriberNum: consumer.id || consumer.subscriberNum,
                 contractId: companyId,
                 companyNum: companyId,
+                companyName: callbacks.companyName || '',  // Will be passed from UI
                 
                 // Names
                 firstName: consumer.firstName || consumer.name?.split(' ')[0] || '',
@@ -420,6 +432,12 @@ class ParkingAPIXML {
                 hasFullDetails: true,  // We have all the data we need!
                 isLargeCompany: isLargeCompany
             }));
+            
+            // Debug the mapped data
+            console.log('[Progressive] === MAPPED SUBSCRIBER DATA ===');
+            if (basicSubscribers.length > 0) {
+                console.log('[Progressive] First mapped subscriber:', JSON.stringify(basicSubscribers[0], null, 2));
+            }
             
             // Return basic data immediately
             onBasicLoaded(basicSubscribers);
