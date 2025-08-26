@@ -3430,6 +3430,12 @@ def company_manager_proxy():
                             return jsonify({'success': True, 'data': contracts})
                             
                         elif not is_detail_endpoint and 'consumer' in endpoint.lower():
+                            # Show RAW XML for debugging
+                            print(f"   📄 === RAW XML RESPONSE FOR CONSUMERS ===")
+                            print(f"   📄 First 3000 chars of XML:")
+                            print(response.text[:3000])
+                            print(f"   📄 === END RAW XML ===")
+                            
                             consumers = []
                             # Try to find consumers in different XML structures
                             # First try with namespace
@@ -3439,7 +3445,9 @@ def company_manager_proxy():
                             if not consumer_elements:
                                 consumer_elements = root.findall('.//consumer')
                             
-                            for consumer in consumer_elements:
+                            print(f"   📊 Found {len(consumer_elements)} consumer elements in XML")
+                            
+                            for idx, consumer in enumerate(consumer_elements):
                                 consumer_data = {}
                                 
                                 # Get attributes if exist
@@ -3460,6 +3468,13 @@ def company_manager_proxy():
                                         consumer_data[tag] = child_data
                                     else:
                                         consumer_data[tag] = child.text
+                                
+                                # Debug first 3 consumers
+                                if idx < 3:
+                                    print(f"   📊 Consumer {idx + 1} extracted data:")
+                                    for k, v in consumer_data.items():
+                                        print(f"      {k}: {v}")
+                                
                                 consumers.append(consumer_data)
                             
                             # If payload has contractId, filter consumers
@@ -3526,13 +3541,49 @@ def company_manager_proxy():
                             return jsonify({'success': True, 'data': consumers})
                         elif '/detail' in endpoint and 'consumer' in endpoint:
                             # Parse consumer DETAIL from XML
-                            print(f"   🔍 Parsing CONSUMER DETAIL XML response")
+                            print(f"   🔍 === PARSING CONSUMER DETAIL XML ===")
                             print(f"   🔍 Endpoint: {endpoint}")
-                            print(f"   🔍 First 500 chars of XML: {response.text[:500]}")
+                            print(f"   🔍 FULL XML Response (first 2000 chars):")
+                            print(response.text[:2000])
+                            print(f"   🔍 === END XML ===")
                             
                             # Parse the consumer detail
                             consumer_detail = {}
-                            # TODO: Implement proper consumer detail parsing
+                            
+                            # Try to parse as XML
+                            try:
+                                detail_root = ET.fromstring(response.text)
+                                
+                                # Extract all fields recursively
+                                def extract_fields(element, prefix=''):
+                                    data = {}
+                                    # Add attributes
+                                    for key, value in element.attrib.items():
+                                        clean_key = key.replace('{http://gsph.sub.com/cust/types}', '')
+                                        data[prefix + clean_key] = value
+                                    
+                                    # Add text if exists
+                                    if element.text and element.text.strip():
+                                        return element.text.strip()
+                                    
+                                    # Process children
+                                    for child in element:
+                                        tag = child.tag.replace('{http://gsph.sub.com/cust/types}', '')
+                                        child_data = extract_fields(child, '')
+                                        if child_data:
+                                            data[tag] = child_data
+                                    
+                                    return data if data else None
+                                
+                                consumer_detail = extract_fields(detail_root) or {}
+                                
+                                print(f"   🔍 Extracted consumer detail fields:")
+                                for key, value in consumer_detail.items():
+                                    print(f"      {key}: {value}")
+                                
+                            except Exception as e:
+                                print(f"   ❌ Error parsing consumer detail XML: {e}")
+                                consumer_detail = {'error': str(e)}
                             
                             return jsonify({'success': True, 'data': consumer_detail})
                         elif '/detail' in endpoint and 'contracts' in endpoint:
