@@ -3498,10 +3498,13 @@ def company_manager_proxy():
                                 else:
                                     print(f"   ⚠️ No consumers found for contract {contract_id} after filtering")
                                     print(f"   ⚠️ Total consumers before filter: {len(consumers)}")
-                                    # For now, if filtering fails, return all consumers
-                                    # TODO: Fix filtering once we know the correct field
-                                    print(f"   ⚠️ TEMPORARY: Returning all consumers due to filter failure")
-                                    # consumers = []  # Commented out temporarily
+                                    # Return empty list if no consumers found for this contract
+                                    consumers = []
+                            
+                            # Limit to reasonable number to avoid performance issues
+                            if len(consumers) > 500:
+                                print(f"   ⚠️ Limiting response from {len(consumers)} to 500 consumers")
+                                consumers = consumers[:500]
                             
                             # Returning consumers from XML
                             return jsonify({'success': True, 'data': consumers})
