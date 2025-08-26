@@ -884,6 +884,7 @@ class ParkingUIIntegrationXML {
             // Get subscribers progressively
             const result = await this.api.getSubscribersProgressive(this.currentContract.id, {
                 batchSize: perfConfig.batchSize || 5,
+                companyName: this.currentContract.name || `חברה ${this.currentContract.id}`,  // Pass company name
                 
                 // Callback when basic data is ready
                 onBasicLoaded: (basicSubscribers) => {
