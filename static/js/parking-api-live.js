@@ -305,15 +305,26 @@ class ParkingAPIXML {
      * Get detailed information for a single consumer
      */
     async getConsumerDetail(contractId, consumerId) {
-        // DISABLED - not needed anymore
-        return { 
-            success: true, 
-            data: { 
-                id: consumerId,
-                contractId: contractId,
-                hasFullDetails: true 
-            } 
-        };
+        console.log(`[getConsumerDetail] Getting detail for consumer ${consumerId} in contract ${contractId}`);
+        
+        // Enable detail loading for debugging
+        const endpoint = `consumers/${contractId},${consumerId}/detail`;
+        console.log(`[getConsumerDetail] Calling endpoint: ${endpoint}`);
+        
+        try {
+            const result = await this.makeRequest(endpoint, 'GET');
+            
+            if (result.success && result.data) {
+                console.log(`[getConsumerDetail] Got detail response:`, result);
+        return result;
+            }
+            
+            console.log(`[getConsumerDetail] Failed to get detail:`, result);
+            return { success: false, error: 'Failed to get consumer detail' };
+        } catch (error) {
+            console.error(`[getConsumerDetail] Error:`, error);
+            return { success: false, error: error.message };
+        }
     }
     
     /**
@@ -442,9 +453,30 @@ class ParkingAPIXML {
             // Return basic data immediately
             onBasicLoaded(basicSubscribers);
             
-            // SKIP ALL DETAIL LOADING - not needed!
-            // The basic data from the list is sufficient
-            console.log('[Progressive] Skipping detail loading - basic data is enough');
+            // Load detail for FIRST consumer only (for debugging)
+            if (basicSubscribers.length > 0 && !isLargeCompany) {
+                console.log('[Progressive] Loading detail for first consumer to see full fields...');
+                
+                try {
+                    const firstConsumer = basicSubscribers[0];
+                    const detailResult = await this.getConsumerDetail(
+                        firstConsumer.contractId, 
+                        firstConsumer.id
+                    );
+                    
+                    if (detailResult.success && detailResult.data) {
+                        console.log('=== CONSUMER DETAIL RESPONSE ===');
+                        console.log('Full detail data:', JSON.stringify(detailResult.data, null, 2));
+                        console.log('=== END DETAIL ===');
+                    } else {
+                        console.log('Failed to get detail for first consumer');
+                    }
+                } catch (error) {
+                    console.log('Error loading first consumer detail:', error);
+                }
+            }
+            
+            console.log('[Progressive] Basic data loading complete');
             
                         return { 
                 success: true,
