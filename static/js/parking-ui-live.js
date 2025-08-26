@@ -815,6 +815,8 @@ class ParkingUIIntegrationXML {
      * Update a single subscriber row with new data
      */
     updateSubscriberRow(subscriber, index) {
+        console.log(`[updateSubscriberRow] Updating row ${index} with subscriber:`, subscriber);
+        
         const tbody = document.getElementById('subscribersTableBody');
         if (!tbody) return;
         
@@ -822,35 +824,47 @@ class ParkingUIIntegrationXML {
         if (index >= 0 && index < rows.length) {
             const row = rows[index];
             
-            // Update cells with new data
-            const cells = row.getElementsByTagName('td');
-            if (cells.length >= 5) {
-                cells[0].textContent = subscriber.subscriberNum || '';
-                cells[1].textContent = subscriber.lastName || '';
-                cells[2].textContent = subscriber.vehicleNum || '';
+            // Find row by subscriberNum if index doesn't match
+            const targetRow = row.dataset.subscriberNum === subscriber.subscriberNum ? 
+                row : 
+                Array.from(rows).find(r => r.dataset.subscriberNum === subscriber.subscriberNum);
                 
-                // Update valid until with full details
-                if (subscriber.validUntil) {
-                    const validUntil = new Date(subscriber.validUntil);
-                    const isExpired = validUntil < new Date();
-                    cells[3].innerHTML = `
-                        <span class="${isExpired ? 'text-danger' : ''}">
-                            ${validUntil.toLocaleDateString('he-IL')}
-                        </span>
-                    `;
-                }
-                
-                // Update phone if available
-                if (subscriber.phone) {
-                    cells[4].textContent = subscriber.phone;
-                }
+            if (!targetRow) {
+                console.warn(`[updateSubscriberRow] Could not find row for subscriber ${subscriber.subscriberNum}`);
+                return;
             }
+            
+            console.log(`[updateSubscriberRow] Found row for subscriber ${subscriber.subscriberNum}, updating cells`);
+            
+            // Re-render the entire row with updated data
+            const validUntil = new Date(subscriber.validUntil || subscriber.xValidUntil || '2030-12-31');
+            const isExpired = validUntil < new Date();
+            
+            targetRow.innerHTML = `
+                <td>${subscriber.companyNum || subscriber.contractId || ''}</td>
+                <td>${subscriber.companyName || this.currentContract.name || ''}</td>
+                <td>${subscriber.subscriberNum || subscriber.id || ''}</td>
+                <td>${subscriber.firstName || subscriber.name?.split(' ')[0] || ''}</td>
+                <td>${subscriber.lastName || subscriber.name || ''}</td>
+                <td>${subscriber.tagNum ? `<span class="tag-badge">${subscriber.tagNum}</span>` : ''}</td>
+                <td>${subscriber.lpn1 || subscriber.vehicle1 || ''}</td>
+                <td>${subscriber.lpn2 || subscriber.vehicle2 || ''}</td>
+                <td>${subscriber.lpn3 || subscriber.vehicle3 || ''}</td>
+                <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(validUntil) || ''}</td>
+                <td style="color: #888;">${subscriber.profile || subscriber.extCardProfile || ''}</td>
+                <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
+                <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.presentStatus === 'present' ? '✅' : '❌'}</td>
+            `;
             
             // Remove hover indicator if has full details
             if (subscriber.hasFullDetails) {
-                row.removeAttribute('data-hover-loadable');
-                row.title = '';
+                targetRow.removeAttribute('data-hover-loadable');
+                targetRow.title = '';
+                targetRow.style.opacity = '1';
+                console.log(`[updateSubscriberRow] Subscriber ${subscriber.subscriberNum} now has full details`);
             }
+        } else {
+            console.warn(`[updateSubscriberRow] Index ${index} out of bounds (rows: ${rows.length})`);
         }
     }
     
@@ -977,7 +991,7 @@ class ParkingUIIntegrationXML {
                     // Check if this is a large company
                     const isLargeCompany = this.subscribers.length > 300;
                     const statusText = isLargeCompany ? ' 🚀 מצב מהיר' : '';
-                    companyNameElement.textContent = `- ${companyName} [${this.selectedCompany.id}] (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''}${statusText})`;
+                    companyNameElement.textContent = `- ${companyName} [${this.currentContract.id}] (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''}${statusText})`;
                     
                     // Add tooltip for large companies
                     if (isLargeCompany) {
