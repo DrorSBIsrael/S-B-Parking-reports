@@ -390,8 +390,8 @@ class ParkingAPIXML {
                 companyNum: companyId,
                 companyName: callbacks.companyName || `חברה ${companyId}`,  // Will be passed from UI
                 
-                // Names
-                firstName: consumer.firstName || consumer.name?.split(' ')[0] || '',
+                // Names - don't duplicate if only last name exists
+                firstName: consumer.firstName || '',
                 lastName: consumer.lastName || consumer.name || '',
                 name: consumer.name || '',
                 
@@ -428,9 +428,14 @@ class ParkingAPIXML {
             // Return basic data immediately
             onBasicLoaded(basicSubscribers);
             
-            // For small companies, load ALL details in parallel (much faster!)
+            // Show results immediately, then load details in background
+            console.log('[Progressive] Showing basic data immediately');
+            
+            // For small companies, load details in background after showing basic data
             if (basicSubscribers.length > 0 && basicSubscribers.length <= 20) {
-                console.log(`[Progressive] Loading details for ${basicSubscribers.length} consumers IN PARALLEL...`);
+                // Load details in background AFTER showing the table
+                setTimeout(async () => {
+                    console.log(`[Progressive] Loading details for ${basicSubscribers.length} consumers IN BACKGROUND...`);
                 
                 const detailPromises = basicSubscribers.map(async (subscriber, idx) => {
                     try {
@@ -447,7 +452,7 @@ class ParkingAPIXML {
                             return {
                                 ...subscriber,
                                 // Keep company info
-                                companyName: subscriber.companyName, // Keep the original company name!
+                                companyName: subscriber.companyName || callbacks.companyName || `חברה ${subscriber.contractId}`, // Keep the original company name!
                                 
                                 // Tag and card info
                                 tagNum: detail.identification?.cardno || '',
@@ -500,6 +505,12 @@ class ParkingAPIXML {
                 
                 // Store the detailed data
                 basicSubscribers = detailedSubscribers;
+                
+                // Hide loading message  
+                if (callbacks.onProgress) {
+                    callbacks.onProgress({ percent: 100 });
+                }
+                }, 100); // Small delay to let UI render first
             }
             
             console.log('[Progressive] Basic data loading complete');
