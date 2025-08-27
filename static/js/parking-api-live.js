@@ -305,24 +305,18 @@ class ParkingAPIXML {
      * Get detailed information for a single consumer
      */
     async getConsumerDetail(contractId, consumerId) {
-        console.log(`[getConsumerDetail] Getting detail for consumer ${consumerId} in contract ${contractId}`);
-        
-        // Enable detail loading for debugging
+        // Silently fetch detail - no debug logs for performance
         const endpoint = `consumers/${contractId},${consumerId}/detail`;
-        console.log(`[getConsumerDetail] Calling endpoint: ${endpoint}`);
         
         try {
             const result = await this.makeRequest(endpoint, 'GET');
             
             if (result.success && result.data) {
-                console.log(`[getConsumerDetail] Got detail response:`, result);
         return result;
             }
             
-            console.log(`[getConsumerDetail] Failed to get detail:`, result);
             return { success: false, error: 'Failed to get consumer detail' };
         } catch (error) {
-            console.error(`[getConsumerDetail] Error:`, error);
             return { success: false, error: error.message };
         }
     }
@@ -453,27 +447,75 @@ class ParkingAPIXML {
             // Return basic data immediately
             onBasicLoaded(basicSubscribers);
             
-            // Load detail for FIRST consumer only (for debugging)
-            if (basicSubscribers.length > 0 && !isLargeCompany) {
-                console.log('[Progressive] Loading detail for first consumer to see full fields...');
+            // For small companies, load ALL details in parallel (much faster!)
+            if (basicSubscribers.length > 0 && basicSubscribers.length <= 20) {
+                console.log(`[Progressive] Loading details for ${basicSubscribers.length} consumers IN PARALLEL...`);
                 
-                try {
-                    const firstConsumer = basicSubscribers[0];
-                    const detailResult = await this.getConsumerDetail(
-                        firstConsumer.contractId, 
-                        firstConsumer.id
-                    );
-                    
-                    if (detailResult.success && detailResult.data) {
-                        console.log('=== CONSUMER DETAIL RESPONSE ===');
-                        console.log('Full detail data:', JSON.stringify(detailResult.data, null, 2));
-                        console.log('=== END DETAIL ===');
-                    } else {
-                        console.log('Failed to get detail for first consumer');
+                const detailPromises = basicSubscribers.map(async (subscriber, idx) => {
+                    try {
+                        const detailResult = await this.getConsumerDetail(
+                            subscriber.contractId,
+                            subscriber.id
+                        );
+                        
+                        if (detailResult.success && detailResult.data) {
+                            // Parse the nested structure
+                            const detail = detailResult.data;
+                            
+                            // Extract all fields from the detail response
+                            return {
+                                ...subscriber,
+                                // Tag and card info
+                                tagNum: detail.identification?.cardno || '',
+                                cardno: detail.identification?.cardno || '',
+                                
+                                // Names
+                                firstName: detail.person?.firstName || detail.firstName || subscriber.firstName,
+                                lastName: detail.person?.surname || detail.surname || subscriber.lastName,
+                                
+                                // Vehicles
+                                lpn1: detail.lpn1 || '',
+                                lpn2: detail.lpn2 || '',
+                                lpn3: detail.lpn3 || '',
+                                vehicle1: detail.lpn1 || '',
+                                vehicle2: detail.lpn2 || '',
+                                vehicle3: detail.lpn3 || '',
+                                
+                                // Profile
+                                profile: detail.identification?.usageProfile?.id || '',
+                                profileName: detail.identification?.usageProfile?.name || '',
+                                
+                                // Dates
+                                validFrom: detail.identification?.validFrom || detail.validFrom || subscriber.validFrom,
+                                validUntil: detail.identification?.validUntil || detail.validUntil || subscriber.validUntil,
+                                
+                                // Presence
+                                present: detail.identification?.present === 'true',
+                                presence: detail.identification?.present === 'true',
+                                ignorePresence: detail.identification?.ignorePresence === '1' || detail.ignorePresence === '1',
+                                
+                                // Mark as having full details
+                                hasFullDetails: true
+                            };
+                        }
+                        
+                        return subscriber; // Return original if detail fetch failed
+                    } catch (error) {
+                        console.error(`Error loading detail for consumer ${subscriber.id}:`, error);
+                        return subscriber;
                     }
-                } catch (error) {
-                    console.log('Error loading first consumer detail:', error);
-                }
+                });
+                
+                // Wait for all details to load
+                const detailedSubscribers = await Promise.all(detailPromises);
+                
+                console.log(`[Progressive] Loaded details for ${detailedSubscribers.length} consumers`);
+                
+                // Update the UI with detailed data
+                onBasicLoaded(detailedSubscribers);
+                
+                // Store the detailed data
+                basicSubscribers = detailedSubscribers;
             }
             
             console.log('[Progressive] Basic data loading complete');
