@@ -845,15 +845,15 @@ class ParkingUIIntegrationXML {
                 <td>${subscriber.companyName || this.currentContract.name || ''}</td>
                 <td>${subscriber.subscriberNum || subscriber.id || ''}</td>
                 <td>${subscriber.firstName || subscriber.name?.split(' ')[0] || ''}</td>
-                <td>${subscriber.lastName || subscriber.name || ''}</td>
-                <td>${subscriber.tagNum ? `<span class="tag-badge">${subscriber.tagNum}</span>` : ''}</td>
+                <td>${subscriber.lastName || subscriber.surname || subscriber.name || ''}</td>
+                <td>${subscriber.tagNum || subscriber.cardno ? `<span class="tag-badge">${subscriber.tagNum || subscriber.cardno}</span>` : ''}</td>
                 <td>${subscriber.lpn1 || subscriber.vehicle1 || ''}</td>
                 <td>${subscriber.lpn2 || subscriber.vehicle2 || ''}</td>
                 <td>${subscriber.lpn3 || subscriber.vehicle3 || ''}</td>
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(validUntil) || ''}</td>
-                <td style="color: #888;">${subscriber.profile || subscriber.extCardProfile || ''}</td>
+                <td style="color: #888;" title="${subscriber.profileName || ''}">${subscriber.profile || subscriber.extCardProfile || ''}</td>
                 <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
-                <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.presentStatus === 'present' ? '✅' : '❌'}</td>
+                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present || subscriber.presentStatus === 'present' ? '✅' : '❌'}</td>
             `;
             
             // Remove hover indicator if has full details
@@ -1524,14 +1524,14 @@ class ParkingUIIntegrationXML {
                 <td>${subscriber.subscriberNum || subscriber.id || ''}</td>
                 <td>${subscriber.firstName || ''}</td>
                 <td>${subscriber.lastName || subscriber.name || ''}</td>
-                <td>${subscriber.tagNum ? `<span class="tag-badge">${subscriber.tagNum}</span>` : ''}</td>
+                <td>${subscriber.tagNum || subscriber.cardno ? `<span class="tag-badge">${subscriber.tagNum || subscriber.cardno}</span>` : ''}</td>
                 <td>${subscriber.vehicle1 || subscriber.lpn1 || ''}</td>
                 <td>${subscriber.vehicle2 || subscriber.lpn2 || ''}</td>
                 <td>${subscriber.vehicle3 || subscriber.lpn3 || ''}</td>
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil || subscriber.xValidUntil) || ''}</td>
-                <td style="color: #888;">${subscriber.profile || subscriber.extCardProfile || ''}</td>
+                <td style="color: #888;" title="${subscriber.profileName || ''}">${subscriber.profile || subscriber.extCardProfile || ''}</td>
                 <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
-                <td style="text-align: center; font-size: 18px;">${subscriber.presence ? '✅' : '❌'}</td>
+                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
             tbody.appendChild(row);
         });
