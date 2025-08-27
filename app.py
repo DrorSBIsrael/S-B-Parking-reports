@@ -3178,7 +3178,7 @@ def company_manager_proxy():
     # Debug log מפורט
     print(f"\n{'='*70}")
     print(f"🎯 PROXY ENDPOINT HIT: {request.method}")
-    print(f"🔥 FIXED VERSION v3 - OPTIMIZED PARALLEL LOADING!")
+    print(f"🔥 FIXED VERSION v4 - INSTANT DISPLAY + BACKGROUND LOADING!")
     print(f"⏰ Time: {datetime.now()}")
     print(f"🌐 Host: {request.host}")
     print(f"📍 Remote Address: {request.remote_addr}")
@@ -3300,10 +3300,11 @@ def company_manager_proxy():
             print(f"   📍 CONSUMERS ENDPOINT HIT - v2 DEBUG ACTIVE")
             method = 'GET'  # תמיד GET למנויים
         elif endpoint.startswith('consumers/'):
-            # Alternative format: consumers/{contractId}
+            # Alternative format: consumers/{contractId} or consumers/{contractId},{consumerId}
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
-            method = 'GET'
-            # Getting consumers using alternative format
+            # Keep the original method (could be GET, PUT, DELETE)
+            # method = 'GET' # Don't override the method!
+            print(f"   📍 CONSUMERS endpoint: {endpoint}, method: {method}")
         elif '/detail' in endpoint:
             # Handle both contracts/X/detail AND consumers/X,Y/detail endpoints
             # Remove CustomerMediaWebService prefix if exists
@@ -3540,9 +3541,15 @@ def company_manager_proxy():
                                     consumers = []
                             
                             # Limit to reasonable number to avoid performance issues
-                            if len(consumers) > 500:
-                                print(f"   ⚠️ Limiting response from {len(consumers)} to 500 consumers")
-                                consumers = consumers[:500]
+                            if len(consumers) > 100:
+                                print(f"   ⚠️ WARNING: Got {len(consumers)} consumers total!")
+                                # Only return filtered consumers if we have a filter
+                                if contract_id and filtered:
+                                    consumers = filtered
+                                    print(f"   ✅ Returning only {len(consumers)} filtered consumers")
+                                elif len(consumers) > 500:
+                                    print(f"   ⚠️ Limiting response from {len(consumers)} to 500 consumers")
+                                    consumers = consumers[:500]
                             
                             # Returning consumers from XML
                             return jsonify({'success': True, 'data': consumers})
