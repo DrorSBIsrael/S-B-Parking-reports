@@ -815,7 +815,7 @@ class ParkingUIIntegrationXML {
      * Update a single subscriber row with new data
      */
     updateSubscriberRow(subscriber, index) {
-        console.log(`[updateSubscriberRow] Updating row ${index} with subscriber:`, subscriber);
+        // Skip debug logs for performance
         
         const tbody = document.getElementById('subscribersTableBody');
         if (!tbody) return;
@@ -830,11 +830,8 @@ class ParkingUIIntegrationXML {
                 Array.from(rows).find(r => r.dataset.subscriberNum === subscriber.subscriberNum);
                 
             if (!targetRow) {
-                console.warn(`[updateSubscriberRow] Could not find row for subscriber ${subscriber.subscriberNum}`);
                 return;
             }
-            
-            console.log(`[updateSubscriberRow] Found row for subscriber ${subscriber.subscriberNum}, updating cells`);
             
             // Re-render the entire row with updated data
             const validUntil = new Date(subscriber.validUntil || subscriber.xValidUntil || '2030-12-31');
@@ -861,10 +858,7 @@ class ParkingUIIntegrationXML {
                 targetRow.removeAttribute('data-hover-loadable');
                 targetRow.title = '';
                 targetRow.style.opacity = '1';
-                console.log(`[updateSubscriberRow] Subscriber ${subscriber.subscriberNum} now has full details`);
             }
-        } else {
-            console.warn(`[updateSubscriberRow] Index ${index} out of bounds (rows: ${rows.length})`);
         }
     }
     
@@ -888,7 +882,6 @@ class ParkingUIIntegrationXML {
                 
                 // Callback when basic data is ready
                 onBasicLoaded: (basicSubscribers) => {
-                    console.log(`[UI] Displaying ${basicSubscribers.length} subscribers (basic data)`);
                     this.subscribers = basicSubscribers;
                     
                     // Update the actual subscriber count in the company card
@@ -1466,10 +1459,7 @@ class ParkingUIIntegrationXML {
      * Display subscribers in table
      */
     displaySubscribers(subscribers) {
-        console.log(`[displaySubscribers] Displaying ${subscribers.length} subscribers`);
-        if (subscribers.length > 0) {
-            console.log(`[displaySubscribers] First subscriber:`, subscribers[0]);
-        }
+        // Skip debug logs for performance
         
         const tbody = document.getElementById('subscribersTableBody');
         if (!tbody) return;
