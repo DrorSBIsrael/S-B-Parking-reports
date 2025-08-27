@@ -3178,7 +3178,7 @@ def company_manager_proxy():
     # Debug log מפורט
     print(f"\n{'='*70}")
     print(f"🎯 PROXY ENDPOINT HIT: {request.method}")
-    print(f"🔥 FIXED VERSION v2 - ENHANCED DEBUG WITH XML OUTPUT!")
+    print(f"🔥 FIXED VERSION v3 - OPTIMIZED PARALLEL LOADING!")
     print(f"⏰ Time: {datetime.now()}")
     print(f"🌐 Host: {request.host}")
     print(f"📍 Remote Address: {request.remote_addr}")
