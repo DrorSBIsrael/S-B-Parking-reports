@@ -3178,7 +3178,7 @@ def company_manager_proxy():
     # Debug log מפורט
     print(f"\n{'='*70}")
     print(f"🎯 PROXY ENDPOINT HIT: {request.method}")
-    print(f"🔥 FIXED VERSION - FULL DEBUG LOGGING ENABLED!")
+    print(f"🔥 FIXED VERSION v2 - ENHANCED DEBUG WITH XML OUTPUT!")
     print(f"⏰ Time: {datetime.now()}")
     print(f"🌐 Host: {request.host}")
     print(f"📍 Remote Address: {request.remote_addr}")
@@ -3297,6 +3297,7 @@ def company_manager_proxy():
             # The contracts/{id}/consumers endpoint seems to not work properly
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
             print(f"   🔍 Getting ALL consumers (will filter client-side)")
+            print(f"   📍 CONSUMERS ENDPOINT HIT - v2 DEBUG ACTIVE")
             method = 'GET'  # תמיד GET למנויים
         elif endpoint.startswith('consumers/'):
             # Alternative format: consumers/{contractId}
@@ -3304,21 +3305,27 @@ def company_manager_proxy():
             method = 'GET'
             # Getting consumers using alternative format
         elif '/detail' in endpoint:
-            # Handle contracts/X/detail endpoint - check this BEFORE CustomerMediaWebService
+            # Handle both contracts/X/detail AND consumers/X,Y/detail endpoints
             # Remove CustomerMediaWebService prefix if exists
             clean_endpoint = endpoint.replace('CustomerMediaWebService/', '')
-            # Make sure we have the proper format: contracts/{id}/detail
-            if not clean_endpoint.startswith('contracts/'):
-                # Extract contract ID if endpoint is like "contracts/123/detail"
+            
+            # Check if it's a consumer detail endpoint
+            if 'consumer' in clean_endpoint.lower():
+                # It's a consumer detail - format: consumers/{contractId},{consumerId}/detail
+                # Already in correct format
+                pass
+            elif not clean_endpoint.startswith('contracts/'):
+                # Extract contract ID if endpoint is like "contracts/123/detail" 
                 import re
                 match = re.search(r'(\d+)/detail', clean_endpoint)
                 if match:
                     contract_id = match.group(1)
                     clean_endpoint = f"contracts/{contract_id}/detail"
+            
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{clean_endpoint}"
             method = 'GET'
             print(f"   🔍 DETAIL REQUEST: {url}")
-            # Getting contract details with pooling data
+            print(f"   🔍 Clean endpoint: {clean_endpoint}")
         elif 'CustomerMediaWebService' in endpoint:
             # אם כבר יש CustomerMediaWebService ב-endpoint
             url = f"{protocol}://{ip_address}:{port}/{endpoint}"
