@@ -3178,7 +3178,7 @@ def company_manager_proxy():
     # Debug log מפורט
     print(f"\n{'='*70}")
     print(f"🎯 PROXY ENDPOINT HIT: {request.method}")
-    print(f"🔥 FIXED VERSION v4 - INSTANT DISPLAY + BACKGROUND LOADING!")
+    print(f"🔥 FIXED VERSION v6 - CONTRACT-SPECIFIC CONSUMER LOADING!")
     print(f"⏰ Time: {datetime.now()}")
     print(f"🌐 Host: {request.host}")
     print(f"📍 Remote Address: {request.remote_addr}")
@@ -3293,11 +3293,20 @@ def company_manager_proxy():
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts"
             method = 'GET'  # תמיד GET לחברות
         elif endpoint == 'consumers' or endpoint == 'GetConsumerList':
-            # Always get all consumers and filter client-side
-            # The contracts/{id}/consumers endpoint seems to not work properly
-            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
-            print(f"   🔍 Getting ALL consumers (will filter client-side)")
-            print(f"   📍 CONSUMERS ENDPOINT HIT - v2 DEBUG ACTIVE")
+            # Check if we have a contractId in payload to filter by
+            contract_id = payload.get('contractId') if payload else None
+            
+            if contract_id:
+                # Get consumers for specific contract only!
+                url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts/{contract_id}/consumers"
+                print(f"   🎯 Getting consumers ONLY for contract {contract_id}")
+                print(f"   📍 OPTIMIZED: Using contract-specific endpoint")
+            else:
+                # Fallback to getting all consumers (should not happen)
+                url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
+                print(f"   ⚠️ WARNING: Getting ALL consumers (no contractId provided)")
+            
+            print(f"   📍 CONSUMERS ENDPOINT v6 - FILTERED BY CONTRACT!")
             method = 'GET'  # תמיד GET למנויים
         elif endpoint.startswith('consumers/'):
             # Alternative format: consumers/{contractId} or consumers/{contractId},{consumerId}
@@ -3485,32 +3494,18 @@ def company_manager_proxy():
                                 
                                 consumers.append(consumer_data)
                             
-                            # If payload has contractId, filter consumers
-                            if payload and 'contractId' in payload:
-                                contract_id = str(payload['contractId'])
-                                print(f"   🔍 Filtering consumers for contract ID: {contract_id}")
+                            # Check if we're getting consumers from contract-specific endpoint
+                            is_contract_specific = 'contracts/' in url and '/consumers' in url
                             
-                            # Debug: Show ALL fields from first few consumers
-                            if consumers and len(consumers) > 0:
-                                print(f"   📋 === FULL CONSUMER DATA FROM XML ===")
-                                print(f"   📋 Total consumers before filtering: {len(consumers)}")
+                            if is_contract_specific:
+                                print(f"   ✅ Got consumers from contract-specific endpoint")
+                                print(f"   ✅ No filtering needed - already filtered by server!")
+                            elif payload and 'contractId' in payload:
+                                # Only filter if we got ALL consumers (old behavior)
+                                contract_id = str(payload['contractId'])
+                                print(f"   🔍 Got ALL consumers - need to filter for contract ID: {contract_id}")
                                 
-                                # Show first consumer with all fields
-                                consumer = consumers[0]
-                                print(f"   📋 First consumer - ALL FIELDS:")
-                                for key in sorted(consumer.keys()):
-                                    value = consumer.get(key, '')
-                                    if isinstance(value, str) and len(value) > 50:
-                                        value = value[:50] + '...'
-                                    print(f"      {key}: {value}")
-                                
-                                # List all unique fields across all consumers
-                                all_fields = set()
-                                for c in consumers:
-                                    all_fields.update(c.keys())
-                                print(f"   📋 All unique fields found: {sorted(all_fields)}")
-                                
-                                # Filter consumers by contractId - check all possible field names
+                                # Filter consumers by contractId
                                 filtered = []
                                 for c in consumers:
                                     # Check different possible field names for contract association
@@ -3536,20 +3531,31 @@ def company_manager_proxy():
                                     consumers = filtered
                                 else:
                                     print(f"   ⚠️ No consumers found for contract {contract_id} after filtering")
-                                    print(f"   ⚠️ Total consumers before filter: {len(consumers)}")
-                                    # Return empty list if no consumers found for this contract
                                     consumers = []
                             
-                            # Limit to reasonable number to avoid performance issues
-                            if len(consumers) > 100:
+                            # Debug: Show consumer count and first consumer
+                            if consumers and len(consumers) > 0:
+                                print(f"   📋 === CONSUMER DATA SUMMARY ===")
+                                print(f"   📋 Total consumers to return: {len(consumers)}")
+                                
+                                # Show first consumer with all fields
+                                if len(consumers) <= 10:
+                                    consumer = consumers[0]
+                                    print(f"   📋 First consumer - ALL FIELDS:")
+                                    for key in sorted(consumer.keys()):
+                                        value = consumer.get(key, '')
+                                        if isinstance(value, str) and len(value) > 50:
+                                            value = value[:50] + '...'
+                                        print(f"      {key}: {value}")
+                            
+                            # CRITICAL PERFORMANCE FIX: Limit consumers to avoid browser freezing
+                            MAX_CONSUMERS_PER_REQUEST = 100  # Reduced from 500 for better performance
+                            
+                            if len(consumers) > MAX_CONSUMERS_PER_REQUEST:
                                 print(f"   ⚠️ WARNING: Got {len(consumers)} consumers total!")
-                                # Only return filtered consumers if we have a filter
-                                if contract_id and filtered:
-                                    consumers = filtered
-                                    print(f"   ✅ Returning only {len(consumers)} filtered consumers")
-                                elif len(consumers) > 500:
-                                    print(f"   ⚠️ Limiting response from {len(consumers)} to 500 consumers")
-                                    consumers = consumers[:500]
+                                print(f"   🚀 PERFORMANCE: Limiting to {MAX_CONSUMERS_PER_REQUEST} consumers")
+                                consumers = consumers[:MAX_CONSUMERS_PER_REQUEST]
+                                print(f"   ℹ️ User should implement pagination for large companies")
                             
                             # Returning consumers from XML
                             return jsonify({'success': True, 'data': consumers})
