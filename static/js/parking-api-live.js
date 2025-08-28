@@ -223,38 +223,11 @@ class ParkingAPIXML {
             // Minimal debug - just count
             console.log(`[getConsumers] Got ${consumers.length} consumers from server`);
             
-            // If we got too many consumers, it might mean the server doesn't support filtering
-            // In that case, we'll need to filter client-side
-            if (consumers.length > 1000) {
-                console.log(`[getConsumers] Got ${consumers.length} consumers - filtering client-side for contract ${contractId}`);
-                const filtered = consumers.filter(c => {
-                    // IMPORTANT: Server returns 'contractid' in lowercase!
-                    return c.contractid === contractId ||  // lowercase version - THIS IS KEY!
-                           c.contractid === String(contractId) ||
-                           c.contractId === contractId || 
-                           c.contractId === String(contractId) ||
-                           c.contract === contractId ||
-                           c.contract === String(contractId) ||
-                           c.contractNum === contractId ||
-                           c.contractNum === String(contractId) ||
-                           c.companyId === contractId ||
-                           c.companyId === String(contractId);
-                });
-                
-                if (filtered.length > 0) {
-                    console.log(`[getConsumers] Filtered to ${filtered.length} consumers for contract ${contractId}`);
-                    return { success: true, data: filtered };
-                } else {
-                    console.log(`[getConsumers] Warning: No consumers found for contract ${contractId} after filtering`);
-                    // Log first consumer to see structure for debugging
-                    if (consumers.length > 0) {
-                        console.log(`[getConsumers] First consumer structure:`, consumers[0]);
-                        console.log(`[getConsumers] Looking for contractId: ${contractId}`);
-                    }
-                    // Return empty array if no consumers found
-                    return { success: true, data: [] };
-                }
-            }
+            // Server now returns only consumers for this specific contract
+            // No need to filter client-side anymore!
+            console.log(`[getConsumers] Server returned ${consumers.length} consumers for contract ${contractId}`)
+            
+            return { success: true, data: consumers };
         }
         
         return result;
@@ -370,15 +343,26 @@ class ParkingAPIXML {
             const finalConsumers = Array.isArray(consumers) ? consumers : [consumers];
             console.log(`[Progressive] Found ${finalConsumers.length} consumers`);
             
-            // PERFORMANCE OPTIMIZATION: Check company size
-            const LARGE_COMPANY_THRESHOLD = 300;
-            const isLargeCompany = finalConsumers.length > LARGE_COMPANY_THRESHOLD;
+            // PERFORMANCE OPTIMIZATION: Smart loading based on company size
+            const INSTANT_LOAD_THRESHOLD = 10;   // Load all details immediately
+            const BATCH_LOAD_THRESHOLD = 50;     // Load in batches
+            const PAGINATION_THRESHOLD = 100;    // Use pagination
             
-            if (isLargeCompany) {
-                console.log(`[Progressive] LARGE COMPANY: ${finalConsumers.length} subscribers > ${LARGE_COMPANY_THRESHOLD}`);
-                console.log(`[Progressive] Will load details on-demand only (hover)`);
+            const subscriberCount = finalConsumers.length;
+            let loadingStrategy = 'instant';
+            
+            if (subscriberCount <= INSTANT_LOAD_THRESHOLD) {
+                loadingStrategy = 'instant';
+                console.log(`[Progressive] SMALL company (${subscriberCount} ≤ ${INSTANT_LOAD_THRESHOLD}): Load all details immediately`);
+            } else if (subscriberCount <= BATCH_LOAD_THRESHOLD) {
+                loadingStrategy = 'batch';
+                console.log(`[Progressive] MEDIUM company (${subscriberCount} ≤ ${BATCH_LOAD_THRESHOLD}): Load details in batches`);
             } else {
-                console.log(`[Progressive] Small company - will load details in background`);
+                loadingStrategy = 'paginated';
+                console.log(`[Progressive] LARGE company (${subscriberCount} > ${BATCH_LOAD_THRESHOLD}): Use pagination`);
+                // Limit to first 100 subscribers for large companies
+                finalConsumers.splice(100);
+                console.log(`[Progressive] Limited initial display to 100 subscribers`);
             }
             
             // Map ALL available data from consumer list
@@ -419,8 +403,8 @@ class ParkingAPIXML {
                 
                 // Status
                 presence: consumer.presence || false,
-                hasFullDetails: true,  // We have all the data we need!
-                isLargeCompany: isLargeCompany
+                hasFullDetails: false,  // Will be set to true after loading details
+                loadingStrategy: loadingStrategy
             }));
             
             // Skip heavy debug logs for performance
@@ -428,89 +412,112 @@ class ParkingAPIXML {
             // Return basic data immediately
             onBasicLoaded(basicSubscribers);
             
-            // Show results immediately, then load details in background
+            // Show results immediately, then load details based on strategy
             console.log('[Progressive] Showing basic data immediately');
             
-            // For small companies, load details in background after showing basic data
-            if (basicSubscribers.length > 0 && basicSubscribers.length <= 20) {
+            // Load details based on company size strategy  
+            if (loadingStrategy === 'instant' || loadingStrategy === 'batch') {
                 // Load details in background AFTER showing the table
                 setTimeout(async () => {
-                    console.log(`[Progressive] Loading details for ${basicSubscribers.length} consumers IN BACKGROUND...`);
+                    console.log(`[Progressive] Loading details using ${loadingStrategy} strategy...`);
                 
-                const detailPromises = basicSubscribers.map(async (subscriber, idx) => {
-                    try {
-                        const detailResult = await this.getConsumerDetail(
-                            subscriber.contractId,
-                            subscriber.id
-                        );
-                        
-                        if (detailResult.success && detailResult.data) {
-                            // Parse the nested structure
-                            const detail = detailResult.data;
+                    const processSubscriber = async (subscriber) => {
+                        try {
+                            const detailResult = await this.getConsumerDetail(
+                                subscriber.contractId,
+                                subscriber.id
+                            );
                             
-                            // Extract all fields from the detail response
-                            return {
-                                ...subscriber,
-                                // Keep company info
-                                companyName: subscriber.companyName || callbacks.companyName || `חברה ${subscriber.contractId}`, // Keep the original company name!
+                            if (detailResult.success && detailResult.data) {
+                                const detail = detailResult.data;
                                 
-                                // Tag and card info
-                                tagNum: detail.identification?.cardno || '',
-                                cardno: detail.identification?.cardno || '',
-                                
-                                // Names
-                                firstName: detail.person?.firstName || detail.firstName || subscriber.firstName,
-                                lastName: detail.person?.surname || detail.surname || subscriber.lastName,
-                                
-                                // Vehicles
-                                lpn1: detail.lpn1 || '',
-                                lpn2: detail.lpn2 || '',
-                                lpn3: detail.lpn3 || '',
-                                vehicle1: detail.lpn1 || '',
-                                vehicle2: detail.lpn2 || '',
-                                vehicle3: detail.lpn3 || '',
-                                
-                                // Profile
-                                profile: detail.identification?.usageProfile?.id || '',
-                                profileName: detail.identification?.usageProfile?.name || '',
-                                
-                                // Dates
-                                validFrom: detail.identification?.validFrom || detail.validFrom || subscriber.validFrom,
-                                validUntil: detail.identification?.validUntil || detail.validUntil || subscriber.validUntil,
-                                
-                                // Presence
-                                present: detail.identification?.present === 'true',
-                                presence: detail.identification?.present === 'true',
-                                ignorePresence: detail.identification?.ignorePresence === '1' || detail.ignorePresence === '1',
-                                
-                                // Mark as having full details
-                                hasFullDetails: true
-                            };
+                                return {
+                                    ...subscriber,
+                                    companyName: subscriber.companyName,
+                                    tagNum: detail.identification?.cardno || '',
+                                    cardno: detail.identification?.cardno || '',
+                                    firstName: detail.person?.firstName || detail.firstName || subscriber.firstName,
+                                    lastName: detail.person?.surname || detail.surname || subscriber.lastName,
+                                    lpn1: detail.lpn1 || '',
+                                    lpn2: detail.lpn2 || '',
+                                    lpn3: detail.lpn3 || '',
+                                    vehicle1: detail.lpn1 || '',
+                                    vehicle2: detail.lpn2 || '',
+                                    vehicle3: detail.lpn3 || '',
+                                    profile: detail.identification?.usageProfile?.id || '',
+                                    profileName: detail.identification?.usageProfile?.name || '',
+                                    validFrom: detail.identification?.validFrom || detail.validFrom || subscriber.validFrom,
+                                    validUntil: detail.identification?.validUntil || detail.validUntil || subscriber.validUntil,
+                                    present: detail.identification?.present === 'true',
+                                    presence: detail.identification?.present === 'true',
+                                    ignorePresence: detail.identification?.ignorePresence === '1' || detail.ignorePresence === '1',
+                                    hasFullDetails: true
+                                };
+                            }
+                            return subscriber;
+                        } catch (error) {
+                            console.error(`Error loading detail for consumer ${subscriber.id}:`, error);
+                            return subscriber;
+                        }
+                    };
+                    
+                    if (loadingStrategy === 'instant') {
+                        // Load all at once for small companies
+                        const detailPromises = basicSubscribers.map(processSubscriber);
+                        const detailedSubscribers = await Promise.all(detailPromises);
+                        console.log(`[Progressive] Loaded all ${detailedSubscribers.length} details at once`);
+                        onBasicLoaded(detailedSubscribers);
+                        basicSubscribers = detailedSubscribers;
+                    } else {
+                        // Batch loading for medium companies
+                        const BATCH_SIZE = 5;
+                        let allUpdated = [];
+                        
+                        for (let i = 0; i < basicSubscribers.length; i += BATCH_SIZE) {
+                            const batch = basicSubscribers.slice(i, Math.min(i + BATCH_SIZE, basicSubscribers.length));
+                            console.log(`[Progressive] Loading batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(basicSubscribers.length/BATCH_SIZE)}`);
+                            
+                            const batchPromises = batch.map(processSubscriber);
+                            const batchResults = await Promise.all(batchPromises);
+                            
+                            allUpdated = [...allUpdated, ...batchResults];
+                            
+                            // Update UI after each batch
+                            const progress = Math.round((allUpdated.length / basicSubscribers.length) * 100);
+                            if (callbacks.onProgress) {
+                                callbacks.onProgress({ percent: progress });
+                            }
+                            
+                            // Update only the changed items in the UI
+                            batchResults.forEach((updated, idx) => {
+                                const originalIndex = i + idx;
+                                if (callbacks.onDetailLoaded) {
+                                    callbacks.onDetailLoaded(updated, originalIndex);
+                                }
+                            });
+                            
+                            // Small delay between batches to not overwhelm server
+                            if (i + BATCH_SIZE < basicSubscribers.length) {
+                                await new Promise(resolve => setTimeout(resolve, 100));
+                            }
                         }
                         
-                        return subscriber; // Return original if detail fetch failed
-                    } catch (error) {
-                        console.error(`Error loading detail for consumer ${subscriber.id}:`, error);
-                        return subscriber;
+                        basicSubscribers = allUpdated;
+                        console.log(`[Progressive] Completed batch loading for ${allUpdated.length} subscribers`);
                     }
-                });
-                
-                // Wait for all details to load
-                const detailedSubscribers = await Promise.all(detailPromises);
-                
-                console.log(`[Progressive] Loaded details for ${detailedSubscribers.length} consumers`);
-                
-                // Update the UI with detailed data
-                onBasicLoaded(detailedSubscribers);
-                
-                // Store the detailed data
-                basicSubscribers = detailedSubscribers;
-                
-                // Hide loading message  
+                    
+                    // Hide loading message
+                    if (callbacks.onProgress) {
+                        callbacks.onProgress({ percent: 100 });
+                    }
+                }, 100); // Small delay to let UI render first
+            }
+            else if (loadingStrategy === 'paginated') {
+                // For very large companies, don't auto-load details
+                console.log('[Progressive] Pagination mode - details will load on-demand');
                 if (callbacks.onProgress) {
                     callbacks.onProgress({ percent: 100 });
                 }
-                }, 100); // Small delay to let UI render first
             }
             
             console.log('[Progressive] Basic data loading complete');
