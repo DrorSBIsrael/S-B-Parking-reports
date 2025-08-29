@@ -298,8 +298,6 @@ class ParkingAPIXML {
         } = callbacks;
         
         try {
-            console.log('[Progressive] Starting progressive loading for company:', companyId);
-            
             // Step 1: Get basic list
         const result = await this.getConsumers(companyId, companyId);
             
@@ -341,8 +339,6 @@ class ParkingAPIXML {
             }
             
             const finalConsumers = Array.isArray(consumers) ? consumers : [consumers];
-            console.log(`[Progressive] Found ${finalConsumers.length} consumers`);
-            
             // PERFORMANCE OPTIMIZATION: Smart loading based on company size
             const INSTANT_LOAD_THRESHOLD = 20;   // Load all details immediately
             const BATCH_LOAD_THRESHOLD = 100;    // Load in batches
@@ -353,17 +349,12 @@ class ParkingAPIXML {
             
             if (subscriberCount <= INSTANT_LOAD_THRESHOLD) {
                 loadingStrategy = 'instant';
-                console.log(`[Progressive] SMALL company (${subscriberCount} ≤ ${INSTANT_LOAD_THRESHOLD}): Load all details immediately`);
             } else if (subscriberCount <= BATCH_LOAD_THRESHOLD) {
                 loadingStrategy = 'batch';
-                console.log(`[Progressive] MEDIUM company (${subscriberCount} ≤ ${BATCH_LOAD_THRESHOLD}): Load details in batches`);
             } else if (subscriberCount <= ON_DEMAND_THRESHOLD) {
-                loadingStrategy = 'batch-large';  // Still batch but bigger batches
-                console.log(`[Progressive] LARGE company (${subscriberCount} ≤ ${ON_DEMAND_THRESHOLD}): Load details in larger batches`);
+                loadingStrategy = 'batch-large';
             } else {
                 loadingStrategy = 'on-demand';
-                console.log(`[Progressive] VERY LARGE company (${subscriberCount} > ${ON_DEMAND_THRESHOLD}): Load details on-demand only`);
-                // Don't limit - show all but without details
             }
             
             // Map ALL available data from consumer list
@@ -413,14 +404,10 @@ class ParkingAPIXML {
             // Return basic data immediately
             onBasicLoaded(basicSubscribers);
             
-            // Show results immediately, then load details based on strategy
-            console.log('[Progressive] Showing basic data immediately');
-            
             // Load details based on company size strategy  
             if (loadingStrategy === 'instant' || loadingStrategy === 'batch' || loadingStrategy === 'batch-large') {
                 // Load details in background AFTER showing the table
                 setTimeout(async () => {
-                    console.log(`[Progressive] Loading details using ${loadingStrategy} strategy...`);
                 
                     const processSubscriber = async (subscriber) => {
                         try {
@@ -466,7 +453,6 @@ class ParkingAPIXML {
                         // Load all at once for small companies
                         const detailPromises = basicSubscribers.map(processSubscriber);
                         const detailedSubscribers = await Promise.all(detailPromises);
-                        console.log(`[Progressive] Loaded all ${detailedSubscribers.length} details at once`);
                         onBasicLoaded(detailedSubscribers);
                         basicSubscribers = detailedSubscribers;
                     } else {
@@ -476,7 +462,6 @@ class ParkingAPIXML {
                         
                         for (let i = 0; i < basicSubscribers.length; i += BATCH_SIZE) {
                             const batch = basicSubscribers.slice(i, Math.min(i + BATCH_SIZE, basicSubscribers.length));
-                            console.log(`[Progressive] Loading batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(basicSubscribers.length/BATCH_SIZE)}`);
                             
                             const batchPromises = batch.map(processSubscriber);
                             const batchResults = await Promise.all(batchPromises);
@@ -504,7 +489,6 @@ class ParkingAPIXML {
                         }
                         
                         basicSubscribers = allUpdated;
-                        console.log(`[Progressive] Completed batch loading for ${allUpdated.length} subscribers`);
                     }
                     
                     // Hide loading message
@@ -515,15 +499,12 @@ class ParkingAPIXML {
             }
             else if (loadingStrategy === 'on-demand') {
                 // For very large companies (300+), don't auto-load details
-                console.log('[Progressive] On-demand mode - details will load only on hover or edit');
                 if (callbacks.onProgress) {
                     callbacks.onProgress({ percent: 100 });
                 }
             }
             
-            console.log('[Progressive] Basic data loading complete');
-            
-            return { 
+                        return { 
                 success: true,
                 data: basicSubscribers,
                 total: finalConsumers.length,
