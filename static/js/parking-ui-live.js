@@ -1013,7 +1013,11 @@ class ParkingUIIntegrationXML {
             // Check if this is a large company
             const isLargeCompany = this.subscribers.length > 300;
             const statusText = isLargeCompany ? ' 🚀 מצב מהיר' : '';
-            companyNameElement.textContent = `- ${companyName} [${this.selectedCompany.id}] (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''}${statusText})`;
+            
+            // Get company ID safely
+            const companyId = this.currentContract?.id || '';
+            
+            companyNameElement.textContent = `- ${companyName} [${companyId}] (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''}${statusText})`;
             
             // Add tooltip for large companies
             if (isLargeCompany) {
