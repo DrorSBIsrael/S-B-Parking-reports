@@ -3178,7 +3178,7 @@ def company_manager_proxy():
     # Debug log מפורט
     print(f"\n{'='*70}")
     print(f"🎯 PROXY ENDPOINT HIT: {request.method}")
-    print(f"🔥 FIXED VERSION v6 - CONTRACT-SPECIFIC CONSUMER LOADING!")
+    print(f"🔥 FIXED VERSION v7 - OPTIMIZED CONTRACT-SPECIFIC LOADING!")
     print(f"⏰ Time: {datetime.now()}")
     print(f"🌐 Host: {request.host}")
     print(f"📍 Remote Address: {request.remote_addr}")
@@ -3301,6 +3301,7 @@ def company_manager_proxy():
                 url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts/{contract_id}/consumers"
                 print(f"   🎯 Getting consumers ONLY for contract {contract_id}")
                 print(f"   📍 OPTIMIZED: Using contract-specific endpoint")
+                print(f"   📍 Full URL: {url}")
             else:
                 # Fallback to getting all consumers (should not happen)
                 url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
