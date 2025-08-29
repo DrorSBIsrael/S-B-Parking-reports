@@ -213,8 +213,10 @@ class ParkingAPIXML {
     async getConsumers(companyNum, contractId) {
         console.log(`[getConsumers] Fetching consumers for contract ${contractId}`);
         
-        // Always pass contractId in payload for proper filtering
-        const result = await this.makeRequest('consumers', 'GET', { contractId: contractId });
+        // CRITICAL: Always pass contractId to get only specific company's consumers
+        const result = await this.makeRequest('consumers', 'GET', { 
+            contractId: contractId  // This MUST be sent to avoid getting all 7000+ consumers
+        });
         
         // Check if we got the consumers
         if (result.success && result.data) {
@@ -223,9 +225,13 @@ class ParkingAPIXML {
             // Minimal debug - just count
             console.log(`[getConsumers] Got ${consumers.length} consumers from server`);
             
-            // Server now returns only consumers for this specific contract
-            // No need to filter client-side anymore!
-            console.log(`[getConsumers] Server returned ${consumers.length} consumers for contract ${contractId}`)
+            // SAFETY CHECK: If we got too many consumers, something is wrong!
+            if (consumers.length > 500) {
+                console.error(`[getConsumers] ERROR: Got ${consumers.length} consumers! Server might be returning ALL consumers instead of just contract ${contractId}`);
+                console.warn('[getConsumers] This will cause performance issues. Check Flask proxy endpoint!');
+            } else {
+                console.log(`[getConsumers] ✅ Got ${consumers.length} consumers for contract ${contractId}`);
+            }
             
             return { success: true, data: consumers };
         }
@@ -340,21 +346,29 @@ class ParkingAPIXML {
             
             const finalConsumers = Array.isArray(consumers) ? consumers : [consumers];
             // PERFORMANCE OPTIMIZATION: Smart loading based on company size
-            const INSTANT_LOAD_THRESHOLD = 20;   // Load all details immediately
-            const BATCH_LOAD_THRESHOLD = 100;    // Load in batches
-            const ON_DEMAND_THRESHOLD = 300;     // Load on hover only
+            const INSTANT_LOAD_THRESHOLD = 10;    // Load all details immediately  
+            const BATCH_LOAD_THRESHOLD = 50;      // Load in small batches
+            const LARGE_BATCH_THRESHOLD = 200;    // Load in larger batches
+            const ON_DEMAND_THRESHOLD = 300;      // Load on hover only
             
             const subscriberCount = finalConsumers.length;
             let loadingStrategy = 'instant';
             
             if (subscriberCount <= INSTANT_LOAD_THRESHOLD) {
                 loadingStrategy = 'instant';
+                console.log(`[Strategy] Small company (${subscriberCount} ≤ ${INSTANT_LOAD_THRESHOLD}): instant load`);
             } else if (subscriberCount <= BATCH_LOAD_THRESHOLD) {
-                loadingStrategy = 'batch';
+                loadingStrategy = 'batch-small';
+                console.log(`[Strategy] Medium company (${subscriberCount} ≤ ${BATCH_LOAD_THRESHOLD}): batch size 3`);
+            } else if (subscriberCount <= LARGE_BATCH_THRESHOLD) {
+                loadingStrategy = 'batch-medium';
+                console.log(`[Strategy] Large company (${subscriberCount} ≤ ${LARGE_BATCH_THRESHOLD}): batch size 5`);
             } else if (subscriberCount <= ON_DEMAND_THRESHOLD) {
                 loadingStrategy = 'batch-large';
+                console.log(`[Strategy] Very large company (${subscriberCount} ≤ ${ON_DEMAND_THRESHOLD}): batch size 10`);
             } else {
                 loadingStrategy = 'on-demand';
+                console.log(`[Strategy] Huge company (${subscriberCount} > ${ON_DEMAND_THRESHOLD}): on-demand only`);
             }
             
             // Map ALL available data from consumer list
@@ -405,7 +419,7 @@ class ParkingAPIXML {
             onBasicLoaded(basicSubscribers);
             
             // Load details based on company size strategy  
-            if (loadingStrategy === 'instant' || loadingStrategy === 'batch' || loadingStrategy === 'batch-large') {
+            if (loadingStrategy !== 'on-demand') {
                 // Load details in background AFTER showing the table
                 setTimeout(async () => {
                 
@@ -456,8 +470,17 @@ class ParkingAPIXML {
                         onBasicLoaded(detailedSubscribers);
                         basicSubscribers = detailedSubscribers;
                     } else {
-                        // Batch loading for medium and large companies
-                        const BATCH_SIZE = loadingStrategy === 'batch-large' ? 20 : 5;
+                        // Batch loading based on strategy
+                        let BATCH_SIZE = 5;
+                        if (loadingStrategy === 'batch-small') {
+                            BATCH_SIZE = 3;
+                        } else if (loadingStrategy === 'batch-medium') {
+                            BATCH_SIZE = 5;
+                        } else if (loadingStrategy === 'batch-large') {
+                            BATCH_SIZE = 10;
+                        }
+                        
+                        console.log(`[Batch Loading] Using batch size: ${BATCH_SIZE} for ${basicSubscribers.length} subscribers`);
                         let allUpdated = [];
                         
                         for (let i = 0; i < basicSubscribers.length; i += BATCH_SIZE) {
@@ -482,9 +505,9 @@ class ParkingAPIXML {
                                 }
                             });
                             
-                            // Small delay between batches to not overwhelm server
+                            // Delay between batches to not overwhelm server
                             if (i + BATCH_SIZE < basicSubscribers.length) {
-                                await new Promise(resolve => setTimeout(resolve, 100));
+                                await new Promise(resolve => setTimeout(resolve, 200)); // Increased delay
                             }
                         }
                         
