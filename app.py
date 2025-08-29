@@ -3178,11 +3178,7 @@ def company_manager_proxy():
     # Debug log מפורט
     print(f"\n{'='*70}")
     print(f"🎯 PROXY ENDPOINT HIT: {request.method}")
-    print(f"🔥 FIXED VERSION v7 - OPTIMIZED CONTRACT-SPECIFIC LOADING!")
-    print(f"⏰ Time: {datetime.now()}")
-    print(f"🌐 Host: {request.host}")
-    print(f"📍 Remote Address: {request.remote_addr}")
-    print(f"📦 Headers: {dict(request.headers)}")
+    print(f"🔥 v7 - CONTRACT-SPECIFIC LOADING")
     print(f"{'='*70}")
     
     # Handle CORS preflight
@@ -3299,9 +3295,7 @@ def company_manager_proxy():
             if contract_id:
                 # Get consumers for specific contract only!
                 url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts/{contract_id}/consumers"
-                print(f"   🎯 Getting consumers ONLY for contract {contract_id}")
-                print(f"   📍 OPTIMIZED: Using contract-specific endpoint")
-                print(f"   📍 Full URL: {url}")
+                print(f"   ✅ Getting consumers for contract {contract_id}")
             else:
                 # Fallback to getting all consumers (should not happen)
                 url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
@@ -3449,11 +3443,6 @@ def company_manager_proxy():
                             
                         elif not is_detail_endpoint and 'consumer' in endpoint.lower():
                             # Show RAW XML for debugging
-                            print(f"   📄 === RAW XML RESPONSE FOR CONSUMERS ===")
-                            print(f"   📄 First 3000 chars of XML:")
-                            print(response.text[:3000])
-                            print(f"   📄 === END RAW XML ===")
-                            
                             consumers = []
                             # Try to find consumers in different XML structures
                             # First try with namespace
@@ -3463,7 +3452,7 @@ def company_manager_proxy():
                             if not consumer_elements:
                                 consumer_elements = root.findall('.//consumer')
                             
-                            print(f"   📊 Found {len(consumer_elements)} consumer elements in XML")
+                            print(f"   ✅ Found {len(consumer_elements)} consumers")
                             
                             for idx, consumer in enumerate(consumer_elements):
                                 consumer_data = {}
@@ -3486,12 +3475,6 @@ def company_manager_proxy():
                                         consumer_data[tag] = child_data
                                     else:
                                         consumer_data[tag] = child.text
-                                
-                                # Debug first 3 consumers
-                                if idx < 3:
-                                    print(f"   📊 Consumer {idx + 1} extracted data:")
-                                    for k, v in consumer_data.items():
-                                        print(f"      {k}: {v}")
                                 
                                 consumers.append(consumer_data)
                             
@@ -3534,20 +3517,9 @@ def company_manager_proxy():
                                     print(f"   ⚠️ No consumers found for contract {contract_id} after filtering")
                                     consumers = []
                             
-                            # Debug: Show consumer count and first consumer
-                            if consumers and len(consumers) > 0:
-                                print(f"   📋 === CONSUMER DATA SUMMARY ===")
-                                print(f"   📋 Total consumers to return: {len(consumers)}")
-                                
-                                # Show first consumer with all fields
-                                if len(consumers) <= 10:
-                                    consumer = consumers[0]
-                                    print(f"   📋 First consumer - ALL FIELDS:")
-                                    for key in sorted(consumer.keys()):
-                                        value = consumer.get(key, '')
-                                        if isinstance(value, str) and len(value) > 50:
-                                            value = value[:50] + '...'
-                                        print(f"      {key}: {value}")
+                            # Minimal logging for performance
+                            if consumers:
+                                print(f"   ✅ Returning {len(consumers)} consumers")
                             
                             # CRITICAL PERFORMANCE FIX: Limit consumers to avoid browser freezing
                             MAX_CONSUMERS_PER_REQUEST = 100  # Reduced from 500 for better performance
@@ -3562,11 +3534,7 @@ def company_manager_proxy():
                             return jsonify({'success': True, 'data': consumers})
                         elif '/detail' in endpoint and 'consumer' in endpoint:
                             # Parse consumer DETAIL from XML
-                            print(f"   🔍 === PARSING CONSUMER DETAIL XML ===")
-                            print(f"   🔍 Endpoint: {endpoint}")
-                            print(f"   🔍 FULL XML Response (first 2000 chars):")
-                            print(response.text[:2000])
-                            print(f"   🔍 === END XML ===")
+                            # Removed verbose XML logging for performance
                             
                             # Parse the consumer detail
                             consumer_detail = {}
@@ -3598,9 +3566,8 @@ def company_manager_proxy():
                                 
                                 consumer_detail = extract_fields(detail_root) or {}
                                 
-                                print(f"   🔍 Extracted consumer detail fields:")
-                                for key, value in consumer_detail.items():
-                                    print(f"      {key}: {value}")
+                                # Removed field logging for performance
+                                pass
                                 
                             except Exception as e:
                                 print(f"   ❌ Error parsing consumer detail XML: {e}")
