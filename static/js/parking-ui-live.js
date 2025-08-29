@@ -878,7 +878,7 @@ class ParkingUIIntegrationXML {
             // Get subscribers progressively
             const result = await this.api.getSubscribersProgressive(this.currentContract.id, {
                 batchSize: perfConfig.batchSize || 5,
-                companyName: this.currentContract.name || `חברה ${this.currentContract.id}`,  // Pass company name
+                companyName: (this.currentContract.name || this.currentContract.firstName || `חברה ${this.currentContract.id}`).trim(),  // Pass company name
                 
                 // Callback when basic data is ready
                 onBasicLoaded: (basicSubscribers) => {
@@ -889,6 +889,12 @@ class ParkingUIIntegrationXML {
                     if (subscribersEl) {
                         subscribersEl.textContent = basicSubscribers.length;
                     }
+                    
+                    // Update all subscribers with correct company name
+                    const companyName = this.currentContract.name || this.currentContract.firstName || `חברה ${this.currentContract.id}`;
+                    this.subscribers.forEach(sub => {
+                        sub.companyName = companyName.trim();
+                    });
                     
                     // Get company name and display immediately
                     this.updateCompanyInfo();
