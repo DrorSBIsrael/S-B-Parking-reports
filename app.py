@@ -3178,7 +3178,7 @@ def company_manager_proxy():
     # Debug log מפורט
     print(f"\n{'='*70}")
     print(f"🎯 PROXY ENDPOINT HIT: {request.method}")
-    print(f"🔥 v7 - CONTRACT-SPECIFIC LOADING")
+    print(f"🔥 v8 - OPTIMIZED BATCH LOADING")
     print(f"{'='*70}")
     
     # Handle CORS preflight
