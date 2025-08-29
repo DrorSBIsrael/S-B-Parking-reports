@@ -344,9 +344,9 @@ class ParkingAPIXML {
             console.log(`[Progressive] Found ${finalConsumers.length} consumers`);
             
             // PERFORMANCE OPTIMIZATION: Smart loading based on company size
-            const INSTANT_LOAD_THRESHOLD = 10;   // Load all details immediately
-            const BATCH_LOAD_THRESHOLD = 50;     // Load in batches
-            const PAGINATION_THRESHOLD = 100;    // Use pagination
+            const INSTANT_LOAD_THRESHOLD = 20;   // Load all details immediately
+            const BATCH_LOAD_THRESHOLD = 100;    // Load in batches
+            const ON_DEMAND_THRESHOLD = 300;     // Load on hover only
             
             const subscriberCount = finalConsumers.length;
             let loadingStrategy = 'instant';
@@ -357,12 +357,13 @@ class ParkingAPIXML {
             } else if (subscriberCount <= BATCH_LOAD_THRESHOLD) {
                 loadingStrategy = 'batch';
                 console.log(`[Progressive] MEDIUM company (${subscriberCount} ≤ ${BATCH_LOAD_THRESHOLD}): Load details in batches`);
+            } else if (subscriberCount <= ON_DEMAND_THRESHOLD) {
+                loadingStrategy = 'batch-large';  // Still batch but bigger batches
+                console.log(`[Progressive] LARGE company (${subscriberCount} ≤ ${ON_DEMAND_THRESHOLD}): Load details in larger batches`);
             } else {
-                loadingStrategy = 'paginated';
-                console.log(`[Progressive] LARGE company (${subscriberCount} > ${BATCH_LOAD_THRESHOLD}): Use pagination`);
-                // Limit to first 100 subscribers for large companies
-                finalConsumers.splice(100);
-                console.log(`[Progressive] Limited initial display to 100 subscribers`);
+                loadingStrategy = 'on-demand';
+                console.log(`[Progressive] VERY LARGE company (${subscriberCount} > ${ON_DEMAND_THRESHOLD}): Load details on-demand only`);
+                // Don't limit - show all but without details
             }
             
             // Map ALL available data from consumer list
@@ -416,7 +417,7 @@ class ParkingAPIXML {
             console.log('[Progressive] Showing basic data immediately');
             
             // Load details based on company size strategy  
-            if (loadingStrategy === 'instant' || loadingStrategy === 'batch') {
+            if (loadingStrategy === 'instant' || loadingStrategy === 'batch' || loadingStrategy === 'batch-large') {
                 // Load details in background AFTER showing the table
                 setTimeout(async () => {
                     console.log(`[Progressive] Loading details using ${loadingStrategy} strategy...`);
@@ -469,8 +470,8 @@ class ParkingAPIXML {
                         onBasicLoaded(detailedSubscribers);
                         basicSubscribers = detailedSubscribers;
                     } else {
-                        // Batch loading for medium companies
-                        const BATCH_SIZE = 5;
+                        // Batch loading for medium and large companies
+                        const BATCH_SIZE = loadingStrategy === 'batch-large' ? 20 : 5;
                         let allUpdated = [];
                         
                         for (let i = 0; i < basicSubscribers.length; i += BATCH_SIZE) {
@@ -512,9 +513,9 @@ class ParkingAPIXML {
                     }
                 }, 100); // Small delay to let UI render first
             }
-            else if (loadingStrategy === 'paginated') {
-                // For very large companies, don't auto-load details
-                console.log('[Progressive] Pagination mode - details will load on-demand');
+            else if (loadingStrategy === 'on-demand') {
+                // For very large companies (300+), don't auto-load details
+                console.log('[Progressive] On-demand mode - details will load only on hover or edit');
                 if (callbacks.onProgress) {
                     callbacks.onProgress({ percent: 100 });
                 }
@@ -522,12 +523,12 @@ class ParkingAPIXML {
             
             console.log('[Progressive] Basic data loading complete');
             
-                        return { 
+            return { 
                 success: true,
                 data: basicSubscribers,
                 total: finalConsumers.length,
                 progressive: true,
-                isLargeCompany: isLargeCompany
+                loadingStrategy: loadingStrategy
             };
             
         } catch (error) {
