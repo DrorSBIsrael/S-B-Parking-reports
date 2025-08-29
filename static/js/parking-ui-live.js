@@ -838,19 +838,19 @@ class ParkingUIIntegrationXML {
             const isExpired = validUntil < new Date();
             
             targetRow.innerHTML = `
-                <td>${subscriber.companyNum || subscriber.contractId || ''}</td>
-                <td>${subscriber.companyName || this.currentContract.name || ''}</td>
+                <td>${subscriber.companyNum || ''}</td>
+                <td>${subscriber.companyName || ''}</td>
                 <td>${subscriber.subscriberNum || subscriber.id || ''}</td>
                 <td>${subscriber.firstName || ''}</td>
                 <td>${subscriber.lastName || subscriber.surname || subscriber.name || ''}</td>
-                <td>${subscriber.tagNum || subscriber.cardno ? `<span class="tag-badge">${subscriber.tagNum || subscriber.cardno}</span>` : ''}</td>
-                <td>${subscriber.lpn1 || subscriber.vehicle1 || ''}</td>
-                <td>${subscriber.lpn2 || subscriber.vehicle2 || ''}</td>
-                <td>${subscriber.lpn3 || subscriber.vehicle3 || ''}</td>
+                <td>${subscriber.tagNum ? `<span class="tag-badge">${subscriber.tagNum}</span>` : ''}</td>
+                <td>${subscriber.lpn1 || ''}</td>
+                <td>${subscriber.lpn2 || ''}</td>
+                <td>${subscriber.lpn3 || ''}</td>
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(validUntil) || ''}</td>
-                <td style="color: #888;" title="פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}">${subscriber.profileName || `פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}`}</td>
+                <td style="color: #888;" title="פרופיל ${subscriber.profile || ''}">${subscriber.profileName || (subscriber.profile ? `פרופיל ${subscriber.profile}` : '')}</td>
                 <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
-                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present || subscriber.presentStatus === 'present' ? '✅' : '❌'}</td>
+                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
             
             // Remove hover indicator if has full details
@@ -888,7 +888,6 @@ class ParkingUIIntegrationXML {
                     const subscribersEl = document.getElementById(`subscribers-${this.currentContract.id}`);
                     if (subscribersEl) {
                         subscribersEl.textContent = basicSubscribers.length;
-                        console.log(`✅ Updated actual subscriber count for company ${this.currentContract.id}: ${basicSubscribers.length}`);
                     }
                     
                     // Get company name and display immediately
@@ -981,17 +980,17 @@ class ParkingUIIntegrationXML {
                 // Count present subscribers
                 const presentCount = this.subscribers.filter(s => s.presence).length;
                 
-                // Update header
+                // Update header with clean company name
                 const companyNameElement = document.getElementById('companyName');
                 if (companyNameElement) {
                     // Check if this is a large company
                     const isLargeCompany = this.subscribers.length > 300;
-                    const statusText = isLargeCompany ? ' 🚀 מצב מהיר' : '';
-                    companyNameElement.textContent = `- ${companyName} [${this.currentContract.id}] (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''}${statusText})`;
+                    const statusText = isLargeCompany ? ' 🚀' : '';
+                    companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''})${statusText}`;
                     
                     // Add tooltip for large companies
                     if (isLargeCompany) {
-                        companyNameElement.title = 'חברה גדולה - פרטי מנויים נטענים לפי דרישה (ערוך או חפש מנוי לטעינת פרטים)';
+                        companyNameElement.title = 'חברה גדולה - פרטי מנויים נטענים לפי דרישה';
                     }
                 }
             }
@@ -1014,14 +1013,12 @@ class ParkingUIIntegrationXML {
             const isLargeCompany = this.subscribers.length > 300;
             const statusText = isLargeCompany ? ' 🚀 מצב מהיר' : '';
             
-            // Get company ID safely
-            const companyId = this.currentContract?.id || '';
-            
-            companyNameElement.textContent = `- ${companyName} [${companyId}] (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''}${statusText})`;
+            // Update with clean format
+            companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''})${statusText}`;
             
             // Add tooltip for large companies
             if (isLargeCompany) {
-                companyNameElement.title = 'חברה גדולה - פרטי מנויים נטענים לפי דרישה (ערוך או חפש מנוי לטעינת פרטים)';
+                companyNameElement.title = 'חברה גדולה - פרטי מנויים נטענים לפי דרישה';
             }
         }
     }
