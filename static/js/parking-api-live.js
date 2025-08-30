@@ -213,10 +213,9 @@ class ParkingAPIXML {
     async getConsumers(companyNum, contractId) {
         console.log(`[getConsumers] Fetching consumers for contract ${contractId}`);
         
-        // CRITICAL: Always pass contractId to get only specific company's consumers
-        const result = await this.makeRequest('consumers', 'GET', { 
-            contractId: contractId  // This MUST be sent to avoid getting all 7000+ consumers
-        });
+        // CRITICAL: Send contractId as part of the endpoint to ensure Flask uses the right URL
+        const endpoint = `contracts/${contractId}/consumers`;
+        const result = await this.makeRequest(endpoint, 'GET', null);
         
         // Check if we got the consumers
         if (result.success && result.data) {
@@ -428,7 +427,7 @@ class ParkingAPIXML {
                                 
                                 return {
                                     ...subscriber,
-                                    companyName: subscriber.companyName,
+                                    companyName: callbacks.companyName || subscriber.companyName,
                                     tagNum: detail.identification?.cardno || '',
                                     cardno: detail.identification?.cardno || '',
                                     firstName: detail.person?.firstName || detail.firstName || subscriber.firstName,
