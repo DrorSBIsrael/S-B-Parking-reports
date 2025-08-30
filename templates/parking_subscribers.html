@@ -1790,30 +1790,20 @@
             profileSelect.innerHTML = '';
             
             // Add only the subscriber's profile
-            if (subscriber.profileId && subscriber.profile) {
-                const option = document.createElement('option');
-                option.value = subscriber.profileId;
-                option.setAttribute('data-profile-name', subscriber.profile);
-                option.textContent = subscriber.profile;
-                profileSelect.appendChild(option);
-                profileSelect.value = subscriber.profileId;
-            } else if (subscriber.profile) {
-                // If we only have profile name, not ID
-                const option = document.createElement('option');
-                option.value = '1'; // Default ID
-                option.setAttribute('data-profile-name', subscriber.profile);
-                option.textContent = subscriber.profile;
-                profileSelect.appendChild(option);
-                profileSelect.value = '1';
-            } else {
-                // Fallback to regular if no profile info
-                const option = document.createElement('option');
-                option.value = '1';
-                option.setAttribute('data-profile-name', 'regular');
-                option.textContent = 'רגיל';
-                profileSelect.appendChild(option);
-                profileSelect.value = '1';
-            }
+            const profileId = subscriber.profileId || subscriber.profile || '1';
+            const profileName = subscriber.profileName || 
+                               (profileId === '1' ? 'כול החניונים' : 
+                                profileId === '0' ? 'רגיל' : 
+                                `פרופיל ${profileId}`);
+            
+            const option = document.createElement('option');
+            option.value = profileId;
+            option.setAttribute('data-profile-name', profileName);
+            option.textContent = profileName;
+            profileSelect.appendChild(option);
+            profileSelect.value = profileId;
+            
+            // No additional fallback needed - we already handle it above
             
             // Ensure profile select is disabled for existing subscriber
             profileSelect.disabled = true;
