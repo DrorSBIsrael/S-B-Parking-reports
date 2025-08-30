@@ -3178,7 +3178,7 @@ def company_manager_proxy():
     # Debug log מפורט
     print(f"\n{'='*70}")
     print(f"🎯 PROXY ENDPOINT HIT: {request.method}")
-    print(f"🔥 v10 - DIRECT CONTRACT ENDPOINT + PERFORMANCE FIX!")
+    print(f"🔥 v11 - CONSUMER UPDATE WITH XML + PUT METHOD FIX!")
     print(f"{'='*70}")
     
     # Handle CORS preflight
@@ -3337,9 +3337,11 @@ def company_manager_proxy():
                     clean_endpoint = f"contracts/{contract_id}/detail"
             
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{clean_endpoint}"
-            method = 'GET'
+            # Preserve the original method for detail endpoints (GET for read, PUT for update)
+            # method = 'GET'  # Don't override the method!
             print(f"   🔍 DETAIL REQUEST: {url}")
             print(f"   🔍 Clean endpoint: {clean_endpoint}")
+            print(f"   🔍 Method: {method}")
         elif 'CustomerMediaWebService' in endpoint:
             # אם כבר יש CustomerMediaWebService ב-endpoint
             url = f"{protocol}://{ip_address}:{port}/{endpoint}"
@@ -3372,8 +3374,62 @@ def company_manager_proxy():
                 # POST request with payload
                 response = requests.post(url, json=payload, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'PUT':
-                # PUT request with payload
-                response = requests.put(url, json=payload, headers=headers, verify=False, timeout=timeout_seconds)
+                # For consumer detail updates, convert JSON to XML
+                if '/detail' in endpoint and 'consumer' in endpoint.lower():
+                    # Convert JSON payload to XML for consumer update
+                    import xml.etree.ElementTree as ET
+                    
+                    # Create the XML structure as per API spec
+                    root = ET.Element('consumerDetail', xmlns='http://gsph.sub.com/cust/types')
+                    
+                    # Add consumer element if exists
+                    if 'consumer' in payload:
+                        consumer_elem = ET.SubElement(root, 'consumer', href=f"/consumers/{payload['consumer'].get('contractid', '')},{payload['consumer'].get('id', '')}")
+                        for key, value in payload['consumer'].items():
+                            if value and key != 'href':
+                                elem = ET.SubElement(consumer_elem, key)
+                                elem.text = str(value)
+                    
+                    # Add person element if exists
+                    if 'person' in payload:
+                        person_elem = ET.SubElement(root, 'person')
+                        for key, value in payload['person'].items():
+                            if value:
+                                elem = ET.SubElement(person_elem, key)
+                                elem.text = str(value)
+                    
+                    # Add identification element if exists
+                    if 'identification' in payload:
+                        ident_elem = ET.SubElement(root, 'identification')
+                        for key, value in payload['identification'].items():
+                            if value:
+                                if key == 'usageProfile' and isinstance(value, dict):
+                                    # Handle nested usageProfile
+                                    usage_elem = ET.SubElement(ident_elem, 'usageProfile')
+                                    for uk, uv in value.items():
+                                        if uv:
+                                            uelem = ET.SubElement(usage_elem, uk)
+                                            uelem.text = str(uv)
+                                else:
+                                    elem = ET.SubElement(ident_elem, key)
+                                    elem.text = str(value)
+                    
+                    # Add vehicle data at root level
+                    for key in ['lpn1', 'lpn2', 'lpn3']:
+                        if key in payload and payload[key]:
+                            elem = ET.SubElement(root, key)
+                            elem.text = str(payload[key])
+                    
+                    # Convert to XML string
+                    xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
+                    print(f"   📝 Sending XML for update:\n{xml_str[:500]}...")  # Show first 500 chars for debug
+                    
+                    # Send as XML
+                    headers['Content-Type'] = 'application/xml'
+                    response = requests.put(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
+                else:
+                    # Regular PUT with JSON
+                    response = requests.put(url, json=payload, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'DELETE':
                 response = requests.delete(url, headers=headers, verify=False, timeout=timeout_seconds)
             else:
