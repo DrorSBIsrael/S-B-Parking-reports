@@ -1780,6 +1780,16 @@
             document.getElementById('editValidFrom').value = formatDateForDisplay(subscriber.validFrom) || '';
             document.getElementById('editValidUntil').value = formatDateForDisplay(subscriber.validUntil) || '';
             
+            // Set ignore presence checkbox
+            const ignorePresenceCheckbox = document.getElementById('editIgnorePresence');
+            if (ignorePresenceCheckbox) {
+                // Check if ignorePresence is true, 'true', '1', or 1
+                ignorePresenceCheckbox.checked = subscriber.ignorePresence === true || 
+                                                subscriber.ignorePresence === 'true' || 
+                                                subscriber.ignorePresence === '1' || 
+                                                subscriber.ignorePresence === 1;
+            }
+            
             // Remove guest mode class for regular edit
             document.getElementById('editModal').classList.remove('guest-mode');
             
@@ -2633,8 +2643,8 @@
                     vehicle1: document.getElementById('editVehicle1').value || '',
                     vehicle2: document.getElementById('editVehicle2').value || '',
                     vehicle3: document.getElementById('editVehicle3').value || '',
-                    validFrom: document.getElementById('editValidFrom').value.trim(),
-                    validUntil: document.getElementById('editValidUntil').value.trim(),
+                    validFrom: convertDateToServer(document.getElementById('editValidFrom').value.trim()),
+                    validUntil: convertDateToServer(document.getElementById('editValidUntil').value.trim()),
                     profile: document.getElementById('editProfile').selectedOptions[0]?.getAttribute('data-profile-name') || 'regular',
                     profileId: document.getElementById('editProfile').value || '1',
                     email: document.getElementById('editEmail').value || '',
@@ -2912,6 +2922,27 @@
                 const month = String(date.getMonth() + 1).padStart(2, '0');
                 const year = date.getFullYear();
                 return `${day}/${month}/${year}`;
+            }
+            
+            return dateStr;
+        }
+        
+        // Convert date from DD/MM/YYYY to YYYY-MM-DD for server
+        function convertDateToServer(dateStr) {
+            if (!dateStr) return '';
+            
+            // If already in YYYY-MM-DD format, return as is
+            if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+                return dateStr;
+            }
+            
+            // If in DD/MM/YYYY format, convert to server format
+            if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
+                const parts = dateStr.split('/');
+                const day = parts[0].padStart(2, '0');
+                const month = parts[1].padStart(2, '0');
+                const year = parts[2];
+                return `${year}-${month}-${day}`;
             }
             
             return dateStr;
