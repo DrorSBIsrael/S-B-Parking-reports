@@ -2595,21 +2595,29 @@
                 
                 // Determine if new based on multiple factors
                 let isNew = false;
-                if (modalEditMode === 'new') {
-                    isNew = true;
-                    console.log('[saveSubscriber] Modal says NEW');
-                } else if (modalEditMode === 'update') {
+                
+                // PRIMARY CHECK: If we have a subscriber number, it's ALWAYS an update
+                if (isDefinitelyUpdate) {
+                    isNew = false;
+                    console.log('[saveSubscriber] Has subscriber number - DEFINITELY UPDATE');
+                } else if (modalEditMode === 'UPDATE' || modalEditMode === 'update') {
                     isNew = false;
                     console.log('[saveSubscriber] Modal says UPDATE');
-                } else if (isDefinitelyUpdate) {
-                    isNew = false;
-                    console.log('[saveSubscriber] Has subscriber number - UPDATE');
                 } else if (currentlyEditing) {
                     isNew = false;
                     console.log('[saveSubscriber] Has editing context - UPDATE');
-                } else {
+                } else if (modalEditMode === 'NEW' || modalEditMode === 'new') {
                     isNew = true;
-                    console.log('[saveSubscriber] No clear indication - assuming NEW');
+                    console.log('[saveSubscriber] Modal says NEW');
+                } else {
+                    // If no clear indication but we have a subscriber num, it's update
+                    if (subscriberNumFromForm && subscriberNumFromForm !== '' && subscriberNumFromForm !== '0') {
+                        isNew = false;
+                        console.log('[saveSubscriber] No mode but has subscriber number - UPDATE');
+                    } else {
+                        isNew = true;
+                        console.log('[saveSubscriber] No clear indication - assuming NEW');
+                    }
                 }
                 
                 console.log('[saveSubscriber] FINAL isNew decision:', isNew);
