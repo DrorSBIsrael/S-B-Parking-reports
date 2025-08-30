@@ -3290,8 +3290,12 @@ def company_manager_proxy():
             method = 'GET'  # תמיד GET לחברות
         elif 'contracts/' in endpoint and '/consumers' in endpoint:
             # Handle contracts/{contractId}/consumers endpoint
-            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
+            # Remove CustomerMediaWebService prefix if it exists
+            clean_endpoint = endpoint.replace('CustomerMediaWebService/', '')
+            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{clean_endpoint}"
             print(f"   ✅ DIRECT CONTRACT-SPECIFIC URL: {url}")
+            print(f"   📍 Clean endpoint: {clean_endpoint}")
+            print(f"   📍 Full URL: {url}")
             method = 'GET'
         elif 'consumers' in endpoint.lower() and '/detail' not in endpoint:
             # Check if we have a contractId in payload to filter by
@@ -3483,7 +3487,7 @@ def company_manager_proxy():
                                 
                                 consumers.append(consumer_data)
                             
-                            # Check if we're getting consumers from contract-specific endpoint
+                            # Check if we're getting consumers from contract-specific endpoint3482
                             is_contract_specific = 'contracts/' in url and '/consumers' in url
                             
                             if is_contract_specific:
