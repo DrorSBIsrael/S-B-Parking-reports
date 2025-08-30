@@ -3178,7 +3178,7 @@ def company_manager_proxy():
     # Debug log מפורט
     print(f"\n{'='*70}")
     print(f"🎯 PROXY ENDPOINT HIT: {request.method}")
-    print(f"🔥 v11 - CONSUMER UPDATE WITH XML + PUT METHOD FIX!")
+    print(f"🔥 v12 - NO LIMIT + BATCH-50 STRATEGY + BOOLEAN FIX!")
     print(f"{'='*70}")
     
     # Handle CORS preflight
@@ -3412,7 +3412,11 @@ def company_manager_proxy():
                                             uelem.text = str(uv)
                                 else:
                                     elem = ET.SubElement(ident_elem, key)
-                                    elem.text = str(value)
+                                    # Handle boolean values for XML
+                                    if isinstance(value, bool):
+                                        elem.text = 'true' if value else 'false'
+                                    else:
+                                        elem.text = str(value)
                     
                     # Add vehicle data at root level
                     for key in ['lpn1', 'lpn2', 'lpn3']:
@@ -3587,13 +3591,9 @@ def company_manager_proxy():
                                 print(f"   ✅ Returning {len(consumers)} consumers")
                             
                             # CRITICAL PERFORMANCE FIX: Limit consumers to avoid browser freezing
-                            MAX_CONSUMERS_PER_REQUEST = 100  # Reduced from 500 for better performance
-                            
-                            if len(consumers) > MAX_CONSUMERS_PER_REQUEST:
-                                print(f"   ⚠️ WARNING: Got {len(consumers)} consumers total!")
-                                print(f"   🚀 PERFORMANCE: Limiting to {MAX_CONSUMERS_PER_REQUEST} consumers")
-                                consumers = consumers[:MAX_CONSUMERS_PER_REQUEST]
-                                print(f"   ℹ️ User should implement pagination for large companies")
+                            # No limit on consumers - let the frontend handle it with smart loading
+                            # MAX_CONSUMERS_PER_REQUEST = 100  # REMOVED - no limit
+                            print(f"   ✅ Returning all {len(consumers)} consumers (no limit)")
                             
                             # Returning consumers from XML
                             return jsonify({'success': True, 'data': consumers})
