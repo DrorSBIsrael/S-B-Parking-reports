@@ -890,10 +890,12 @@ class ParkingUIIntegrationXML {
                         subscribersEl.textContent = basicSubscribers.length;
                     }
                     
-                    // Update all subscribers with correct company name
+                    // Update all subscribers with correct company name and loading strategy
                     const companyName = this.currentContract.name || this.currentContract.firstName || `חברה ${this.currentContract.id}`;
+                    const isLargeCompany = this.subscribers.length > 300;
                     this.subscribers.forEach(sub => {
                         sub.companyName = companyName.trim();
+                        sub.isLargeCompany = isLargeCompany;
                     });
                     
                     // Get company name and display immediately
