@@ -346,10 +346,10 @@ class ParkingAPIXML {
             }
             
             const finalConsumers = Array.isArray(consumers) ? consumers : [consumers];
-            // PERFORMANCE OPTIMIZATION: Dramatically reduced requests!
+            // PERFORMANCE OPTIMIZATION: Smart loading based on company size
             const INSTANT_LOAD_THRESHOLD = 30;    // Load all at once (1 batch)
-            const TWO_BATCH_THRESHOLD = 80;       // Load in 2 batches only
-            const ON_DEMAND_THRESHOLD = 100;      // Load on hover/edit only
+            const BATCH_LOAD_THRESHOLD = 300;     // Load in batches of 50
+            const ON_DEMAND_THRESHOLD = 300;      // Load on hover only (>300)
             
             const subscriberCount = finalConsumers.length;
             let loadingStrategy = 'instant';
@@ -357,9 +357,9 @@ class ParkingAPIXML {
             if (subscriberCount <= INSTANT_LOAD_THRESHOLD) {
                 loadingStrategy = 'instant';
                 console.log(`[Strategy] Small company (${subscriberCount} ≤ ${INSTANT_LOAD_THRESHOLD}): Loading ALL details at once`);
-            } else if (subscriberCount <= TWO_BATCH_THRESHOLD) {
-                loadingStrategy = 'two-batch';
-                console.log(`[Strategy] Medium company (${subscriberCount} ≤ ${TWO_BATCH_THRESHOLD}): Loading in ONLY 2 batches`);
+            } else if (subscriberCount <= BATCH_LOAD_THRESHOLD) {
+                loadingStrategy = 'batch-50';
+                console.log(`[Strategy] Medium company (${subscriberCount} ≤ ${BATCH_LOAD_THRESHOLD}): Loading in batches of 50`);
             } else {
                 loadingStrategy = 'on-demand';
                 console.log(`[Strategy] Large company (${subscriberCount} > ${ON_DEMAND_THRESHOLD}): Details on-demand only`);
@@ -463,14 +463,17 @@ class ParkingAPIXML {
                         const detailedSubscribers = await Promise.all(detailPromises);
                         onBasicLoaded(detailedSubscribers);
                         basicSubscribers = detailedSubscribers;
-                    } else if (loadingStrategy === 'two-batch') {
-                        // For 66 subscribers: Load in exactly 2 batches (33 each)
-                        const BATCH_SIZE = Math.ceil(basicSubscribers.length / 2);
-                        console.log(`[TWO-BATCH Strategy] Loading ${basicSubscribers.length} subscribers in 2 batches of ~${BATCH_SIZE} each`);
+                    } else if (loadingStrategy === 'batch-50') {
+                        // Load in batches of 50 for companies up to 300 subscribers
+                        const BATCH_SIZE = 50;
+                        const totalBatches = Math.ceil(basicSubscribers.length / BATCH_SIZE);
+                        console.log(`[BATCH-50 Strategy] Loading ${basicSubscribers.length} subscribers in ${totalBatches} batches of up to ${BATCH_SIZE} each`);
                         let allUpdated = [];
                         
                         for (let i = 0; i < basicSubscribers.length; i += BATCH_SIZE) {
                             const batch = basicSubscribers.slice(i, Math.min(i + BATCH_SIZE, basicSubscribers.length));
+                            const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+                            console.log(`[BATCH-50] Loading batch ${batchNumber}/${totalBatches} (${batch.length} subscribers)`);
                             
                             const batchPromises = batch.map(processSubscriber);
                             const batchResults = await Promise.all(batchPromises);
@@ -480,7 +483,11 @@ class ParkingAPIXML {
                             // Update UI after each batch
                             const progress = Math.round((allUpdated.length / basicSubscribers.length) * 100);
                             if (callbacks.onProgress) {
-                                callbacks.onProgress({ percent: progress });
+                                callbacks.onProgress({ 
+                                    percent: progress,
+                                    current: allUpdated.length,
+                                    total: basicSubscribers.length
+                                });
                             }
                             
                             // Update only the changed items in the UI
@@ -491,15 +498,14 @@ class ParkingAPIXML {
                                 }
                             });
                             
-                            // Small delay between the 2 batches
+                            // Small delay between batches to let UI breathe
                             if (i + BATCH_SIZE < basicSubscribers.length) {
-                                console.log('[TWO-BATCH] Loading second batch...');
-                                await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
+                                await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
                             }
                         }
                         
                         basicSubscribers = allUpdated;
-                        console.log('[TWO-BATCH] ✅ All details loaded');
+                        console.log('[BATCH-50] ✅ All details loaded');
                     } else {
                         // Should not reach here with current strategy
                         console.warn('[Strategy] Unknown loading strategy:', loadingStrategy);
