@@ -946,7 +946,7 @@ class ParkingUIIntegrationXML {
                             `טוען פרטים... ${progress.current}/${progress.total} (${progress.percent}%)`
                         );
                         
-                        if (progress.percent === 100) {
+                        if (progress.percent >= 100) {
                             // Hide immediately when done
                             this.hideBackgroundProgress();
                         }
@@ -967,6 +967,8 @@ class ParkingUIIntegrationXML {
             this.displaySubscribers([]);
         } finally {
             this.hideProgressMessage();
+            // Also hide the background loading message
+            this.hideBackgroundProgress();
         }
     }
     
@@ -1968,7 +1970,43 @@ class ParkingUIIntegrationXML {
             
             if (result.success) {
                 this.showNotification('הנתונים נשמרו בהצלחה', 'success');
-                await this.loadSubscribers(); // Refresh the list
+                
+                // Only update the specific subscriber in the list, don't reload everything
+                if (shouldUpdate && subscriberData.subscriberNum) {
+                    // Find and update the subscriber in our local array
+                    const index = this.subscribers.findIndex(s => s.id === subscriberData.subscriberNum);
+                    if (index !== -1) {
+                        // Update local data
+                        this.subscribers[index] = {
+                            ...this.subscribers[index],
+                            firstName: subscriberData.firstName,
+                            lastName: subscriberData.lastName,
+                            name: subscriberData.lastName,
+                            vehicle1: subscriberData.vehicle1,
+                            vehicle2: subscriberData.vehicle2,
+                            vehicle3: subscriberData.vehicle3,
+                            lpn1: subscriberData.vehicle1,
+                            lpn2: subscriberData.vehicle2,
+                            lpn3: subscriberData.vehicle3,
+                            validFrom: subscriberData.validFrom,
+                            validUntil: subscriberData.validUntil,
+                            xValidFrom: subscriberData.validFrom,
+                            xValidUntil: subscriberData.validUntil,
+                            tagNum: subscriberData.tagNum,
+                            cardno: subscriberData.tagNum,
+                            profile: subscriberData.profileId,
+                            profileName: subscriberData.profile,
+                            ignorePresence: subscriberData.ignorePresence === '1'
+                        };
+                        
+                        // Update the specific row in the table
+                        this.updateSubscriberRow(this.subscribers[index], index);
+                    }
+                } else if (isReallyNew) {
+                    // For new subscribers, we need to reload to get the server-assigned ID
+                    await this.loadSubscribers();
+                }
+                
                 return true;
             } else {
                 this.showNotification('שגיאה בשמירת הנתונים: ' + result.error, 'error');
