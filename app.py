@@ -3178,7 +3178,7 @@ def company_manager_proxy():
     # Debug log מפורט
     print(f"\n{'='*70}")
     print(f"🎯 PROXY ENDPOINT HIT: {request.method}")
-    print(f"🔥 v8 - OPTIMIZED BATCH LOADING")
+    print(f"🔥 v9 - CRITICAL FIX: CONTRACT-SPECIFIC LOADING!")
     print(f"{'='*70}")
     
     # Handle CORS preflight
@@ -3288,18 +3288,18 @@ def company_manager_proxy():
         if endpoint == 'contracts' or endpoint == 'GetContractsList':
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts"
             method = 'GET'  # תמיד GET לחברות
-        elif endpoint == 'consumers' or endpoint == 'GetConsumerList':
+        elif 'consumers' in endpoint.lower() and '/detail' not in endpoint:
             # Check if we have a contractId in payload to filter by
             contract_id = payload.get('contractId') if payload else None
             
             if contract_id:
-                # Get consumers for specific contract only!
+                # Get consumers for SPECIFIC CONTRACT ONLY - Critical for performance!
                 url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts/{contract_id}/consumers"
-                print(f"   ✅ Getting consumers for contract {contract_id}")
+                print(f"   ✅ OPTIMIZED: Getting consumers ONLY for contract {contract_id} (not all 7000+)")
             else:
                 # Fallback to getting all consumers (should not happen)
                 url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
-                print(f"   ⚠️ WARNING: Getting ALL consumers (no contractId provided)")
+                print(f"   ⚠️ ERROR: Getting ALL consumers (no contractId) - THIS WILL BE SLOW!")
             
             print(f"   📍 CONSUMERS ENDPOINT v6 - FILTERED BY CONTRACT!")
             method = 'GET'  # תמיד GET למנויים
@@ -3474,7 +3474,7 @@ def company_manager_proxy():
                                             child_data[subtag] = subchild.text
                                         consumer_data[tag] = child_data
                                     else:
-                                        consumer_data[tag] = child.text
+                                    consumer_data[tag] = child.text
                                 
                                 consumers.append(consumer_data)
                             
