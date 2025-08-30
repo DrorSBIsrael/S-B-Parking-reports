@@ -3178,7 +3178,7 @@ def company_manager_proxy():
     # Debug log מפורט
     print(f"\n{'='*70}")
     print(f"🎯 PROXY ENDPOINT HIT: {request.method}")
-    print(f"🔥 v9 - CRITICAL FIX: CONTRACT-SPECIFIC LOADING!")
+    print(f"🔥 v10 - DIRECT CONTRACT ENDPOINT + PERFORMANCE FIX!")
     print(f"{'='*70}")
     
     # Handle CORS preflight
@@ -3288,6 +3288,11 @@ def company_manager_proxy():
         if endpoint == 'contracts' or endpoint == 'GetContractsList':
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts"
             method = 'GET'  # תמיד GET לחברות
+        elif 'contracts/' in endpoint and '/consumers' in endpoint:
+            # Handle contracts/{contractId}/consumers endpoint
+            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
+            print(f"   ✅ DIRECT CONTRACT-SPECIFIC URL: {url}")
+            method = 'GET'
         elif 'consumers' in endpoint.lower() and '/detail' not in endpoint:
             # Check if we have a contractId in payload to filter by
             contract_id = payload.get('contractId') if payload else None
