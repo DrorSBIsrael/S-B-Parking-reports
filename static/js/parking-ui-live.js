@@ -1773,9 +1773,9 @@ class ParkingUIIntegrationXML {
                     identification: {
                         cardno: subscriberData.tagNum || '',
                         identificationType: '54',  // Standard type for parking cards
-                        validFrom: subscriberData.validFrom,
-                        validUntil: subscriberData.validUntil,
-                        ignorePresence: subscriberData.ignorePresence || '1',
+                        validFrom: subscriberData.validFrom,  // Use validFrom for identification
+                        validUntil: subscriberData.validUntil,  // Use validUntil for identification
+                        ignorePresence: subscriberData.ignorePresence === '1' ? true : false,  // Send as boolean
                         usageProfile: {
                             id: subscriberData.profileId || '1'
                         }
