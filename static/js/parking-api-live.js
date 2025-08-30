@@ -244,7 +244,8 @@ class ParkingAPIXML {
     }
     
     async updateConsumer(contractId, consumerId, consumerData) {
-        return this.makeRequest(`consumers/${contractId},${consumerId}`, 'PUT', consumerData);
+        // Use the /detail endpoint for updating consumer as per API spec
+        return this.makeRequest(`consumers/${contractId},${consumerId}/detail`, 'PUT', consumerData);
     }
     
     async deleteConsumer(contractId, consumerId) {
