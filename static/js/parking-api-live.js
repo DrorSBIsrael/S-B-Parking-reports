@@ -345,30 +345,23 @@ class ParkingAPIXML {
             }
             
             const finalConsumers = Array.isArray(consumers) ? consumers : [consumers];
-            // PERFORMANCE OPTIMIZATION: Smart loading based on company size
-            const INSTANT_LOAD_THRESHOLD = 10;    // Load all details immediately  
-            const BATCH_LOAD_THRESHOLD = 50;      // Load in small batches
-            const LARGE_BATCH_THRESHOLD = 200;    // Load in larger batches
-            const ON_DEMAND_THRESHOLD = 300;      // Load on hover only
+            // PERFORMANCE OPTIMIZATION: Dramatically reduced requests!
+            const INSTANT_LOAD_THRESHOLD = 30;    // Load all at once (1 batch)
+            const TWO_BATCH_THRESHOLD = 80;       // Load in 2 batches only
+            const ON_DEMAND_THRESHOLD = 100;      // Load on hover/edit only
             
             const subscriberCount = finalConsumers.length;
             let loadingStrategy = 'instant';
             
             if (subscriberCount <= INSTANT_LOAD_THRESHOLD) {
                 loadingStrategy = 'instant';
-                console.log(`[Strategy] Small company (${subscriberCount} ≤ ${INSTANT_LOAD_THRESHOLD}): instant load`);
-            } else if (subscriberCount <= BATCH_LOAD_THRESHOLD) {
-                loadingStrategy = 'batch-small';
-                console.log(`[Strategy] Medium company (${subscriberCount} ≤ ${BATCH_LOAD_THRESHOLD}): batch size 3`);
-            } else if (subscriberCount <= LARGE_BATCH_THRESHOLD) {
-                loadingStrategy = 'batch-medium';
-                console.log(`[Strategy] Large company (${subscriberCount} ≤ ${LARGE_BATCH_THRESHOLD}): batch size 5`);
-            } else if (subscriberCount <= ON_DEMAND_THRESHOLD) {
-                loadingStrategy = 'batch-large';
-                console.log(`[Strategy] Very large company (${subscriberCount} ≤ ${ON_DEMAND_THRESHOLD}): batch size 10`);
+                console.log(`[Strategy] Small company (${subscriberCount} ≤ ${INSTANT_LOAD_THRESHOLD}): Loading ALL details at once`);
+            } else if (subscriberCount <= TWO_BATCH_THRESHOLD) {
+                loadingStrategy = 'two-batch';
+                console.log(`[Strategy] Medium company (${subscriberCount} ≤ ${TWO_BATCH_THRESHOLD}): Loading in ONLY 2 batches`);
             } else {
                 loadingStrategy = 'on-demand';
-                console.log(`[Strategy] Huge company (${subscriberCount} > ${ON_DEMAND_THRESHOLD}): on-demand only`);
+                console.log(`[Strategy] Large company (${subscriberCount} > ${ON_DEMAND_THRESHOLD}): Details on-demand only`);
             }
             
             // Map ALL available data from consumer list
@@ -469,18 +462,10 @@ class ParkingAPIXML {
                         const detailedSubscribers = await Promise.all(detailPromises);
                         onBasicLoaded(detailedSubscribers);
                         basicSubscribers = detailedSubscribers;
-                    } else {
-                        // Batch loading based on strategy
-                        let BATCH_SIZE = 5;
-                        if (loadingStrategy === 'batch-small') {
-                            BATCH_SIZE = 3;
-                        } else if (loadingStrategy === 'batch-medium') {
-                            BATCH_SIZE = 5;
-                        } else if (loadingStrategy === 'batch-large') {
-                            BATCH_SIZE = 10;
-                        }
-                        
-                        console.log(`[Batch Loading] Using batch size: ${BATCH_SIZE} for ${basicSubscribers.length} subscribers`);
+                    } else if (loadingStrategy === 'two-batch') {
+                        // For 66 subscribers: Load in exactly 2 batches (33 each)
+                        const BATCH_SIZE = Math.ceil(basicSubscribers.length / 2);
+                        console.log(`[TWO-BATCH Strategy] Loading ${basicSubscribers.length} subscribers in 2 batches of ~${BATCH_SIZE} each`);
                         let allUpdated = [];
                         
                         for (let i = 0; i < basicSubscribers.length; i += BATCH_SIZE) {
@@ -505,13 +490,18 @@ class ParkingAPIXML {
                                 }
                             });
                             
-                            // Delay between batches to not overwhelm server
+                            // Small delay between the 2 batches
                             if (i + BATCH_SIZE < basicSubscribers.length) {
-                                await new Promise(resolve => setTimeout(resolve, 200)); // Increased delay
+                                console.log('[TWO-BATCH] Loading second batch...');
+                                await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
                             }
                         }
                         
                         basicSubscribers = allUpdated;
+                        console.log('[TWO-BATCH] ✅ All details loaded');
+                    } else {
+                        // Should not reach here with current strategy
+                        console.warn('[Strategy] Unknown loading strategy:', loadingStrategy);
                     }
                     
                     // Hide loading message
