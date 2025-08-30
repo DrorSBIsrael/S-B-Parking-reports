@@ -1517,7 +1517,7 @@ class ParkingUIIntegrationXML {
             
             row.innerHTML = `
                 <td>${subscriber.companyNum || ''}</td>
-                <td>${subscriber.companyName || this.currentContract?.name || ''}</td>
+                <td>${subscriber.companyName || ''}</td>
                 <td>${subscriber.subscriberNum || subscriber.id || ''}</td>
                 <td>${subscriber.firstName || ''}</td>
                 <td>${subscriber.lastName || subscriber.name || ''}</td>
@@ -1708,8 +1708,10 @@ class ParkingUIIntegrationXML {
         
         // Open edit modal with full data
         if (window.editSubscriber) {
-            console.log('[editSubscriber from UI] Calling window.editSubscriber with:', subscriber);
+            console.log('[editSubscriber from UI] Full subscriber data:', JSON.stringify(subscriber, null, 2));
             window.editSubscriber(subscriber);
+        } else {
+            console.error('[editSubscriber] window.editSubscriber function not found!');
         }
     }
     
