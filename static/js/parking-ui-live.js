@@ -947,7 +947,8 @@ class ParkingUIIntegrationXML {
                         );
                         
                         if (progress.percent === 100) {
-                            setTimeout(() => this.hideBackgroundProgress(), 2000);
+                            // Hide immediately when done
+                            this.hideBackgroundProgress();
                         }
                     }
                 }
@@ -1708,6 +1709,9 @@ class ParkingUIIntegrationXML {
         
         // Open edit modal with full data
         if (window.editSubscriber) {
+            // Make sure we have the correct company name
+            subscriber.companyName = this.currentContract?.name || this.currentContract?.firstName || subscriber.companyName;
+            
             console.log('[editSubscriber from UI] Full subscriber data:', JSON.stringify(subscriber, null, 2));
             window.editSubscriber(subscriber);
         } else {
@@ -1747,13 +1751,46 @@ class ParkingUIIntegrationXML {
                 surname: subscriberData.surname
             });
             
-            // Prepare consumer data for XML API with new detail fields
-            const consumerData = {
+            // Prepare consumer data for XML API
+            let consumerData;
+            
+            if (shouldUpdate) {
+                // For UPDATE - send only the essential fields
+                consumerData = {
+                    // Names
+                    firstName: subscriberData.firstName || '',
+                    name: subscriberData.lastName || subscriberData.surname || '',
+                    
+                    // Vehicles
+                    lpn1: subscriberData.vehicle1 || '',
+                    lpn2: subscriberData.vehicle2 || '',
+                    lpn3: subscriberData.vehicle3 || '',
+                    
+                    // Dates in required format
+                    xValidFrom: subscriberData.validFrom,
+                    xValidUntil: subscriberData.validUntil,
+                    
+                    // Profile (send ID only)
+                    profile: subscriberData.profileId || '1',
+                    
+                    // Tag number (if changed)
+                    tagNum: subscriberData.tagNum || '',
+                    
+                    // Ignore presence flag
+                    ignorePresence: subscriberData.ignorePresence || '1',
+                    
+                    // IDs for identification
+                    id: subscriberData.subscriberNum,
+                    contractId: this.currentContract.id
+                };
+            } else {
+                // For NEW subscriber - send full structure
+                consumerData = {
                 // Basic info - BOTH names must have values, server requires it!
                 firstName: subscriberData.firstName || subscriberData.lastName || subscriberData.surname || 'Unknown',
-                surname: subscriberData.lastName || subscriberData.surname || subscriberData.firstName || 'Unknown',  // Support both field names
+                    surname: subscriberData.lastName || subscriberData.surname || subscriberData.firstName || 'Unknown',
                 
-                // Vehicles - make sure lpn3 only exists if lpn2 exists
+                    // Vehicles
                 lpn1: subscriberData.vehicle1 || '',
                 lpn2: subscriberData.vehicle2 || '',
                 lpn3: (subscriberData.vehicle2 && subscriberData.vehicle3) ? subscriberData.vehicle3 : '',
@@ -1765,8 +1802,8 @@ class ParkingUIIntegrationXML {
                     identificationType: '54',
                     ignorePresence: subscriberData.ignorePresence || '1',
                     cardno: subscriberData.tagNum || '',
-                    validFrom: subscriberData.validFrom,  // Will be formatted by API
-                    validUntil: subscriberData.validUntil,  // Will be formatted by API
+                        validFrom: subscriberData.validFrom,
+                        validUntil: subscriberData.validUntil,
                     usageProfile: {
                         id: subscriberData.profileId || '1',
                         name: subscriberData.profile || 'רגיל'
@@ -1776,7 +1813,6 @@ class ParkingUIIntegrationXML {
                 
                 // Consumer info
                 consumer: {
-                    // Only include ID if provided, otherwise server will auto-generate
                     id: subscriberData.subscriberNum || undefined,
                     contractid: this.currentContract.id,
                     filialId: subscriberData.filialId || '2240'
@@ -1786,6 +1822,7 @@ class ParkingUIIntegrationXML {
                 email: subscriberData.email || '',
                 phone: subscriberData.phone || ''
             };
+            }
             
             if (isReallyNew) {
                 // Need to ensure subscribers list is loaded
