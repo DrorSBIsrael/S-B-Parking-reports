@@ -1757,33 +1757,33 @@ class ParkingUIIntegrationXML {
             let consumerData;
             
             if (shouldUpdate) {
-                // For UPDATE - send only the essential fields
+                // For UPDATE - structure data according to API spec for /detail endpoint
                 consumerData = {
-                    // Names
-                    firstName: subscriberData.firstName || '',
-                    name: subscriberData.lastName || subscriberData.surname || '',
-                    
-                    // Vehicles
+                    consumer: {
+                        id: subscriberData.subscriberNum,
+                        contractid: this.currentContract.id,
+                        name: subscriberData.lastName || subscriberData.surname || '',
+                        xValidFrom: subscriberData.validFrom,
+                        xValidUntil: subscriberData.validUntil
+                    },
+                    person: {
+                        firstName: subscriberData.firstName || '',
+                        surname: subscriberData.lastName || subscriberData.surname || ''
+                    },
+                    identification: {
+                        cardno: subscriberData.tagNum || '',
+                        identificationType: '54',  // Standard type for parking cards
+                        validFrom: subscriberData.validFrom,
+                        validUntil: subscriberData.validUntil,
+                        ignorePresence: subscriberData.ignorePresence || '1',
+                        usageProfile: {
+                            id: subscriberData.profileId || '1'
+                        }
+                    },
+                    // Vehicle data
                     lpn1: subscriberData.vehicle1 || '',
                     lpn2: subscriberData.vehicle2 || '',
-                    lpn3: subscriberData.vehicle3 || '',
-                    
-                    // Dates in required format
-                    xValidFrom: subscriberData.validFrom,
-                    xValidUntil: subscriberData.validUntil,
-                    
-                    // Profile (send ID only)
-                    profile: subscriberData.profileId || '1',
-                    
-                    // Tag number (if changed)
-                    tagNum: subscriberData.tagNum || '',
-                    
-                    // Ignore presence flag
-                    ignorePresence: subscriberData.ignorePresence || '1',
-                    
-                    // IDs for identification
-                    id: subscriberData.subscriberNum,
-                    contractId: this.currentContract.id
+                    lpn3: subscriberData.vehicle3 || ''
                 };
             } else {
                 // For NEW subscriber - send full structure
