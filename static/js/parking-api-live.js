@@ -339,9 +339,8 @@ class ParkingAPIXML {
                         console.log(`[Progressive] First consumer structure:`, consumersArray[0]);
                         console.log(`[Progressive] Looking for contractId: ${companyId}`);
                     }
-                    // TEMPORARY: Return first 100 consumers for testing
-                    console.log(`[Progressive] TEMPORARY: Returning first 100 consumers for testing`);
-                    consumers = consumersArray.slice(0, 100);
+                    // No limit - return all consumers
+                    consumers = consumersArray;
                 }
             }
             
