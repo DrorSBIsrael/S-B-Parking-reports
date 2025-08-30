@@ -3479,7 +3479,7 @@ def company_manager_proxy():
                                             child_data[subtag] = subchild.text
                                         consumer_data[tag] = child_data
                                     else:
-                                    consumer_data[tag] = child.text
+                                        consumer_data[tag] = child.text
                                 
                                 consumers.append(consumer_data)
                             
