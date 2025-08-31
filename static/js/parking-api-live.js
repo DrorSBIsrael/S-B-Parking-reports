@@ -402,9 +402,9 @@ class ParkingAPIXML {
                 
                 // Status
                 presence: consumer.presence || false,
-                ignorePresence: consumer.ignorePresence === '1' || 
-                               consumer.ignorePresence === 'true' || 
-                               consumer.ignorePresence === true || false,
+                // Keep ignorePresence as '0' or '1' string
+                ignorePresence: consumer.ignorePresence === '1' || consumer.ignorePresence === 1 || consumer.ignorePresence === true || consumer.ignorePresence === 'true' ? '1' :
+                               consumer.ignorePresence === '0' || consumer.ignorePresence === 0 || consumer.ignorePresence === false || consumer.ignorePresence === 'false' ? '0' : '0',
                 hasFullDetails: false,  // Will be set to true after loading details
                 loadingStrategy: loadingStrategy
             }));
@@ -448,12 +448,11 @@ class ParkingAPIXML {
                                     validUntil: detail.identification?.validUntil || detail.validUntil || subscriber.validUntil,
                                     present: detail.identification?.present === 'true',
                                     presence: detail.identification?.present === 'true',
-                                    ignorePresence: detail.identification?.ignorePresence === '1' || 
-                                                   detail.identification?.ignorePresence === 'true' || 
-                                                   detail.identification?.ignorePresence === true ||
-                                                   detail.ignorePresence === '1' ||
-                                                   detail.ignorePresence === 'true' ||
-                                                   detail.ignorePresence === true,
+                                    // Keep ignorePresence as '0' or '1' string
+                                    ignorePresence: (detail.identification?.ignorePresence === '1' || detail.identification?.ignorePresence === 1 || 
+                                                   detail.identification?.ignorePresence === true || detail.identification?.ignorePresence === 'true' ||
+                                                   detail.ignorePresence === '1' || detail.ignorePresence === 1 ||
+                                                   detail.ignorePresence === true || detail.ignorePresence === 'true') ? '1' : '0',
                                     hasFullDetails: true
                                 };
                             }
