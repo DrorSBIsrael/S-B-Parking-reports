@@ -3178,7 +3178,7 @@ def company_manager_proxy():
     # Debug log מפורט
     print(f"\n{'='*70}")
     print(f"🎯 PROXY ENDPOINT HIT: {request.method}")
-    print(f"🔥 v13 - FIXED: HOVER LOADING + DATE FORMAT + NO LIMITS!")
+    print(f"🔥 v14 - FIXED: DUPLICATE EVENTS + PROFILE DISPLAY + HOVER LOADING!")
     print(f"{'='*70}")
     
     # Handle CORS preflight
@@ -3426,7 +3426,7 @@ def company_manager_proxy():
                     
                     # Convert to XML string
                     xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
-                    print(f"   📝 Sending XML for update:\n{xml_str[:500]}...")  # Show first 500 chars for debug
+                    print(f"   📝 Sending XML for update:\n{xml_str}")  # Show full XML for debug
                     
                     # Send as XML
                     headers['Content-Type'] = 'application/xml'
