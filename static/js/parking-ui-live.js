@@ -1349,9 +1349,49 @@ class ParkingUIIntegrationXML {
                     );
                     
                     if (result.success && result.data) {
-                        // Update subscriber with full details
-                        Object.assign(subscriber, result.data);
-                        subscriber.hasFullDetails = true;
+                        // Update subscriber with full details - preserve important fields
+                        const detail = result.data;
+                        
+                        // Preserve company name and other UI-specific fields
+                        const preservedFields = {
+                            companyName: subscriber.companyName,
+                            isLargeCompany: subscriber.isLargeCompany,
+                            loadingStrategy: subscriber.loadingStrategy
+                        };
+                        
+                        // Map the detail fields properly
+                        Object.assign(subscriber, {
+                            ...detail,
+                            ...preservedFields,
+                            // Map profile correctly
+                            profile: detail.identification?.usageProfile?.id || detail.profile || subscriber.profile,
+                            profileName: detail.identification?.usageProfile?.name || detail.profileName || subscriber.profileName,
+                            // Map dates
+                            validFrom: detail.identification?.validFrom || detail.validFrom || subscriber.validFrom,
+                            validUntil: detail.identification?.validUntil || detail.validUntil || subscriber.validUntil,
+                            xValidFrom: detail.consumer?.xValidFrom || detail.xValidFrom || subscriber.xValidFrom,
+                            xValidUntil: detail.consumer?.xValidUntil || detail.xValidUntil || subscriber.xValidUntil,
+                            // Map presence and ignorePresence correctly
+                            ignorePresence: detail.identification?.ignorePresence === '1' || 
+                                          detail.identification?.ignorePresence === 'true' || 
+                                          detail.identification?.ignorePresence === true ||
+                                          detail.ignorePresence === '1' ||
+                                          detail.ignorePresence === 'true' ||
+                                          detail.ignorePresence === true,
+                            presence: detail.identification?.present === 'true' || detail.presence,
+                            present: detail.identification?.present === 'true' || detail.present,
+                            // Map vehicles
+                            lpn1: detail.lpn1 || subscriber.lpn1,
+                            lpn2: detail.lpn2 || subscriber.lpn2,
+                            lpn3: detail.lpn3 || subscriber.lpn3,
+                            vehicle1: detail.lpn1 || subscriber.vehicle1,
+                            vehicle2: detail.lpn2 || subscriber.vehicle2,
+                            vehicle3: detail.lpn3 || subscriber.vehicle3,
+                            // Map tag/card
+                            tagNum: detail.identification?.cardno || detail.tagNum || subscriber.tagNum,
+                            cardno: detail.identification?.cardno || detail.cardno || subscriber.cardno,
+                            hasFullDetails: true
+                        });
                         
                         // Update the row in the table
                         this.updateSubscriberRow(subscriber, index);
@@ -1711,7 +1751,7 @@ class ParkingUIIntegrationXML {
                         identificationType: '54',  // Standard type for parking cards
                         validFrom: subscriberData.validFrom,  // Use validFrom for identification
                         validUntil: subscriberData.validUntil,  // Use validUntil for identification
-                        ignorePresence: subscriberData.ignorePresence === '1' ? true : false,  // Send as boolean
+                        ignorePresence: subscriberData.ignorePresence === '1' ? '1' : '0',  // Send as string '1' or '0'
                         usageProfile: {
                             id: subscriberData.profileId || '1'
                         }
@@ -1912,7 +1952,7 @@ class ParkingUIIntegrationXML {
                     // Find and update the subscriber in our local array
                     const index = this.subscribers.findIndex(s => s.id === subscriberData.subscriberNum);
                     if (index !== -1) {
-                        // Update local data
+                        // Update local data - preserve important fields
                         this.subscribers[index] = {
                             ...this.subscribers[index],
                             firstName: subscriberData.firstName,
@@ -1932,7 +1972,12 @@ class ParkingUIIntegrationXML {
                             cardno: subscriberData.tagNum,
                             profile: subscriberData.profileId,
                             profileName: subscriberData.profile,
-                            ignorePresence: subscriberData.ignorePresence === '1'
+                            ignorePresence: subscriberData.ignorePresence === '1',
+                            // Preserve company name and other UI fields
+                            companyName: this.subscribers[index].companyName,
+                            isLargeCompany: this.subscribers[index].isLargeCompany,
+                            loadingStrategy: this.subscribers[index].loadingStrategy,
+                            hasFullDetails: this.subscribers[index].hasFullDetails
                         };
                         
                         // Update the specific row in the table
