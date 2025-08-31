@@ -742,74 +742,7 @@ class ParkingUIIntegrationXML {
         return [...new Set(companies)].sort((a, b) => parseInt(a) - parseInt(b));
     }
     
-    /**
-     * Setup hover loading for a row
-     */
-    setupHoverLoading(row, subscriber, index) {
-        let hoverTimeout = null;
-        let isLoadingDetails = false;
-        
-        // Get hover delay from config or use default
-        const hoverDelay = 500; // 500ms delay
-        
-        // Mouse enter - start timer
-        row.addEventListener('mouseenter', async (e) => {
-            // Don't load if already has full details or already loading
-            if (subscriber.hasFullDetails || isLoadingDetails) return;
-            
-            // Clear any existing timeout
-            if (hoverTimeout) {
-                clearTimeout(hoverTimeout);
-            }
-            
-            // Start loading after delay
-            hoverTimeout = setTimeout(async () => {
-                if (isLoadingDetails || subscriber.hasFullDetails) return;
-                
-                isLoadingDetails = true;
-                
-                // Add loading indicator
-                row.classList.add('loading-details');
-                row.style.opacity = '0.7';
-                
-                try {
-                    console.log(`[Hover Loading] Loading details for subscriber ${subscriber.subscriberNum}`);
-                    
-                    // Load details
-                    const detailResult = await this.api.getConsumerDetail(
-                        subscriber.contractId, 
-                        subscriber.id
-                    );
-                    
-                    if (detailResult.success && detailResult.data) {
-                        // Update subscriber with full details
-                        Object.assign(subscriber, detailResult.data);
-                        subscriber.hasFullDetails = true;
-                        
-                        // Update the row in the table
-                        this.updateSubscriberRow(subscriber, index);
-                        
-                        console.log(`[Hover Loading] Details loaded for subscriber ${subscriber.subscriberNum}`);
-                    }
-                } catch (error) {
-                    console.error('[Hover Loading] Error:', error);
-                } finally {
-                    // Remove loading indicator
-                    row.classList.remove('loading-details');
-                    row.style.opacity = '1';
-                    isLoadingDetails = false;
-                }
-            }, hoverDelay);
-        });
-        
-        // Mouse leave - cancel loading
-        row.addEventListener('mouseleave', () => {
-            if (hoverTimeout) {
-                clearTimeout(hoverTimeout);
-                hoverTimeout = null;
-            }
-        });
-    }
+
     
     /**
      * Update a single subscriber row with new data
@@ -1093,34 +1026,45 @@ class ParkingUIIntegrationXML {
         if (!tbody) return;
         
         const rows = tbody.getElementsByTagName('tr');
-        if (rows[index]) {
-            const row = rows[index];
-            
+        // Try to find row by index or by subscriber number
+        let targetRow = rows[index];
+        if (!targetRow || targetRow.dataset.subscriberNum !== String(subscriber.subscriberNum)) {
+            targetRow = Array.from(rows).find(r => r.dataset.subscriberNum === String(subscriber.subscriberNum));
+        }
+        
+        if (targetRow) {
             // Update the row with full data
-            const validUntil = new Date(subscriber.validUntil);
+            const validUntil = new Date(subscriber.validUntil || subscriber.xValidUntil || '2030-12-31');
             const isExpired = validUntil < new Date();
             
-            row.innerHTML = `
-                <td>${subscriber.companyNum}</td>
-                <td>${subscriber.companyName || this.currentContract.name}</td>
-                <td>${subscriber.subscriberNum}</td>
-                <td>${subscriber.firstName}</td>
-                <td>${subscriber.lastName}</td>
-                <td>${subscriber.tagNum ? `<span class="tag-badge">${subscriber.tagNum}</span>` : ''}</td>
-                <td>${subscriber.vehicle1 || ''}</td>
-                <td>${subscriber.vehicle2 || ''}</td>
-                <td>${subscriber.vehicle3 || ''}</td>
-                <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil)}</td>
-                <td style="color: #888;">${subscriber.profile || ''}</td>
-                <td>${this.formatDate(subscriber.validFrom) || ''}</td>
-                <td style="text-align: center; font-size: 18px;">${subscriber.presence ? '✅' : '❌'}</td>
+            targetRow.innerHTML = `
+                <td>${subscriber.companyNum || ''}</td>
+                <td>${subscriber.companyName || this.currentContract?.name || ''}</td>
+                <td>${subscriber.subscriberNum || subscriber.id || ''}</td>
+                <td>${subscriber.firstName || ''}</td>
+                <td>${subscriber.lastName || subscriber.surname || subscriber.name || ''}</td>
+                <td>${subscriber.tagNum || subscriber.cardno ? `<span class="tag-badge">${subscriber.tagNum || subscriber.cardno}</span>` : ''}</td>
+                <td>${subscriber.vehicle1 || subscriber.lpn1 || ''}</td>
+                <td>${subscriber.vehicle2 || subscriber.lpn2 || ''}</td>
+                <td>${subscriber.vehicle3 || subscriber.lpn3 || ''}</td>
+                <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil || subscriber.xValidUntil)}</td>
+                <td style="color: #888;" title="פרופיל ${subscriber.profile || ''}">${subscriber.profileName || (subscriber.profile ? `פרופיל ${subscriber.profile}` : '')}</td>
+                <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
+                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
             
+            // Remove hover loading attributes if has full details
+            if (subscriber.hasFullDetails) {
+                targetRow.style.opacity = '1';
+                targetRow.removeAttribute('data-hover-loadable');
+                targetRow.title = '';
+            }
+            
             // Add subtle animation to show update
-            row.style.transition = 'background-color 0.5s';
-            row.style.backgroundColor = '#e8f5e9';
+            targetRow.style.transition = 'background-color 0.5s';
+            targetRow.style.backgroundColor = '#e8f5e9';
             setTimeout(() => {
-                row.style.backgroundColor = '';
+                targetRow.style.backgroundColor = '';
             }, 500);
         }
     }
@@ -1499,22 +1443,12 @@ class ParkingUIIntegrationXML {
                 row.setAttribute('data-hover-loadable', 'true');
                 row.title = 'עמוד עם העכבר לטעינת פרטים מלאים';
                 row.style.opacity = '0.85';
+                // Setup hover loading only once
                 this.setupHoverLoading(row, subscriber, index);
-            }
-            
-            // Add visual indicator for basic vs full data
-            if (!subscriber.hasFullDetails) {
+            } else if (!subscriber.hasFullDetails) {
+                // For small/medium companies without full details
                 row.style.opacity = '0.85';
-                
-                // Add hover loading for subscribers without full details
-                if (subscriber.isLargeCompany) {
-                    row.title = 'נתונים בסיסיים - עמוד עם העכבר לטעינת פרטים';
-                    row.setAttribute('data-hover-loadable', 'true');
-                    this.setupHoverLoading(row, subscriber, index);
-                } else {
-                    // For small companies, details should already be loading in background
                     row.title = 'נתונים בסיסיים - טוען פרטים...';
-                }
             }
             
             const validUntil = new Date(subscriber.validUntil || subscriber.xValidUntil || '2030-12-31');
