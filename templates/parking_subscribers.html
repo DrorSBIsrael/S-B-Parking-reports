@@ -1751,7 +1751,7 @@
             // CRITICAL: Store the edit mode in the modal itself
             const modal = document.getElementById('editModal');
             if (modal) {
-                modal.setAttribute('data-edit-mode', 'update');
+                modal.setAttribute('data-edit-mode', 'UPDATE');
                 modal.setAttribute('data-subscriber-num', subscriber.subscriberNum);
                 console.log('[editSubscriber] Set modal data-edit-mode to UPDATE');
             }
@@ -1783,11 +1783,12 @@
             // Set ignore presence checkbox
             const ignorePresenceCheckbox = document.getElementById('editIgnorePresence');
             if (ignorePresenceCheckbox) {
-                // Check if ignorePresence is true, 'true', '1', or 1
-                ignorePresenceCheckbox.checked = subscriber.ignorePresence === true || 
-                                                subscriber.ignorePresence === 'true' || 
-                                                subscriber.ignorePresence === '1' || 
-                                                subscriber.ignorePresence === 1;
+                // Check if ignorePresence is '1' (no presence check)
+                // If '0' or false, checkbox should be unchecked
+                ignorePresenceCheckbox.checked = subscriber.ignorePresence === '1' || 
+                                                subscriber.ignorePresence === 1 || 
+                                                subscriber.ignorePresence === true || 
+                                                subscriber.ignorePresence === 'true';
             }
             
             // Remove guest mode class for regular edit
