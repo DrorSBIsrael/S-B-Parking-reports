@@ -1752,15 +1752,15 @@ class ParkingUIIntegrationXML {
                         identificationType: '54',  // Standard type for parking cards
                         validFrom: subscriberData.validFrom,  // Use validFrom for identification
                         validUntil: subscriberData.validUntil,  // Use validUntil for identification
-                        ignorePresence: subscriberData.ignorePresence === '1' ? true : false,  // Send as boolean true/false
+                        ignorePresence: subscriberData.ignorePresence === '1' ? '1' : '0',  // Send as string '0' or '1'
                         usageProfile: {
                             id: subscriberData.profileId || '1'
                         }
                     },
-                    // Vehicle data
-                    lpn1: subscriberData.vehicle1 || '',
-                    lpn2: subscriberData.vehicle2 || '',
-                    lpn3: subscriberData.vehicle3 || ''
+                    // Vehicle data - clean dashes from vehicle numbers
+                    lpn1: (subscriberData.vehicle1 || '').replace(/-/g, ''),
+                    lpn2: (subscriberData.vehicle2 || '').replace(/-/g, ''),
+                    lpn3: (subscriberData.vehicle3 || '').replace(/-/g, '')
                 };
             } else {
                 // For NEW subscriber - send full structure
@@ -1769,17 +1769,17 @@ class ParkingUIIntegrationXML {
                 firstName: subscriberData.firstName || subscriberData.lastName || subscriberData.surname || 'Unknown',
                     surname: subscriberData.lastName || subscriberData.surname || subscriberData.firstName || 'Unknown',
                 
-                    // Vehicles
-                lpn1: subscriberData.vehicle1 || '',
-                lpn2: subscriberData.vehicle2 || '',
-                lpn3: (subscriberData.vehicle2 && subscriberData.vehicle3) ? subscriberData.vehicle3 : '',
+                    // Vehicles - clean dashes from vehicle numbers
+                lpn1: (subscriberData.vehicle1 || '').replace(/-/g, ''),
+                lpn2: (subscriberData.vehicle2 || '').replace(/-/g, ''),
+                lpn3: (subscriberData.vehicle2 && subscriberData.vehicle3) ? (subscriberData.vehicle3 || '').replace(/-/g, '') : '',
                 
                 // Identification
                 identification: {
                     ptcptType: '2',
                     cardclass: '0',
                     identificationType: '54',
-                    ignorePresence: subscriberData.ignorePresence || '1',
+                    ignorePresence: subscriberData.ignorePresence === '1' ? '1' : '0',  // Send as string '0' or '1'
                     cardno: subscriberData.tagNum || '',
                         validFrom: subscriberData.validFrom,
                         validUntil: subscriberData.validUntil,
@@ -2206,9 +2206,10 @@ class ParkingUIIntegrationXML {
                     firstName: document.getElementById('editFirstName').value || '',
                     lastName: document.getElementById('editLastName').value,
                     tagNum: document.getElementById('editTagNum').value || '',
-                    vehicle1: document.getElementById('editVehicle1').value || '',
-                    vehicle2: document.getElementById('editVehicle2').value || '',
-                    vehicle3: document.getElementById('editVehicle3').value || '',
+                    // Clean vehicle numbers - remove dashes
+                    vehicle1: (document.getElementById('editVehicle1').value || '').replace(/-/g, ''),
+                    vehicle2: (document.getElementById('editVehicle2').value || '').replace(/-/g, ''),
+                    vehicle3: (document.getElementById('editVehicle3').value || '').replace(/-/g, ''),
                     validFrom: document.getElementById('editValidFrom').value,
                     validUntil: document.getElementById('editValidUntil').value,
                     profileId: profileSelect.value || '1',
