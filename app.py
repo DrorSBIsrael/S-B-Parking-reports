@@ -3412,8 +3412,15 @@ def company_manager_proxy():
                                             uelem.text = str(uv)
                                 else:
                                     elem = ET.SubElement(ident_elem, key)
-                                    # Handle boolean values for XML
-                                    if isinstance(value, bool):
+                                    # Handle ignorePresence specially - should be '0' or '1'
+                                    if key == 'ignorePresence':
+                                        # Convert to '0' or '1' string
+                                        if value == '1' or value == 1 or value == True or value == 'true':
+                                            elem.text = '1'
+                                        else:
+                                            elem.text = '0'
+                                    # Handle other boolean values for XML
+                                    elif isinstance(value, bool):
                                         elem.text = 'true' if value else 'false'
                                     else:
                                         elem.text = str(value)
