@@ -2266,6 +2266,12 @@
             document.getElementById('editEmail').value = '';
             document.getElementById('editNotes').value = '';
             
+            // Initialize ignorePresence checkbox - checked by default for new subscribers
+            const ignorePresenceCheckbox = document.getElementById('editIgnorePresence');
+            if (ignorePresenceCheckbox) {
+                ignorePresenceCheckbox.checked = true; // Default to checked (no presence check)
+            }
+            
             // If guest, disable vehicle 2 and 3
             if (isGuest) {
                 document.getElementById('editVehicle2').disabled = true;
@@ -2640,9 +2646,10 @@
                     firstName: document.getElementById('editFirstName').value.trim() || '',  // Allow empty first name
                     lastName: document.getElementById('editLastName').value.trim(),  // Required field
                     tagNum: document.getElementById('editTagNum').value || '',
-                    vehicle1: document.getElementById('editVehicle1').value || '',
-                    vehicle2: document.getElementById('editVehicle2').value || '',
-                    vehicle3: document.getElementById('editVehicle3').value || '',
+                    // Clean vehicle numbers - remove dashes
+                    vehicle1: (document.getElementById('editVehicle1').value || '').replace(/-/g, ''),
+                    vehicle2: (document.getElementById('editVehicle2').value || '').replace(/-/g, ''),
+                    vehicle3: (document.getElementById('editVehicle3').value || '').replace(/-/g, ''),
                     validFrom: convertDateToServer(document.getElementById('editValidFrom').value.trim()),
                     validUntil: convertDateToServer(document.getElementById('editValidUntil').value.trim()),
                     profile: document.getElementById('editProfile').selectedOptions[0]?.getAttribute('data-profile-name') || 'regular',
@@ -2931,21 +2938,32 @@
         function convertDateToServer(dateStr) {
             if (!dateStr) return '';
             
-            // If already in YYYY-MM-DD format, return as is
-            if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-                return dateStr;
-            }
+            let resultDate = '';
             
+            // If already in YYYY-MM-DD format
+            if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+                resultDate = dateStr;
+            }
             // If in DD/MM/YYYY format, convert to server format
-            if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
+            else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
                 const parts = dateStr.split('/');
                 const day = parts[0].padStart(2, '0');
                 const month = parts[1].padStart(2, '0');
                 const year = parts[2];
-                return `${year}-${month}-${day}`;
+                resultDate = `${year}-${month}-${day}`;
+            }
+            else {
+                resultDate = dateStr;
             }
             
-            return dateStr;
+            // Limit date to maximum 31.12.2035
+            const MAX_DATE = '2035-12-31';
+            if (resultDate > MAX_DATE) {
+                console.log(`Date ${resultDate} exceeds maximum, limiting to ${MAX_DATE}`);
+                return MAX_DATE;
+            }
+            
+            return resultDate;
         }
 
         // Export to Excel
