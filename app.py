@@ -3178,7 +3178,7 @@ def company_manager_proxy():
     # Debug log מפורט
     print(f"\n{'='*70}")
     print(f"🎯 PROXY ENDPOINT HIT: {request.method}")
-    print(f"🔥 v15 - FIXED: HOVER DATA MAPPING + DATES + IGNOREPREENCE!")
+    print(f"🔥 v16 - FIXED: COMPANY NAME PRESERVE + BOOLEAN IGNOREPREENCE + DATES!")
     print(f"{'='*70}")
     
     # Handle CORS preflight
@@ -3427,8 +3427,9 @@ def company_manager_proxy():
                     # Convert to XML string
                     xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
                     print(f"   📝 Sending XML for update (PUT to {url}):")
-                    print(f"   📅 Dates: xValidFrom={payload.get('consumer', {}).get('xValidFrom')}, xValidUntil={payload.get('consumer', {}).get('xValidUntil')}")
-                    print(f"   🔐 ignorePresence={payload.get('identification', {}).get('ignorePresence')}")
+                    print(f"   📅 Dates in consumer: xValidFrom={payload.get('consumer', {}).get('xValidFrom')}, xValidUntil={payload.get('consumer', {}).get('xValidUntil')}")
+                    print(f"   📅 Dates in identification: validFrom={payload.get('identification', {}).get('validFrom')}, validUntil={payload.get('identification', {}).get('validUntil')}")
+                    print(f"   🔐 ignorePresence={payload.get('identification', {}).get('ignorePresence')} (type: {type(payload.get('identification', {}).get('ignorePresence'))})")
                     print(f"   🏷️ Profile ID={payload.get('identification', {}).get('usageProfile', {}).get('id')}")
                     print(f"   Full XML:\n{xml_str}")  # Show full XML for debug
                     
