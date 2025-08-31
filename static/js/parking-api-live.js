@@ -402,6 +402,9 @@ class ParkingAPIXML {
                 
                 // Status
                 presence: consumer.presence || false,
+                ignorePresence: consumer.ignorePresence === '1' || 
+                               consumer.ignorePresence === 'true' || 
+                               consumer.ignorePresence === true || false,
                 hasFullDetails: false,  // Will be set to true after loading details
                 loadingStrategy: loadingStrategy
             }));
@@ -445,7 +448,12 @@ class ParkingAPIXML {
                                     validUntil: detail.identification?.validUntil || detail.validUntil || subscriber.validUntil,
                                     present: detail.identification?.present === 'true',
                                     presence: detail.identification?.present === 'true',
-                                    ignorePresence: detail.identification?.ignorePresence === '1' || detail.ignorePresence === '1',
+                                    ignorePresence: detail.identification?.ignorePresence === '1' || 
+                                                   detail.identification?.ignorePresence === 'true' || 
+                                                   detail.identification?.ignorePresence === true ||
+                                                   detail.ignorePresence === '1' ||
+                                                   detail.ignorePresence === 'true' ||
+                                                   detail.ignorePresence === true,
                                     hasFullDetails: true
                                 };
                             }
