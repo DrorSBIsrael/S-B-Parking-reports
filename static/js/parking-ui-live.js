@@ -783,7 +783,7 @@ class ParkingUIIntegrationXML {
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(validUntil) || ''}</td>
                 <td style="color: #888;" title="פרופיל ${subscriber.profile || ''}">${subscriber.profileName || (subscriber.profile ? `פרופיל ${subscriber.profile}` : '')}</td>
                 <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
-                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
+                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence === '1' ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
             
             // Remove hover indicator if has full details
@@ -850,8 +850,11 @@ class ParkingUIIntegrationXML {
                         this.setupFilters();
                     }, 100);
                     
-                    // Show subtle progress indicator
-                    this.showBackgroundProgress('טוען פרטים מלאים ברקע...');
+                    // Show subtle progress indicator only for medium/large companies
+                    // Small companies (≤30) load instantly, so no need for progress
+                    if (basicSubscribers.length > 30) {
+                        this.showBackgroundProgress('טוען פרטים מלאים ברקע...');
+                    }
                 },
                 
                 // Callback when each detail is loaded
@@ -1050,7 +1053,7 @@ class ParkingUIIntegrationXML {
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil || subscriber.xValidUntil)}</td>
                 <td style="color: #888;" title="פרופיל ${subscriber.profile || ''}">${subscriber.profileName || (subscriber.profile ? `פרופיל ${subscriber.profile}` : '')}</td>
                 <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
-                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
+                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence === '1' ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
             
             // Remove hover loading attributes if has full details
@@ -1371,13 +1374,15 @@ class ParkingUIIntegrationXML {
                             validUntil: detail.identification?.validUntil || detail.validUntil || subscriber.validUntil,
                             xValidFrom: detail.consumer?.xValidFrom || detail.xValidFrom || subscriber.xValidFrom,
                             xValidUntil: detail.consumer?.xValidUntil || detail.xValidUntil || subscriber.xValidUntil,
-                            // Map presence and ignorePresence correctly
-                            ignorePresence: detail.identification?.ignorePresence === '1' || 
+                            // Map presence and ignorePresence correctly - keep as '0' or '1' string
+                            ignorePresence: (detail.identification?.ignorePresence === '1' || 
+                                          detail.identification?.ignorePresence === 1 ||
                                           detail.identification?.ignorePresence === 'true' || 
                                           detail.identification?.ignorePresence === true ||
                                           detail.ignorePresence === '1' ||
+                                          detail.ignorePresence === 1 ||
                                           detail.ignorePresence === 'true' ||
-                                          detail.ignorePresence === true,
+                                          detail.ignorePresence === true) ? '1' : '0',
                             presence: detail.identification?.present === 'true' || detail.presence,
                             present: detail.identification?.present === 'true' || detail.present,
                             // Map vehicles
@@ -1507,7 +1512,7 @@ class ParkingUIIntegrationXML {
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil || subscriber.xValidUntil) || ''}</td>
                 <td style="color: #888;" title="פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}">${subscriber.profileName || `פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}`}</td>
                 <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
-                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
+                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence === '1' ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
             tbody.appendChild(row);
         });
@@ -1734,6 +1739,11 @@ class ParkingUIIntegrationXML {
             
             if (shouldUpdate) {
                 // For UPDATE - structure data according to API spec for /detail endpoint
+                console.log('[saveSubscriber] UPDATE - Input dates:', {
+                    validFrom: subscriberData.validFrom,
+                    validUntil: subscriberData.validUntil
+                });
+                
                 consumerData = {
                     consumer: {
                         id: subscriberData.subscriberNum,
@@ -1946,7 +1956,9 @@ class ParkingUIIntegrationXML {
             }
             
             if (result.success) {
-                this.showNotification('הנתונים נשמרו בהצלחה', 'success');
+                // Use message from server if available, otherwise show generic success
+                const message = result.message || result.data?.message || 'הנתונים נשמרו בהצלחה';
+                this.showNotification(message, 'success');
                 
                 // Only update the specific subscriber in the list, don't reload everything
                 if (shouldUpdate && subscriberData.subscriberNum) {
