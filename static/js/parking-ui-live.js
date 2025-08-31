@@ -772,7 +772,7 @@ class ParkingUIIntegrationXML {
             
             targetRow.innerHTML = `
                 <td>${subscriber.companyNum || ''}</td>
-                <td>${subscriber.companyName || ''}</td>
+                <td>${subscriber.companyName || this.currentContract?.name || ''}</td>
                 <td>${subscriber.subscriberNum || subscriber.id || ''}</td>
                 <td>${subscriber.firstName || ''}</td>
                 <td>${subscriber.lastName || subscriber.surname || subscriber.name || ''}</td>
@@ -1359,10 +1359,10 @@ class ParkingUIIntegrationXML {
                             loadingStrategy: subscriber.loadingStrategy
                         };
                         
-                        // Map the detail fields properly
+                        // Map the detail fields properly - DON'T let detail override preserved fields
                         Object.assign(subscriber, {
                             ...detail,
-                            ...preservedFields,
+                            ...preservedFields,  // This must come AFTER detail to preserve our fields
                             // Map profile correctly
                             profile: detail.identification?.usageProfile?.id || detail.profile || subscriber.profile,
                             profileName: detail.identification?.usageProfile?.name || detail.profileName || subscriber.profileName,
@@ -1496,7 +1496,7 @@ class ParkingUIIntegrationXML {
             
             row.innerHTML = `
                 <td>${subscriber.companyNum || ''}</td>
-                <td>${subscriber.companyName || ''}</td>
+                <td>${subscriber.companyName || this.currentContract?.name || ''}</td>
                 <td>${subscriber.subscriberNum || subscriber.id || ''}</td>
                 <td>${subscriber.firstName || ''}</td>
                 <td>${subscriber.lastName || subscriber.name || ''}</td>
@@ -1739,8 +1739,9 @@ class ParkingUIIntegrationXML {
                         id: subscriberData.subscriberNum,
                         contractid: this.currentContract.id,
                         name: subscriberData.lastName || subscriberData.surname || '',
-                        xValidFrom: subscriberData.validFrom,
-                        xValidUntil: subscriberData.validUntil
+                        // Send dates in server format (YYYY-MM-DD)
+                        xValidFrom: subscriberData.validFrom,  // Already converted by convertDateToServer
+                        xValidUntil: subscriberData.validUntil  // Already converted by convertDateToServer
                     },
                     person: {
                         firstName: subscriberData.firstName || '',
@@ -1751,7 +1752,7 @@ class ParkingUIIntegrationXML {
                         identificationType: '54',  // Standard type for parking cards
                         validFrom: subscriberData.validFrom,  // Use validFrom for identification
                         validUntil: subscriberData.validUntil,  // Use validUntil for identification
-                        ignorePresence: subscriberData.ignorePresence === '1' ? '1' : '0',  // Send as string '1' or '0'
+                        ignorePresence: subscriberData.ignorePresence === '1' ? true : false,  // Send as boolean true/false
                         usageProfile: {
                             id: subscriberData.profileId || '1'
                         }
