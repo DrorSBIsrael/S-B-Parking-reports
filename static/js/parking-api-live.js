@@ -570,6 +570,116 @@ class ParkingAPIXML {
     async viewTransactions(companyId, subscriberId) {
         return this.makeRequest(`contracts/${companyId}/consumers/${subscriberId}/transactions`);
     }
+
+    // Get parking transactions for a consumer
+    async getParkingTransactions(contractId, consumerId, minDate = null, maxDate = null) {
+        try {
+            console.log(`[ParkingAPIXML] Getting parking transactions for contract ${contractId}, consumer ${consumerId}`);
+            
+            // Build query parameters
+            let queryParams = [];
+            if (minDate) {
+                // Convert date to YYYY-MM-DD format if needed
+                const formattedMinDate = this.formatDateForAPI(minDate);
+                queryParams.push(`minDate=${formattedMinDate}`);
+            }
+            if (maxDate) {
+                const formattedMaxDate = this.formatDateForAPI(maxDate);
+                queryParams.push(`maxDate=${formattedMaxDate}`);
+            }
+            
+            const queryString = queryParams.length > 0 ? '?' + queryParams.join('&') : '';
+            const url = `/consumers/${contractId},${consumerId}/parktrans${queryString}`;
+            
+            console.log(`[ParkingAPIXML] Requesting parking transactions from: ${url}`);
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/xml, text/xml',
+                    'Content-Type': 'application/xml'
+                }
+            });
+            
+            if (!response.ok) {
+                if (response.status === 204) {
+                    console.log('[ParkingAPIXML] No parking transactions found');
+                    return { success: true, data: [] };
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const xmlText = await response.text();
+            console.log('[ParkingAPIXML] Received XML response:', xmlText);
+            
+            // Parse XML response
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+            
+            // Check for parsing errors
+            if (xmlDoc.getElementsByTagName('parsererror').length > 0) {
+                console.error('[ParkingAPIXML] XML parsing error');
+                return { success: false, error: 'Failed to parse XML response' };
+            }
+            
+            // Extract parking transactions
+            const transactions = [];
+            const transactionNodes = xmlDoc.getElementsByTagName('parkTransaction');
+            
+            for (let node of transactionNodes) {
+                const transaction = {
+                    transactionTime: this.getXMLNodeValue(node, 'transactionTime'),
+                    transactionType: this.getXMLNodeValue(node, 'transactionType'),
+                    facilityin: this.getXMLNodeValue(node, 'facilityin'),
+                    facilityout: this.getXMLNodeValue(node, 'facilityout'),
+                    computer: this.getXMLNodeValue(node, 'computer'),
+                    device: this.getXMLNodeValue(node, 'device'),
+                    amount: this.getXMLNodeValue(node, 'amount')
+                };
+                transactions.push(transaction);
+            }
+            
+            console.log(`[ParkingAPIXML] Found ${transactions.length} parking transactions`);
+            return { success: true, data: transactions };
+            
+        } catch (error) {
+            console.error('[ParkingAPIXML] Error getting parking transactions:', error);
+            return { 
+                success: false, 
+                error: error.message || 'Failed to get parking transactions' 
+            };
+        }
+    }
+
+    // Helper function to format date for API
+    formatDateForAPI(dateStr) {
+        if (!dateStr) return '';
+        
+        // If already in YYYY-MM-DD format
+        if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+            return dateStr;
+        }
+        
+        // If in DD/MM/YYYY format, convert
+        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
+            const parts = dateStr.split('/');
+            const day = parts[0].padStart(2, '0');
+            const month = parts[1].padStart(2, '0');
+            const year = parts[2];
+            return `${year}-${month}-${day}`;
+        }
+        
+        // Try to parse as Date object
+        const date = new Date(dateStr);
+        if (!isNaN(date)) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
+        return dateStr;
+    }
 }
 
 // Create instance
