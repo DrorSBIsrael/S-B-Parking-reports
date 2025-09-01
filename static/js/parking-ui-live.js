@@ -1057,6 +1057,14 @@ class ParkingUIIntegrationXML {
             const validUntil = new Date(subscriber.validUntil || subscriber.xValidUntil || '2030-12-31');
             const isExpired = validUntil < new Date();
             
+            // Update the onclick handler to use the updated subscriber
+            targetRow.onclick = () => {
+                const currentSubscriber = this.subscribers.find(s => 
+                    String(s.subscriberNum) === String(subscriber.subscriberNum)
+                ) || subscriber;
+                this.editSubscriber(currentSubscriber);
+            };
+            
             targetRow.innerHTML = `
                 <td>${subscriber.companyNum || ''}</td>
                 <td>${subscriber.companyName || this.currentContract?.name || ''}</td>
@@ -1493,7 +1501,13 @@ class ParkingUIIntegrationXML {
         
         subscribers.forEach((subscriber, index) => {
             const row = document.createElement('tr');
-            row.onclick = () => this.editSubscriber(subscriber);
+            // IMPORTANT: Get the current subscriber from array, not from closure!
+            row.onclick = () => {
+                const currentSubscriber = this.subscribers.find(s => 
+                    String(s.subscriberNum) === String(subscriber.subscriberNum)
+                ) || subscriber;
+                this.editSubscriber(currentSubscriber);
+            };
             row.style.cursor = 'pointer';
             row.dataset.subscriberNum = subscriber.subscriberNum;
             row.dataset.index = index;
@@ -1661,6 +1675,8 @@ class ParkingUIIntegrationXML {
      * Edit subscriber - prepare data for modal
      */
     async editSubscriber(subscriber) {
+        console.log(`[editSubscriber] Called with subscriber ${subscriber.subscriberNum}, hasFullDetails: ${subscriber.hasFullDetails}`);
+        
         // Check if we have full details
         if (!subscriber.hasFullDetails) {
             console.log(`[UI] Loading full details for subscriber ${subscriber.subscriberNum}`);
@@ -1999,8 +2015,23 @@ class ParkingUIIntegrationXML {
                 // Only update the specific subscriber in the list, don't reload everything
                 if (shouldUpdate && subscriberData.subscriberNum) {
                     // Find and update the subscriber in our local array
-                    const index = this.subscribers.findIndex(s => s.id === subscriberData.subscriberNum);
+                    // IMPORTANT: Compare subscriberNum to subscriberNum, not id!
+                    // Convert to string for comparison
+                    const subscriberNumStr = String(subscriberData.subscriberNum);
+                    
+                    console.log(`[saveSubscriber] Looking for subscriber ${subscriberNumStr} in array of ${this.subscribers.length} subscribers`);
+                    console.log(`[saveSubscriber] First 3 subscribers:`, this.subscribers.slice(0, 3).map(s => ({id: s.id, subscriberNum: s.subscriberNum})));
+                    
+                    const index = this.subscribers.findIndex(s => 
+                        String(s.subscriberNum) === subscriberNumStr || 
+                        String(s.id) === subscriberNumStr
+                    );
+                    
+                    console.log(`[saveSubscriber] Found subscriber at index: ${index}`);
+                    
                     if (index !== -1) {
+                        console.log(`[saveSubscriber] Updating subscriber at index ${index} with new data:`, subscriberData);
+                        
                         // Update local data - preserve important fields
                         const updatedSubscriber = {
                             ...this.subscribers[index],
@@ -2035,6 +2066,9 @@ class ParkingUIIntegrationXML {
                         
                         // CRITICAL: Actually update the subscriber in the array!
                         this.subscribers[index] = updatedSubscriber;
+                        
+                        console.log(`[saveSubscriber] Updated subscriber in array, hasFullDetails: ${this.subscribers[index].hasFullDetails}`);
+                        console.log(`[saveSubscriber] Updated data:`, this.subscribers[index]);
                         
                         // Update the specific row in the table
                         this.updateSubscriberRow(this.subscribers[index], index);
