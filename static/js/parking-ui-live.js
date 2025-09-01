@@ -2445,8 +2445,6 @@ class ParkingUIIntegrationXML {
                     profileId: profileSelect.value || '1',
                     profile: selectedOption?.getAttribute('data-profile-name') || selectedOption?.text || 'regular',
                     email: document.getElementById('editEmail')?.value || '',
-                    notes: document.getElementById('editNotes').value || '',
-
                     isNew: !window.editingSubscriber,  // New subscriber if editingSubscriber is null
                     isGuest: document.getElementById('editFirstName').value === 'אורח' || 
                             document.getElementById('editModal')?.classList.contains('guest-mode')
