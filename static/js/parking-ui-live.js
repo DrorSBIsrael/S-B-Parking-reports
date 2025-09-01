@@ -1733,8 +1733,8 @@ class ParkingUIIntegrationXML {
                         vehicle1: detail.lpn1 || subscriber.vehicle1 || '',
                         vehicle2: detail.lpn2 || subscriber.vehicle2 || '',
                         vehicle3: detail.lpn3 || subscriber.vehicle3 || '',
-                        // Map presence correctly
-                        ignorePresence: detail.identification?.ignorePresence === '1' || detail.ignorePresence === '1',
+                        // Map presence correctly - keep as string for form
+                        ignorePresence: detail.identification?.ignorePresence || detail.ignorePresence || '0',
                         presence: detail.identification?.present === 'true' || detail.presence,
                         // Mark as having full details
                         hasFullDetails: true
@@ -1805,15 +1805,27 @@ class ParkingUIIntegrationXML {
             
             if (shouldUpdate) {
                 console.log(`[saveSubscriber] Preparing UPDATE data for subscriber ${subscriberData.subscriberNum}`);
-                console.log(`[saveSubscriber] Dates - validFrom: ${subscriberData.validFrom}, validUntil: ${subscriberData.validUntil}`);
-                console.log(`[saveSubscriber] ignorePresence: ${subscriberData.ignorePresence}`);
+                console.log(`[saveSubscriber] Raw dates from form - validFrom: ${subscriberData.validFrom}, validUntil: ${subscriberData.validUntil}`);
+                console.log(`[saveSubscriber] ignorePresence from form: ${subscriberData.ignorePresence} (type: ${typeof subscriberData.ignorePresence})`);
                 
                 // For UPDATE - structure data according to API spec for /detail endpoint
                 // Add timezone to dates for XML format
                 const formatDateWithTimezone = (date) => {
                     if (!date) return '';
+                    
+                    let formattedDate = date;
+                    
+                    // Convert DD/MM/YYYY to YYYY-MM-DD if needed
+                    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(date)) {
+                        const parts = date.split('/');
+                        const day = parts[0].padStart(2, '0');
+                        const month = parts[1].padStart(2, '0');
+                        const year = parts[2];
+                        formattedDate = `${year}-${month}-${day}`;
+                    }
+                    
                     // Add Israel timezone (+02:00 or +03:00 depending on DST)
-                    return date + '+02:00';
+                    return formattedDate + '+02:00';
                 };
                 
                 consumerData = {
@@ -1861,7 +1873,20 @@ class ParkingUIIntegrationXML {
                 // For NEW subscriber - send full structure matching documentation
                 const formatDateWithTimezone = (date) => {
                     if (!date) return '';
-                    return date + '+02:00';
+                    
+                    let formattedDate = date;
+                    
+                    // Convert DD/MM/YYYY to YYYY-MM-DD if needed
+                    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(date)) {
+                        const parts = date.split('/');
+                        const day = parts[0].padStart(2, '0');
+                        const month = parts[1].padStart(2, '0');
+                        const year = parts[2];
+                        formattedDate = `${year}-${month}-${day}`;
+                    }
+                    
+                    // Add Israel timezone
+                    return formattedDate + '+02:00';
                 };
                 
                 consumerData = {
@@ -2095,7 +2120,7 @@ class ParkingUIIntegrationXML {
                             cardno: subscriberData.tagNum,
                             profile: subscriberData.profileId,
                             profileName: subscriberData.profile,
-                            ignorePresence: subscriberData.ignorePresence === '1',
+                            ignorePresence: subscriberData.ignorePresence,  // Keep as string '0' or '1'
                             // Keep current presence - it will be updated from server on next load
                             // If ignorePresence is '1', presence should be false
                             presence: subscriberData.ignorePresence === '1' ? false : this.subscribers[index].presence,
