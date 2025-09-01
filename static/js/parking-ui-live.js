@@ -77,6 +77,9 @@ class ParkingUIIntegrationXML {
                 s.vehicle1?.includes(searchTerm) ||
                 s.vehicle2?.includes(searchTerm) ||
                 s.vehicle3?.includes(searchTerm) ||
+                s.lpn1?.includes(searchTerm) ||
+                s.lpn2?.includes(searchTerm) ||
+                s.lpn3?.includes(searchTerm) ||
                 s.tagNum?.toLowerCase().includes(searchTerm)
             );
         }
@@ -1700,8 +1703,14 @@ class ParkingUIIntegrationXML {
         
         // Open edit modal with full data
         if (window.editSubscriber) {
-            // Make sure we have the correct company name
-            subscriber.companyName = this.currentContract?.name || this.currentContract?.firstName || subscriber.companyName;
+            // Make sure we have the correct company name from current contract or subscriber data
+            if (!subscriber.companyName && this.currentContract) {
+                subscriber.companyName = this.currentContract.name || this.currentContract.firstName || '';
+            }
+            // Ensure we have all vehicle data mapped correctly
+            subscriber.vehicle1 = subscriber.vehicle1 || subscriber.lpn1 || '';
+            subscriber.vehicle2 = subscriber.vehicle2 || subscriber.lpn2 || '';
+            subscriber.vehicle3 = subscriber.vehicle3 || subscriber.lpn3 || '';
             
             console.log('[editSubscriber from UI] Full subscriber data:', JSON.stringify(subscriber, null, 2));
             window.editSubscriber(subscriber);
@@ -2071,9 +2080,9 @@ class ParkingUIIntegrationXML {
             subscriber.firstName || '',
             subscriber.lastName || '',
             subscriber.tagNum || '',
-            subscriber.vehicle1 || '',
-            subscriber.vehicle2 || '',
-            subscriber.vehicle3 || '',
+            subscriber.vehicle1 || subscriber.lpn1 || '',
+            subscriber.vehicle2 || subscriber.lpn2 || '',
+            subscriber.vehicle3 || subscriber.lpn3 || '',
             this.formatDate(subscriber.validFrom) || '',
             this.formatDate(subscriber.validUntil) || '',
             subscriber.profile || '',
