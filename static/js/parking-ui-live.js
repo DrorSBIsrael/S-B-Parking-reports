@@ -1798,8 +1798,7 @@ class ParkingUIIntegrationXML {
                         validFrom: subscriberData.validFrom,  // Use validFrom for identification
                         validUntil: subscriberData.validUntil,  // Use validUntil for identification
                         ignorePresence: subscriberData.ignorePresence,  // Already '0' or '1' from form
-                        // Set presence based on ignorePresence - if ignoring, always false
-                        present: subscriberData.ignorePresence === '1' ? 'false' : 'true',
+                        // DO NOT send 'present' - it's read-only from server
                         usageProfile: {
                             id: subscriberData.profileId || '1'
                         }
@@ -1830,13 +1829,11 @@ class ParkingUIIntegrationXML {
                     cardno: subscriberData.tagNum || '',
                         validFrom: subscriberData.validFrom,
                         validUntil: subscriberData.validUntil,
-                        // Set presence for new subscriber
-                        present: subscriberData.ignorePresence === '1' ? 'false' : 'false',  // Default false for new
+                        // DO NOT send 'present' - it's read-only from server
                     usageProfile: {
                         id: subscriberData.profileId || '1',
                         name: subscriberData.profile || 'רגיל'
-                    },
-                    present: false
+                    }
                 },
                 
                 // Consumer info
@@ -2005,7 +2002,7 @@ class ParkingUIIntegrationXML {
                     const index = this.subscribers.findIndex(s => s.id === subscriberData.subscriberNum);
                     if (index !== -1) {
                         // Update local data - preserve important fields
-                        this.subscribers[index] = {
+                        const updatedSubscriber = {
                             ...this.subscribers[index],
                             firstName: subscriberData.firstName,
                             lastName: subscriberData.lastName,
@@ -2025,14 +2022,19 @@ class ParkingUIIntegrationXML {
                             profile: subscriberData.profileId,
                             profileName: subscriberData.profile,
                             ignorePresence: subscriberData.ignorePresence === '1',
-                            // Update presence based on ignorePresence
+                            // Keep current presence - it will be updated from server on next load
+                            // If ignorePresence is '1', presence should be false
                             presence: subscriberData.ignorePresence === '1' ? false : this.subscribers[index].presence,
+                            // DO NOT update 'present' - it's read-only from server
                             // Preserve company name and other UI fields
                             companyName: this.subscribers[index].companyName,
                             isLargeCompany: this.subscribers[index].isLargeCompany,
                             loadingStrategy: this.subscribers[index].loadingStrategy,
                             hasFullDetails: false  // Reset to force reload on next edit
                         };
+                        
+                        // CRITICAL: Actually update the subscriber in the array!
+                        this.subscribers[index] = updatedSubscriber;
                         
                         // Update the specific row in the table
                         this.updateSubscriberRow(this.subscribers[index], index);
