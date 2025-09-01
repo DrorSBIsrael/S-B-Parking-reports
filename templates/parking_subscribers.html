@@ -969,7 +969,7 @@
                 <span>🅿️</span>
                 <span data-translate="title">מערכת ניהול מנויי חניון</span>
                 <br>
-                <span style="font-size: 0.5em; font-weight: normal; color: #e0e0e0;">מבית שיידט את בכמן ישראל</span>
+                <span style="font-size: 0.5em; font-weight: normal; ">מבית שיידט את בכמן ישראל</span>
             </h1>
             <div class="header-controls">
                 <div class="user-info" style="padding: 5px 10px; background: var(--light-bg); border-radius: 6px; margin-right: 10px;">
@@ -990,12 +990,6 @@
                     <button class="btn btn-secondary" onclick="toggleLanguage()">
                         <span data-translate="lang">English</span>
                     </button>
-                </div>
-                <div class="font-controls">
-                    <button class="btn btn-icon" onclick="changeFontSize('small')" title="גודל קטן">A-</button>
-                    <button class="btn btn-icon" onclick="changeFontSize('normal')" title="גודל רגיל">A</button>
-                    <button class="btn btn-icon" onclick="changeFontSize('large')" title="גודל בינוני">A+</button>
-                    <button class="btn btn-icon" onclick="changeFontSize('xlarge')" title="גודל גדול">A++</button>
                 </div>
                 <button class="btn btn-warning" onclick="toggleAccessibility()" title="נגישות">
                     ♿ <span data-translate="accessibility">נגישות</span>
@@ -1274,7 +1268,7 @@
                 נוצר ע"י <span class="developer">דרור פרינץ</span>
             </div>
             <div style="margin-top: 10px; font-size: 12px; color: #999;">
-                © 2024 כל הזכויות שמורות
+                © 2025 כל הזכויות שמורות
             </div>
         </div>
     </div>
@@ -1289,8 +1283,6 @@
             { id: '2', name: 'חברה 2', subscribersCount: 120 },
             { id: '3', name: 'חברה 3', subscribersCount: 25 },
             { id: '4', name: 'חברה 4', subscribersCount: 30 },
-            { id: '5', name: 'חברה 5', subscribersCount: 50 },
-            { id: '6', name: 'חברה 6', subscribersCount: 67 }
         ];
 
         const mockSubscribers = [
@@ -1300,14 +1292,13 @@
                 subscriberNum: '10001',
                 firstName: 'דוד',
                 lastName: 'כהן',
-                tagNum: 'TAG001',
-                vehicle1: '12-345-67',
-                vehicle2: '98-765-43',
+                tagNum: '20001',
+                vehicle1: '1234567',
+                vehicle2: '9876543',
                 vehicle3: '',
                 validFrom: '2024-01-01',
                 validUntil: '2025-12-31',
                 profile: 'regular',
-                notes: 'מנוי ותיק',
                 presence: true,
                 lastEntry: '2025-01-13 08:30'
             },
@@ -1317,14 +1308,13 @@
                 subscriberNum: '10002',
                 firstName: 'רחל',
                 lastName: 'לוי',
-                tagNum: 'TAG002',
+                tagNum: '20002',
                 vehicle1: '5566677',
                 vehicle2: '',
                 vehicle3: '',
                 validFrom: '2024-06-01',
                 validUntil: '2025-06-30',
                 profile: 'vip',
-                notes: 'VIP - טיפול מיוחד',
                 presence: false,
                 lastEntry: '2025-01-12 17:45'
             },
@@ -1341,7 +1331,6 @@
                 validFrom: '2024-09-15',
                 validUntil: '2025-09-15',
                 profile: 'disabled',
-                notes: 'חניית נכה - קרוב לכניסה',
                 presence: true,
                 lastEntry: '2025-01-13 09:15'
             }
@@ -2107,7 +2096,7 @@
                 
                 if (result.success) {
                     displayTransactionsReport(result.data, result.summary);
-                } else {
+            } else {
                     throw new Error(result.error || 'Failed to load report');
                 }
             } catch (error) {
@@ -3449,9 +3438,9 @@
         console.log('[Init] User permissions:', window.userPermissions);
     </script>
     
-    <script src="/static/js/config.js?v=20251216_fixed2"></script>
-    <script src="/static/js/parking-api-live.js?v=20251216_fixed2"></script>
-    <script src="/static/js/parking-ui-live.js?v=20251216_fixed2"></script>
+    <script src="/static/js/config.js?v=20251216_fixed3"></script>
+    <script src="/static/js/parking-api-live.js?v=20251216_fixed3"></script>
+    <script src="/static/js/parking-ui-live.js?v=20251216_fixed3"></script>
     
         <script>
         // Override init function to use XML API
