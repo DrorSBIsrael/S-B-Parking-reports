@@ -1782,18 +1782,26 @@
             // Use xValidUntil if validUntil is empty (for dates from consumer details)
             const validFrom = subscriber.validFrom || subscriber.xValidFrom || '';
             const validUntil = subscriber.validUntil || subscriber.xValidUntil || '';
+            
+            console.log(`[editSubscriber] Date mapping - validFrom: ${validFrom}, validUntil: ${validUntil}`);
+            
             document.getElementById('editValidFrom').value = formatDateForDisplay(validFrom) || '';
             document.getElementById('editValidUntil').value = formatDateForDisplay(validUntil) || '';
             
             // Set ignore presence checkbox
             const ignorePresenceCheckbox = document.getElementById('editIgnorePresence');
             if (ignorePresenceCheckbox) {
+                // Debug log
+                console.log(`[editSubscriber] Setting ignorePresence checkbox, value: ${subscriber.ignorePresence}, type: ${typeof subscriber.ignorePresence}`);
+                
                 // Check if ignorePresence is '1' (no presence check)
                 // If '0' or false, checkbox should be unchecked
                 ignorePresenceCheckbox.checked = subscriber.ignorePresence === '1' || 
                                                 subscriber.ignorePresence === 1 || 
                                                 subscriber.ignorePresence === true || 
                                                 subscriber.ignorePresence === 'true';
+                
+                console.log(`[editSubscriber] Checkbox set to: ${ignorePresenceCheckbox.checked}`);
             }
             
             // Remove guest mode class for regular edit
