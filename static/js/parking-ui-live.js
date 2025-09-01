@@ -1699,6 +1699,15 @@ class ParkingUIIntegrationXML {
                 if (result.success) {
                     const detail = result.data;
                     
+                    console.log(`[editSubscriber] Loaded detail from server:`, JSON.stringify({
+                        validFrom: detail.identification?.validFrom,
+                        validUntil: detail.identification?.validUntil,
+                        xValidFrom: detail.consumer?.xValidFrom,
+                        xValidUntil: detail.consumer?.xValidUntil,
+                        ignorePresence: detail.identification?.ignorePresence,
+                        present: detail.identification?.present
+                    }, null, 2));
+                    
                     // Preserve important fields and map correctly
                     const preservedFields = {
                         companyName: subscriber.companyName,
@@ -1794,6 +1803,10 @@ class ParkingUIIntegrationXML {
             let consumerData;
             
             if (shouldUpdate) {
+                console.log(`[saveSubscriber] Preparing UPDATE data for subscriber ${subscriberData.subscriberNum}`);
+                console.log(`[saveSubscriber] Dates - validFrom: ${subscriberData.validFrom}, validUntil: ${subscriberData.validUntil}`);
+                console.log(`[saveSubscriber] ignorePresence: ${subscriberData.ignorePresence}`);
+                
                 // For UPDATE - structure data according to API spec for /detail endpoint
                 consumerData = {
                     consumer: {
@@ -1824,6 +1837,8 @@ class ParkingUIIntegrationXML {
                     lpn2: (subscriberData.vehicle2 || '').replace(/-/g, ''),
                     lpn3: (subscriberData.vehicle3 || '').replace(/-/g, '')
                 };
+                
+                console.log(`[saveSubscriber] Full UPDATE payload:`, JSON.stringify(consumerData, null, 2));
             } else {
                 // For NEW subscriber - send full structure
                 consumerData = {
@@ -1933,6 +1948,8 @@ class ParkingUIIntegrationXML {
                     subscriberData.subscriberNum,
                     consumerData
                 );
+                
+                console.log(`[saveSubscriber] Server response:`, result);
                 
                 // If update failed with 500 error, try different approaches
                 if (!result.success && result.error && result.error.includes('500')) {
