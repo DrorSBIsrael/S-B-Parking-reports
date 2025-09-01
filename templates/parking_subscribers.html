@@ -1777,8 +1777,11 @@
             document.getElementById('editVehicle1').value = subscriber.vehicle1 || '';
             document.getElementById('editVehicle2').value = subscriber.vehicle2 || '';
             document.getElementById('editVehicle3').value = subscriber.vehicle3 || '';
-            document.getElementById('editValidFrom').value = formatDateForDisplay(subscriber.validFrom) || '';
-            document.getElementById('editValidUntil').value = formatDateForDisplay(subscriber.validUntil) || '';
+            // Use xValidUntil if validUntil is empty (for dates from consumer details)
+            const validFrom = subscriber.validFrom || subscriber.xValidFrom || '';
+            const validUntil = subscriber.validUntil || subscriber.xValidUntil || '';
+            document.getElementById('editValidFrom').value = formatDateForDisplay(validFrom) || '';
+            document.getElementById('editValidUntil').value = formatDateForDisplay(validUntil) || '';
             
             // Set ignore presence checkbox
             const ignorePresenceCheckbox = document.getElementById('editIgnorePresence');
