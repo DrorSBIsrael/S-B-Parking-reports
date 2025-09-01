@@ -801,7 +801,7 @@ class ParkingUIIntegrationXML {
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(validUntil) || ''}</td>
                 <td style="color: #888;" title="פרופיל ${subscriber.profile || ''}">${subscriber.profileName || (subscriber.profile ? `פרופיל ${subscriber.profile}` : '')}</td>
                 <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
-                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
+                <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
             
             // Remove hover indicator if has full details
@@ -1079,7 +1079,7 @@ class ParkingUIIntegrationXML {
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil || subscriber.xValidUntil)}</td>
                 <td style="color: #888;" title="פרופיל ${subscriber.profile || ''}">${subscriber.profileName || (subscriber.profile ? `פרופיל ${subscriber.profile}` : '')}</td>
                 <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
-                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
+                <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
             
             // Remove hover loading attributes if has full details
@@ -1400,13 +1400,7 @@ class ParkingUIIntegrationXML {
                             validUntil: detail.identification?.validUntil || detail.validUntil || subscriber.validUntil,
                             xValidFrom: detail.consumer?.xValidFrom || detail.xValidFrom || subscriber.xValidFrom,
                             xValidUntil: detail.consumer?.xValidUntil || detail.xValidUntil || subscriber.xValidUntil,
-                            // Map presence and ignorePresence correctly
-                            ignorePresence: detail.identification?.ignorePresence === '1' || 
-                                          detail.identification?.ignorePresence === 'true' || 
-                                          detail.identification?.ignorePresence === true ||
-                                          detail.ignorePresence === '1' ||
-                                          detail.ignorePresence === 'true' ||
-                                          detail.ignorePresence === true,
+                            // Map presence correctly
                             presence: detail.identification?.present === 'true' || detail.presence,
                             present: detail.identification?.present === 'true' || detail.present,
                             // Map vehicles
@@ -1542,7 +1536,7 @@ class ParkingUIIntegrationXML {
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil || subscriber.xValidUntil) || ''}</td>
                 <td style="color: #888;" title="פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}">${subscriber.profileName || `פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}`}</td>
                 <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
-                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
+                <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
             tbody.appendChild(row);
         });
@@ -1705,7 +1699,7 @@ class ParkingUIIntegrationXML {
                         validUntil: detail.identification?.validUntil,
                         xValidFrom: detail.consumer?.xValidFrom,
                         xValidUntil: detail.consumer?.xValidUntil,
-                        ignorePresence: detail.identification?.ignorePresence,
+
                         present: detail.identification?.present
                     }, null, 2));
                     
@@ -1733,8 +1727,7 @@ class ParkingUIIntegrationXML {
                         vehicle1: detail.lpn1 || subscriber.vehicle1 || '',
                         vehicle2: detail.lpn2 || subscriber.vehicle2 || '',
                         vehicle3: detail.lpn3 || subscriber.vehicle3 || '',
-                        // Map presence correctly - keep as string for form
-                        ignorePresence: detail.identification?.ignorePresence || detail.ignorePresence || '0',
+                        // Map presence correctly
                         presence: detail.identification?.present === 'true' || detail.presence,
                         // Mark as having full details
                         hasFullDetails: true
@@ -1806,7 +1799,7 @@ class ParkingUIIntegrationXML {
             if (shouldUpdate) {
                 console.log(`[saveSubscriber] Preparing UPDATE data for subscriber ${subscriberData.subscriberNum}`);
                 console.log(`[saveSubscriber] Raw dates from form - validFrom: ${subscriberData.validFrom}, validUntil: ${subscriberData.validUntil}`);
-                console.log(`[saveSubscriber] ignorePresence from form: ${subscriberData.ignorePresence} (type: ${typeof subscriberData.ignorePresence})`);
+
                 
                 // For UPDATE - structure data according to API spec for /detail endpoint
                 // Add timezone to dates for XML format
@@ -1854,8 +1847,6 @@ class ParkingUIIntegrationXML {
                             name: subscriberData.profile || 'Standard'
                         },
                         admission: '',  // Empty as in documentation
-                        ignorePresence: subscriberData.ignorePresence,  // '0' or '1' - AFTER usageProfile
-                        present: subscriberData.ignorePresence === '1' ? 'false' : 'true',  // Set present based on ignorePresence
                         status: '0',  // Active status (0 = active, 6 = locked)
                         ptcptGrpNo: '-1',  // Default group
                         chrgOvdrftAcct: '0'  // Don't charge overdraft
@@ -1911,7 +1902,7 @@ class ParkingUIIntegrationXML {
                         identificationType: '54',  // Back to 54 as per your requirement
                         validFrom: formatDateWithTimezone(subscriberData.validFrom),
                         validUntil: formatDateWithTimezone(subscriberData.validUntil),
-                        ignorePresence: subscriberData.ignorePresence || '0',  // Default '0' for new
+
                         status: '0',  // Active
                         ptcptGrpNo: '-1',
                         chrgOvdrftAcct: '0',
@@ -2004,29 +1995,7 @@ class ParkingUIIntegrationXML {
                 
                 console.log(`[saveSubscriber] Server response:`, result);
                 
-                // Check what the server returned for ignorePresence
-                if (result.success && result.data) {
-                    console.log(`[saveSubscriber] Server returned ignorePresence: ${result.data.identification?.ignorePresence} (in identification)`);
-                    console.log(`[saveSubscriber] Server returned ignorePresence: ${result.data.ignorePresence} (at root)`);
-                    
-                    // Check if there's an error message about ignorePresence
-                    if (result.data.identification?.ignorePresence !== subscriberData.ignorePresence) {
-                        console.warn(`[saveSubscriber] ⚠️ ignorePresence not updated! Sent: ${subscriberData.ignorePresence}, Got: ${result.data.identification?.ignorePresence}`);
-                        console.warn(`[saveSubscriber] This might be a server limitation. The field may not be updatable via this API.`);
-                        
-                        // Try alternative: update only identification block
-                        if (subscriberData.ignorePresence === '1') {
-                            console.log(`[saveSubscriber] Trying alternative: updating only identification...`);
-                            const identificationOnly = {
-                                identification: {
-                                    ignorePresence: '1'
-                                }
-                            };
-                            console.log(`[saveSubscriber] Sending identification-only update:`, identificationOnly);
-                            // We can try this in a future update if needed
-                        }
-                    }
-                }
+
                 
                 // If update failed with 500 error, try different approaches
                 if (!result.success && result.error && result.error.includes('500')) {
@@ -2146,10 +2115,8 @@ class ParkingUIIntegrationXML {
                             cardno: subscriberData.tagNum,
                             profile: subscriberData.profileId,
                             profileName: subscriberData.profile,
-                            ignorePresence: subscriberData.ignorePresence,  // Keep as string '0' or '1'
                             // Keep current presence - it will be updated from server on next load
-                            // If ignorePresence is '1', presence should be false
-                            presence: subscriberData.ignorePresence === '1' ? false : this.subscribers[index].presence,
+                            presence: this.subscribers[index].presence,
                             // DO NOT update 'present' - it's read-only from server
                             // Preserve company name and other UI fields
                             companyName: this.subscribers[index].companyName,
@@ -2213,6 +2180,86 @@ class ParkingUIIntegrationXML {
         } finally {
             this.setLoading(false);
         }
+    }
+    
+    /**
+     * Report Functions
+     */
+    
+    // Get parking transactions report for a subscriber
+    async getSubscriberReport(subscriberNum, minDate = null, maxDate = null) {
+        try {
+            if (!this.currentContract || !this.currentContract.id) {
+                throw new Error('לא נבחרה חברה');
+            }
+            
+            const contractId = this.currentContract.id;
+            
+            console.log(`[getSubscriberReport] Getting report for subscriber ${subscriberNum}, contract ${contractId}`);
+            
+            // Get parking transactions from API
+            const result = await this.api.getParkingTransactions(contractId, subscriberNum, minDate, maxDate);
+            
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to get parking transactions');
+            }
+            
+            const transactions = result.data || [];
+            console.log(`[getSubscriberReport] Found ${transactions.length} transactions`);
+            
+            // Format transactions for display
+            const formattedTransactions = transactions.map(trans => ({
+                date: this.formatDateTime(trans.transactionTime),
+                type: this.getTransactionTypeName(trans.transactionType),
+                entrance: trans.facilityin || '-',
+                exit: trans.facilityout || '-',
+                device: trans.device || '-',
+                amount: trans.amount ? `₪${trans.amount}` : '-'
+            }));
+            
+            return {
+                success: true,
+                data: formattedTransactions,
+                summary: {
+                    total: transactions.length,
+                    totalAmount: transactions.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
+                }
+            };
+            
+        } catch (error) {
+            console.error('[getSubscriberReport] Error:', error);
+            return {
+                success: false,
+                error: error.message || 'Failed to get report'
+            };
+        }
+    }
+    
+    // Format date and time for display
+    formatDateTime(dateTimeStr) {
+        if (!dateTimeStr) return '-';
+        try {
+            const date = new Date(dateTimeStr);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${day}/${month}/${year} ${hours}:${minutes}`;
+        } catch (e) {
+            return dateTimeStr;
+        }
+    }
+    
+    // Get transaction type name
+    getTransactionTypeName(typeCode) {
+        const types = {
+            '42': 'כניסה',
+            '43': 'יציאה',
+            '44': 'תשלום',
+            '45': 'ביטול'
+        };
+        return types[typeCode] || `סוג ${typeCode}`;
     }
     
     /**
@@ -2399,7 +2446,7 @@ class ParkingUIIntegrationXML {
                     profile: selectedOption?.getAttribute('data-profile-name') || selectedOption?.text || 'regular',
                     email: document.getElementById('editEmail')?.value || '',
                     notes: document.getElementById('editNotes').value || '',
-                    ignorePresence: document.getElementById('editIgnorePresence')?.checked ? '1' : '0',
+
                     isNew: !window.editingSubscriber,  // New subscriber if editingSubscriber is null
                     isGuest: document.getElementById('editFirstName').value === 'אורח' || 
                             document.getElementById('editModal')?.classList.contains('guest-mode')
