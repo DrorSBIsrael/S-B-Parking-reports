@@ -1838,6 +1838,8 @@ class ParkingUIIntegrationXML {
                         xValidUntil: formatDateWithTimezone(subscriberData.validUntil),
                         filialId: this.currentContract.filialId || '2228'  // Add filialId
                     },
+                    // Try adding ignorePresence at root level too
+                    ignorePresence: subscriberData.ignorePresence,
                     person: {
                         firstName: subscriberData.firstName || '',
                         surname: subscriberData.lastName || subscriberData.surname || ''
@@ -2001,6 +2003,12 @@ class ParkingUIIntegrationXML {
                 );
                 
                 console.log(`[saveSubscriber] Server response:`, result);
+                
+                // Check what the server returned for ignorePresence
+                if (result.success && result.data) {
+                    console.log(`[saveSubscriber] Server returned ignorePresence: ${result.data.identification?.ignorePresence} (in identification)`);
+                    console.log(`[saveSubscriber] Server returned ignorePresence: ${result.data.ignorePresence} (at root)`);
+                }
                 
                 // If update failed with 500 error, try different approaches
                 if (!result.success && result.error && result.error.includes('500')) {
