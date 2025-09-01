@@ -750,6 +750,16 @@ class ParkingUIIntegrationXML {
     updateSubscriberRow(subscriber, index) {
         // Skip debug logs for performance
         
+        // Update the subscriber in the main array FIRST
+        if (this.subscribers && index >= 0 && index < this.subscribers.length) {
+            // Update the array with the new data
+            this.subscribers[index] = {
+                ...this.subscribers[index],
+                ...subscriber,
+                hasFullDetails: true
+            };
+        }
+        
         const tbody = document.getElementById('subscribersTableBody');
         if (!tbody) return;
         
@@ -783,7 +793,7 @@ class ParkingUIIntegrationXML {
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(validUntil) || ''}</td>
                 <td style="color: #888;" title="פרופיל ${subscriber.profile || ''}">${subscriber.profileName || (subscriber.profile ? `פרופיל ${subscriber.profile}` : '')}</td>
                 <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
-                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence === '1' ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
+                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
             
             // Remove hover indicator if has full details
@@ -1053,7 +1063,7 @@ class ParkingUIIntegrationXML {
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil || subscriber.xValidUntil)}</td>
                 <td style="color: #888;" title="פרופיל ${subscriber.profile || ''}">${subscriber.profileName || (subscriber.profile ? `פרופיל ${subscriber.profile}` : '')}</td>
                 <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
-                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence === '1' ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
+                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
             
             // Remove hover loading attributes if has full details
@@ -1374,15 +1384,13 @@ class ParkingUIIntegrationXML {
                             validUntil: detail.identification?.validUntil || detail.validUntil || subscriber.validUntil,
                             xValidFrom: detail.consumer?.xValidFrom || detail.xValidFrom || subscriber.xValidFrom,
                             xValidUntil: detail.consumer?.xValidUntil || detail.xValidUntil || subscriber.xValidUntil,
-                            // Map presence and ignorePresence correctly - keep as '0' or '1' string
-                            ignorePresence: (detail.identification?.ignorePresence === '1' || 
-                                          detail.identification?.ignorePresence === 1 ||
+                            // Map presence and ignorePresence correctly
+                            ignorePresence: detail.identification?.ignorePresence === '1' || 
                                           detail.identification?.ignorePresence === 'true' || 
                                           detail.identification?.ignorePresence === true ||
                                           detail.ignorePresence === '1' ||
-                                          detail.ignorePresence === 1 ||
                                           detail.ignorePresence === 'true' ||
-                                          detail.ignorePresence === true) ? '1' : '0',
+                                          detail.ignorePresence === true,
                             presence: detail.identification?.present === 'true' || detail.presence,
                             present: detail.identification?.present === 'true' || detail.present,
                             // Map vehicles
@@ -1512,7 +1520,7 @@ class ParkingUIIntegrationXML {
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil || subscriber.xValidUntil) || ''}</td>
                 <td style="color: #888;" title="פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}">${subscriber.profileName || `פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}`}</td>
                 <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
-                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence === '1' ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
+                <td style="text-align: center; font-size: 18px;" title="${subscriber.ignorePresence ? 'ללא בדיקת נוכחות' : ''}">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
             tbody.appendChild(row);
         });
@@ -1706,10 +1714,6 @@ class ParkingUIIntegrationXML {
      * Save subscriber (create or update)
      */
     async saveSubscriber(subscriberData) {
-        console.log('[saveSubscriber] Starting save process:', subscriberData);
-        console.log('[saveSubscriber] isNew flag:', subscriberData.isNew);
-        console.log('[saveSubscriber] subscriberNum:', subscriberData.subscriberNum);
-        
         if (!this.currentContract) return;
         
         this.setLoading(true);
@@ -1726,24 +1730,13 @@ class ParkingUIIntegrationXML {
             // assume it's an update
             const shouldUpdate = !isReallyNew && subscriberData.subscriberNum && subscriberData.subscriberNum !== '';
             
-            console.log('[saveSubscriber] Determined isReallyNew:', isReallyNew);
-            console.log('[saveSubscriber] Should update existing:', shouldUpdate);
-            console.log('[saveSubscriber] Raw subscriber data names:', {
-                firstName: subscriberData.firstName,
-                lastName: subscriberData.lastName,
-                surname: subscriberData.surname
-            });
+
             
             // Prepare consumer data for XML API
             let consumerData;
             
             if (shouldUpdate) {
                 // For UPDATE - structure data according to API spec for /detail endpoint
-                console.log('[saveSubscriber] UPDATE - Input dates:', {
-                    validFrom: subscriberData.validFrom,
-                    validUntil: subscriberData.validUntil
-                });
-                
                 consumerData = {
                     consumer: {
                         id: subscriberData.subscriberNum,
@@ -1762,7 +1755,7 @@ class ParkingUIIntegrationXML {
                         identificationType: '54',  // Standard type for parking cards
                         validFrom: subscriberData.validFrom,  // Use validFrom for identification
                         validUntil: subscriberData.validUntil,  // Use validUntil for identification
-                        ignorePresence: subscriberData.ignorePresence === '1' ? '1' : '0',  // Send as string '0' or '1'
+                        ignorePresence: subscriberData.ignorePresence,  // Already '0' or '1' from form
                         usageProfile: {
                             id: subscriberData.profileId || '1'
                         }
@@ -1789,7 +1782,7 @@ class ParkingUIIntegrationXML {
                     ptcptType: '2',
                     cardclass: '0',
                     identificationType: '54',
-                    ignorePresence: subscriberData.ignorePresence === '1' ? '1' : '0',  // Send as string '0' or '1'
+                    ignorePresence: subscriberData.ignorePresence || '1',  // Default '1' for new subscribers
                     cardno: subscriberData.tagNum || '',
                         validFrom: subscriberData.validFrom,
                         validUntil: subscriberData.validUntil,
@@ -1863,7 +1856,7 @@ class ParkingUIIntegrationXML {
                 }
                 
                 // Create new consumer with all details in one call
-                result = await this.api.createConsumer(this.currentContract.id, consumerData);
+                result = await this.api.addConsumer(this.currentContract.id, consumerData);
                 
                 if (result.success) {
                     console.log('New consumer created successfully');
