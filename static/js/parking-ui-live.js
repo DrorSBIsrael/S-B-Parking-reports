@@ -1838,8 +1838,6 @@ class ParkingUIIntegrationXML {
                         xValidUntil: formatDateWithTimezone(subscriberData.validUntil),
                         filialId: this.currentContract.filialId || '2228'  // Add filialId
                     },
-                    // Try adding ignorePresence at root level too
-                    ignorePresence: subscriberData.ignorePresence,
                     person: {
                         firstName: subscriberData.firstName || '',
                         surname: subscriberData.lastName || subscriberData.surname || ''
@@ -1851,14 +1849,16 @@ class ParkingUIIntegrationXML {
                         identificationType: '54',  // Back to 54 as per your requirement
                         validFrom: formatDateWithTimezone(subscriberData.validFrom),
                         validUntil: formatDateWithTimezone(subscriberData.validUntil),
-                        ignorePresence: subscriberData.ignorePresence,  // '0' or '1'
-                        status: '0',  // Active status (0 = active, 6 = locked)
-                        ptcptGrpNo: '-1',  // Default group
-                        chrgOvdrftAcct: '0',  // Don't charge overdraft
                         usageProfile: {
                             id: subscriberData.profileId || '1',
                             name: subscriberData.profile || 'Standard'
-                        }
+                        },
+                        admission: '',  // Empty as in documentation
+                        ignorePresence: subscriberData.ignorePresence,  // '0' or '1' - AFTER usageProfile
+                        present: subscriberData.ignorePresence === '1' ? 'false' : 'true',  // Set present based on ignorePresence
+                        status: '0',  // Active status (0 = active, 6 = locked)
+                        ptcptGrpNo: '-1',  // Default group
+                        chrgOvdrftAcct: '0'  // Don't charge overdraft
                     },
                     displayText: '-1',
                     limit: '9999900',
@@ -1904,9 +1904,9 @@ class ParkingUIIntegrationXML {
                         firstName: subscriberData.firstName || subscriberData.lastName || 'Unknown',
                         surname: subscriberData.lastName || subscriberData.surname || subscriberData.firstName || 'Unknown'
                     },
-                    identification: {
-                        ptcptType: '2',
-                        cardno: subscriberData.tagNum || '',
+                identification: {
+                    ptcptType: '2',
+                    cardno: subscriberData.tagNum || '',
                         cardclass: '1',  // Keep as 1
                         identificationType: '54',  // Back to 54 as per your requirement
                         validFrom: formatDateWithTimezone(subscriberData.validFrom),
@@ -1915,8 +1915,8 @@ class ParkingUIIntegrationXML {
                         status: '0',  // Active
                         ptcptGrpNo: '-1',
                         chrgOvdrftAcct: '0',
-                        usageProfile: {
-                            id: subscriberData.profileId || '1',
+                    usageProfile: {
+                        id: subscriberData.profileId || '1',
                             name: subscriberData.profile || 'Standard'
                         }
                     },
@@ -2008,6 +2008,24 @@ class ParkingUIIntegrationXML {
                 if (result.success && result.data) {
                     console.log(`[saveSubscriber] Server returned ignorePresence: ${result.data.identification?.ignorePresence} (in identification)`);
                     console.log(`[saveSubscriber] Server returned ignorePresence: ${result.data.ignorePresence} (at root)`);
+                    
+                    // Check if there's an error message about ignorePresence
+                    if (result.data.identification?.ignorePresence !== subscriberData.ignorePresence) {
+                        console.warn(`[saveSubscriber] ⚠️ ignorePresence not updated! Sent: ${subscriberData.ignorePresence}, Got: ${result.data.identification?.ignorePresence}`);
+                        console.warn(`[saveSubscriber] This might be a server limitation. The field may not be updatable via this API.`);
+                        
+                        // Try alternative: update only identification block
+                        if (subscriberData.ignorePresence === '1') {
+                            console.log(`[saveSubscriber] Trying alternative: updating only identification...`);
+                            const identificationOnly = {
+                                identification: {
+                                    ignorePresence: '1'
+                                }
+                            };
+                            console.log(`[saveSubscriber] Sending identification-only update:`, identificationOnly);
+                            // We can try this in a future update if needed
+                        }
+                    }
                 }
                 
                 // If update failed with 500 error, try different approaches
