@@ -29,7 +29,7 @@
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             min-height: 100vh;
             direction: rtl;
-            font-size: 14px;
+            font-size: 13px; /* Reduced font size */
             transition: font-size 0.3s ease;
         }
 
@@ -981,6 +981,11 @@
                         🚪 התנתק
                     </button>
                 </div>
+                <div style="display: flex; gap: 5px;">
+                    <button onclick="adjustFontSize(-1)" class="btn btn-secondary btn-sm" title="הקטן פונט" style="padding: 5px 10px;">A-</button>
+                    <button onclick="adjustFontSize(0)" class="btn btn-secondary btn-sm" title="גודל רגיל" style="padding: 5px 10px;">A</button>
+                    <button onclick="adjustFontSize(1)" class="btn btn-secondary btn-sm" title="הגדל פונט" style="padding: 5px 10px;">A+</button>
+                </div>
                 <div class="lang-switch">
                     <button class="btn btn-secondary" onclick="toggleLanguage()">
                         <span data-translate="lang">English</span>
@@ -1156,20 +1161,19 @@
                     </div>
                     <div class="form-group">
                         <label for="editTagNum" data-translate="tagNum">מספר תג</label>
-                        <input type="text" id="editTagNum" placeholder="מספר תג (יווצר אוטומטית למנוי חדש)">
-                        <small style="color: #666;" id="tagHelpText">* לא ניתן לשנות למנויים קיימים</small>
+                        <input type="text" id="editTagNum" placeholder="מספר תג">
                     </div>
                     <div class="form-group">
                         <label for="editVehicle1" data-translate="vehicle1">רכב 1</label>
-                        <input type="text" id="editVehicle1" placeholder="מספר רכב (לדוגמה: 12-345-67) ניתן להשאיר ריק">
+                        <input type="text" id="editVehicle1" placeholder="מספר רכב (לדוגמה: 12345001)">
                     </div>
                     <div class="form-group">
                         <label for="editVehicle2" data-translate="vehicle2">רכב 2</label>
-                        <input type="text" id="editVehicle2" placeholder="מספר רכב, ניתן להשאיר ריק">
+                        <input type="text" id="editVehicle2" placeholder="מספר רכב (לדוגמה: 98765002)">
                     </div>
                     <div class="form-group">
                         <label for="editVehicle3" data-translate="vehicle3">רכב 3</label>
-                        <input type="text" id="editVehicle3" placeholder="מספר רכב, ניתן להשאיר ריק">
+                        <input type="text" id="editVehicle3" placeholder="מספר רכב (לדוגמה: 55666003)">
                     </div>
                     <div class="form-group">
                         <label for="editValidFrom" data-translate="validFrom">תחילת תוקף *</label>
@@ -1194,19 +1198,6 @@
                     <div class="form-group" id="emailGroup">
                         <label for="editEmail" data-translate="email">אימייל</label>
                         <input type="email" id="editEmail" placeholder="כתובת אימייל (אופציונלי)">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="editNotes" data-translate="notes">הערות</label>
-                        <textarea id="editNotes" rows="3" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.95em; resize: vertical;"></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                            <input type="checkbox" id="editIgnorePresence" checked style="width: auto;">
-                            <span data-translate="ignorePresence">ללא בדיקת נוכחות</span>
-                        </label>
-                        <small style="color: #666;">* סמן אם המנוי פטור מבדיקת נוכחות</small>
                     </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" onclick="closeModal()">
@@ -1771,10 +1762,6 @@
             document.getElementById('editFirstName').value = subscriber.firstName;
             document.getElementById('editLastName').value = subscriber.lastName;
             document.getElementById('editTagNum').value = subscriber.tagNum || '';
-            document.getElementById('editTagNum').readOnly = true; // Make tag read-only for existing subscribers
-            document.getElementById('editTagNum').style.backgroundColor = '#f0f0f0';
-            document.getElementById('editTagNum').style.cursor = 'not-allowed';
-            document.getElementById('tagHelpText').style.display = 'block';
             // Display vehicle numbers as they come from the server - check both vehicle and lpn fields
             document.getElementById('editVehicle1').value = subscriber.vehicle1 || subscriber.lpn1 || '';
             document.getElementById('editVehicle2').value = subscriber.vehicle2 || subscriber.lpn2 || '';
@@ -1788,21 +1775,7 @@
             document.getElementById('editValidFrom').value = formatDateForDisplay(validFrom) || '';
             document.getElementById('editValidUntil').value = formatDateForDisplay(validUntil) || '';
             
-            // Set ignore presence checkbox
-            const ignorePresenceCheckbox = document.getElementById('editIgnorePresence');
-            if (ignorePresenceCheckbox) {
-                // Debug log
-                console.log(`[editSubscriber] Setting ignorePresence checkbox, value: ${subscriber.ignorePresence}, type: ${typeof subscriber.ignorePresence}`);
-                
-                // Check if ignorePresence is '1' (no presence check)
-                // If '0' or false, checkbox should be unchecked
-                ignorePresenceCheckbox.checked = subscriber.ignorePresence === '1' || 
-                                                subscriber.ignorePresence === 1 || 
-                                                subscriber.ignorePresence === true || 
-                                                subscriber.ignorePresence === 'true';
-                
-                console.log(`[editSubscriber] Checkbox set to: ${ignorePresenceCheckbox.checked}`);
-            }
+
             
             // Remove guest mode class for regular edit
             document.getElementById('editModal').classList.remove('guest-mode');
@@ -1845,7 +1818,6 @@
             }
             
             document.getElementById('editEmail').value = subscriber.email || '';
-            document.getElementById('editNotes').value = subscriber.notes || '';
             
             // Show modal
             document.getElementById('editModal').classList.add('show');
@@ -2064,13 +2036,213 @@
             console.log('[selectSubscriberForReport] Selected:', { companyNum, subscriberNum });
             closeReportsModal();
             
-            if (window.viewTransactions) {
-                console.log('[selectSubscriberForReport] Calling viewTransactions');
-                window.viewTransactions(companyNum, subscriberNum);
-            } else {
-                console.error('[selectSubscriberForReport] viewTransactions function not found');
-                showToast('⚠️ פונקציית הדוחות לא זמינה', 'error');
+            // Call viewTransactions to show the report
+            viewTransactions(companyNum, subscriberNum);
+        }
+        
+                // Store current report subscriber
+        let currentReportSubscriber = null;
+        
+        // View transactions report for a subscriber
+        async function viewTransactions(companyNum, subscriberNum) {
+            console.log('[viewTransactions] Loading transactions for subscriber:', subscriberNum);
+            
+            // Store subscriber number for later use
+            currentReportSubscriber = subscriberNum;
+            
+            // Show loading
+            showToast('🔄 טוען דוח תנועות...', 'info');
+            
+            // Create modal for report
+            let modal = document.getElementById('transactionsModal');
+            if (!modal) {
+                const modalHtml = `
+                    <div id="transactionsModal" class="modal">
+                        <div class="modal-content" style="max-width: 900px;">
+                            <div class="modal-header">
+                                <h2 id="reportTitle">דוח תנועות</h2>
+                                <button class="close-btn" onclick="closeTransactionsModal()">×</button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="report-filters" style="margin-bottom: 20px; display: flex; gap: 10px;">
+                                    <div>
+                                        <label>מתאריך:</label>
+                                        <input type="date" id="reportMinDate" style="padding: 5px;">
+                                    </div>
+                                    <div>
+                                        <label>עד תאריך:</label>
+                                        <input type="date" id="reportMaxDate" style="padding: 5px;">
+                                    </div>
+                                    <button class="btn btn-primary" onclick="refreshReport()">🔄 רענן</button>
+                                    <button class="btn btn-success" onclick="exportReportToCSV()">📥 ייצא לאקסל</button>
+                                </div>
+                                <div id="reportContent" style="max-height: 500px; overflow-y: auto;">
+                                    <div style="text-align: center; padding: 40px;">
+                                        <div class="spinner"></div>
+                                        <p>טוען נתונים...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                modal = document.getElementById('transactionsModal');
             }
+            
+            // Update title
+            document.getElementById('reportTitle').textContent = `דוח תנועות - מנוי ${subscriberNum}`;
+            
+            // Show modal
+            modal.classList.add('show');
+            
+            // Load report data
+            try {
+                const ui = window.parkingUIXML || window.parkingUI;
+                if (!ui || !ui.getSubscriberReport) {
+                    throw new Error('Report function not available');
+                }
+                
+                const result = await ui.getSubscriberReport(subscriberNum);
+                
+                if (result.success) {
+                    displayTransactionsReport(result.data, result.summary);
+                } else {
+                    throw new Error(result.error || 'Failed to load report');
+                }
+            } catch (error) {
+                console.error('[viewTransactions] Error:', error);
+                document.getElementById('reportContent').innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: red;">
+                        ❌ שגיאה בטעינת הדוח: ${error.message}
+                    </div>
+                `;
+                showToast('❌ שגיאה בטעינת הדוח', 'error');
+            }
+        }
+        
+        function displayTransactionsReport(transactions, summary) {
+            const content = document.getElementById('reportContent');
+            
+            if (!transactions || transactions.length === 0) {
+                content.innerHTML = `
+                    <div style="text-align: center; padding: 40px;">
+                        <p>לא נמצאו תנועות לתקופה המבוקשת</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = `
+                <div style="padding: 10px; background: #f0f0f0; margin-bottom: 10px;">
+                    <strong>סה"כ תנועות:</strong> ${summary.total} | 
+                    <strong>סה"כ סכום:</strong> ₪${summary.totalAmount.toFixed(2)}
+                </div>
+                <table class="subscribers-table" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>תאריך ושעה</th>
+                            <th>סוג פעולה</th>
+                            <th>כניסה</th>
+                            <th>יציאה</th>
+                            <th>מכשיר</th>
+                            <th>סכום</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            transactions.forEach(trans => {
+                html += `
+                    <tr>
+                        <td>${trans.date}</td>
+                        <td>${trans.type}</td>
+                        <td>${trans.entrance}</td>
+                        <td>${trans.exit}</td>
+                        <td>${trans.device}</td>
+                        <td>${trans.amount}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+            `;
+            
+            content.innerHTML = html;
+        }
+        
+        function closeTransactionsModal() {
+            const modal = document.getElementById('transactionsModal');
+            if (modal) modal.classList.remove('show');
+        }
+        
+        async function refreshReport() {
+            if (!currentReportSubscriber) {
+                showToast('לא נבחר מנוי', 'error');
+                return;
+            }
+            
+            const minDate = document.getElementById('reportMinDate').value;
+            const maxDate = document.getElementById('reportMaxDate').value;
+            
+            document.getElementById('reportContent').innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <div class="spinner"></div>
+                    <p>טוען נתונים...</p>
+                </div>
+            `;
+            
+            try {
+                const ui = window.parkingUIXML || window.parkingUI;
+                const result = await ui.getSubscriberReport(currentReportSubscriber, minDate, maxDate);
+                
+                if (result.success) {
+                    displayTransactionsReport(result.data, result.summary);
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                document.getElementById('reportContent').innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: red;">
+                        ❌ שגיאה בטעינת הדוח: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        function exportReportToCSV() {
+            // Get current displayed data
+            const table = document.querySelector('#reportContent table');
+            if (!table) {
+                showToast('אין נתונים לייצוא', 'warning');
+                return;
+            }
+            
+            // Create CSV content
+            let csv = '\ufeff'; // BOM for Hebrew
+            csv += 'תאריך ושעה,סוג פעולה,כניסה,יציאה,מכשיר,סכום\n';
+            
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                const rowData = Array.from(cells).map(cell => `"${cell.textContent}"`).join(',');
+                csv += rowData + '\n';
+            });
+            
+            // Download CSV
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `report_${currentReportSubscriber}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showToast('✅ הדוח יוצא בהצלחה', 'success');
         }
         
         // Guest date handlers for week limitation
@@ -2280,13 +2452,6 @@
             // Profile will be set by loadUsageProfiles based on company profiles
             // document.getElementById('editProfile').value = '1'; // Will be set automatically
             document.getElementById('editEmail').value = '';
-            document.getElementById('editNotes').value = '';
-            
-            // Initialize ignorePresence checkbox - checked by default for new subscribers
-            const ignorePresenceCheckbox = document.getElementById('editIgnorePresence');
-            if (ignorePresenceCheckbox) {
-                ignorePresenceCheckbox.checked = true; // Default to checked (no presence check)
-            }
             
             // If guest, disable vehicle 2 and 3
             if (isGuest) {
@@ -2677,8 +2842,6 @@
                     profile: document.getElementById('editProfile').selectedOptions[0]?.getAttribute('data-profile-name') || 'regular',
                     profileId: document.getElementById('editProfile').value || '1',
                     email: document.getElementById('editEmail').value || '',
-                    notes: document.getElementById('editNotes').value || '',
-                    ignorePresence: document.getElementById('editIgnorePresence').checked ? '1' : '0',
                     isNew: isNew,  // Use the calculated value that considers both editing state and form data
                     // Check if creating a guest (first name is "אורח" or modal has guest indicator)
                     isGuest: document.getElementById('editFirstName').value.trim() === 'אורח' || 
@@ -3332,7 +3495,38 @@
         }
 
         // Load user info on page load
+        // Font size adjustment
+        let currentFontSize = 0; // 0 = normal, -1 = small, 1 = large
+        function adjustFontSize(size) {
+            const body = document.body;
+            if (size === 0) {
+                // Reset to normal
+                body.style.fontSize = '13px';
+                currentFontSize = 0;
+            } else if (size === -1 && currentFontSize > -2) {
+                // Decrease
+                currentFontSize--;
+                const newSize = 13 + (currentFontSize * 1);
+                body.style.fontSize = newSize + 'px';
+            } else if (size === 1 && currentFontSize < 3) {
+                // Increase
+                currentFontSize++;
+                const newSize = 13 + (currentFontSize * 1);
+                body.style.fontSize = newSize + 'px';
+            }
+            // Save preference
+            localStorage.setItem('preferredFontSize', currentFontSize);
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
+            // Load saved font size preference
+            const savedFontSize = localStorage.getItem('preferredFontSize');
+            if (savedFontSize) {
+                currentFontSize = parseInt(savedFontSize);
+                const newSize = 13 + (currentFontSize * 1);
+                document.body.style.fontSize = newSize + 'px';
+            }
+            
             loadCurrentUser();
         });
     </script>
