@@ -673,7 +673,11 @@ class ParkingUIIntegrationXML {
      * Select a company and load its subscribers
      */
     async selectCompany(company) {
-        this.currentContract = company;
+        // Store the full company object with correct name
+        this.currentContract = {
+            ...company,
+            name: company.name || company.firstName || company.companyName || `חברה ${company.id}`
+        };
         
         // Also set global currentCompany for form compatibility
         window.currentCompany = company;
@@ -824,7 +828,7 @@ class ParkingUIIntegrationXML {
             // Get subscribers progressively
             const result = await this.api.getSubscribersProgressive(this.currentContract.id, {
                 batchSize: perfConfig.batchSize || 5,
-                companyName: (this.currentContract.name || this.currentContract.firstName || `חברה ${this.currentContract.id}`).trim(),  // Pass company name
+                companyName: this.currentContract.name || this.currentContract.firstName || this.currentContract.companyName || `חברה ${this.currentContract.id}`,  // Pass correct company name
                 
                 // Callback when basic data is ready
                 onBasicLoaded: (basicSubscribers) => {
@@ -1677,9 +1681,38 @@ class ParkingUIIntegrationXML {
                 );
                 
                 if (result.success) {
-                    // Update subscriber with full details
-                    Object.assign(subscriber, result.data);
-                    subscriber.hasFullDetails = true; // Mark as having full details now
+                    const detail = result.data;
+                    
+                    // Preserve important fields and map correctly
+                    const preservedFields = {
+                        companyName: subscriber.companyName,
+                        companyNum: subscriber.companyNum,
+                        contractId: subscriber.contractId,
+                        isLargeCompany: subscriber.isLargeCompany,
+                        loadingStrategy: subscriber.loadingStrategy
+                    };
+                    
+                    // Update subscriber with full details - map fields properly
+                    Object.assign(subscriber, {
+                        ...detail,
+                        ...preservedFields,  // Preserve our fields
+                        // Map profile correctly from identification.usageProfile
+                        profile: detail.identification?.usageProfile?.id || detail.profile || detail.extCardProfile || subscriber.profile,
+                        profileName: detail.identification?.usageProfile?.name || detail.profileName || subscriber.profileName,
+                        extCardProfile: detail.identification?.usageProfile?.id || detail.extCardProfile || subscriber.extCardProfile,
+                        // Map dates correctly
+                        validFrom: detail.identification?.validFrom || detail.validFrom || subscriber.validFrom,
+                        validUntil: detail.identification?.validUntil || detail.validUntil || subscriber.validUntil,
+                        // Map vehicles
+                        vehicle1: detail.lpn1 || subscriber.vehicle1 || '',
+                        vehicle2: detail.lpn2 || subscriber.vehicle2 || '',
+                        vehicle3: detail.lpn3 || subscriber.vehicle3 || '',
+                        // Map presence correctly
+                        ignorePresence: detail.identification?.ignorePresence === '1' || detail.ignorePresence === '1',
+                        presence: detail.identification?.present === 'true' || detail.presence,
+                        // Mark as having full details
+                        hasFullDetails: true
+                    });
                     
                     // Update the row in the table
                     const index = this.subscribers.findIndex(s => 
@@ -1703,9 +1736,9 @@ class ParkingUIIntegrationXML {
         
         // Open edit modal with full data
         if (window.editSubscriber) {
-            // Make sure we have the correct company name from current contract or subscriber data
-            if (!subscriber.companyName && this.currentContract) {
-                subscriber.companyName = this.currentContract.name || this.currentContract.firstName || '';
+            // ALWAYS use the company name from current contract, don't trust subscriber data
+            if (this.currentContract) {
+                subscriber.companyName = this.currentContract.name || this.currentContract.firstName || subscriber.companyName || '';
             }
             // Ensure we have all vehicle data mapped correctly
             subscriber.vehicle1 = subscriber.vehicle1 || subscriber.lpn1 || '';
@@ -1765,6 +1798,8 @@ class ParkingUIIntegrationXML {
                         validFrom: subscriberData.validFrom,  // Use validFrom for identification
                         validUntil: subscriberData.validUntil,  // Use validUntil for identification
                         ignorePresence: subscriberData.ignorePresence,  // Already '0' or '1' from form
+                        // Set presence based on ignorePresence - if ignoring, always false
+                        present: subscriberData.ignorePresence === '1' ? 'false' : 'true',
                         usageProfile: {
                             id: subscriberData.profileId || '1'
                         }
@@ -1795,6 +1830,8 @@ class ParkingUIIntegrationXML {
                     cardno: subscriberData.tagNum || '',
                         validFrom: subscriberData.validFrom,
                         validUntil: subscriberData.validUntil,
+                        // Set presence for new subscriber
+                        present: subscriberData.ignorePresence === '1' ? 'false' : 'false',  // Default false for new
                     usageProfile: {
                         id: subscriberData.profileId || '1',
                         name: subscriberData.profile || 'רגיל'
@@ -1988,11 +2025,13 @@ class ParkingUIIntegrationXML {
                             profile: subscriberData.profileId,
                             profileName: subscriberData.profile,
                             ignorePresence: subscriberData.ignorePresence === '1',
+                            // Update presence based on ignorePresence
+                            presence: subscriberData.ignorePresence === '1' ? false : this.subscribers[index].presence,
                             // Preserve company name and other UI fields
                             companyName: this.subscribers[index].companyName,
                             isLargeCompany: this.subscribers[index].isLargeCompany,
                             loadingStrategy: this.subscribers[index].loadingStrategy,
-                            hasFullDetails: this.subscribers[index].hasFullDetails
+                            hasFullDetails: false  // Reset to force reload on next edit
                         };
                         
                         // Update the specific row in the table
