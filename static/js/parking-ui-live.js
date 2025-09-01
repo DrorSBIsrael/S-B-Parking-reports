@@ -676,7 +676,8 @@ class ParkingUIIntegrationXML {
         // Store the full company object with correct name
         this.currentContract = {
             ...company,
-            name: company.name || company.firstName || company.companyName || `חברה ${company.id}`
+            name: company.name || company.firstName || company.companyName || `חברה ${company.id}`,
+            filialId: company.filialId || '2228'  // Default filialId
         };
         
         // Also set global currentCompany for form compatibility
@@ -1808,30 +1809,47 @@ class ParkingUIIntegrationXML {
                 console.log(`[saveSubscriber] ignorePresence: ${subscriberData.ignorePresence}`);
                 
                 // For UPDATE - structure data according to API spec for /detail endpoint
+                // Add timezone to dates for XML format
+                const formatDateWithTimezone = (date) => {
+                    if (!date) return '';
+                    // Add Israel timezone (+02:00 or +03:00 depending on DST)
+                    return date + '+02:00';
+                };
+                
                 consumerData = {
                     consumer: {
                         id: subscriberData.subscriberNum,
                         contractid: this.currentContract.id,
                         name: subscriberData.lastName || subscriberData.surname || '',
-                        // Send dates in server format (YYYY-MM-DD)
-                        xValidFrom: subscriberData.validFrom,  // Already converted by convertDateToServer
-                        xValidUntil: subscriberData.validUntil  // Already converted by convertDateToServer
+                        // Send dates with timezone
+                        xValidFrom: formatDateWithTimezone(subscriberData.validFrom),
+                        xValidUntil: formatDateWithTimezone(subscriberData.validUntil),
+                        filialId: this.currentContract.filialId || '2228'  // Add filialId
                     },
                     person: {
                         firstName: subscriberData.firstName || '',
                         surname: subscriberData.lastName || subscriberData.surname || ''
                     },
                     identification: {
+                        ptcptType: '2',  // Required field from documentation
                         cardno: subscriberData.tagNum || '',
-                        identificationType: '54',  // Standard type for parking cards
-                        validFrom: subscriberData.validFrom,  // Use validFrom for identification
-                        validUntil: subscriberData.validUntil,  // Use validUntil for identification
-                        ignorePresence: subscriberData.ignorePresence,  // Already '0' or '1' from form
-                        // DO NOT send 'present' - it's read-only from server
+                        cardclass: '1',  // Keep as 1
+                        identificationType: '54',  // Back to 54 as per your requirement
+                        validFrom: formatDateWithTimezone(subscriberData.validFrom),
+                        validUntil: formatDateWithTimezone(subscriberData.validUntil),
+                        ignorePresence: subscriberData.ignorePresence,  // '0' or '1'
+                        status: '0',  // Active status (0 = active, 6 = locked)
+                        ptcptGrpNo: '-1',  // Default group
+                        chrgOvdrftAcct: '0',  // Don't charge overdraft
                         usageProfile: {
-                            id: subscriberData.profileId || '1'
+                            id: subscriberData.profileId || '1',
+                            name: subscriberData.profile || 'Standard'
                         }
                     },
+                    displayText: '-1',
+                    limit: '9999900',
+                    status: '0',  // Active status
+                    delete: '0',  // Not deleted
                     // Vehicle data - clean dashes from vehicle numbers
                     lpn1: (subscriberData.vehicle1 || '').replace(/-/g, ''),
                     lpn2: (subscriberData.vehicle2 || '').replace(/-/g, ''),
@@ -1840,44 +1858,52 @@ class ParkingUIIntegrationXML {
                 
                 console.log(`[saveSubscriber] Full UPDATE payload:`, JSON.stringify(consumerData, null, 2));
             } else {
-                // For NEW subscriber - send full structure
+                // For NEW subscriber - send full structure matching documentation
+                const formatDateWithTimezone = (date) => {
+                    if (!date) return '';
+                    return date + '+02:00';
+                };
+                
                 consumerData = {
-                // Basic info - BOTH names must have values, server requires it!
-                firstName: subscriberData.firstName || subscriberData.lastName || subscriberData.surname || 'Unknown',
-                    surname: subscriberData.lastName || subscriberData.surname || subscriberData.firstName || 'Unknown',
+                    consumer: {
+                        id: '',  // Empty for new subscriber
+                        contractid: this.currentContract.id,
+                        name: subscriberData.lastName || subscriberData.surname || '',
+                        xValidFrom: formatDateWithTimezone(subscriberData.validFrom),
+                        xValidUntil: formatDateWithTimezone(subscriberData.validUntil),
+                        filialId: this.currentContract.filialId || '2228'
+                    },
+                    person: {
+                        firstName: subscriberData.firstName || subscriberData.lastName || 'Unknown',
+                        surname: subscriberData.lastName || subscriberData.surname || subscriberData.firstName || 'Unknown'
+                    },
+                    identification: {
+                        ptcptType: '2',
+                        cardno: subscriberData.tagNum || '',
+                        cardclass: '1',  // Keep as 1
+                        identificationType: '54',  // Back to 54 as per your requirement
+                        validFrom: formatDateWithTimezone(subscriberData.validFrom),
+                        validUntil: formatDateWithTimezone(subscriberData.validUntil),
+                        ignorePresence: subscriberData.ignorePresence || '0',  // Default '0' for new
+                        status: '0',  // Active
+                        ptcptGrpNo: '-1',
+                        chrgOvdrftAcct: '0',
+                        usageProfile: {
+                            id: subscriberData.profileId || '1',
+                            name: subscriberData.profile || 'Standard'
+                        }
+                    },
+                    displayText: '-1',
+                    limit: '9999900',
+                    status: '0',
+                    delete: '0',
+                    // Vehicles
+                    lpn1: (subscriberData.vehicle1 || '').replace(/-/g, ''),
+                    lpn2: (subscriberData.vehicle2 || '').replace(/-/g, ''),
+                    lpn3: (subscriberData.vehicle3 || '').replace(/-/g, '')
+                };
                 
-                    // Vehicles - clean dashes from vehicle numbers
-                lpn1: (subscriberData.vehicle1 || '').replace(/-/g, ''),
-                lpn2: (subscriberData.vehicle2 || '').replace(/-/g, ''),
-                lpn3: (subscriberData.vehicle2 && subscriberData.vehicle3) ? (subscriberData.vehicle3 || '').replace(/-/g, '') : '',
-                
-                // Identification
-                identification: {
-                    ptcptType: '2',
-                    cardclass: '0',
-                    identificationType: '54',
-                    ignorePresence: subscriberData.ignorePresence || '1',  // Default '1' for new subscribers
-                    cardno: subscriberData.tagNum || '',
-                        validFrom: subscriberData.validFrom,
-                        validUntil: subscriberData.validUntil,
-                        // DO NOT send 'present' - it's read-only from server
-                    usageProfile: {
-                        id: subscriberData.profileId || '1',
-                        name: subscriberData.profile || 'רגיל'
-                    }
-                },
-                
-                // Consumer info
-                consumer: {
-                    id: subscriberData.subscriberNum || undefined,
-                    contractid: this.currentContract.id,
-                    filialId: subscriberData.filialId || '2240'
-                },
-                
-                // Contact info
-                email: subscriberData.email || '',
-                phone: subscriberData.phone || ''
-            };
+                console.log(`[saveSubscriber] Full NEW payload:`, JSON.stringify(consumerData, null, 2));
             }
             
             if (isReallyNew) {
