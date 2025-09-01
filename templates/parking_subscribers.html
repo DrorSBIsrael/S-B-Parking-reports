@@ -1762,9 +1762,11 @@
             // Don't load profiles for existing subscriber - just use what they have
             // The profile will be set from the subscriber data below
             
-            // Populate form
+            // Populate form - handle company name properly
             document.getElementById('editCompanyNum').value = subscriber.companyNum;
-            document.getElementById('editCompanyName').value = subscriber.companyName;
+            // Fix company name - use the correct value from subscriber
+            const correctCompanyName = subscriber.companyName || subscriber.company || '';
+            document.getElementById('editCompanyName').value = correctCompanyName;
             document.getElementById('editSubscriberNum').value = subscriber.subscriberNum;
             document.getElementById('editFirstName').value = subscriber.firstName;
             document.getElementById('editLastName').value = subscriber.lastName;
@@ -1773,10 +1775,10 @@
             document.getElementById('editTagNum').style.backgroundColor = '#f0f0f0';
             document.getElementById('editTagNum').style.cursor = 'not-allowed';
             document.getElementById('tagHelpText').style.display = 'block';
-            // Display vehicle numbers as they come from the server
-            document.getElementById('editVehicle1').value = subscriber.vehicle1 || '';
-            document.getElementById('editVehicle2').value = subscriber.vehicle2 || '';
-            document.getElementById('editVehicle3').value = subscriber.vehicle3 || '';
+            // Display vehicle numbers as they come from the server - check both vehicle and lpn fields
+            document.getElementById('editVehicle1').value = subscriber.vehicle1 || subscriber.lpn1 || '';
+            document.getElementById('editVehicle2').value = subscriber.vehicle2 || subscriber.lpn2 || '';
+            document.getElementById('editVehicle3').value = subscriber.vehicle3 || subscriber.lpn3 || '';
             // Use xValidUntil if validUntil is empty (for dates from consumer details)
             const validFrom = subscriber.validFrom || subscriber.xValidFrom || '';
             const validUntil = subscriber.validUntil || subscriber.xValidUntil || '';
@@ -1803,11 +1805,13 @@
             // Clear all options first
             profileSelect.innerHTML = '';
             
-            // Add only the subscriber's profile
-            const profileId = subscriber.profileId || subscriber.profile || '1';
+            // Add only the subscriber's profile - check various fields including identification
+            const profileId = subscriber.profileId || subscriber.profile || subscriber.extCardProfile || subscriber.identification?.usageProfile?.id || '1';
             const profileName = subscriber.profileName || 
+                               subscriber.identification?.usageProfile?.name ||
                                (profileId === '1' ? 'כול החניונים' : 
                                 profileId === '0' ? 'רגיל' : 
+                                profileId === '2' ? 'חניון ראשי' :
                                 `פרופיל ${profileId}`);
             
             const option = document.createElement('option');
@@ -2407,6 +2411,9 @@
                     s.vehicle1?.includes(searchTerm) ||
                     s.vehicle2?.includes(searchTerm) ||
                     s.vehicle3?.includes(searchTerm) ||
+                    s.lpn1?.includes(searchTerm) ||
+                    s.lpn2?.includes(searchTerm) ||
+                    s.lpn3?.includes(searchTerm) ||
                     s.tagNum?.toLowerCase().includes(searchTerm)
                 );
             }
@@ -2547,6 +2554,9 @@
                     s.vehicle1?.includes(searchTerm) ||
                     s.vehicle2?.includes(searchTerm) ||
                     s.vehicle3?.includes(searchTerm) ||
+                    s.lpn1?.includes(searchTerm) ||
+                    s.lpn2?.includes(searchTerm) ||
+                    s.lpn3?.includes(searchTerm) ||
                     s.tagNum?.toLowerCase().includes(searchTerm)
                 );
             }
@@ -3017,9 +3027,9 @@
                 subscriber.firstName || '',
                 subscriber.lastName || '',
                 subscriber.tagNum || '',
-                subscriber.vehicle1 || '',
-                subscriber.vehicle2 || '',
-                subscriber.vehicle3 || '',
+                subscriber.vehicle1 || subscriber.lpn1 || '',
+                subscriber.vehicle2 || subscriber.lpn2 || '',
+                subscriber.vehicle3 || subscriber.lpn3 || '',
                 formatDate(subscriber.validFrom) || '',
                 formatDate(subscriber.validUntil) || '' || '',
                 translations[currentLang][subscriber.profile] || subscriber.profile || '',
