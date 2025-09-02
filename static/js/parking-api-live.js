@@ -213,9 +213,10 @@ class ParkingAPIXML {
     async getConsumers(companyNum, contractId) {
         console.log(`[getConsumers] Fetching consumers for contract ${contractId}`);
         
-        // Use contract-specific endpoint directly to avoid issues
-        const endpoint = `contracts/${contractId}/consumers`;
-        const result = await this.makeRequest(endpoint, 'GET');
+        // Send contractId in payload - Flask will build the correct URL
+        const result = await this.makeRequest('consumers', 'GET', { 
+            contractId: contractId  // Pass contractId in payload for Flask to use
+        });
         
         // Check if we got the consumers
         if (result.success && result.data) {
