@@ -755,7 +755,7 @@ class ParkingUIIntegrationXML {
     /**
      * Update a single subscriber row with new data
      */
-    updateSubscriberRow(subscriber, index) {
+    updateSubscriberRowOld(subscriber, index) {
         // Skip debug logs for performance
         
         // Update the subscriber in the main array FIRST
@@ -852,8 +852,18 @@ class ParkingUIIntegrationXML {
                     // Get company name and display immediately
                     this.updateCompanyInfo();
                     
-                    // Display basic data immediately
+                    // Display basic data immediately - with fade transition for smooth update
+                    const tbody = document.getElementById('subscribersTableBody');
+                    if (tbody) {
+                        tbody.style.transition = 'opacity 0.3s ease';
+                        tbody.style.opacity = '0.8';
+                    }
                     this.displaySubscribers(this.subscribers);
+                    if (tbody) {
+                        setTimeout(() => {
+                            tbody.style.opacity = '1';
+                        }, 100);
+                    }
                     
                     // Hide loading but show progress in status bar
                     this.setLoading(false, 'loadingState');
@@ -1089,12 +1099,14 @@ class ParkingUIIntegrationXML {
                 targetRow.title = '';
             }
             
-            // Add subtle animation to show update
-            targetRow.style.transition = 'background-color 0.5s';
-            targetRow.style.backgroundColor = '#e8f5e9';
-            setTimeout(() => {
-                targetRow.style.backgroundColor = '';
-            }, 500);
+            // Add subtle animation to show update - only if visible
+            if (window.getComputedStyle(targetRow).display !== 'none') {
+                targetRow.style.transition = 'background-color 0.5s, opacity 0.2s';
+                targetRow.style.backgroundColor = '#e8f5e9';
+                setTimeout(() => {
+                    targetRow.style.backgroundColor = '';
+                }, 500);
+            }
         }
     }
     
