@@ -213,10 +213,9 @@ class ParkingAPIXML {
     async getConsumers(companyNum, contractId) {
         console.log(`[getConsumers] Fetching consumers for contract ${contractId}`);
         
-        // Send contractId in payload - Flask will build the correct URL
-        const result = await this.makeRequest('consumers', 'GET', { 
-            contractId: contractId  // Pass contractId in payload for Flask to use
-        });
+        // Use contract-specific endpoint directly to avoid issues
+        const endpoint = `contracts/${contractId}/consumers`;
+        const result = await this.makeRequest(endpoint, 'GET');
         
         // Check if we got the consumers
         if (result.success && result.data) {
@@ -401,7 +400,8 @@ class ParkingAPIXML {
                 presence: consumer.presence || false,
                 ignorePresence: consumer.ignorePresence || false,
                 hasFullDetails: false,  // Will be set to true after loading details
-                loadingStrategy: loadingStrategy
+                loadingStrategy: loadingStrategy,
+                isLargeCompany: loadingStrategy === 'on-demand'
             }));
             
             // Skip heavy debug logs for performance
