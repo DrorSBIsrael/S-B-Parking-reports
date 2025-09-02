@@ -2562,22 +2562,29 @@
             const presenceFilter = document.getElementById('filterPresence').value;
             const dateFilter = document.getElementById('filterDate').value;
             
-            let filtered = currentSubscribers;
+            // Get subscribers from UI integration - includes full details
+            const ui = window.parkingUIXML || window.parkingUI;
+            let filtered = ui && ui.subscribers ? ui.subscribers : currentSubscribers;
             
             // Search filter
             if (searchTerm) {
-                filtered = filtered.filter(s => 
-                    s.firstName.toLowerCase().includes(searchTerm) ||
-                    s.lastName.toLowerCase().includes(searchTerm) ||
-                    s.subscriberNum.includes(searchTerm) ||
-                    s.vehicle1?.includes(searchTerm) ||
-                    s.vehicle2?.includes(searchTerm) ||
-                    s.vehicle3?.includes(searchTerm) ||
-                    s.lpn1?.includes(searchTerm) ||
-                    s.lpn2?.includes(searchTerm) ||
-                    s.lpn3?.includes(searchTerm) ||
-                    s.tagNum?.toLowerCase().includes(searchTerm)
-                );
+                filtered = filtered.filter(s => {
+                    const firstName = (s.firstName || '').toLowerCase();
+                    const lastName = (s.lastName || '').toLowerCase();
+                    const subscriberNum = (s.subscriberNum || '').toString();
+                    const vehicle1 = (s.vehicle1 || s.lpn1 || '');
+                    const vehicle2 = (s.vehicle2 || s.lpn2 || '');
+                    const vehicle3 = (s.vehicle3 || s.lpn3 || '');
+                    const tagNum = (s.tagNum || s.cardno || '').toLowerCase();
+                    
+                    return firstName.includes(searchTerm) ||
+                           lastName.includes(searchTerm) ||
+                           subscriberNum.includes(searchTerm) ||
+                           vehicle1.includes(searchTerm) ||
+                           vehicle2.includes(searchTerm) ||
+                           vehicle3.includes(searchTerm) ||
+                           tagNum.includes(searchTerm);
+                });
             }
             
             // Presence filter
@@ -2705,22 +2712,29 @@
             const presenceFilter = document.getElementById('filterPresence').value;
             const dateFilter = document.getElementById('filterDate').value;
             
-            let filtered = currentSubscribers;
+            // Get subscribers from UI integration - includes full details
+            const ui = window.parkingUIXML || window.parkingUI;
+            let filtered = ui && ui.subscribers ? ui.subscribers : currentSubscribers;
             
             // Apply same filters as filterSubscribers
             if (searchTerm) {
-                filtered = filtered.filter(s => 
-                    s.firstName.toLowerCase().includes(searchTerm) ||
-                    s.lastName.toLowerCase().includes(searchTerm) ||
-                    s.subscriberNum.includes(searchTerm) ||
-                    s.vehicle1?.includes(searchTerm) ||
-                    s.vehicle2?.includes(searchTerm) ||
-                    s.vehicle3?.includes(searchTerm) ||
-                    s.lpn1?.includes(searchTerm) ||
-                    s.lpn2?.includes(searchTerm) ||
-                    s.lpn3?.includes(searchTerm) ||
-                    s.tagNum?.toLowerCase().includes(searchTerm)
-                );
+                filtered = filtered.filter(s => {
+                    const firstName = (s.firstName || '').toLowerCase();
+                    const lastName = (s.lastName || '').toLowerCase();
+                    const subscriberNum = (s.subscriberNum || '').toString();
+                    const vehicle1 = (s.vehicle1 || s.lpn1 || '');
+                    const vehicle2 = (s.vehicle2 || s.lpn2 || '');
+                    const vehicle3 = (s.vehicle3 || s.lpn3 || '');
+                    const tagNum = (s.tagNum || s.cardno || '').toLowerCase();
+                    
+                    return firstName.includes(searchTerm) ||
+                           lastName.includes(searchTerm) ||
+                           subscriberNum.includes(searchTerm) ||
+                           vehicle1.includes(searchTerm) ||
+                           vehicle2.includes(searchTerm) ||
+                           vehicle3.includes(searchTerm) ||
+                           tagNum.includes(searchTerm);
+                });
             }
             
             if (presenceFilter) {
@@ -3438,9 +3452,9 @@
         console.log('[Init] User permissions:', window.userPermissions);
     </script>
     
-    <script src="/static/js/config.js?v=20251216_fixed3"></script>
-    <script src="/static/js/parking-api-live.js?v=20251216_fixed3"></script>
-    <script src="/static/js/parking-ui-live.js?v=20251216_fixed3"></script>
+    <script src="/static/js/config.js?v=20251216_fixed4"></script>
+    <script src="/static/js/parking-api-live.js?v=20251216_fixed4"></script>
+    <script src="/static/js/parking-ui-live.js?v=20251216_fixed4"></script>
     
         <script>
         // Override init function to use XML API
