@@ -2220,8 +2220,17 @@ class ParkingUIIntegrationXML {
             const transactions = result.data || [];
             console.log(`[getSubscriberReport] Found ${transactions.length} transactions`);
             
+            // Filter transactions by type (1, 2, 11, 12)
+            const allowedTypes = ['1', '2', '11', '12'];
+            const filteredTransactions = transactions.filter(trans => {
+                const typeStr = String(trans.transactionType);
+                return allowedTypes.includes(typeStr);
+            });
+            
+            console.log(`[getSubscriberReport] After filtering: ${filteredTransactions.length} relevant transactions`);
+            
             // Format transactions for display
-            const formattedTransactions = transactions.map(trans => ({
+            const formattedTransactions = filteredTransactions.map(trans => ({
                 date: this.formatDateTime(trans.transactionTime),
                 type: this.getTransactionTypeName(trans.transactionType),
                 entrance: trans.facilityin || '-',
@@ -2234,8 +2243,8 @@ class ParkingUIIntegrationXML {
                 success: true,
                 data: formattedTransactions,
                 summary: {
-                    total: transactions.length,
-                    totalAmount: transactions.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
+                    total: filteredTransactions.length,
+                    totalAmount: filteredTransactions.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
                 }
             };
             
@@ -2267,12 +2276,16 @@ class ParkingUIIntegrationXML {
     // Get transaction type name
     getTransactionTypeName(typeCode) {
         const types = {
+            '1': 'כניסה רגילה',
+            '2': 'יציאה רגילה',
+            '11': 'כניסה חריגה',
+            '12': 'יציאה חריגה',
             '42': 'כניסה',
             '43': 'יציאה',
             '44': 'תשלום',
             '45': 'ביטול'
         };
-        return types[typeCode] || `סוג ${typeCode}`;
+        return types[String(typeCode)] || `סוג ${typeCode}`;
     }
     
     /**
@@ -2286,6 +2299,22 @@ class ParkingUIIntegrationXML {
         
         console.log('[exportToCSV] Exporting data for', this.subscribers.length, 'subscribers');
         console.log('[exportToCSV] Sample subscriber data:', this.subscribers[0]);
+        
+        // Check if all subscribers have full details
+        const subscribersWithoutDetails = this.subscribers.filter(s => !s.hasFullDetails);
+        if (subscribersWithoutDetails.length > 0) {
+            console.log(`[exportToCSV] Warning: ${subscribersWithoutDetails.length} subscribers without full details`);
+            
+            // For large companies, offer to load all details first
+            if (subscribersWithoutDetails.length > 10) {
+                const confirmLoad = confirm(`יש ${subscribersWithoutDetails.length} מנויים ללא פרטים מלאים.\nהאם לטעון את כל הפרטים לפני הייצוא? (עלול לקחת זמן)`);
+                if (confirmLoad) {
+                    this.showNotification('טוען פרטים מלאים...', 'info');
+                    // In the future, we could implement loading all details here
+                    // For now, just warn the user
+                }
+            }
+        }
         
         // Create CSV content
         const headers = [
@@ -2305,21 +2334,35 @@ class ParkingUIIntegrationXML {
         ];
         
         // Create CSV rows
-        const rows = this.subscribers.map(subscriber => [
-            subscriber.companyNum || '',
-            subscriber.companyName || '',
-            subscriber.subscriberNum || '',
-            subscriber.firstName || '',
-            subscriber.lastName || '',
-            subscriber.tagNum || subscriber.cardno || '',
-            subscriber.vehicle1 || subscriber.lpn1 || '',
-            subscriber.vehicle2 || subscriber.lpn2 || '',
-            subscriber.vehicle3 || subscriber.lpn3 || '',
-            this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || '',
-            this.formatDate(subscriber.validUntil || subscriber.xValidUntil) || '',
-            subscriber.profileName || subscriber.profile || '',
-            subscriber.presence || subscriber.present ? 'נוכח' : 'לא נוכח'
-        ]);
+        const rows = this.subscribers.map(subscriber => {
+            // Debug log for first few subscribers
+            if (this.subscribers.indexOf(subscriber) < 3) {
+                console.log(`[exportToCSV] Subscriber ${subscriber.subscriberNum}:`, {
+                    firstName: subscriber.firstName,
+                    lastName: subscriber.lastName,
+                    surname: subscriber.surname,
+                    vehicle1: subscriber.vehicle1,
+                    lpn1: subscriber.lpn1,
+                    hasFullDetails: subscriber.hasFullDetails
+                });
+            }
+            
+            return [
+                subscriber.companyNum || '',
+                subscriber.companyName || '',
+                subscriber.subscriberNum || '',
+                subscriber.firstName || '',
+                subscriber.lastName || subscriber.surname || subscriber.name || '',
+                subscriber.tagNum || subscriber.cardno || '',
+                subscriber.vehicle1 || subscriber.lpn1 || '',
+                subscriber.vehicle2 || subscriber.lpn2 || '',
+                subscriber.vehicle3 || subscriber.lpn3 || '',
+                this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || '',
+                this.formatDate(subscriber.validUntil || subscriber.xValidUntil) || '',
+                subscriber.profileName || subscriber.profile || subscriber.extCardProfile || '',
+                subscriber.presence || subscriber.present ? 'נוכח' : 'לא נוכח'
+            ];
+        });
         
         // Combine headers and rows
         const csvContent = [
