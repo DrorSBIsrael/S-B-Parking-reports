@@ -2092,32 +2092,13 @@
             // Show modal
             modal.classList.add('show');
             
-            // Set default dates (last month) - Using 2024 dates
+            // Set default dates (last month)
             const today = new Date();
-            const currentYear = today.getFullYear();
+            const lastMonth = new Date();
+            lastMonth.setMonth(lastMonth.getMonth() - 1);
             
-            // If we're in 2025 or later, use 2024 dates instead
-            if (currentYear >= 2025) {
-                const fixedToday = new Date('2024-09-03');
-                const fixedLastMonth = new Date('2024-08-03');
-                
-                document.getElementById('reportMinDate').valueAsDate = fixedLastMonth;
-                document.getElementById('reportMaxDate').valueAsDate = fixedToday;
-                
-                console.log('[viewTransactions] Using fixed 2024 dates due to system date:', currentYear);
-            } else {
-                const lastMonth = new Date(today);
-                lastMonth.setMonth(today.getMonth() - 1);
-                
-                // If going back a month changed the year incorrectly, fix it
-                if (lastMonth.getMonth() === today.getMonth()) {
-                    lastMonth.setDate(1); // First day of current month
-                    lastMonth.setMonth(lastMonth.getMonth() - 1);
-                }
-                
-                document.getElementById('reportMinDate').valueAsDate = lastMonth;
-                document.getElementById('reportMaxDate').valueAsDate = today;
-            }
+            document.getElementById('reportMinDate').valueAsDate = lastMonth;
+            document.getElementById('reportMaxDate').valueAsDate = today;
             
             // Load report data
             try {
@@ -3494,9 +3475,9 @@
         console.log('[Init] User permissions:', window.userPermissions);
     </script>
     
-    <script src="/static/js/config.js?v=20251216_fixed10"></script>
-    <script src="/static/js/parking-api-live.js?v=20251216_fixed10"></script>
-    <script src="/static/js/parking-ui-live.js?v=20251216_fixed10"></script>
+    <script src="/static/js/config.js?v=20251216_fixed11"></script>
+    <script src="/static/js/parking-api-live.js?v=20251216_fixed11"></script>
+    <script src="/static/js/parking-ui-live.js?v=20251216_fixed11"></script>
     
         <script>
         // Override init function to use XML API
