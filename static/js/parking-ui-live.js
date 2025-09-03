@@ -2208,6 +2208,7 @@ class ParkingUIIntegrationXML {
             const contractId = this.currentContract.id;
             
             console.log(`[getSubscriberReport] Getting report for subscriber ${subscriberNum}, contract ${contractId}`);
+            console.log(`[getSubscriberReport] Date range: ${minDate} to ${maxDate}`);
             
             // Get parking transactions from API
             const result = await this.api.getParkingTransactions(contractId, subscriberNum, minDate, maxDate);
@@ -2283,6 +2284,9 @@ class ParkingUIIntegrationXML {
             return;
         }
         
+        console.log('[exportToCSV] Exporting data for', this.subscribers.length, 'subscribers');
+        console.log('[exportToCSV] Sample subscriber data:', this.subscribers[0]);
+        
         // Create CSV content
         const headers = [
             'מספר חברה',
@@ -2307,14 +2311,14 @@ class ParkingUIIntegrationXML {
             subscriber.subscriberNum || '',
             subscriber.firstName || '',
             subscriber.lastName || '',
-            subscriber.tagNum || '',
+            subscriber.tagNum || subscriber.cardno || '',
             subscriber.vehicle1 || subscriber.lpn1 || '',
             subscriber.vehicle2 || subscriber.lpn2 || '',
             subscriber.vehicle3 || subscriber.lpn3 || '',
-            this.formatDate(subscriber.validFrom) || '',
-            this.formatDate(subscriber.validUntil) || '',
-            subscriber.profile || '',
-            subscriber.presence ? 'נוכח' : 'לא נוכח'
+            this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || '',
+            this.formatDate(subscriber.validUntil || subscriber.xValidUntil) || '',
+            subscriber.profileName || subscriber.profile || '',
+            subscriber.presence || subscriber.present ? 'נוכח' : 'לא נוכח'
         ]);
         
         // Combine headers and rows
