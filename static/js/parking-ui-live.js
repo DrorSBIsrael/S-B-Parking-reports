@@ -1,5 +1,5 @@
 /**
- * UI  Integration Layer for XML API 
+ * UI Integration Layer for XML API 
  * Connects the parking XML API with the HTML interface
  */
 
@@ -1056,6 +1056,14 @@ class ParkingUIIntegrationXML {
         const tbody = document.getElementById('subscribersTableBody');
         if (!tbody) return;
         
+        // Update the subscriber in the main array
+        const subIndex = this.subscribers.findIndex(s => 
+            String(s.subscriberNum) === String(subscriber.subscriberNum)
+        );
+        if (subIndex !== -1) {
+            this.subscribers[subIndex] = subscriber;
+        }
+        
         const rows = tbody.getElementsByTagName('tr');
         // Try to find row by index or by subscriber number
         let targetRow = rows[index];
@@ -1102,10 +1110,10 @@ class ParkingUIIntegrationXML {
             // Add subtle animation to show update - only if visible
             if (window.getComputedStyle(targetRow).display !== 'none') {
                 targetRow.style.transition = 'background-color 0.5s, opacity 0.2s';
-                targetRow.style.backgroundColor = '#e8f5e9';
-                setTimeout(() => {
-                    targetRow.style.backgroundColor = '';
-                }, 500);
+            targetRow.style.backgroundColor = '#e8f5e9';
+            setTimeout(() => {
+                targetRow.style.backgroundColor = '';
+            }, 500);
             }
         }
     }
@@ -2201,7 +2209,11 @@ class ParkingUIIntegrationXML {
     // Get parking transactions report for a subscriber
     async getSubscriberReport(subscriberNum, minDate = null, maxDate = null) {
         try {
+            console.log(`[getSubscriberReport] Starting report for subscriber ${subscriberNum}`);
+            console.log(`[getSubscriberReport] Current contract:`, this.currentContract);
+            
             if (!this.currentContract || !this.currentContract.id) {
+                console.error('[getSubscriberReport] No current contract set');
                 throw new Error('לא נבחרה חברה');
             }
             
@@ -2212,6 +2224,7 @@ class ParkingUIIntegrationXML {
             
             // Get parking transactions from API
             const result = await this.api.getParkingTransactions(contractId, subscriberNum, minDate, maxDate);
+            console.log(`[getSubscriberReport] API Response:`, result);
             
             if (!result.success) {
                 throw new Error(result.error || 'Failed to get parking transactions');
@@ -2348,10 +2361,10 @@ class ParkingUIIntegrationXML {
             }
             
             return [
-                subscriber.companyNum || '',
-                subscriber.companyName || '',
-                subscriber.subscriberNum || '',
-                subscriber.firstName || '',
+            subscriber.companyNum || '',
+            subscriber.companyName || '',
+            subscriber.subscriberNum || '',
+            subscriber.firstName || '',
                 subscriber.lastName || subscriber.surname || subscriber.name || '',
                 subscriber.tagNum || subscriber.cardno || '',
                 subscriber.vehicle1 || subscriber.lpn1 || '',
