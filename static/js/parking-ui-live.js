@@ -1,5 +1,5 @@
 /**
- * UI Integration Layer for XML API 
+ * UI  Integration Layer for XML API 
  * Connects the parking XML API with the HTML interface
  */
 
