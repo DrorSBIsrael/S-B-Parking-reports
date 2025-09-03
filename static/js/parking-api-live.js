@@ -611,7 +611,7 @@ class ParkingAPIXML {
             }
             
             const xmlText = await response.text();
-            console.log('[ParkingAPIXML] Received XML response:', xmlText);
+            console.log('[ParkingAPIXML] Received XML response:', xmlText.substring(0, 500) + (xmlText.length > 500 ? '...' : ''));
             console.log('[ParkingAPIXML] Response length:', xmlText.length);
             
             // Parse XML response
@@ -624,9 +624,22 @@ class ParkingAPIXML {
                 return { success: false, error: 'Failed to parse XML response' };
             }
             
+            // Also check for namespace issues
+            const rootElement = xmlDoc.documentElement;
+            console.log(`[ParkingAPIXML] Root element: ${rootElement?.tagName}, namespace: ${rootElement?.namespaceURI}`);
+            
             // Extract parking transactions
             const transactions = [];
-            const transactionNodes = xmlDoc.getElementsByTagName('parkTransaction');
+            let transactionNodes = xmlDoc.getElementsByTagName('parkTransaction');
+            
+            // If no nodes found, try with namespace
+            if (transactionNodes.length === 0) {
+                console.log('[ParkingAPIXML] No nodes found with getElementsByTagName, trying with namespace');
+                const namespace = 'http://gsph.sub.com/cust/types';
+                transactionNodes = xmlDoc.getElementsByTagNameNS(namespace, 'parkTransaction');
+            }
+            
+            console.log(`[ParkingAPIXML] Found ${transactionNodes.length} transaction nodes`);
             
             for (let node of transactionNodes) {
                 const transaction = {
@@ -638,6 +651,8 @@ class ParkingAPIXML {
                     device: this.getXMLNodeValue(node, 'device'),
                     amount: this.getXMLNodeValue(node, 'amount')
                 };
+                
+                console.log(`[ParkingAPIXML] Transaction: Type=${transaction.transactionType}, Time=${transaction.transactionTime}, Amount=${transaction.amount}`);
                 transactions.push(transaction);
             }
             
