@@ -612,6 +612,7 @@ class ParkingAPIXML {
             
             const xmlText = await response.text();
             console.log('[ParkingAPIXML] Received XML response:', xmlText);
+            console.log('[ParkingAPIXML] Response length:', xmlText.length);
             
             // Parse XML response
             const parser = new DOMParser();
@@ -641,6 +642,12 @@ class ParkingAPIXML {
             }
             
             console.log(`[ParkingAPIXML] Found ${transactions.length} parking transactions`);
+            
+            // If no transactions found, check if we got an empty response
+            if (transactions.length === 0 && xmlText.includes('parkTransactions')) {
+                console.log('[ParkingAPIXML] Empty transactions response from server');
+            }
+            
             return { success: true, data: transactions };
             
         } catch (error) {
