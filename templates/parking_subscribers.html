@@ -1447,26 +1447,26 @@
         let currentSubscribers = [];
         let editingSubscriber = null;
         
-        // User permissions (hardcoded for now - will be loaded from database later)
-        const userPermissions = {
-            role: 'company_manager', // user, company_manager, admin
-            canAddSubscriber: true,
-            canEditSubscriber: true,
-            canDeleteSubscriber: true,
-            canExport: true
-        };
+        // Get user permissions from window variable (set by server)
+        const getUserPermissions = () => window.userPermissions || '';
         
         // Check user permission
+        // G-guest, N-New, P-profile, R-report
         function checkUserPermission(action) {
+            const permissions = getUserPermissions();
+            console.log(`[checkUserPermission] Checking ${action} against permissions: ${permissions}`);
+            
             switch(action) {
                 case 'add_subscriber':
-                    return userPermissions.canAddSubscriber;
+                    return permissions.includes('N'); // New subscriber
+                case 'add_guest':
+                    return permissions.includes('G'); // Guest
                 case 'edit_subscriber':
-                    return userPermissions.canEditSubscriber;
-                case 'delete_subscriber':
-                    return userPermissions.canDeleteSubscriber;
+                case 'update_profile':
+                    return permissions.includes('P'); // Profile updates
+                case 'view_reports':
                 case 'export':
-                    return userPermissions.canExport;
+                    return permissions.includes('R'); // Reports
                 default:
                     return false;
             }
@@ -1837,6 +1837,12 @@
         // Open reports modal
         function openReportsModal() {
             console.log('[openReportsModal] Opening reports modal');
+            
+            // Check user permissions
+            if (!checkUserPermission('view_reports')) {
+                showToast('אין לך הרשאה לצפות בדוחות (דרושה הרשאת R)', 'error');
+                return;
+            }
             const modal = document.getElementById('reportsModal');
             if (!modal) {
                 console.log('[openReportsModal] Creating modal HTML');
@@ -2035,6 +2041,7 @@
         // View transactions report for a subscriber
         async function viewTransactions(companyNum, subscriberNum) {
             console.log('[viewTransactions] Loading transactions for subscriber:', subscriberNum);
+            console.log('[viewTransactions] Company:', companyNum);
             
             // Store subscriber number for later use
             currentReportSubscriber = subscriberNum;
@@ -2053,7 +2060,7 @@
                                 <button class="close-btn" onclick="closeTransactionsModal()">×</button>
                             </div>
                             <div class="modal-body">
-                                <div class="report-filters" style="margin-bottom: 20px; display: flex; gap: 10px;">
+                                <div class="report-filters" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
                                     <div>
                                         <label>מתאריך:</label>
                                         <input type="date" id="reportMinDate" style="padding: 5px;">
@@ -2085,6 +2092,14 @@
             // Show modal
             modal.classList.add('show');
             
+            // Set default dates (last month)
+            const today = new Date();
+            const lastMonth = new Date();
+            lastMonth.setMonth(lastMonth.getMonth() - 1);
+            
+            document.getElementById('reportMinDate').valueAsDate = lastMonth;
+            document.getElementById('reportMaxDate').valueAsDate = today;
+            
             // Load report data
             try {
                 const ui = window.parkingUIXML || window.parkingUI;
@@ -2092,7 +2107,11 @@
                     throw new Error('Report function not available');
                 }
                 
-                const result = await ui.getSubscriberReport(subscriberNum);
+                // Format dates for API
+                const minDate = lastMonth.toISOString().split('T')[0];
+                const maxDate = today.toISOString().split('T')[0];
+                
+                const result = await ui.getSubscriberReport(subscriberNum, minDate, maxDate);
                 
                 if (result.success) {
                     displayTransactionsReport(result.data, result.summary);
@@ -2116,7 +2135,8 @@
             if (!transactions || transactions.length === 0) {
                 content.innerHTML = `
                     <div style="text-align: center; padding: 40px;">
-                        <p>לא נמצאו תנועות לתקופה המבוקשת</p>
+                        <p style="font-size: 18px; color: #666;">לא נמצאו תנועות לתקופה המבוקשת</p>
+                        <p style="font-size: 14px; color: #999; margin-top: 10px;">נסה לשנות את טווח התאריכים או בדוק שוב מאוחר יותר</p>
                     </div>
                 `;
                 return;
@@ -2365,8 +2385,12 @@
         // Add new subscriber
         async function addNewSubscriber(isGuest = false) {
             // Check user permissions
-            if (!checkUserPermission('add_subscriber')) {
-                showToast('אין לך הרשאה להוסיף מנויים חדשים', 'error');
+            const requiredPermission = isGuest ? 'add_guest' : 'add_subscriber';
+            if (!checkUserPermission(requiredPermission)) {
+                const message = isGuest ? 
+                    'אין לך הרשאה להוסיף אורחים (דרושה הרשאת G)' : 
+                    'אין לך הרשאה להוסיף מנויים חדשים (דרושה הרשאת N)';
+                showToast(message, 'error');
                 return;
             }
             
@@ -2426,13 +2450,12 @@
             document.getElementById('editSubscriberNum').placeholder = isGuest ? 'יוצר אוטומטית (40001+)' : 'יוצר אוטומטית';
             document.getElementById('editFirstName').value = '';
             document.getElementById('editLastName').value = '';
-            // Generate new tag number for new subscriber
-            const newTagNum = isGuest ? '' : 'TAG' + Date.now().toString().substr(-6);
-            document.getElementById('editTagNum').value = newTagNum;
+            // Don't auto-generate tag number - user will enter manually
+            document.getElementById('editTagNum').value = '';
             document.getElementById('editTagNum').readOnly = false; // Allow editing tag for new subscribers
             document.getElementById('editTagNum').style.backgroundColor = '';
             document.getElementById('editTagNum').style.cursor = '';
-            document.getElementById('tagHelpText').style.display = 'none';
+            // tagHelpText was removed
             document.getElementById('editVehicle1').value = '';
             document.getElementById('editVehicle2').value = '';
             document.getElementById('editVehicle3').value = '';
@@ -3452,9 +3475,9 @@
         console.log('[Init] User permissions:', window.userPermissions);
     </script>
     
-    <script src="/static/js/config.js?v=20251216_fixed5"></script>
-    <script src="/static/js/parking-api-live.js?v=20251216_fixed5"></script>
-    <script src="/static/js/parking-ui-live.js?v=20251216_fixed5"></script>
+    <script src="/static/js/config.js?v=20251216_fixed7"></script>
+    <script src="/static/js/parking-api-live.js?v=20251216_fixed7"></script>
+    <script src="/static/js/parking-ui-live.js?v=20251216_fixed7"></script>
     
         <script>
         // Override init function to use XML API
@@ -3521,6 +3544,52 @@
             localStorage.setItem('preferredFontSize', currentFontSize);
         }
 
+        // Update UI buttons based on permissions
+        function updateUIPermissions() {
+            const permissions = getUserPermissions();
+            console.log('[updateUIPermissions] User permissions:', permissions);
+            
+            // Add New Subscriber button
+            const addNewBtn = document.querySelector('button[onclick="addNewSubscriber()"]');
+            if (addNewBtn) {
+                if (!permissions.includes('N')) {
+                    addNewBtn.disabled = true;
+                    addNewBtn.title = 'אין הרשאה להוסיף מנויים (דרושה הרשאת N)';
+                    addNewBtn.style.opacity = '0.5';
+                }
+            }
+            
+            // Add Guest button
+            const addGuestBtn = document.querySelector('button[onclick="addGuestSubscriber()"]');
+            if (addGuestBtn) {
+                if (!permissions.includes('G')) {
+                    addGuestBtn.disabled = true;
+                    addGuestBtn.title = 'אין הרשאה להוסיף אורחים (דרושה הרשאת G)';
+                    addGuestBtn.style.opacity = '0.5';
+                }
+            }
+            
+            // Reports button
+            const reportsBtn = document.querySelector('button[onclick="openReportsModal()"]');
+            if (reportsBtn) {
+                if (!permissions.includes('R')) {
+                    reportsBtn.disabled = true;
+                    reportsBtn.title = 'אין הרשאה לצפות בדוחות (דרושה הרשאת R)';
+                    reportsBtn.style.opacity = '0.5';
+                }
+            }
+            
+            // Export button
+            const exportBtn = document.querySelector('button[onclick="exportToExcel()"]');
+            if (exportBtn) {
+                if (!permissions.includes('R')) {
+                    exportBtn.disabled = true;
+                    exportBtn.title = 'אין הרשאה לייצא נתונים (דרושה הרשאת R)';
+                    exportBtn.style.opacity = '0.5';
+                }
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             // Load saved font size preference
             const savedFontSize = localStorage.getItem('preferredFontSize');
@@ -3531,6 +3600,9 @@
             }
             
             loadCurrentUser();
+            
+            // Update UI based on permissions
+            setTimeout(updateUIPermissions, 100); // Small delay to ensure DOM is ready
         });
     </script>
 </body>
