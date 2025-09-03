@@ -593,6 +593,7 @@ class ParkingAPIXML {
             const url = `/consumers/${contractId},${consumerId}/parktrans${queryString}`;
             
             console.log(`[ParkingAPIXML] Requesting parking transactions from: ${url}`);
+            console.log(`[ParkingAPIXML] Date range: ${minDate} to ${maxDate}`);
             
             const response = await fetch(url, {
                 method: 'GET',
@@ -601,6 +602,8 @@ class ParkingAPIXML {
                     'Content-Type': 'application/xml'
                 }
             });
+            
+            console.log(`[ParkingAPIXML] Response status: ${response.status}`);
             
             if (!response.ok) {
                 if (response.status === 204) {
@@ -659,8 +662,13 @@ class ParkingAPIXML {
             console.log(`[ParkingAPIXML] Found ${transactions.length} parking transactions`);
             
             // If no transactions found, check if we got an empty response
-            if (transactions.length === 0 && xmlText.includes('parkTransactions')) {
-                console.log('[ParkingAPIXML] Empty transactions response from server');
+            if (transactions.length === 0) {
+                if (xmlText.includes('parkTransactions')) {
+                    console.log('[ParkingAPIXML] Empty parkTransactions response - no transactions for this period');
+                } else {
+                    console.log('[ParkingAPIXML] Unexpected response format - no parkTransactions element found');
+                    console.log('[ParkingAPIXML] Response first 500 chars:', xmlText.substring(0, 500));
+                }
             }
             
             return { success: true, data: transactions };
