@@ -1480,8 +1480,9 @@
                 case 'add_guest':
                     return permissions.includes('G'); // Guest
                 case 'edit_subscriber':
+                    return true; // Always allow basic editing
                 case 'update_profile':
-                    return permissions.includes('P'); // Profile updates
+                    return permissions.includes('P'); // Profile updates only
                 case 'view_reports':
                     return permissions.includes('R'); // Reports only
                 case 'export':
@@ -1790,11 +1791,8 @@
         async function editSubscriber(subscriber) {
             console.log('[editSubscriber] Called with subscriber:', subscriber);
             
-            // Check user permissions
-            if (!checkUserPermission('edit_subscriber')) {
-                showToast('אין לך הרשאה לערוך מנויים', 'error');
-                return;
-            }
+            // Always allow viewing/editing subscriber details
+            // Permission check will be done when saving (for profile updates)
             
             // IMPORTANT: Store the subscriber globally for saveSubscriber to check
             // Make sure we have a valid subscriber object
@@ -3598,9 +3596,9 @@
         console.log('[Init] User permissions:', window.userPermissions);
     </script>
     
-    <script src="/static/js/config.js?v=20251216_fixed19"></script>
-    <script src="/static/js/parking-api-live.js?v=20251216_fixed19"></script>
-    <script src="/static/js/parking-ui-live.js?v=20251216_fixed19"></script>
+    <script src="/static/js/config.js?v=20251216_fixed20"></script>
+    <script src="/static/js/parking-api-live.js?v=20251216_fixed20"></script>
+    <script src="/static/js/parking-ui-live.js?v=20251216_fixed20"></script>
     
         <script>
         // Override init function to use XML API
