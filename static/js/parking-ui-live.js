@@ -154,64 +154,10 @@ class ParkingUIIntegrationXML {
      */
     async loadCompanies() {
         this.setLoading(true);
-        console.log('[loadCompanies] Starting to load companies...');
+        console.log('[loadCompanies] Starting to load parkings from Flask...');
         
         try {
-            // First check if we have company list from window
-            if (window.userCompanyList) {
-                console.log('[loadCompanies] Using userCompanyList:', window.userCompanyList);
-                // Parse company list (format: "2-4,54")
-                const companies = window.userCompanyList.split(',').map(range => {
-                    if (range.includes('-')) {
-                        // Handle range like "2-4"
-                        const [start, end] = range.split('-').map(n => parseInt(n));
-                        const result = [];
-                        for (let i = start; i <= end; i++) {
-                            result.push({ id: String(i), name: `חברה ${i}` });
-                        }
-                        return result;
-                    } else {
-                        // Single company
-                        return { id: range.trim(), name: `חברה ${range.trim()}` };
-                    }
-                }).flat();
-                
-                console.log('[loadCompanies] Parsed companies:', companies);
-                
-                // Auto-select if only one company
-                if (companies.length === 1) {
-                    await this.selectCompany(companies[0]);
-                } else {
-                    // Display companies
-                    const companyList = document.getElementById('companyList');
-                    console.log('[loadCompanies] companyList element found?', !!companyList);
-                    if (companyList) {
-                        companyList.innerHTML = '';
-                        companies.forEach(company => {
-                            console.log('[loadCompanies] Creating card for company:', company);
-                            const card = document.createElement('div');
-                            card.className = 'company-card';
-                            card.onclick = () => this.selectCompany(company);
-                            card.innerHTML = `
-                                <div class="company-icon">🏢</div>
-                                <div class="company-info">
-                                    <div class="company-name">${company.name}</div>
-                                    <div class="company-id">מספר: ${company.id}</div>
-                                </div>
-                            `;
-                            companyList.appendChild(card);
-                        });
-                        console.log('[loadCompanies] Added', companies.length, 'company cards');
-                    } else {
-                        console.error('[loadCompanies] companyList element not found!');
-                    }
-                }
-                
-                this.setLoading(false);
-                return;
-            }
-            
-            // Fallback to Flask API
+            // Get parkings list from Flask (not from parking API)
             console.log('[loadCompanies] Calling Flask API /api/company-manager/get-parkings...');
             const response = await fetch('/api/company-manager/get-parkings');
             const result = await response.json();
@@ -727,36 +673,12 @@ class ParkingUIIntegrationXML {
      * Select a company and load its subscribers
      */
     async selectCompany(company) {
-        console.log('[selectCompany] Selected company:', company);
-        
-        // Set parking ID for API calls
-        if (this.api && this.api.setCurrentParking) {
-            this.api.setCurrentParking(company.id);
-            console.log('[selectCompany] Set parking ID to:', company.id);
-        }
-        
         // Store the full company object with correct name
         this.currentContract = {
             ...company,
             name: company.name || company.firstName || company.companyName || `חברה ${company.id}`,
             filialId: company.filialId || '2228'  // Default filialId
         };
-        
-        // Get full contract details to get parking name
-        try {
-            const contractDetails = await this.api.getContractDetails(company.id);
-            if (contractDetails.success && contractDetails.data) {
-                // Update currentContract with full details
-                this.currentContract = {
-                    ...this.currentContract,
-                    ...contractDetails.data,
-                    parkingName: contractDetails.data.name || contractDetails.data.contractName || this.currentContract.name
-                };
-                console.log('[selectCompany] Got contract details:', this.currentContract);
-            }
-        } catch (error) {
-            console.error('[selectCompany] Failed to get contract details:', error);
-        }
         
         // Also set global currentCompany for form compatibility
         window.currentCompany = company;
@@ -1041,18 +963,13 @@ class ParkingUIIntegrationXML {
      * Update button permissions based on user permissions
      */
     updateButtonPermissions() {
-        console.log('[updateButtonPermissions] Called, checking for global function');
         // Call the function from parking_subscribers.html if it exists
         if (typeof updateButtonPermissions === 'function') {
-            console.log('[updateButtonPermissions] Calling global updateButtonPermissions');
             updateButtonPermissions();
-        } else {
-            console.warn('[updateButtonPermissions] Global updateButtonPermissions not found');
         }
         
         // Show permissions info to user
         const permissions = window.userPermissions || '';
-        console.log('[updateButtonPermissions] User permissions:', permissions);
         if (permissions) {
             let permissionText = 'הרשאות: ';
             if (permissions === 'B' || permissions === '') {
@@ -2124,43 +2041,44 @@ class ParkingUIIntegrationXML {
                     await this.loadSubscribers();
                 }
                 
-                // Handle subscriber numbering
+                // Calculate next available subscriber number
                 if (!subscriberData.subscriberNum || subscriberData.subscriberNum === '') {
                     // Check if this is a guest
                     if (subscriberData.isGuest || subscriberData.firstName === 'אורח') {
-                        // Guest numbers start from 40000
+                        // Guest numbers start from 40001
                         const existingGuests = this.subscribers.filter(s => {
                             const num = parseInt(s.subscriberNum);
-                            return !isNaN(num) && num >= 40000;
+                            return !isNaN(num) && num >= 40001;
                         });
                         
-                        let nextGuestId = 40000;
+                        let nextGuestId = 40001;
                         if (existingGuests.length > 0) {
-                            // Find all guest IDs and sort them
-                            const guestIds = existingGuests.map(s => parseInt(s.subscriberNum)).sort((a, b) => a - b);
-                            // Find the first gap or use max + 1
-                            for (let i = 0; i < guestIds.length; i++) {
-                                if (guestIds[i] > nextGuestId + i) {
-                                    nextGuestId = nextGuestId + i;
-                                    break;
-                                }
-                            }
-                            if (nextGuestId === 40000) {
-                                nextGuestId = guestIds[guestIds.length - 1] + 1;
-                            }
+                            const maxGuestId = Math.max(...existingGuests.map(s => parseInt(s.subscriberNum)));
+                            nextGuestId = maxGuestId + 1;
                         }
                         
                         consumerData.consumer.id = String(nextGuestId);
                         console.log(`[saveSubscriber] Creating guest with ID: ${consumerData.consumer.id}`);
                         console.log(`[saveSubscriber] Found ${existingGuests.length} existing guests`);
                     } else {
-                        // Regular subscriber - let the server assign the ID
-                        // Don't send ID at all for new regular subscribers
-                        delete consumerData.consumer.id;
-                        console.log(`[saveSubscriber] Creating regular subscriber - server will assign ID`);
+                        // Regular subscriber - get next number in company
+                        const companySubscribers = this.subscribers.filter(s => {
+                            const num = parseInt(s.subscriberNum);
+                            return !isNaN(num) && num < 40001;
+                        });
+                        
+                        let nextId = 1;
+                        if (companySubscribers.length > 0) {
+                            const maxId = Math.max(...companySubscribers.map(s => parseInt(s.subscriberNum)));
+                            nextId = maxId + 1;
+                        }
+                        
+                        consumerData.consumer.id = String(nextId);
+                        console.log(`[saveSubscriber] Creating regular subscriber with ID: ${consumerData.consumer.id}`);
+                        console.log(`[saveSubscriber] Found ${companySubscribers.length} existing subscribers`);
                     }
                 } else {
-                    // Use provided subscriber number (for updates)
+                    // Use provided subscriber number
                     consumerData.consumer.id = subscriberData.subscriberNum;
                     console.log(`[saveSubscriber] Using provided subscriber number: ${consumerData.consumer.id}`);
                 }
@@ -2168,48 +2086,12 @@ class ParkingUIIntegrationXML {
                 // Create new consumer with all details in one call
                 result = await this.api.addConsumer(this.currentContract.id, consumerData);
                 
-                console.log('[saveSubscriber] Server response for new consumer:', result);
-                
                 if (result.success) {
                     console.log('New consumer created successfully');
-                    
-                    // Check if we got the created consumer ID
-                    if (result.data && result.data.id) {
-                        console.log(`[saveSubscriber] New consumer created with ID: ${result.data.id}`);
-                    } else {
-                        console.warn('[saveSubscriber] Success but no consumer ID returned');
-                    }
                     // Send email notification if email provided for guest
                     if ((subscriberData.isGuest || subscriberData.profile === 'guest') && subscriberData.email) {
-                        console.log(`Sending email notification to: ${subscriberData.email}`);
-                        try {
-                            const emailResponse = await fetch('/api/company-manager/send-guest-email', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                    email: subscriberData.email,
-                                    name: `${subscriberData.lastName || ''} ${subscriberData.firstName || ''}`.trim() || 'אורח',
-                                    validFrom: subscriberData.validFrom,
-                                    validUntil: subscriberData.validUntil,
-                                    parkingName: this.currentContract.parkingName || this.currentContract.name || 'החניון',
-                                    companyName: subscriberData.companyName || this.currentContract.name || '',
-                                    vehicleNumber: subscriberData.vehicle1 || ''
-                                })
-                            });
-                            const emailResult = await emailResponse.json();
-                            if (emailResult.success) {
-                                console.log('Email sent successfully');
-                                showToast('מייל אישור נשלח לאורח', 'success');
-                            } else {
-                                console.error('Failed to send email:', emailResult.message);
-                                showToast('האורח נוצר בהצלחה אך לא ניתן לשלוח מייל', 'warning');
-                            }
-                        } catch (emailError) {
-                            console.error('Error sending email:', emailError);
-                            showToast('האורח נוצר בהצלחה אך לא ניתן לשלוח מייל', 'warning');
-                        }
+                        console.log(`Email notification would be sent to: ${subscriberData.email}`);
+                        // TODO: Implement email sending when server is ready
                     }
                 }
             } else {
@@ -2656,14 +2538,10 @@ class ParkingUIIntegrationXML {
      * Helper methods for UI
      */
     setLoading(isLoading, elementId = 'loadingState') {
-        console.log(`[setLoading] isLoading=${isLoading}, elementId=${elementId}`);
         this.isLoading = isLoading;
         const loadingElement = document.getElementById(elementId);
-        console.log(`[setLoading] loadingElement found: ${!!loadingElement}`);
         if (loadingElement) {
             loadingElement.style.display = isLoading ? 'block' : 'none';
-        } else {
-            console.warn(`[setLoading] Element with id '${elementId}' not found`);
         }
         
         const tableContainer = document.getElementById('tableContainer');
@@ -2728,23 +2606,18 @@ class ParkingUIIntegrationXML {
 
     
     async initialize() {
-        console.log('[ParkingUIXML] Initializing Parking XML UI Integration...');
-        console.log('[ParkingUIXML] Current window.userCompanyList:', window.userCompanyList);
+        console.log('Initializing Parking XML UI Integration...');
         
         // Load initial data
-        console.log('[ParkingUIXML] Loading companies...');
         await this.loadCompanies();
-        console.log('[ParkingUIXML] Companies loaded');
         
         // Update button permissions
-        console.log('[ParkingUIXML] Updating button permissions...');
         this.updateButtonPermissions();
         
         // Set up event listeners
-        console.log('[ParkingUIXML] Setting up event listeners...');
         this.setupEventListeners();
         
-        console.log('[ParkingUIXML] Parking XML UI Integration initialized');
+        console.log('Parking XML UI Integration initialized');
     }
     
     setupEventListeners() {
@@ -2794,4 +2667,11 @@ class ParkingUIIntegrationXML {
 // Create global instance
 window.parkingUIXML = new ParkingUIIntegrationXML();
 
-// Don't auto-initialize - let the HTML page control when to initialize
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.parkingUIXML.initialize();
+    });
+} else {
+    window.parkingUIXML.initialize();
+}
