@@ -479,6 +479,14 @@ class ParkingAPIXML {
                         const detailedSubscribers = await Promise.all(detailPromises);
                         onBasicLoaded(detailedSubscribers);
                         basicSubscribers = detailedSubscribers;
+                        
+                        // Hide progress message when done
+                        if (callbacks.onProgress) {
+                            callbacks.onProgress({ 
+                                percent: 100,
+                                message: `הושלמה טעינת ${basicSubscribers.length} מנויים`
+                            });
+                        }
                     } else if (loadingStrategy === 'batch-50') {
                         // Show initial loading message
                         if (callbacks.onProgress) {
@@ -536,8 +544,8 @@ class ParkingAPIXML {
                         console.warn('[Strategy] Unknown loading strategy:', loadingStrategy);
                     }
                     
-                    // Hide loading message
-                    if (callbacks.onProgress) {
+                    // Hide loading message (only if not already handled by instant loading)
+                    if (loadingStrategy !== 'instant' && callbacks.onProgress) {
                         callbacks.onProgress({ percent: 100 });
                     }
                 }, 100); // Small delay to let UI render first
@@ -545,7 +553,10 @@ class ParkingAPIXML {
             else if (loadingStrategy === 'on-demand') {
                 // For very large companies (300+), don't auto-load details
                 if (callbacks.onProgress) {
-                    callbacks.onProgress({ percent: 100 });
+                    callbacks.onProgress({ 
+                        percent: 100,
+                        message: `חברה גדולה - פרטי מנויים ייטענו בעת הצורך`
+                    });
                 }
             }
             
