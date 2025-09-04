@@ -2,6 +2,11 @@
  * Parking API v2 - Complete version with all methods
  */
 
+// Prevent duplicate loading
+if (typeof window !== 'undefined' && window.ParkingAPIXML) {
+    console.warn('ParkingAPIXML already loaded, skipping duplicate load');
+} else {
+
 class ParkingAPIXML {
     constructor() {
         // ALWAYS use proxy for consistency and security
@@ -753,4 +758,7 @@ const parkingAPIXML = new ParkingAPIXML();
 if (typeof window !== 'undefined') {
     window.parkingAPIXML = parkingAPIXML;
     window.parkingAPI = parkingAPIXML;
+    window.ParkingAPIXML = ParkingAPIXML; // Also make the class available
 }
+
+} // End of duplicate loading check
