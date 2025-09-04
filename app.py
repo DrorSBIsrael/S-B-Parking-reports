@@ -3270,15 +3270,11 @@ def company_manager_proxy():
         ).eq('id', parking_id).execute()
         
         if not parking_result.data:
-            # Fallback for company-based access without specific parking
-            print(f"   ⚠️ Parking {parking_id} not found, using default server")
-            # Use default server for company-based access
-            ip_address = '192.117.0.122'  # Production server
-            port = 8240
-        else:
-            parking_data = parking_result.data[0]
-            ip_address = parking_data.get('ip_address')
-            port = parking_data.get('port', 443)
+            return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
+        
+        parking_data = parking_result.data[0]
+        ip_address = parking_data.get('ip_address')
+        port = parking_data.get('port', 443)
         
         # בדיקה אם אנחנו בסביבת פיתוח או production
         is_local_dev = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
@@ -3409,65 +3405,7 @@ def company_manager_proxy():
                 response = requests.get(url, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'POST':
                 # POST request with payload
-                # Check if this is a consumer creation endpoint
-                if 'contracts' in endpoint and 'consumers' in endpoint:
-                    # Convert JSON to XML for consumer creation
-                    import xml.etree.ElementTree as ET
-                    
-                    # Create the XML structure as per API spec
-                    root = ET.Element('consumerDetail', xmlns='http://gsph.sub.com/cust/types')
-                    
-                    # Add consumer element if exists
-                    if 'consumer' in payload:
-                        consumer_elem = ET.SubElement(root, 'consumer')
-                        for key, value in payload['consumer'].items():
-                            if value is not None and value != '' and key != 'href':
-                                elem = ET.SubElement(consumer_elem, key)
-                                elem.text = str(value)
-                    
-                    # Add person element if exists
-                    if 'person' in payload:
-                        person_elem = ET.SubElement(root, 'person')
-                        for key, value in payload['person'].items():
-                            if value is not None and value != '':
-                                elem = ET.SubElement(person_elem, key)
-                                elem.text = str(value)
-                    
-                    # Add identification element if exists
-                    if 'identification' in payload:
-                        ident_elem = ET.SubElement(root, 'identification')
-                        for key, value in payload['identification'].items():
-                            if value is not None and value != '':
-                                if key == 'usageProfile' and isinstance(value, dict):
-                                    # Handle nested usageProfile
-                                    usage_elem = ET.SubElement(ident_elem, 'usageProfile')
-                                    if 'id' in value:
-                                        usage_elem.set('href', f"/usageProfile/{value['id']}")
-                                    for uk, uv in value.items():
-                                        if uv is not None and uv != '':
-                                            uelem = ET.SubElement(usage_elem, uk)
-                                            uelem.text = str(uv)
-                                else:
-                                    elem = ET.SubElement(ident_elem, key)
-                                    elem.text = str(value)
-                    
-                    # Add other root level elements
-                    for key in ['displayText', 'limit', 'status', 'delete', 'lpn1', 'lpn2', 'lpn3']:
-                        if key in payload and payload[key] is not None and payload[key] != '':
-                            elem = ET.SubElement(root, key)
-                            elem.text = str(payload[key])
-                    
-                    # Convert to XML string
-                    xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
-                    print(f"   📝 Sending XML for consumer creation (POST to {url}):")
-                    print(f"   Full XML:\n{xml_str}")
-                    
-                    # Send as XML
-                    headers['Content-Type'] = 'application/xml'
-                    response = requests.post(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
-                else:
-                    # Regular POST with JSON
-                    response = requests.post(url, json=payload, headers=headers, verify=False, timeout=timeout_seconds)
+                response = requests.post(url, json=payload, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'PUT':
                 # For consumer detail updates, convert JSON to XML
                 if '/detail' in endpoint and 'consumer' in endpoint.lower():
@@ -4366,123 +4304,6 @@ def debug_why_no_access():
         })
 
 print("🔧 DEBUG ENDPOINT ADDED!")
-
-@app.route('/api/company-manager/send-guest-email', methods=['POST'])
-def send_guest_email():
-    """שליחת מייל לאורח עם פרטי החניה"""
-    try:
-        if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
-        
-        data = request.get_json()
-        guest_email = data.get('email')
-        guest_name = data.get('name', 'אורח')
-        valid_from = data.get('validFrom')
-        valid_until = data.get('validUntil')
-        parking_name = data.get('parkingName', 'החניון')
-        company_name = data.get('companyName', '')
-        vehicle_number = data.get('vehicleNumber', '')
-        
-        # Validate email
-        is_valid, validated_email = validate_input(guest_email, "email")
-        if not is_valid:
-            return jsonify({'success': False, 'message': 'כתובת מייל לא תקינה'})
-        
-        # Send email
-        if mail:
-            try:
-                # Get Gmail credentials
-                gmail_user = os.environ.get('GMAIL_USERNAME')
-                gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
-                
-                if not gmail_user or not gmail_password:
-                    print(f"❌ Missing Gmail credentials")
-                    return jsonify({'success': False, 'message': 'חסרים פרטי Gmail'})
-                
-                msg = MIMEMultipart('alternative')
-                msg['From'] = gmail_user
-                msg['To'] = validated_email
-                msg['Subject'] = f'הזמנה לחניה - {parking_name}'
-                
-                # Create HTML content
-                html_body = f"""
-                <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto;">
-                    <h2 style="color: #2c3e50;">שלום {guest_name},</h2>
-                    
-                    <p style="font-size: 16px; line-height: 1.6;">
-                        הרשאת החניה שלך אושרה בהצלחה!
-                    </p>
-                    
-                    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                        <h3 style="color: #28a745; margin-top: 0;">פרטי החניה:</h3>
-                        <ul style="list-style: none; padding: 0;">
-                            <li style="margin: 10px 0;"><strong>חניון:</strong> {parking_name}</li>
-                            <li style="margin: 10px 0;"><strong>לחברה:</strong> {company_name}</li>
-                            <li style="margin: 10px 0;"><strong>מספר רכב:</strong> {vehicle_number if vehicle_number else "לא צוין"}</li>
-                            <li style="margin: 10px 0;"><strong>תאריך תחילה:</strong> {valid_from}</li>
-                            <li style="margin: 10px 0;"><strong>תאריך סיום:</strong> {valid_until}</li>
-                        </ul>
-                    </div>
-                    
-                    <p style="font-size: 14px; color: #6c757d;">
-                        נא להציג הרשאה זו בכניסה לחניון במידת הצורך.
-                    </p>
-                    
-                    <hr style="margin: 30px 0; border: none; border-top: 1px solid #dee2e6;">
-                    
-                    <p style="font-size: 12px; color: #6c757d; text-align: center;">
-                        S&B Parking Management System<br>
-                        זוהי הודעה אוטומטית, אין להשיב למייל זה.
-                    </p>
-                </div>
-                """
-                
-                # Create plain text version
-                text_body = f"""
-                שלום {guest_name},
-
-                הרשאת החניה שלך אושרה בהצלחה!
-
-                פרטי החניה:
-                - חניון: {parking_name}
-                - לחברה: {company_name}
-                - מספר רכב: {vehicle_number if vehicle_number else "לא צוין"}
-                - תאריך תחילה: {valid_from}
-                - תאריך סיום: {valid_until}
-
-                נא להציג הרשאה זו בכניסה לחניון במידת הצורך.
-
-                ---
-                S&B Parking Management System
-                זוהי הודעה אוטומטית, אין להשיב למייל זה.
-                """
-                
-                part1 = MIMEText(text_body, 'plain', 'utf-8')
-                part2 = MIMEText(html_body, 'html', 'utf-8')
-                
-                msg.attach(part1)
-                msg.attach(part2)
-                
-                # Send email
-                server = smtplib.SMTP('smtp.gmail.com', 587)
-                server.starttls()
-                server.login(gmail_user, gmail_password)
-                server.send_message(msg)
-                server.quit()
-                
-                print(f"✅ Guest email sent to {validated_email}")
-                return jsonify({'success': True, 'message': 'מייל נשלח בהצלחה'})
-                
-            except Exception as e:
-                print(f"❌ Failed to send guest email: {str(e)}")
-                return jsonify({'success': False, 'message': 'שגיאה בשליחת מייל'})
-        else:
-            print(f"⚠️ Mail system not available")
-            return jsonify({'success': False, 'message': 'מערכת המייל לא זמינה'})
-            
-    except Exception as e:
-        print(f"❌ Error in send_guest_email: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה בשליחת מייל'})
 
 @app.route('/api/company-manager/consumer-detail', methods=['POST'])
 def get_consumer_detail():
