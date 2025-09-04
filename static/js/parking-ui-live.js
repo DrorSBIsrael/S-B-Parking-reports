@@ -1594,19 +1594,19 @@ class ParkingUIIntegrationXML {
             if (subscriber.isLargeCompany && !subscriber.hasFullDetails) {
                 row.setAttribute('data-hover-loadable', 'true');
                 if (canEdit) {
-                    row.title = 'עמוד עם העכבר לטעינת פרטים מלאים';
+                row.title = 'עמוד עם העכבר לטעינת פרטים מלאים';
                 } else {
                     row.title = 'אין הרשאה לערוך מנויים (דרושה הרשאת P) | עמוד עם העכבר לטעינת פרטים מלאים';
                 }
                 if (!row.style.opacity || row.style.opacity === '1') {
-                    row.style.opacity = '0.85';
+                row.style.opacity = '0.85';
                 }
                 // Setup hover loading only once
                 this.setupHoverLoading(row, subscriber, index);
             } else if (!subscriber.hasFullDetails) {
                 // For small/medium companies without full details
                 if (!row.style.opacity || row.style.opacity === '1') {
-                    row.style.opacity = '0.85';
+                row.style.opacity = '0.85';
                 }
                 if (!row.title) {
                     row.title = 'נתונים בסיסיים - טוען פרטים...';
@@ -1881,7 +1881,7 @@ class ParkingUIIntegrationXML {
         
         // If updating an existing subscriber and changing profile, need P permission
         if (currentSubscriber && subscriberData.profileId && 
-            currentSubscriber.profile !== subscriberData.profileId && 
+            String(currentSubscriber.profile) !== String(subscriberData.profileId) && 
             !permissions.includes('P')) {
             this.showNotification('אין לך הרשאה לשנות פרופיל (דרושה הרשאת P)', 'error');
             return;
