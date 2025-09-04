@@ -1198,12 +1198,12 @@
                     </div>
                     <div class="form-group">
                         <label for="editProfile" data-translate="profile">פרופיל כרטיס</label>
-                        <select id="editProfile" disabled style="background-color: #f0f0f0; color: #888; cursor: not-allowed;">
+                        <select id="editProfile">
                             <option value="1" data-profile-name="regular" data-translate="regular">רגיל</option>
                             <option value="2" data-profile-name="vip" data-translate="vip">VIP</option>
                             <option value="3" data-profile-name="disabled" data-translate="disabled">נכה</option>
                         </select>
-                        <small style="color: #888;" id="profileHelpText">* לא ניתן לשינוי למנויים קיימים</small>
+                        <small style="color: #888;" id="profileHelpText">* עדכון פרופיל דורש הרשאת P</small>
                     </div>
                     
                     <div class="form-group" id="emailGroup">
@@ -1875,17 +1875,26 @@
             
             // No additional fallback needed - we already handle it above
             
-            // Ensure profile select is disabled for existing subscriber
-            profileSelect.disabled = true;
+            // Check if user has permission to update profile
+            const permissions = getUserPermissions();
+            const canUpdateProfile = permissions.includes('P');
+            
+            profileSelect.disabled = !canUpdateProfile;
+            if (!canUpdateProfile) {
             profileSelect.style.backgroundColor = '#f0f0f0';
             profileSelect.style.color = '#888';
             profileSelect.style.cursor = 'not-allowed';
+            } else {
+                profileSelect.style.backgroundColor = '';
+                profileSelect.style.color = '';
+                profileSelect.style.cursor = '';
+            }
             
             // Update help text
             const profileHelpText = document.getElementById('profileHelpText');
             if (profileHelpText) {
-                profileHelpText.textContent = '* לא ניתן לשינוי למנויים קיימים';
-                profileHelpText.style.color = '#888';
+                profileHelpText.textContent = canUpdateProfile ? '* ניתן לעדכון פרופיל' : '* עדכון פרופיל דורש הרשאת P';
+                profileHelpText.style.color = canUpdateProfile ? '#666' : '#888';
             }
             
             document.getElementById('editEmail').value = subscriber.email || '';
@@ -2588,6 +2597,20 @@
                 
                 // Remove guest date handlers
                 removeGuestDateHandlers();
+                
+                // New subscriber can always choose profile
+                const profileSelect = document.getElementById('editProfile');
+                profileSelect.disabled = false;
+                profileSelect.style.backgroundColor = '';
+                profileSelect.style.color = '';
+                profileSelect.style.cursor = '';
+                
+                // Update help text for new subscriber
+                const profileHelpText = document.getElementById('profileHelpText');
+                if (profileHelpText) {
+                    profileHelpText.textContent = '* בחר פרופיל למנוי החדש';
+                    profileHelpText.style.color = '#666';
+                }
             }
             
             // Show modal
@@ -3575,9 +3598,9 @@
         console.log('[Init] User permissions:', window.userPermissions);
     </script>
     
-    <script src="/static/js/config.js?v=20251216_fixed18"></script>
-    <script src="/static/js/parking-api-live.js?v=20251216_fixed18"></script>
-    <script src="/static/js/parking-ui-live.js?v=20251216_fixed18"></script>
+    <script src="/static/js/config.js?v=20251216_fixed19"></script>
+    <script src="/static/js/parking-api-live.js?v=20251216_fixed19"></script>
+    <script src="/static/js/parking-ui-live.js?v=20251216_fixed19"></script>
     
         <script>
         // Override init function to use XML API
