@@ -301,7 +301,8 @@ class ParkingAPIXML {
         const { 
             onBasicLoaded = () => {}, 
             onDetailLoaded = () => {}, 
-            onProgress = () => {} 
+            onProgress = () => {},
+            forceFullLoad = false  // Add this parameter
         } = callbacks;
         
         try {
@@ -353,7 +354,11 @@ class ParkingAPIXML {
             const subscriberCount = finalConsumers.length;
             let loadingStrategy = 'instant';
             
-            if (subscriberCount <= INSTANT_LOAD_THRESHOLD) {
+            if (forceFullLoad) {
+                // If forcing full load, use batch-50 strategy even for large companies
+                loadingStrategy = subscriberCount <= INSTANT_LOAD_THRESHOLD ? 'instant' : 'batch-50';
+                console.log(`[Progressive] Force full load requested for ${subscriberCount} subscribers`);
+            } else if (subscriberCount <= INSTANT_LOAD_THRESHOLD) {
                 loadingStrategy = 'instant';
             } else if (subscriberCount <= BATCH_LOAD_THRESHOLD) {
                 loadingStrategy = 'batch-50';
