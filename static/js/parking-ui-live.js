@@ -967,6 +967,29 @@ class ParkingUIIntegrationXML {
         if (typeof updateButtonPermissions === 'function') {
             updateButtonPermissions();
         }
+        
+        // Show permissions info to user
+        const permissions = window.userPermissions || '';
+        if (permissions) {
+            let permissionText = 'הרשאות: ';
+            if (permissions === 'B' || permissions === '') {
+                permissionText += 'בסיס (צפייה בלבד)';
+            } else {
+                const permMap = {
+                    'G': 'אורח',
+                    'N': 'מנוי חדש',
+                    'P': 'עדכון פרופיל',
+                    'R': 'דוחות'
+                };
+                const permList = permissions.split('').map(p => permMap[p] || p).join(', ');
+                permissionText += permList;
+            }
+            
+            // Show notification briefly
+            setTimeout(() => {
+                this.showNotification(permissionText, 'info', 3000);
+            }, 1000);
+        }
     }
     
     /**
@@ -1554,24 +1577,15 @@ class ParkingUIIntegrationXML {
         subscribers.forEach((subscriber, index) => {
             const row = document.createElement('tr');
             
-            // Check permissions for editing
-            const permissions = window.userPermissions || '';
-            const canEdit = permissions.includes('P');
-            
-            // IMPORTANT: Get the current subscriber from array, not from closure!
-            if (canEdit) {
-                row.onclick = () => {
-                    const currentSubscriber = this.subscribers.find(s => 
-                        String(s.subscriberNum) === String(subscriber.subscriberNum)
-                    ) || subscriber;
-                    this.editSubscriber(currentSubscriber);
-                };
-                row.style.cursor = 'pointer';
-            } else {
-                row.style.cursor = 'not-allowed';
-                row.style.opacity = '0.8';
-                row.title = 'אין הרשאה לערוך מנויים (דרושה הרשאת P)';
-            }
+            // Always allow viewing subscriber details
+            // P permission is only needed for profile updates
+            row.onclick = () => {
+                const currentSubscriber = this.subscribers.find(s => 
+                    String(s.subscriberNum) === String(subscriber.subscriberNum)
+                ) || subscriber;
+                this.editSubscriber(currentSubscriber);
+            };
+            row.style.cursor = 'pointer';
             
             row.dataset.subscriberNum = subscriber.subscriberNum;
             row.dataset.index = index;
@@ -1751,12 +1765,8 @@ class ParkingUIIntegrationXML {
     async editSubscriber(subscriber) {
         console.log(`[editSubscriber] Called with subscriber ${subscriber.subscriberNum}, hasFullDetails: ${subscriber.hasFullDetails}`);
         
-        // Check permissions
-        const permissions = window.userPermissions || '';
-        if (!permissions.includes('P')) {
-            this.showNotification('אין לך הרשאה לערוך מנויים (דרושה הרשאת P)', 'error');
-            return;
-        }
+        // Always allow viewing subscriber details
+        // Permission check will be done when saving changes
         
         // Check if we have full details
         if (!subscriber.hasFullDetails) {
@@ -1862,6 +1872,20 @@ class ParkingUIIntegrationXML {
      */
     async saveSubscriber(subscriberData) {
         if (!this.currentContract) return;
+        
+        // Check if trying to update profile
+        const permissions = window.userPermissions || '';
+        const currentSubscriber = this.subscribers.find(s => 
+            String(s.subscriberNum) === String(subscriberData.subscriberNum)
+        );
+        
+        // If updating an existing subscriber and changing profile, need P permission
+        if (currentSubscriber && subscriberData.profileId && 
+            currentSubscriber.profile !== subscriberData.profileId && 
+            !permissions.includes('P')) {
+            this.showNotification('אין לך הרשאה לשנות פרופיל (דרושה הרשאת P)', 'error');
+            return;
+        }
         
         this.setLoading(true);
         
