@@ -4305,6 +4305,120 @@ def debug_why_no_access():
 
 print("🔧 DEBUG ENDPOINT ADDED!")
 
+@app.route('/api/company-manager/send-guest-email', methods=['POST'])
+def send_guest_email():
+    """שליחת מייל לאורח עם פרטי החניה"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        data = request.get_json()
+        guest_email = data.get('email')
+        guest_name = data.get('name', 'אורח')
+        valid_from = data.get('validFrom')
+        valid_until = data.get('validUntil')
+        parking_name = data.get('parkingName', 'החניון')
+        vehicle_number = data.get('vehicleNumber', '')
+        
+        # Validate email
+        is_valid, validated_email = validate_input(guest_email, "email")
+        if not is_valid:
+            return jsonify({'success': False, 'message': 'כתובת מייל לא תקינה'})
+        
+        # Send email
+        if mail:
+            try:
+                # Get Gmail credentials
+                gmail_user = os.environ.get('GMAIL_USERNAME')
+                gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
+                
+                if not gmail_user or not gmail_password:
+                    print(f"❌ Missing Gmail credentials")
+                    return jsonify({'success': False, 'message': 'חסרים פרטי Gmail'})
+                
+                msg = MIMEMultipart('alternative')
+                msg['From'] = gmail_user
+                msg['To'] = validated_email
+                msg['Subject'] = f'הזמנה לחניה - {parking_name}'
+                
+                # Create HTML content
+                html_body = f"""
+                <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto;">
+                    <h2 style="color: #2c3e50;">שלום {guest_name},</h2>
+                    
+                    <p style="font-size: 16px; line-height: 1.6;">
+                        הרשאת החניה שלך אושרה בהצלחה!
+                    </p>
+                    
+                    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                        <h3 style="color: #28a745; margin-top: 0;">פרטי החניה:</h3>
+                        <ul style="list-style: none; padding: 0;">
+                            <li style="margin: 10px 0;"><strong>חניון:</strong> {parking_name}</li>
+                            <li style="margin: 10px 0;"><strong>מספר רכב:</strong> {vehicle_number}</li>
+                            <li style="margin: 10px 0;"><strong>תאריך תחילה:</strong> {valid_from}</li>
+                            <li style="margin: 10px 0;"><strong>תאריך סיום:</strong> {valid_until}</li>
+                        </ul>
+                    </div>
+                    
+                    <p style="font-size: 14px; color: #6c757d;">
+                        נא להציג הרשאה זו בכניסה לחניון במידת הצורך.
+                    </p>
+                    
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid #dee2e6;">
+                    
+                    <p style="font-size: 12px; color: #6c757d; text-align: center;">
+                        S&B Parking Management System<br>
+                        זוהי הודעה אוטומטית, אין להשיב למייל זה.
+                    </p>
+                </div>
+                """
+                
+                # Create plain text version
+                text_body = f"""
+                שלום {guest_name},
+
+                הרשאת החניה שלך אושרה בהצלחה!
+
+                פרטי החניה:
+                - חניון: {parking_name}
+                - מספר רכב: {vehicle_number}
+                - תאריך תחילה: {valid_from}
+                - תאריך סיום: {valid_until}
+
+                נא להציג הרשאה זו בכניסה לחניון במידת הצורך.
+
+                ---
+                S&B Parking Management System
+                זוהי הודעה אוטומטית, אין להשיב למייל זה.
+                """
+                
+                part1 = MIMEText(text_body, 'plain', 'utf-8')
+                part2 = MIMEText(html_body, 'html', 'utf-8')
+                
+                msg.attach(part1)
+                msg.attach(part2)
+                
+                # Send email
+                server = smtplib.SMTP('smtp.gmail.com', 587)
+                server.starttls()
+                server.login(gmail_user, gmail_password)
+                server.send_message(msg)
+                server.quit()
+                
+                print(f"✅ Guest email sent to {validated_email}")
+                return jsonify({'success': True, 'message': 'מייל נשלח בהצלחה'})
+                
+            except Exception as e:
+                print(f"❌ Failed to send guest email: {str(e)}")
+                return jsonify({'success': False, 'message': 'שגיאה בשליחת מייל'})
+        else:
+            print(f"⚠️ Mail system not available")
+            return jsonify({'success': False, 'message': 'מערכת המייל לא זמינה'})
+            
+    except Exception as e:
+        print(f"❌ Error in send_guest_email: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה בשליחת מייל'})
+
 @app.route('/api/company-manager/consumer-detail', methods=['POST'])
 def get_consumer_detail():
     """קבלת פרטי מנוי בודד - לטעינת hover"""
