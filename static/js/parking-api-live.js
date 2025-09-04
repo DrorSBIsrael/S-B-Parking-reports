@@ -466,12 +466,28 @@ class ParkingAPIXML {
                     };
                     
                     if (loadingStrategy === 'instant') {
+                        // Show loading message for instant loading
+                        if (callbacks.onProgress) {
+                            callbacks.onProgress({ 
+                                percent: 0,
+                                message: `טוען פרטי ${basicSubscribers.length} מנויים...`
+                            });
+                        }
+                        
                         // Load all at once for small companies
                         const detailPromises = basicSubscribers.map(processSubscriber);
                         const detailedSubscribers = await Promise.all(detailPromises);
                         onBasicLoaded(detailedSubscribers);
                         basicSubscribers = detailedSubscribers;
                     } else if (loadingStrategy === 'batch-50') {
+                        // Show initial loading message
+                        if (callbacks.onProgress) {
+                            callbacks.onProgress({ 
+                                percent: 0,
+                                message: `מתחיל לטעון פרטי ${basicSubscribers.length} מנויים...`
+                            });
+                        }
+                        
                         // Load in batches of 50 for companies up to 300 subscribers
                         const BATCH_SIZE = 50;
                         const totalBatches = Math.ceil(basicSubscribers.length / BATCH_SIZE);
@@ -494,7 +510,8 @@ class ParkingAPIXML {
                                 callbacks.onProgress({ 
                                     percent: progress,
                                     current: allUpdated.length,
-                                    total: basicSubscribers.length
+                                    total: basicSubscribers.length,
+                                    message: `טוען פרטי מנויים... ${allUpdated.length} מתוך ${basicSubscribers.length}`
                                 });
                             }
                             
