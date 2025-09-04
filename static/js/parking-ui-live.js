@@ -2073,8 +2073,9 @@ class ParkingUIIntegrationXML {
                             nextId = maxId + 1;
                         }
                         
-                        consumerData.consumer.id = String(nextId);
-                        console.log(`[saveSubscriber] Creating regular subscriber with ID: ${consumerData.consumer.id}`);
+                        // Don't send ID for regular subscribers - let server assign
+                        consumerData.consumer.id = '';
+                        console.log(`[saveSubscriber] Creating regular subscriber - server will assign ID`);
                         console.log(`[saveSubscriber] Found ${companySubscribers.length} existing subscribers`);
                     }
                 } else {
@@ -2086,8 +2087,16 @@ class ParkingUIIntegrationXML {
                 // Create new consumer with all details in one call
                 result = await this.api.addConsumer(this.currentContract.id, consumerData);
                 
+                console.log('[saveSubscriber] Server response for new consumer:', result);
+                
                 if (result.success) {
                     console.log('New consumer created successfully');
+                    
+                    // Check if we got the created consumer ID from server
+                    if (result.data && result.data.id) {
+                        consumerData.consumer.id = result.data.id;
+                        console.log(`[saveSubscriber] Server assigned ID: ${result.data.id}`);
+                    }
                     // Send email notification if email provided for guest
                     if ((subscriberData.isGuest || subscriberData.profile === 'guest') && subscriberData.email) {
                         console.log(`Email notification would be sent to: ${subscriberData.email}`);
@@ -2245,8 +2254,38 @@ class ParkingUIIntegrationXML {
                         this.updateSubscriberRow(this.subscribers[index], index);
                     }
                 } else if (isReallyNew) {
-                    // For new subscribers, we need to reload to get the server-assigned ID
-                    await this.loadSubscribers();
+                    // For new subscribers, add to the list without reloading
+                    // Use the ID from server response if available
+                    const subscriberId = result.data?.id || consumerData.consumer.id || subscriberData.subscriberNum;
+                    
+                    const newSubscriber = {
+                        ...subscriberData,
+                        id: subscriberId,
+                        subscriberNum: subscriberId,
+                        hasFullDetails: true,
+                        companyNum: this.currentContract.id,
+                        companyName: this.currentContract.name,
+                        // Ensure we have all required fields
+                        firstName: subscriberData.firstName || '',
+                        lastName: subscriberData.lastName || '',
+                        tagNum: subscriberData.tagNum || '',
+                        vehicle1: subscriberData.vehicle1 || '',
+                        vehicle2: subscriberData.vehicle2 || '',
+                        vehicle3: subscriberData.vehicle3 || '',
+                        validFrom: subscriberData.validFrom || '',
+                        validUntil: subscriberData.validUntil || '',
+                        profile: subscriberData.profile || subscriberData.profileId || '',
+                        profileName: subscriberData.profileName || ''
+                    };
+                    
+                    // Add to subscribers array
+                    this.subscribers.push(newSubscriber);
+                    
+                    // Re-display the entire table (easier than inserting a new row)
+                    this.displaySubscribers(this.subscribers);
+                    
+                    // Update counts in header
+                    this.updatePresentCount();
                 }
                 
                 return true;
