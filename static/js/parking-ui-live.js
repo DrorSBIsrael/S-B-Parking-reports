@@ -711,6 +711,9 @@ class ParkingUIIntegrationXML {
         
         // Load subscribers
         await this.loadSubscribers();
+        
+        // Update button permissions after loading
+        this.updateButtonPermissions();
     }
     
     /**
@@ -912,11 +915,12 @@ class ParkingUIIntegrationXML {
                         // Show progress message
                         this.showProgressMessage(progress.message);
                         
-                        // If we reached 100%, hide progress after a delay
-                        if (progress.percent >= 100) {
+                        // If we reached 100%, hide progress after a short delay
+                        if (progress.percent && progress.percent >= 100) {
+                            // Show completion message briefly, then hide
                             setTimeout(() => {
                                 this.hideProgressMessage();
-                            }, 1000);
+                            }, 300); // Show completion message for 300ms only
                         }
                     } else if (progress.current && progress.total) {
                         this.updateBackgroundProgress(
@@ -942,10 +946,26 @@ class ParkingUIIntegrationXML {
             this.showNotification('שגיאה בטעינת מנויים', 'error');
             this.subscribers = [];
             this.displaySubscribers([]);
-        } finally {
+            // Hide progress message on error
             this.hideProgressMessage();
+        } finally {
+            // Don't hide progress message here - let the onProgress callback handle it
+            // this.hideProgressMessage();
             // Also hide the background loading message
             this.hideBackgroundProgress();
+            
+            // Set loading state to false
+            this.setLoading(false, 'loadingState');
+        }
+    }
+    
+    /**
+     * Update button permissions based on user permissions
+     */
+    updateButtonPermissions() {
+        // Call the function from parking_subscribers.html if it exists
+        if (typeof updateButtonPermissions === 'function') {
+            updateButtonPermissions();
         }
     }
     
@@ -1533,28 +1553,50 @@ class ParkingUIIntegrationXML {
         
         subscribers.forEach((subscriber, index) => {
             const row = document.createElement('tr');
+            
+            // Check permissions for editing
+            const permissions = window.userPermissions || '';
+            const canEdit = permissions.includes('P');
+            
             // IMPORTANT: Get the current subscriber from array, not from closure!
-            row.onclick = () => {
-                const currentSubscriber = this.subscribers.find(s => 
-                    String(s.subscriberNum) === String(subscriber.subscriberNum)
-                ) || subscriber;
-                this.editSubscriber(currentSubscriber);
-            };
-            row.style.cursor = 'pointer';
+            if (canEdit) {
+                row.onclick = () => {
+                    const currentSubscriber = this.subscribers.find(s => 
+                        String(s.subscriberNum) === String(subscriber.subscriberNum)
+                    ) || subscriber;
+                    this.editSubscriber(currentSubscriber);
+                };
+                row.style.cursor = 'pointer';
+            } else {
+                row.style.cursor = 'not-allowed';
+                row.style.opacity = '0.8';
+                row.title = 'אין הרשאה לערוך מנויים (דרושה הרשאת P)';
+            }
+            
             row.dataset.subscriberNum = subscriber.subscriberNum;
             row.dataset.index = index;
             
             // Add hover loading for large companies without full details
             if (subscriber.isLargeCompany && !subscriber.hasFullDetails) {
                 row.setAttribute('data-hover-loadable', 'true');
-                row.title = 'עמוד עם העכבר לטעינת פרטים מלאים';
-                row.style.opacity = '0.85';
+                if (canEdit) {
+                    row.title = 'עמוד עם העכבר לטעינת פרטים מלאים';
+                } else {
+                    row.title = 'אין הרשאה לערוך מנויים (דרושה הרשאת P) | עמוד עם העכבר לטעינת פרטים מלאים';
+                }
+                if (!row.style.opacity || row.style.opacity === '1') {
+                    row.style.opacity = '0.85';
+                }
                 // Setup hover loading only once
                 this.setupHoverLoading(row, subscriber, index);
             } else if (!subscriber.hasFullDetails) {
                 // For small/medium companies without full details
-                row.style.opacity = '0.85';
+                if (!row.style.opacity || row.style.opacity === '1') {
+                    row.style.opacity = '0.85';
+                }
+                if (!row.title) {
                     row.title = 'נתונים בסיסיים - טוען פרטים...';
+                }
             }
             
             const validUntil = new Date(subscriber.validUntil || subscriber.xValidUntil || '2030-12-31');
@@ -1708,6 +1750,13 @@ class ParkingUIIntegrationXML {
      */
     async editSubscriber(subscriber) {
         console.log(`[editSubscriber] Called with subscriber ${subscriber.subscriberNum}, hasFullDetails: ${subscriber.hasFullDetails}`);
+        
+        // Check permissions
+        const permissions = window.userPermissions || '';
+        if (!permissions.includes('P')) {
+            this.showNotification('אין לך הרשאה לערוך מנויים (דרושה הרשאת P)', 'error');
+            return;
+        }
         
         // Check if we have full details
         if (!subscriber.hasFullDetails) {
@@ -2537,6 +2586,9 @@ class ParkingUIIntegrationXML {
         
         // Load initial data
         await this.loadCompanies();
+        
+        // Update button permissions
+        this.updateButtonPermissions();
         
         // Set up event listeners
         this.setupEventListeners();
