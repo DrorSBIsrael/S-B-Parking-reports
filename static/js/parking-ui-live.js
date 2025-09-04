@@ -816,11 +816,11 @@ class ParkingUIIntegrationXML {
     /**
      * Load subscribers for current company - Progressive Loading
      */
-    async loadSubscribers() {
+    async loadSubscribers(forceFullLoad = false) {
         if (!this.currentContract) return;
         
         this.setLoading(true, 'loadingState');
-        this.showProgressMessage('טוען רשימת מנויים...');
+        this.showProgressMessage(forceFullLoad ? 'טוען את כל נתוני המנויים...' : 'טוען רשימת מנויים...');
         
         try {
             // Get performance settings from config
@@ -830,6 +830,7 @@ class ParkingUIIntegrationXML {
             const result = await this.api.getSubscribersProgressive(this.currentContract.id, {
                 batchSize: perfConfig.batchSize || 5,
                 companyName: this.currentContract.name || this.currentContract.firstName || this.currentContract.companyName || `חברה ${this.currentContract.id}`,  // Pass correct company name
+                forceFullLoad: forceFullLoad,  // Force loading all details if requested
                 
                 // Callback when basic data is ready
                 onBasicLoaded: (basicSubscribers) => {
@@ -966,6 +967,12 @@ class ParkingUIIntegrationXML {
                     // Add tooltip for large companies
                     if (isLargeCompany) {
                         companyNameElement.title = 'חברה גדולה - פרטי מנויים נטענים לפי דרישה';
+                    }
+                    
+                    // Show/hide reload button for large companies
+                    const reloadButton = document.getElementById('reloadFullButton');
+                    if (reloadButton) {
+                        reloadButton.style.display = isLargeCompany ? 'inline-block' : 'none';
                     }
                 }
             }
@@ -2161,12 +2168,47 @@ class ParkingUIIntegrationXML {
                 
                 return true;
             } else {
-                this.showNotification('שגיאה בשמירת הנתונים: ' + result.error, 'error');
+                // Provide clearer error messages based on the error type
+                let errorMessage = 'שגיאה בשמירת הנתונים';
+                
+                if (result.error) {
+                    if (result.error.includes('500') || result.error.includes('Internal Server Error')) {
+                        // Check if it's a present subscriber error
+                        if (consumerData.identification && consumerData.identification.present === 'true') {
+                            errorMessage = '⚠️ לא ניתן לעדכן מנוי נוכח בחניון - יש להוציא את הרכב מהחניון לפני עדכון פרטים';
+                        } else {
+                            errorMessage = '⚠️ שגיאת שרת - ייתכן שהמנוי נוכח בחניון או שיש בעיה בנתונים שנשלחו';
+                        }
+                    } else if (result.error.includes('400') || result.error.includes('Bad Request')) {
+                        errorMessage = '❌ הנתונים שהוזנו אינם תקינים - אנא בדוק את הפרטים';
+                    } else if (result.error.includes('404')) {
+                        errorMessage = '❌ המנוי לא נמצא במערכת';
+                    } else if (result.error.includes('403') || result.error.includes('Forbidden')) {
+                        errorMessage = '🔒 אין הרשאה לבצע פעולה זו';
+                    } else {
+                        errorMessage = `❌ ${result.error}`;
+                    }
+                }
+                
+                this.showNotification(errorMessage, 'error');
                 return false;
             }
         } catch (error) {
             console.error('Error saving subscriber:', error);
-            this.showNotification('שגיאה בשמירת הנתונים', 'error');
+            
+            // Try to provide a meaningful error message
+            let errorMessage = 'שגיאה בשמירת הנתונים';
+            if (error.message) {
+                if (error.message.includes('present')) {
+                    errorMessage = '⚠️ לא ניתן לעדכן מנוי נוכח בחניון';
+                } else if (error.message.includes('network')) {
+                    errorMessage = '🌐 בעיית תקשורת - אנא בדוק את החיבור לאינטרנט';
+                } else {
+                    errorMessage = `❌ ${error.message}`;
+                }
+            }
+            
+            this.showNotification(errorMessage, 'error');
             return false;
         } finally {
             this.setLoading(false);
