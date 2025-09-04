@@ -908,6 +908,16 @@ class ParkingUIIntegrationXML {
                             );
                             this.hideBackgroundProgress();
                         }, 500);
+                    } else if (progress.message) {
+                        // Show progress message
+                        this.showProgressMessage(progress.message);
+                        
+                        // If we reached 100%, hide progress after a delay
+                        if (progress.percent >= 100) {
+                            setTimeout(() => {
+                                this.hideProgressMessage();
+                            }, 1000);
+                        }
                     } else if (progress.current && progress.total) {
                         this.updateBackgroundProgress(
                             `טוען פרטים... ${progress.current}/${progress.total} (${progress.percent}%)`
