@@ -3405,7 +3405,67 @@ def company_manager_proxy():
                 response = requests.get(url, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'POST':
                 # POST request with payload
-                response = requests.post(url, json=payload, headers=headers, verify=False, timeout=timeout_seconds)
+                # Check if this is a consumer creation endpoint
+                if 'contracts' in endpoint and 'consumers' in endpoint and payload:
+                    # Convert JSON to XML for consumer creation
+                    import xml.etree.ElementTree as ET
+                    
+                    # Create the XML structure as per API spec
+                    root = ET.Element('consumerDetail', xmlns='http://gsph.sub.com/cust/types')
+                    
+                    # Add consumer element if exists
+                    if 'consumer' in payload:
+                        consumer_elem = ET.SubElement(root, 'consumer')
+                        if 'id' in payload['consumer'] and payload['consumer']['id']:
+                            consumer_elem.set('href', f"/consumers/{payload['consumer'].get('contractid', '')},{payload['consumer']['id']}")
+                        for key, value in payload['consumer'].items():
+                            if value is not None and value != '' and key != 'href':
+                                elem = ET.SubElement(consumer_elem, key)
+                                elem.text = str(value)
+                    
+                    # Add person element if exists
+                    if 'person' in payload:
+                        person_elem = ET.SubElement(root, 'person')
+                        for key, value in payload['person'].items():
+                            if value is not None and value != '':
+                                elem = ET.SubElement(person_elem, key)
+                                elem.text = str(value)
+                    
+                    # Add identification element if exists
+                    if 'identification' in payload:
+                        ident_elem = ET.SubElement(root, 'identification')
+                        for key, value in payload['identification'].items():
+                            if value is not None and value != '':
+                                if key == 'usageProfile' and isinstance(value, dict):
+                                    # Handle nested usageProfile
+                                    usage_elem = ET.SubElement(ident_elem, 'usageProfile')
+                                    if 'id' in value:
+                                        usage_elem.set('href', f"/usageProfile/{value['id']}")
+                                    for uk, uv in value.items():
+                                        if uv is not None and uv != '':
+                                            uelem = ET.SubElement(usage_elem, uk)
+                                            uelem.text = str(uv)
+                                else:
+                                    elem = ET.SubElement(ident_elem, key)
+                                    elem.text = str(value)
+                    
+                    # Add other root level elements
+                    for key in ['displayText', 'limit', 'status', 'delete', 'lpn1', 'lpn2', 'lpn3']:
+                        if key in payload and payload[key] is not None and payload[key] != '':
+                            elem = ET.SubElement(root, key)
+                            elem.text = str(payload[key])
+                    
+                    # Convert to XML string
+                    xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
+                    print(f"   📝 Sending XML for consumer creation (POST to {url}):")
+                    print(f"   Consumer ID: {payload.get('consumer', {}).get('id', 'NEW')}")
+                    
+                    # Send as XML
+                    headers['Content-Type'] = 'application/xml'
+                    response = requests.post(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
+                else:
+                    # Regular POST with JSON
+                    response = requests.post(url, json=payload, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'PUT':
                 # For consumer detail updates, convert JSON to XML
                 if '/detail' in endpoint and 'consumer' in endpoint.lower():
