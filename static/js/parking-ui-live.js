@@ -727,6 +727,14 @@ class ParkingUIIntegrationXML {
      * Select a company and load its subscribers
      */
     async selectCompany(company) {
+        console.log('[selectCompany] Selected company:', company);
+        
+        // Set parking ID for API calls
+        if (this.api && this.api.setCurrentParking) {
+            this.api.setCurrentParking(company.id);
+            console.log('[selectCompany] Set parking ID to:', company.id);
+        }
+        
         // Store the full company object with correct name
         this.currentContract = {
             ...company,
