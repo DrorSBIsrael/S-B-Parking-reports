@@ -2041,44 +2041,43 @@ class ParkingUIIntegrationXML {
                     await this.loadSubscribers();
                 }
                 
-                // Calculate next available subscriber number
+                // Handle subscriber numbering
                 if (!subscriberData.subscriberNum || subscriberData.subscriberNum === '') {
                     // Check if this is a guest
                     if (subscriberData.isGuest || subscriberData.firstName === 'אורח') {
-                        // Guest numbers start from 40001
+                        // Guest numbers start from 40000
                         const existingGuests = this.subscribers.filter(s => {
                             const num = parseInt(s.subscriberNum);
-                            return !isNaN(num) && num >= 40001;
+                            return !isNaN(num) && num >= 40000;
                         });
                         
-                        let nextGuestId = 40001;
+                        let nextGuestId = 40000;
                         if (existingGuests.length > 0) {
-                            const maxGuestId = Math.max(...existingGuests.map(s => parseInt(s.subscriberNum)));
-                            nextGuestId = maxGuestId + 1;
+                            // Find all guest IDs and sort them
+                            const guestIds = existingGuests.map(s => parseInt(s.subscriberNum)).sort((a, b) => a - b);
+                            // Find the first gap or use max + 1
+                            for (let i = 0; i < guestIds.length; i++) {
+                                if (guestIds[i] > nextGuestId + i) {
+                                    nextGuestId = nextGuestId + i;
+                                    break;
+                                }
+                            }
+                            if (nextGuestId === 40000) {
+                                nextGuestId = guestIds[guestIds.length - 1] + 1;
+                            }
                         }
                         
                         consumerData.consumer.id = String(nextGuestId);
                         console.log(`[saveSubscriber] Creating guest with ID: ${consumerData.consumer.id}`);
                         console.log(`[saveSubscriber] Found ${existingGuests.length} existing guests`);
                     } else {
-                        // Regular subscriber - get next number in company
-                        const companySubscribers = this.subscribers.filter(s => {
-                            const num = parseInt(s.subscriberNum);
-                            return !isNaN(num) && num < 40001;
-                        });
-                        
-                        let nextId = 1;
-                        if (companySubscribers.length > 0) {
-                            const maxId = Math.max(...companySubscribers.map(s => parseInt(s.subscriberNum)));
-                            nextId = maxId + 1;
-                        }
-                        
-                        consumerData.consumer.id = String(nextId);
-                        console.log(`[saveSubscriber] Creating regular subscriber with ID: ${consumerData.consumer.id}`);
-                        console.log(`[saveSubscriber] Found ${companySubscribers.length} existing subscribers`);
+                        // Regular subscriber - let the server assign the ID
+                        // Don't send ID at all for new regular subscribers
+                        delete consumerData.consumer.id;
+                        console.log(`[saveSubscriber] Creating regular subscriber - server will assign ID`);
                     }
                 } else {
-                    // Use provided subscriber number
+                    // Use provided subscriber number (for updates)
                     consumerData.consumer.id = subscriberData.subscriberNum;
                     console.log(`[saveSubscriber] Using provided subscriber number: ${consumerData.consumer.id}`);
                 }
@@ -2090,8 +2089,34 @@ class ParkingUIIntegrationXML {
                     console.log('New consumer created successfully');
                     // Send email notification if email provided for guest
                     if ((subscriberData.isGuest || subscriberData.profile === 'guest') && subscriberData.email) {
-                        console.log(`Email notification would be sent to: ${subscriberData.email}`);
-                        // TODO: Implement email sending when server is ready
+                        console.log(`Sending email notification to: ${subscriberData.email}`);
+                        try {
+                            const emailResponse = await fetch('/api/company-manager/send-guest-email', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    email: subscriberData.email,
+                                    name: subscriberData.firstName || 'אורח',
+                                    validFrom: subscriberData.validFrom,
+                                    validUntil: subscriberData.validUntil,
+                                    parkingName: this.currentContract.name || 'החניון',
+                                    vehicleNumber: subscriberData.vehicle1 || ''
+                                })
+                            });
+                            const emailResult = await emailResponse.json();
+                            if (emailResult.success) {
+                                console.log('Email sent successfully');
+                                showToast('מייל אישור נשלח לאורח', 'success');
+                            } else {
+                                console.error('Failed to send email:', emailResult.message);
+                                showToast('האורח נוצר בהצלחה אך לא ניתן לשלוח מייל', 'warning');
+                            }
+                        } catch (emailError) {
+                            console.error('Error sending email:', emailError);
+                            showToast('האורח נוצר בהצלחה אך לא ניתן לשלוח מייל', 'warning');
+                        }
                     }
                 }
             } else {
