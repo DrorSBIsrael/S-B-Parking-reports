@@ -184,9 +184,11 @@ class ParkingUIIntegrationXML {
                 } else {
                     // Display companies
                     const companyList = document.getElementById('companyList');
+                    console.log('[loadCompanies] companyList element found?', !!companyList);
                     if (companyList) {
                         companyList.innerHTML = '';
                         companies.forEach(company => {
+                            console.log('[loadCompanies] Creating card for company:', company);
                             const card = document.createElement('div');
                             card.className = 'company-card';
                             card.onclick = () => this.selectCompany(company);
@@ -199,6 +201,9 @@ class ParkingUIIntegrationXML {
                             `;
                             companyList.appendChild(card);
                         });
+                        console.log('[loadCompanies] Added', companies.length, 'company cards');
+                    } else {
+                        console.error('[loadCompanies] companyList element not found!');
                     }
                 }
                 
@@ -1028,13 +1033,18 @@ class ParkingUIIntegrationXML {
      * Update button permissions based on user permissions
      */
     updateButtonPermissions() {
+        console.log('[updateButtonPermissions] Called, checking for global function');
         // Call the function from parking_subscribers.html if it exists
         if (typeof updateButtonPermissions === 'function') {
+            console.log('[updateButtonPermissions] Calling global updateButtonPermissions');
             updateButtonPermissions();
+        } else {
+            console.warn('[updateButtonPermissions] Global updateButtonPermissions not found');
         }
         
         // Show permissions info to user
         const permissions = window.userPermissions || '';
+        console.log('[updateButtonPermissions] User permissions:', permissions);
         if (permissions) {
             let permissionText = 'הרשאות: ';
             if (permissions === 'B' || permissions === '') {
@@ -2638,10 +2648,14 @@ class ParkingUIIntegrationXML {
      * Helper methods for UI
      */
     setLoading(isLoading, elementId = 'loadingState') {
+        console.log(`[setLoading] isLoading=${isLoading}, elementId=${elementId}`);
         this.isLoading = isLoading;
         const loadingElement = document.getElementById(elementId);
+        console.log(`[setLoading] loadingElement found: ${!!loadingElement}`);
         if (loadingElement) {
             loadingElement.style.display = isLoading ? 'block' : 'none';
+        } else {
+            console.warn(`[setLoading] Element with id '${elementId}' not found`);
         }
         
         const tableContainer = document.getElementById('tableContainer');
@@ -2706,18 +2720,23 @@ class ParkingUIIntegrationXML {
 
     
     async initialize() {
-        console.log('Initializing Parking XML UI Integration...');
+        console.log('[ParkingUIXML] Initializing Parking XML UI Integration...');
+        console.log('[ParkingUIXML] Current window.userCompanyList:', window.userCompanyList);
         
         // Load initial data
+        console.log('[ParkingUIXML] Loading companies...');
         await this.loadCompanies();
+        console.log('[ParkingUIXML] Companies loaded');
         
         // Update button permissions
+        console.log('[ParkingUIXML] Updating button permissions...');
         this.updateButtonPermissions();
         
         // Set up event listeners
+        console.log('[ParkingUIXML] Setting up event listeners...');
         this.setupEventListeners();
         
-        console.log('Parking XML UI Integration initialized');
+        console.log('[ParkingUIXML] Parking XML UI Integration initialized');
     }
     
     setupEventListeners() {
