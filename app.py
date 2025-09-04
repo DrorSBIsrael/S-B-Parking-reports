@@ -1527,6 +1527,21 @@ def dashboard():
     """דף הדשבורד הראשי"""
     if 'user_email' not in session:
         return redirect(url_for('login_page'))
+    
+    # בדיקה אם המשתמש הוא מנהל חברה
+    try:
+        user_result = supabase.table('user_parkings').select(
+            'access_level, code_type'
+        ).eq('email', session['user_email']).execute()
+        
+        if user_result.data:
+            user_data = user_result.data[0]
+            if user_data.get('access_level') == 'company_manager' or user_data.get('code_type') == 'company_manager':
+                # מנהל חברה - מפנים אותו לדף הנכון
+                return redirect(url_for('company_manager_page'))
+    except Exception as e:
+        print(f"Error checking user type: {str(e)}")
+    
     return render_template('dashboard.html')
 
 @app.route('/api/user-info', methods=['GET'])
@@ -1679,6 +1694,13 @@ def get_parking_data():
                     query = query.in_('project_number', parking_numbers)
                 else:
                     return jsonify({'success': True, 'data': []})
+        elif user_data['access_level'] == 'company_manager':
+            # מנהל חברה - מפנים אותו לדף הנכון
+            return jsonify({
+                'success': False, 
+                'message': 'מנהל חברה - יש להשתמש בדף ניהול חברה',
+                'redirect': '/company-manager'
+            })
         else:
             return jsonify({'success': False, 'message': 'רמת הרשאה לא מוכרת'})
         
@@ -2893,9 +2915,14 @@ def company_manager_page():
             print(f"⚠️ Unauthorized access attempt to company-manager by {session['user_email']}")
             return redirect(url_for('dashboard'))
         
-        # בדיקת הרשאות - צריך לפחות הרשאת R (report)
-        if 'R' not in permissions and 'P' not in permissions:
-            print(f"⚠️ No report permissions for {session['user_email']}")
+        # בדיקת הרשאות - מאפשרים כניסה לכל מנהל חברה
+        # ההרשאות יקבעו אילו כפתורים יהיו זמינים
+        valid_permissions = ['G', 'N', 'P', 'R', 'B']
+        has_valid_permission = any(perm in permissions for perm in valid_permissions) or permissions == 'B' or permissions == ''
+        
+        # אם אין הרשאות בכלל או הרשאות לא תקינות
+        if not has_valid_permission and permissions not in ['', 'B']:
+            print(f"⚠️ Invalid permissions for {session['user_email']}: {permissions}")
             return redirect(url_for('dashboard'))
         
         # שמירת נתונים ב-session לשימוש ב-API
@@ -2983,10 +3010,13 @@ def company_manager_get_parkings():
         
         # User data loaded
         
-        # בדיקת הרשאות
-        if 'R' not in permissions and 'P' not in permissions:
-            # No R or P permissions
-            return jsonify({'success': False, 'message': 'אין הרשאת דוחות'}), 403
+        # בדיקת הרשאות - מאפשרים גישה לכל מנהל חברה עם הרשאות תקינות
+        valid_permissions = ['G', 'N', 'P', 'R', 'B']
+        has_valid_permission = any(perm in permissions for perm in valid_permissions) or permissions == 'B' or permissions == ''
+        
+        if not has_valid_permission and permissions not in ['', 'B']:
+            # Invalid permissions
+            return jsonify({'success': False, 'message': 'הרשאות לא תקינות'}), 403
         
         # לא צריך לפענח את company_list כאן - זה חברות בתוך החניון, לא חניונים
         # company_list משמש למטרות אחרות (חברות בתוך החניון)
@@ -3086,9 +3116,12 @@ def company_manager_get_subscribers():
         user_permissions = session.get('user_permissions', '')
         company_list = session.get('user_company_list', '')
         
-        # בדיקת הרשאות
-        if 'R' not in user_permissions and 'P' not in user_permissions:
-            return jsonify({'success': False, 'message': 'אין הרשאת דוחות'}), 403
+        # בדיקת הרשאות - מאפשרים גישה לכל מנהל חברה עם הרשאות תקינות
+        valid_permissions = ['G', 'N', 'P', 'R', 'B']
+        has_valid_permission = any(perm in user_permissions for perm in valid_permissions) or user_permissions == 'B' or user_permissions == ''
+        
+        if not has_valid_permission and user_permissions not in ['', 'B']:
+            return jsonify({'success': False, 'message': 'הרשאות לא תקינות'}), 403
         
         # קבלת נתוני החניון כולל IP ופורט
         parking_result = supabase.table('parkings').select(
@@ -3859,10 +3892,19 @@ def company_manager_proxy():
                                     else:
                                         data = filtered
                         
-                        return jsonify({
+                        # Add success message for PUT/POST requests
+                        result = {
                             'success': True,
                             'data': data
-                        })
+                        }
+                        
+                        # Add appropriate message based on method
+                        if method == 'PUT':
+                            result['message'] = 'הנתונים עודכנו בהצלחה בשרת החניון'
+                        elif method == 'POST':
+                            result['message'] = 'הנתונים נשמרו בהצלחה בשרת החניון'
+                        
+                        return jsonify(result)
                     except Exception as e:
                         # Error parsing JSON
                         # אם זה לא JSON, החזר את הטקסט
