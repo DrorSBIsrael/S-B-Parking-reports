@@ -16,7 +16,7 @@ class ParkingAPIXML {
             password: '2022',
             timeout: 30000,
             useProxy: true,  // Always use proxy
-            currentParkingId: null
+            currentParkingId: '2'  // Default parking ID - will be updated dynamically
         };
         console.log('☁️ Using secure proxy connection');
         console.log('Parking API v2 initialized');
