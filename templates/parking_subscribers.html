@@ -3605,23 +3605,32 @@
         console.log('[Init] User permissions:', window.userPermissions);
     </script>
     
-    <script src="/static/js/config.js?v=20251216_fixed24"></script>
-    <script src="/static/js/parking-api-live.js?v=20251216_fixed24"></script>
-    <script src="/static/js/parking-ui-live.js?v=20251216_fixed24"></script>
+    <script src="/static/js/config.js?v=20251216_fixed25"></script>
+    <script src="/static/js/parking-api-live.js?v=20251216_fixed25"></script>
+    <script src="/static/js/parking-ui-live.js?v=20251216_fixed25"></script>
     
         <script>
         // Override init function to use XML API
         const originalInit = init;
         init = async function() {
+            console.log('[INIT] Starting init function...');
+            console.log('[INIT] window.parkingUIXML exists?', !!window.parkingUIXML);
+            console.log('[INIT] window.userCompanyList:', window.userCompanyList);
+            
             // Skip original init - we handle everything through parkingUIXML
-
+            
             // Use XML API integration
             if (window.parkingUIXML) {
-                console.log('XML API Integration available');
-                // Initialize parkingUIXML - it will handle everything
-                await window.parkingUIXML.initialize();
+                console.log('[INIT] XML API Integration available, initializing...');
+                try {
+                    // Initialize parkingUIXML - it will handle everything
+                    await window.parkingUIXML.initialize();
+                    console.log('[INIT] parkingUIXML initialized successfully');
+                } catch (error) {
+                    console.error('[INIT] Error initializing parkingUIXML:', error);
+                }
             } else {
-                console.error('parkingUIXML not available!');
+                console.error('[INIT] parkingUIXML not available! Falling back to original init');
                 originalInit();
             }
         };
@@ -3725,6 +3734,8 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('[DOM] DOMContentLoaded event fired');
+            
             // Load saved font size preference
             const savedFontSize = localStorage.getItem('preferredFontSize');
             if (savedFontSize) {
@@ -3740,6 +3751,10 @@
             
             // Update UI based on permissions
             setTimeout(updateUIPermissions, 100); // Small delay to ensure DOM is ready
+            
+            // Call init function - THIS WAS MISSING!
+            console.log('[DOM] Calling init()...');
+            init();
         });
     </script>
 </body>
