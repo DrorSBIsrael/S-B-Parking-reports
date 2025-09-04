@@ -1483,8 +1483,9 @@
                 case 'update_profile':
                     return permissions.includes('P'); // Profile updates
                 case 'view_reports':
+                    return permissions.includes('R'); // Reports only
                 case 'export':
-                    return permissions.includes('R'); // Reports
+                    return true; // Export always allowed
                 default:
                     return false;
             }
@@ -1543,20 +1544,13 @@
                 }
             }
             
-            // Export button
+            // Export button - always enabled
             const exportBtn = document.querySelector('button[onclick="exportToExcel()"]');
             if (exportBtn) {
-                if (!permissions.includes('R')) {
-                    exportBtn.disabled = true;
-                    exportBtn.title = 'אין הרשאה לייצא נתונים (דרושה הרשאת R)';
-                    exportBtn.style.opacity = '0.5';
-                    exportBtn.style.cursor = 'not-allowed';
-                } else {
-                    exportBtn.disabled = false;
-                    exportBtn.title = '';
-                    exportBtn.style.opacity = '1';
-                    exportBtn.style.cursor = 'pointer';
-                }
+                exportBtn.disabled = false;
+                exportBtn.title = '';
+                exportBtn.style.opacity = '1';
+                exportBtn.style.cursor = 'pointer';
             }
         }
 
@@ -3288,10 +3282,7 @@
 
         // Export to Excel
         function exportToExcel() {
-            if (!checkUserPermission('export')) {
-                showToast('אין לך הרשאה לייצא נתונים', 'error');
-                return;
-            }
+            // Export is always allowed - no permission check needed
             
             // Check if we have the UI integration
             if (window.parkingUIXML || window.parkingUI) {
@@ -3584,9 +3575,9 @@
         console.log('[Init] User permissions:', window.userPermissions);
     </script>
     
-    <script src="/static/js/config.js?v=20251216_fixed16"></script>
-    <script src="/static/js/parking-api-live.js?v=20251216_fixed16"></script>
-    <script src="/static/js/parking-ui-live.js?v=20251216_fixed16"></script>
+    <script src="/static/js/config.js?v=20251216_fixed18"></script>
+    <script src="/static/js/parking-api-live.js?v=20251216_fixed18"></script>
+    <script src="/static/js/parking-ui-live.js?v=20251216_fixed18"></script>
     
         <script>
         // Override init function to use XML API
