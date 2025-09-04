@@ -100,6 +100,20 @@
             transition: all 0.3s;
             white-space: nowrap;
         }
+        
+        .btn:disabled,
+        .btn[disabled] {
+            opacity: 0.5 !important;
+            cursor: not-allowed !important;
+            background-color: #cccccc !important;
+            color: #666666 !important;
+        }
+        
+        .btn:disabled:hover,
+        .btn[disabled]:hover {
+            opacity: 0.5 !important;
+            cursor: not-allowed !important;
+        }
 
         .btn-primary {
             background: var(--primary-color);
@@ -1473,6 +1487,76 @@
                     return permissions.includes('R'); // Reports
                 default:
                     return false;
+            }
+        }
+        
+        // Update button states based on permissions
+        function updateButtonPermissions() {
+            const permissions = getUserPermissions();
+            console.log('[updateButtonPermissions] Updating buttons based on permissions:', permissions);
+            
+            // Add New Subscriber button
+            const addNewBtn = document.querySelector('button[onclick="addNewSubscriber()"]');
+            if (addNewBtn) {
+                if (!permissions.includes('N')) {
+                    addNewBtn.disabled = true;
+                    addNewBtn.title = 'אין הרשאה להוסיף מנוי חדש (דרושה הרשאת N)';
+                    addNewBtn.style.opacity = '0.5';
+                    addNewBtn.style.cursor = 'not-allowed';
+                } else {
+                    addNewBtn.disabled = false;
+                    addNewBtn.title = '';
+                    addNewBtn.style.opacity = '1';
+                    addNewBtn.style.cursor = 'pointer';
+                }
+            }
+            
+            // Add Guest button
+            const addGuestBtn = document.querySelector('button[onclick="addGuestSubscriber()"]');
+            if (addGuestBtn) {
+                if (!permissions.includes('G')) {
+                    addGuestBtn.disabled = true;
+                    addGuestBtn.title = 'אין הרשאה להוסיף אורח (דרושה הרשאת G)';
+                    addGuestBtn.style.opacity = '0.5';
+                    addGuestBtn.style.cursor = 'not-allowed';
+                } else {
+                    addGuestBtn.disabled = false;
+                    addGuestBtn.title = '';
+                    addGuestBtn.style.opacity = '1';
+                    addGuestBtn.style.cursor = 'pointer';
+                }
+            }
+            
+            // Reports button
+            const reportsBtn = document.querySelector('button[onclick="openReportsModal()"]');
+            if (reportsBtn) {
+                if (!permissions.includes('R')) {
+                    reportsBtn.disabled = true;
+                    reportsBtn.title = 'אין הרשאה לצפות בדוחות (דרושה הרשאת R)';
+                    reportsBtn.style.opacity = '0.5';
+                    reportsBtn.style.cursor = 'not-allowed';
+                } else {
+                    reportsBtn.disabled = false;
+                    reportsBtn.title = '';
+                    reportsBtn.style.opacity = '1';
+                    reportsBtn.style.cursor = 'pointer';
+                }
+            }
+            
+            // Export button
+            const exportBtn = document.querySelector('button[onclick="exportToExcel()"]');
+            if (exportBtn) {
+                if (!permissions.includes('R')) {
+                    exportBtn.disabled = true;
+                    exportBtn.title = 'אין הרשאה לייצא נתונים (דרושה הרשאת R)';
+                    exportBtn.style.opacity = '0.5';
+                    exportBtn.style.cursor = 'not-allowed';
+                } else {
+                    exportBtn.disabled = false;
+                    exportBtn.title = '';
+                    exportBtn.style.opacity = '1';
+                    exportBtn.style.cursor = 'pointer';
+                }
             }
         }
 
@@ -3500,9 +3584,9 @@
         console.log('[Init] User permissions:', window.userPermissions);
     </script>
     
-    <script src="/static/js/config.js?v=20251216_fixed13"></script>
-    <script src="/static/js/parking-api-live.js?v=20251216_fixed13"></script>
-    <script src="/static/js/parking-ui-live.js?v=20251216_fixed13"></script>
+    <script src="/static/js/config.js?v=20251216_fixed16"></script>
+    <script src="/static/js/parking-api-live.js?v=20251216_fixed16"></script>
+    <script src="/static/js/parking-ui-live.js?v=20251216_fixed16"></script>
     
         <script>
         // Override init function to use XML API
@@ -3623,6 +3707,9 @@
                 const newSize = 13 + (currentFontSize * 1);
                 document.body.style.fontSize = newSize + 'px';
             }
+            
+            // Update button states based on permissions
+            updateButtonPermissions();
             
             loadCurrentUser();
             
