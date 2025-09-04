@@ -1053,6 +1053,9 @@
                     <button class="btn btn-primary action-btn" onclick="exportToExcel()">
                         <span data-translate="export">📥 ייצוא לאקסל</span>
                     </button>
+                    <button class="btn btn-secondary action-btn" id="reloadFullButton" onclick="reloadFullData()" style="display: none;">
+                        <span data-translate="reloadFull">🔄 טעינה מלאה</span>
+                    </button>
                 </div>
             </div>
 
@@ -1352,6 +1355,7 @@
                 addNew: '+ הוסף מנוי חדש',
                 addGuest: '+ הוסף אורח',
                 export: '📥 ייצוא לאקסל',
+                reloadFull: '🔄 טעינה מלאה',
                 searchPlaceholder: 'חיפוש לפי שם, מספר מנוי, מספר רכב...',
                 allPresence: 'הכל',
                 presentOnly: 'נוכחים בלבד',
@@ -2545,6 +2549,27 @@
                 console.log('[closeModal] Cleared modal data attributes');
             }
         }
+        
+        // Function to reload full data for large companies
+        async function reloadFullData() {
+            const ui = window.parkingUIXML || window.parkingUI;
+            if (!ui || !ui.currentContract) {
+                alert('אנא בחר חברה תחילה');
+                return;
+            }
+            
+            // Show loading notification
+            ui.showNotification('🔄 טוען את כל נתוני המנויים...', 'info');
+            
+            try {
+                // Force reload with full details
+                await ui.loadSubscribers(true); // Force full reload
+                ui.showNotification('✅ כל הנתונים נטענו בהצלחה', 'success');
+            } catch (error) {
+                console.error('Error reloading full data:', error);
+                ui.showNotification('❌ שגיאה בטעינת הנתונים', 'error');
+            }
+        }
 
         // Setup event listeners
         function setupEventListeners() {
@@ -3475,9 +3500,9 @@
         console.log('[Init] User permissions:', window.userPermissions);
     </script>
     
-    <script src="/static/js/config.js?v=20251216_fixed11"></script>
-    <script src="/static/js/parking-api-live.js?v=20251216_fixed11"></script>
-    <script src="/static/js/parking-ui-live.js?v=20251216_fixed11"></script>
+    <script src="/static/js/config.js?v=20251216_fixed12"></script>
+    <script src="/static/js/parking-api-live.js?v=20251216_fixed12"></script>
+    <script src="/static/js/parking-ui-live.js?v=20251216_fixed12"></script>
     
         <script>
         // Override init function to use XML API
