@@ -3270,11 +3270,15 @@ def company_manager_proxy():
         ).eq('id', parking_id).execute()
         
         if not parking_result.data:
-            return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
-        
-        parking_data = parking_result.data[0]
-        ip_address = parking_data.get('ip_address')
-        port = parking_data.get('port', 443)
+            # Fallback for company-based access without specific parking
+            print(f"   ⚠️ Parking {parking_id} not found, using default server")
+            # Use default server for company-based access
+            ip_address = '192.117.0.122'  # Production server
+            port = 8240
+        else:
+            parking_data = parking_result.data[0]
+            ip_address = parking_data.get('ip_address')
+            port = parking_data.get('port', 443)
         
         # בדיקה אם אנחנו בסביבת פיתוח או production
         is_local_dev = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
