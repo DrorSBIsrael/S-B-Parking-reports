@@ -3454,7 +3454,7 @@
             document.getElementById('noTransactions').style.display = 'none';
             
             try {
-                const api = window.parkingAPIXML || new ParkingAPIXML();
+                const api = window.parkingAPIXML;
                 const url = `/consumers/${currentTransactionCompany},${currentTransactionSubscriber}/parktrans?minDate=${startDate}&maxDate=${endDate}`;
                 
                 const result = await api.makeRequest(url);
@@ -3605,20 +3605,24 @@
         console.log('[Init] User permissions:', window.userPermissions);
     </script>
     
-    <script src="/static/js/config.js?v=20251216_fixed22"></script>
-    <script src="/static/js/parking-api-live.js?v=20251216_fixed22"></script>
-    <script src="/static/js/parking-ui-live.js?v=20251216_fixed22"></script>
+    <script src="/static/js/config.js?v=20251216_fixed24"></script>
+    <script src="/static/js/parking-api-live.js?v=20251216_fixed24"></script>
+    <script src="/static/js/parking-ui-live.js?v=20251216_fixed24"></script>
     
         <script>
         // Override init function to use XML API
         const originalInit = init;
         init = async function() {
-            originalInit();
+            // Skip original init - we handle everything through parkingUIXML
 
             // Use XML API integration
             if (window.parkingUIXML) {
-                console.log('XML API Integration available, connecting to parking server');
-                // The parkingUIXML will handle loading companies and subscribers
+                console.log('XML API Integration available');
+                // Initialize parkingUIXML - it will handle everything
+                await window.parkingUIXML.initialize();
+            } else {
+                console.error('parkingUIXML not available!');
+                originalInit();
             }
         };
 
