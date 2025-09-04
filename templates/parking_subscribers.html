@@ -2499,26 +2499,17 @@
                 await window.parkingUIXML.loadUsageProfiles(true); // true = new subscriber
             }
             
-            // Get dates
-            const today = new Date();
+            // Get tomorrow's date
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
+            const tomorrowStr = formatDateForDisplay(tomorrow.toISOString().split('T')[0]);
             
-            let startDateStr, defaultEndDateStr;
-            
+            // Default dates
+            let defaultEndDateStr;
             if (isGuest) {
-                // Guest - start today, end on Saturday of current week
-                startDateStr = formatDateForDisplay(today.toISOString().split('T')[0]);
-                
-                // Calculate end of week (Saturday)
-                const dayOfWeek = today.getDay();
-                const daysUntilSaturday = (6 - dayOfWeek + 7) % 7 || 7; // If it's Saturday, use next Saturday
-                const saturday = new Date(today);
-                saturday.setDate(today.getDate() + daysUntilSaturday);
-                defaultEndDateStr = formatDateForDisplay(saturday.toISOString().split('T')[0]);
+                // Guest - Same day as start date (for same week limitation)
+                defaultEndDateStr = tomorrowStr;
             } else {
-                // Regular subscriber - start tomorrow
-                startDateStr = formatDateForDisplay(tomorrow.toISOString().split('T')[0]);
                 // Regular subscriber - until end of current year
                 const currentYear = new Date().getFullYear();
                 defaultEndDateStr = `31/12/${currentYear}`;
@@ -2557,7 +2548,7 @@
             document.getElementById('editVehicle1').value = '';
             document.getElementById('editVehicle2').value = '';
             document.getElementById('editVehicle3').value = '';
-            document.getElementById('editValidFrom').value = startDateStr;
+            document.getElementById('editValidFrom').value = tomorrowStr;
             document.getElementById('editValidUntil').value = defaultEndDateStr;
             // Profile will be set by loadUsageProfiles based on company profiles
             // document.getElementById('editProfile').value = '1'; // Will be set automatically
@@ -3454,7 +3445,7 @@
             document.getElementById('noTransactions').style.display = 'none';
             
             try {
-                const api = window.parkingAPIXML;
+                const api = window.parkingAPIXML || new ParkingAPIXML();
                 const url = `/consumers/${currentTransactionCompany},${currentTransactionSubscriber}/parktrans?minDate=${startDate}&maxDate=${endDate}`;
                 
                 const result = await api.makeRequest(url);
@@ -3605,33 +3596,20 @@
         console.log('[Init] User permissions:', window.userPermissions);
     </script>
     
-    <script src="/static/js/config.js?v=20251216_fixed27"></script>
-    <script src="/static/js/parking-api-live.js?v=20251216_fixed27"></script>
-    <script src="/static/js/parking-ui-live.js?v=20251216_fixed27"></script>
+    <script src="/static/js/config.js?v=20251216_fixed20"></script>
+    <script src="/static/js/parking-api-live.js?v=20251216_fixed20"></script>
+    <script src="/static/js/parking-ui-live.js?v=20251216_fixed20"></script>
     
         <script>
         // Override init function to use XML API
         const originalInit = init;
         init = async function() {
-            console.log('[INIT] Starting init function...');
-            console.log('[INIT] window.parkingUIXML exists?', !!window.parkingUIXML);
-            console.log('[INIT] window.userCompanyList:', window.userCompanyList);
-            
-            // Skip original init - we handle everything through parkingUIXML
-            
+            originalInit();
+
             // Use XML API integration
             if (window.parkingUIXML) {
-                console.log('[INIT] XML API Integration available, initializing...');
-                try {
-                    // Initialize parkingUIXML - it will handle everything
-                    await window.parkingUIXML.initialize();
-                    console.log('[INIT] parkingUIXML initialized successfully');
-                } catch (error) {
-                    console.error('[INIT] Error initializing parkingUIXML:', error);
-                }
-            } else {
-                console.error('[INIT] parkingUIXML not available! Falling back to original init');
-                originalInit();
+                console.log('XML API Integration available, connecting to parking server');
+                // The parkingUIXML will handle loading companies and subscribers
             }
         };
 
@@ -3734,8 +3712,6 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('[DOM] DOMContentLoaded event fired');
-            
             // Load saved font size preference
             const savedFontSize = localStorage.getItem('preferredFontSize');
             if (savedFontSize) {
@@ -3751,10 +3727,6 @@
             
             // Update UI based on permissions
             setTimeout(updateUIPermissions, 100); // Small delay to ensure DOM is ready
-            
-            // Call init function - THIS WAS MISSING!
-            console.log('[DOM] Calling init()...');
-            init();
         });
     </script>
 </body>
