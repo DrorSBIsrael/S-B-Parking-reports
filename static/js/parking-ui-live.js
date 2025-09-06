@@ -1586,6 +1586,10 @@ class ParkingUIIntegrationXML {
         const tbody = document.getElementById('subscribersTableBody');
         if (!tbody) return;
         
+        // Check if user can edit subscribers (for permission display)
+        const permissions = window.userPermissions || '';
+        const canEdit = permissions !== 'B' && permissions !== '';
+        
         // Ensure the actions column header exists
         const tableHead = document.querySelector('#subscribersTable thead tr');
         if (tableHead && !tableHead.querySelector('th[data-translate="actions"]')) {
