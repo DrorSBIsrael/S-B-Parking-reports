@@ -1935,15 +1935,15 @@ class ParkingUIIntegrationXML {
                     consumer: {
                         id: subscriberData.subscriberNum,
                         contractid: this.currentContract.id,
-                        name: subscriberData.lastName || subscriberData.surname || '',
+                        name: `${subscriberData.lastName || ''} ${subscriberData.firstName || ''}`.trim() || '',
                         // Send dates with timezone
                         xValidFrom: formatDateWithTimezone(subscriberData.validFrom),
                         xValidUntil: formatDateWithTimezone(subscriberData.validUntil),
                         filialId: this.currentContract.filialId || '2228'  // Add filialId
                     },
                     person: {
-                        firstName: subscriberData.firstName || '',
-                        surname: subscriberData.lastName || subscriberData.surname || ''
+                        firstName: (subscriberData.firstName || '').trim(),
+                        surname: (subscriberData.lastName || subscriberData.surname || '').trim()
                     },
                     identification: {
                         ptcptType: '2',  // Required field from documentation
@@ -1996,14 +1996,14 @@ class ParkingUIIntegrationXML {
                     consumer: {
                         id: '',  // Empty for new subscriber
                         contractid: this.currentContract.id,
-                        name: subscriberData.lastName || subscriberData.surname || '',
+                        name: `${subscriberData.lastName || ''} ${subscriberData.firstName || ''}`.trim() || '',
                         xValidFrom: formatDateWithTimezone(subscriberData.validFrom),
                         xValidUntil: formatDateWithTimezone(subscriberData.validUntil),
                         filialId: this.currentContract.filialId || '2228'
                     },
                     person: {
-                        firstName: subscriberData.firstName || subscriberData.lastName || 'Unknown',
-                        surname: subscriberData.lastName || subscriberData.surname || subscriberData.firstName || 'Unknown'
+                        firstName: (subscriberData.firstName || '').trim() || 'Unknown',
+                        surname: (subscriberData.lastName || subscriberData.surname || '').trim() || 'Unknown'
                     },
                 identification: {
                     ptcptType: '2',
