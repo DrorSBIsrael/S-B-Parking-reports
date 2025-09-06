@@ -375,7 +375,7 @@ class ParkingUIIntegrationXML {
                 const companies = filteredContracts.map(contract => {
                     // Extract values from XML structure (they come as {#text: "value"})
                     const id = contract.id?.['#text'] || contract.id || '';
-                    const name = contract.name?.['#text'] || contract.name || `חברה ${id}`;
+                    const name = contract.name?.['#text'] || contract.name || '';
                     
                     return {
                         id: id,
@@ -439,7 +439,7 @@ class ParkingUIIntegrationXML {
             // Start with basic info
             card.innerHTML = `
                 <div class="company-header">
-                    <h3>${company.name || company.companyName} <span style="color: #666; font-size: 0.9em;">[${company.id}]</span></h3>
+                    <h3>${company.name || company.companyName || this.currentParking?.name || 'פלאזה'} <span style="color: #666; font-size: 0.9em;">[${company.id}]</span></h3>
                     <span class="company-number">#${company.id}</span>
                 </div>
                 <div class="stats-row">
@@ -674,9 +674,14 @@ class ParkingUIIntegrationXML {
      */
     async selectCompany(company) {
         // Store the full company object with correct name
+        // If no name, use the parking name or a default
+        const contractName = company.name || company.firstName || company.companyName || 
+                            this.currentParking?.name || 'פלאזה';
+        
         this.currentContract = {
             ...company,
-            name: company.name || company.firstName || company.companyName || `חברה ${company.id}`,
+            name: contractName,
+            parkingName: this.currentParking?.name || contractName,
             filialId: company.filialId || '2228'  // Default filialId
         };
         
@@ -2002,8 +2007,8 @@ class ParkingUIIntegrationXML {
                         filialId: this.currentContract.filialId || '2228'
                     },
                     person: {
-                        firstName: (subscriberData.firstName || '').trim() || 'Unknown',
-                        surname: (subscriberData.lastName || subscriberData.surname || '').trim() || 'Unknown'
+                        firstName: (subscriberData.firstName || '').trim(),
+                        surname: (subscriberData.lastName || subscriberData.surname || '').trim()
                     },
                 identification: {
                     ptcptType: '2',
@@ -2077,6 +2082,7 @@ class ParkingUIIntegrationXML {
                         consumerData.consumer.id = '';
                         console.log(`[saveSubscriber] Creating regular subscriber - server will assign ID`);
                         console.log(`[saveSubscriber] Found ${companySubscribers.length} existing subscribers`);
+                        console.log(`[saveSubscriber] Current contract name: "${this.currentContract.name}"`);
                     }
                 } else {
                     // Use provided subscriber number
