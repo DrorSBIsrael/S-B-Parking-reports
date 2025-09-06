@@ -4466,8 +4466,9 @@ def send_guest_email():
                         </ul>
                     </div>
                     
-                    <p style="font-size: 14px; color: #6c757d;">
-                        נא להציג הרשאה זו בכניסה לחניון במידת הצורך.
+                    <p style="font-size: 16px; color: #6c757d;">
+                        נא להציג הרשאה זו בכניסה לחניון במידת הצורך.<br>
+	             החניה במקומות המסומנים לחברה בלבד
                     </p>
                     
                     <hr style="margin: 30px 0; border: none; border-top: 1px solid #dee2e6;">
