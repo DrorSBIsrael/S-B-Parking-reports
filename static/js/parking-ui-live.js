@@ -959,6 +959,8 @@ class ParkingUIIntegrationXML {
                 this.showNotification('לא נמצאו מנויים לחברה זו', 'warning');
                 this.subscribers = [];
                 this.displaySubscribers([]);
+                // Make sure loading is cleared
+                this.setLoading(false, 'loadingState');
             }
         } catch (error) {
             console.error('Error loading subscribers:', error);
@@ -967,14 +969,16 @@ class ParkingUIIntegrationXML {
             this.displaySubscribers([]);
             // Hide progress message on error
             this.hideProgressMessage();
+            // Make sure loading is cleared on error
+            this.setLoading(false, 'loadingState');
         } finally {
             // Don't hide progress message here - let the onProgress callback handle it
             // this.hideProgressMessage();
             // Also hide the background loading message
             this.hideBackgroundProgress();
             
-            // Set loading state to false
-            this.setLoading(false, 'loadingState');
+            // Don't set loading state to false here - let displaySubscribers handle it
+            // for proper timing with batch rendering
         }
     }
     
@@ -1717,6 +1721,20 @@ class ParkingUIIntegrationXML {
                 }
                 tbody.appendChild(fragment);
                 console.log(`[displaySubscribers] Finished rendering ${subscribers.length} subscribers in ${currentBatch + 1} batches`);
+                
+                // Clear loading state after all batches are done
+                this.setLoading(false, 'loadingState');
+                this.hideProgressMessage();
+                this.hideBackgroundProgress();
+                
+                // Make sure table is visible
+                const tableContainer = document.getElementById('tableContainer');
+                if (tableContainer) {
+                    tableContainer.style.display = 'block';
+                }
+                
+                // Show completion message
+                this.showNotification(`✅ נטענו ${subscribers.length} מנויים`, 'success', 3000);
             }
         };
         
@@ -1785,8 +1803,13 @@ class ParkingUIIntegrationXML {
                     <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                     <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
-            tbody.appendChild(row);
-        });
+                tbody.appendChild(row);
+            });
+            
+            // Clear loading state for smaller companies
+            this.setLoading(false, 'loadingState');
+            this.hideProgressMessage();
+            this.hideBackgroundProgress();
         }
     }
     
