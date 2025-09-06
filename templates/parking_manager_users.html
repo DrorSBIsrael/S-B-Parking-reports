@@ -333,6 +333,47 @@
 	        <option value="single_parking">גישה לחניון בלבד</option>
  	   </select>
 	</div>
+	
+	<div class="form-group">
+	    <label>הרשאות משתמש</label>
+	    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+	        <label style="display: flex; align-items: center; font-weight: normal;">
+	            <input type="checkbox" name="permissions" value="G" style="width: auto; margin-left: 5px;">
+	            <span>G - יצירת אורחים</span>
+	        </label>
+	        <label style="display: flex; align-items: center; font-weight: normal;">
+	            <input type="checkbox" name="permissions" value="N" style="width: auto; margin-left: 5px;">
+	            <span>N - יצירת מנויים חדשים</span>
+	        </label>
+	        <label style="display: flex; align-items: center; font-weight: normal;">
+	            <input type="checkbox" name="permissions" value="P" style="width: auto; margin-left: 5px;">
+	            <span>P - עדכון פרופילים</span>
+	        </label>
+	        <label style="display: flex; align-items: center; font-weight: normal;">
+	            <input type="checkbox" name="permissions" value="R" style="width: auto; margin-left: 5px;">
+	            <span>R - צפייה בדוחות</span>
+	        </label>
+	        <label style="display: flex; align-items: center; font-weight: normal;">
+	            <input type="checkbox" name="permissions" value="T" style="width: auto; margin-left: 5px;">
+	            <span>T - עריכת מספר תג</span>
+	        </label>
+	        <label style="display: flex; align-items: center; font-weight: normal;">
+	            <input type="checkbox" name="permissions" value="1" style="width: auto; margin-left: 5px;">
+	            <span>1 - עריכת רכב 1 בלבד</span>
+	        </label>
+	        <label style="display: flex; align-items: center; font-weight: normal;">
+	            <input type="checkbox" name="permissions" value="2" style="width: auto; margin-left: 5px;">
+	            <span>2 - עריכת רכבים 1-2</span>
+	        </label>
+	        <label style="display: flex; align-items: center; font-weight: normal;">
+	            <input type="checkbox" name="permissions" value="3" style="width: auto; margin-left: 5px;">
+	            <span>3 - עריכת כל הרכבים</span>
+	        </label>
+	    </div>
+	    <small style="color: #6c757d; font-size: 12px; margin-top: 10px; display: block;">
+	        ללא בחירה, המשתמש יקבל הרשאת B (בסיס) - צפייה ועריכה בסיסית בלבד
+	    </small>
+	</div>
                     
                     <button type="submit" class="btn btn-primary" id="createBtn">
                         ✅ הוסף משתמש לחניון
@@ -355,6 +396,7 @@
                                 <th>אימייל</th>
                                 <th>תפקיד</th>
                                 <th>רמת גישה</th>
+                                <th>הרשאות</th>
                                 <th>תאריך יצירה</th>
                                 <th>סטטוס</th>
                             </tr>
@@ -370,6 +412,29 @@
     <script>
         let parkingInfo = null;
         let allUsers = [];
+        
+        // Format permissions for display
+        function formatPermissions(permissions) {
+            if (!permissions || permissions === 'B') {
+                return 'B (בסיס)';
+            }
+            
+            const permMap = {
+                'G': 'אורח',
+                'N': 'מנוי חדש',
+                'P': 'פרופיל',
+                'R': 'דוחות',
+                'T': 'תג',
+                '1': 'רכב 1',
+                '2': 'רכבים 1-2',
+                '3': 'כל הרכבים',
+                'B': 'בסיס'
+            };
+            
+            const permArray = permissions.split('');
+            const formatted = permArray.map(p => permMap[p] || p).join(', ');
+            return formatted;
+        }
         
         // טעינת נתוני החניון ורשימת המשתמשים
         async function loadParkingInfo() {
@@ -406,7 +471,7 @@
             tbody.innerHTML = '';
             
             if (users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #6c757d;">אין משתמשים עדיין בחניון זה</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #6c757d;">אין משתמשים עדיין בחניון זה</td></tr>';
                 return;
             }
             
@@ -418,11 +483,16 @@
                 
                 const createdDate = new Date(user.created_at).toLocaleDateString('he-IL');
                 
+                // Format permissions display
+                const permissions = user.permissions || 'B';
+                const permissionDisplay = formatPermissions(permissions);
+                
                 row.innerHTML = `
                     <td><strong>${user.username}</strong></td>
                     <td>${user.email}</td>
                     <td>${user.role}</td>
                     <td>${user.access_level}</td>
+                    <td>${permissionDisplay}</td>
                     <td>${createdDate}</td>
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                 `;
@@ -451,11 +521,23 @@
             createBtn.disabled = true;
             
             const formData = new FormData(e.target);
+	
+	// Collect selected permissions
+	const permissions = [];
+	const permissionCheckboxes = document.querySelectorAll('input[name="permissions"]:checked');
+	permissionCheckboxes.forEach(checkbox => {
+	    permissions.push(checkbox.value);
+	});
+	
+	// If no permissions selected, default to 'B'
+	const permissionsString = permissions.length > 0 ? permissions.join('') : 'B';
+	
 	const userData = {
 	    username: formData.get('username'),
 	    email: formData.get('email'),
 	    access_level: formData.get('accessLevel'),
-	    company_list: formData.get('companyList')
+	    company_list: formData.get('companyList'),
+	    permissions: permissionsString
 	};
             
             try {
