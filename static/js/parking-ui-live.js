@@ -377,10 +377,16 @@ class ParkingUIIntegrationXML {
                     const id = contract.id?.['#text'] || contract.id || '';
                     const name = contract.name?.['#text'] || contract.name || '';
                     
+                    // Debug: log what we got
+                    if (id === '2') {
+                        console.log('[DEBUG] Contract 2 raw data:', contract);
+                        console.log('[DEBUG] Contract 2 name:', name);
+                    }
+                    
                     return {
                         id: id,
-                        name: name,
-                        companyName: name,
+                        name: name || this.currentParking?.name || `חברה ${id}`,  // Use parking name as fallback
+                        companyName: name || this.currentParking?.name || `חברה ${id}`,  // Use parking name as fallback
                         subscribersCount: 0
                     };
                 });
@@ -696,6 +702,11 @@ class ParkingUIIntegrationXML {
         if (event && event.currentTarget) {
             event.currentTarget.classList.add('selected');
         }
+        
+        // Log company name for debugging
+        console.log(`[selectCompany] Selected company: ${company.id} - "${contractName}"`);
+        console.log(`[selectCompany] currentContract.name set to: "${this.currentContract.name}"`);
+        console.log(`[selectCompany] Original company object:`, company);
         
         // Hide company selector if only one company
         const companySelector = document.getElementById('companySelector');
@@ -2103,8 +2114,8 @@ class ParkingUIIntegrationXML {
                         consumerData.consumer.id = result.data.id;
                         console.log(`[saveSubscriber] Server assigned ID: ${result.data.id}`);
                     }
-                    // Send email notification if email provided for guest
-                    if ((subscriberData.isGuest || subscriberData.profile === 'guest' || subscriberData.firstName === 'אורח') && subscriberData.email) {
+                    // Send email notification if email provided
+                    if (subscriberData.email) {
                         console.log(`Sending email notification to: ${subscriberData.email}`);
                         try {
                             const emailResponse = await fetch('/api/company-manager/send-guest-email', {
@@ -2327,6 +2338,39 @@ class ParkingUIIntegrationXML {
                     
                     // Update counts in header
                     this.updatePresentCount();
+                }
+                
+                // Send email notification if email provided (for updates too)
+                if (!isReallyNew && subscriberData.email && result.success) {
+                    console.log(`Sending email notification for updated subscriber to: ${subscriberData.email}`);
+                    try {
+                        const emailResponse = await fetch('/api/company-manager/send-guest-email', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                email: subscriberData.email,
+                                name: `${subscriberData.lastName || ''} ${subscriberData.firstName || ''}`.trim() || 'מנוי',
+                                validFrom: subscriberData.validFrom,
+                                validUntil: subscriberData.validUntil,
+                                parkingName: this.currentParking?.name || this.currentContract.parkingName || this.currentContract.name || 'החניון',
+                                companyName: this.currentContract.name || '',
+                                vehicleNumber: subscriberData.vehicle1 || ''
+                            })
+                        });
+                        const emailResult = await emailResponse.json();
+                        if (emailResult.success) {
+                            console.log('Email sent successfully');
+                            showToast('מייל אישור נשלח למנוי', 'success');
+                        } else {
+                            console.error('Failed to send email:', emailResult.message);
+                            // Don't show error for updates - email is optional
+                        }
+                    } catch (emailError) {
+                        console.error('Error sending email:', emailError);
+                        // Don't show error for updates - email is optional
+                    }
                 }
                 
                 return true;
