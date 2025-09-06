@@ -373,7 +373,7 @@ class ParkingAPIXML {
                 subscriberNum: consumer.id || consumer.subscriberNum,
                 contractId: companyId,
                 companyNum: companyId,
-                companyName: callbacks.companyName || `חברה ${companyId}`,  // Will be passed from UI
+                companyName: callbacks.companyName || '',  // Will be passed from UI
                 
                 // Names - don't duplicate if only last name exists
                 firstName: consumer.firstName || '',
