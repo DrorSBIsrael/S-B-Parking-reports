@@ -1553,6 +1553,75 @@
                 exportBtn.style.opacity = '1';
                 exportBtn.style.cursor = 'pointer';
             }
+            
+            // Update vehicle fields based on permissions (1, 2, or 3)
+            const vehicle1 = document.getElementById('editVehicle1');
+            const vehicle2 = document.getElementById('editVehicle2');
+            const vehicle3 = document.getElementById('editVehicle3');
+            
+            // Check for vehicle permissions (1, 2, or 3)
+            const hasVehicle1 = permissions.includes('1') || permissions.includes('2') || permissions.includes('3');
+            const hasVehicle2 = permissions.includes('2') || permissions.includes('3');
+            const hasVehicle3 = permissions.includes('3');
+            
+            // Apply vehicle field permissions
+            if (vehicle1) {
+                if (!hasVehicle1) {
+                    vehicle1.disabled = true;
+                    vehicle1.style.opacity = '0.5';
+                    vehicle1.style.cursor = 'not-allowed';
+                    vehicle1.title = 'אין הרשאה לערוך רכב 1';
+                } else {
+                    vehicle1.disabled = false;
+                    vehicle1.style.opacity = '1';
+                    vehicle1.style.cursor = 'text';
+                    vehicle1.title = '';
+                }
+            }
+            
+            if (vehicle2) {
+                if (!hasVehicle2) {
+                    vehicle2.disabled = true;
+                    vehicle2.style.opacity = '0.5';
+                    vehicle2.style.cursor = 'not-allowed';
+                    vehicle2.title = 'אין הרשאה לערוך רכב 2 (דרושה הרשאת 2 או 3)';
+                } else {
+                    vehicle2.disabled = false;
+                    vehicle2.style.opacity = '1';
+                    vehicle2.style.cursor = 'text';
+                    vehicle2.title = '';
+                }
+            }
+            
+            if (vehicle3) {
+                if (!hasVehicle3) {
+                    vehicle3.disabled = true;
+                    vehicle3.style.opacity = '0.5';
+                    vehicle3.style.cursor = 'not-allowed';
+                    vehicle3.title = 'אין הרשאה לערוך רכב 3 (דרושה הרשאת 3)';
+                } else {
+                    vehicle3.disabled = false;
+                    vehicle3.style.opacity = '1';
+                    vehicle3.style.cursor = 'text';
+                    vehicle3.title = '';
+                }
+            }
+            
+            // Update tag field based on T permission
+            const tagField = document.getElementById('editTagNum');
+            if (tagField) {
+                if (!permissions.includes('T')) {
+                    tagField.disabled = true;
+                    tagField.style.opacity = '0.5';
+                    tagField.style.cursor = 'not-allowed';
+                    tagField.title = 'אין הרשאה לערוך מספר תג (דרושה הרשאת T)';
+                } else {
+                    tagField.disabled = false;
+                    tagField.style.opacity = '1';
+                    tagField.style.cursor = 'text';
+                    tagField.title = '';
+                }
+            }
         }
 
         // Sorting variables
@@ -1915,6 +1984,9 @@
                     modalActions.style.visibility = 'visible';
                     modalActions.style.opacity = '1';
                 }
+                
+                // Update field permissions after modal is open
+                updateButtonPermissions();
             }, 10);
         }
 
@@ -2558,6 +2630,10 @@
             if (isGuest) {
                 document.getElementById('editVehicle2').disabled = true;
                 document.getElementById('editVehicle3').disabled = true;
+                document.getElementById('editVehicle2').style.opacity = '0.5';
+                document.getElementById('editVehicle3').style.opacity = '0.5';
+                document.getElementById('editVehicle2').style.cursor = 'not-allowed';
+                document.getElementById('editVehicle3').style.cursor = 'not-allowed';
                 
                 // Add guest mode indicator to modal
                 document.getElementById('editModal').classList.add('guest-mode');
@@ -2629,6 +2705,9 @@
                     modalActions.style.visibility = 'visible';
                     modalActions.style.opacity = '1';
                 }
+                
+                // Update field permissions after modal is open
+                updateButtonPermissions();
             }, 10);
         }
 
