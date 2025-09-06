@@ -1615,7 +1615,7 @@ class ParkingUIIntegrationXML {
         tbody.innerHTML = '';
         
         // For very large lists, use DocumentFragment for better performance
-        const fragment = document.createDocumentFragment();
+        let fragment = document.createDocumentFragment();
         const isVeryLarge = subscribers.length > 500;
         
         if (isVeryLarge) {
