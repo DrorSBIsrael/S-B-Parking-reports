@@ -3328,8 +3328,10 @@ def company_manager_proxy():
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{clean_endpoint}"
             print(f"   ✅ DIRECT CONTRACT-SPECIFIC URL: {url}")
             print(f"   📍 Clean endpoint: {clean_endpoint}")
+            print(f"   📍 Method: {method}")
             print(f"   📍 Full URL: {url}")
-            method = 'GET'
+            # Don't override method for POST requests!
+            # method = 'GET'
         elif 'consumers' in endpoint.lower() and '/detail' not in endpoint:
             # Check if we have a contractId in payload to filter by
             contract_id = payload.get('contractId') if payload else None
@@ -3976,7 +3978,9 @@ def company_manager_proxy():
                             result['message'] = 'הנתונים נשמרו בהצלחה בשרת החניון'
                             # For consumer creation, check if we got a created ID
                             if 'contracts' in endpoint and 'consumers' in endpoint:
-                                print(f"   🆕 Consumer creation response: {response.text[:500]}")
+                                print(f"   🆕 Consumer creation response status: {response.status_code}")
+                                print(f"   🆕 Consumer creation response: {response.text[:1000]}")
+                                print(f"   🆕 Response content-type: {response.headers.get('content-type', 'unknown')}")
                                 # Try to extract ID from response if exists
                                 try:
                                     import xml.etree.ElementTree as ET
@@ -3993,8 +3997,14 @@ def company_manager_proxy():
                                             if id_elem is not None and id_elem.text:
                                                 result['data'] = {'id': id_elem.text}
                                                 print(f"   🆕 New consumer ID from server: {id_elem.text}")
-                                except:
-                                    pass
+                                            else:
+                                                print(f"   ⚠️ No ID found in consumer element")
+                                        else:
+                                            print(f"   ⚠️ No consumer element found in response")
+                                    else:
+                                        print(f"   ⚠️ Response is not XML")
+                                except Exception as e:
+                                    print(f"   ❌ Error parsing creation response: {str(e)}")
                         
                         return jsonify(result)
                     except Exception as e:
