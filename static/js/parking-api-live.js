@@ -323,6 +323,8 @@ class ParkingAPIXML {
                 const filtered = consumersArray.filter(c => 
                     c.contractId === companyId || 
                     c.contractId === String(companyId) ||
+                    c.contractid === companyId ||  // lowercase version
+                    c.contractid === String(companyId) ||  // lowercase version
                     c.contract === companyId ||
                     c.contract === String(companyId) ||
                     c.contractNum === companyId ||
