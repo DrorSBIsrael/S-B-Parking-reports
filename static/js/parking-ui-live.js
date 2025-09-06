@@ -982,7 +982,6 @@ class ParkingUIIntegrationXML {
             setTimeout(() => {
                 const progressMsg = document.getElementById('progressMessage');
                 if (progressMsg && progressMsg.style.display !== 'none') {
-                    console.log('[loadSubscribers] Force removing stuck progress message');
                     this.hideProgressMessage();
                     this.setLoading(false, 'loadingState');
                 }
@@ -1269,7 +1268,6 @@ class ParkingUIIntegrationXML {
      * Show progress message
      */
     showProgressMessage(message) {
-        console.log('[showProgressMessage] Showing:', message);
         let progressDiv = document.getElementById('progressMessage');
         if (!progressDiv) {
             progressDiv = document.createElement('div');
@@ -1299,15 +1297,11 @@ class ParkingUIIntegrationXML {
      * Hide progress message
      */
     hideProgressMessage() {
-        console.log('[hideProgressMessage] Hiding progress message');
         const progressDiv = document.getElementById('progressMessage');
         if (progressDiv) {
-            console.log('[hideProgressMessage] Found progressDiv, removing it');
             progressDiv.style.display = 'none';
             // Also try to remove it completely to avoid issues
             progressDiv.remove();
-        } else {
-            console.log('[hideProgressMessage] No progressDiv found');
         }
     }
     
@@ -1724,8 +1718,10 @@ class ParkingUIIntegrationXML {
                     if (currentBatch === 1) {
                         tbody.innerHTML = '';
                     }
-                    tbody.appendChild(fragment.cloneNode(true));
-                    fragment.innerHTML = '';
+                    // Don't use cloneNode - it doesn't copy event listeners!
+                    tbody.appendChild(fragment);
+                    // Create new fragment for next batch
+                    fragment = document.createDocumentFragment();
                 }
                 // Schedule next batch
                 setTimeout(renderBatch, 10);
@@ -1738,7 +1734,6 @@ class ParkingUIIntegrationXML {
                 console.log(`[displaySubscribers] Finished rendering ${subscribers.length} subscribers in ${currentBatch + 1} batches`);
                 
                 // Clear loading state after all batches are done
-                console.log('[displaySubscribers] Clearing all loading states...');
                 this.setLoading(false, 'loadingState');
                 this.hideProgressMessage();
                 this.hideBackgroundProgress();
@@ -1746,34 +1741,23 @@ class ParkingUIIntegrationXML {
                 // Force remove any loading overlays
                 const loadingState = document.getElementById('loadingState');
                 if (loadingState) {
-                    console.log('[displaySubscribers] Force hiding loadingState');
                     loadingState.style.display = 'none';
                 }
                 
                 const progressMsg = document.getElementById('progressMessage');
                 if (progressMsg) {
-                    console.log('[displaySubscribers] Force removing progressMessage');
                     progressMsg.remove();
                 }
                 
                 // Make sure table is visible
                 const tableContainer = document.getElementById('tableContainer');
                 if (tableContainer) {
-                    console.log('[displaySubscribers] Making tableContainer visible');
                     tableContainer.style.display = 'block';
                 }
                 
                 // Show completion message
                 this.showNotification(`✅ נטענו ${subscribers.length} מנויים`, 'success', 3000);
                 
-                // Debug: check what's visible
-                setTimeout(() => {
-                    const allLoadingElements = document.querySelectorAll('.loading, #loadingState, #progressMessage, [id*="loading"], [class*="loading"]');
-                    console.log('[displaySubscribers] Found loading elements:', allLoadingElements.length);
-                    allLoadingElements.forEach(el => {
-                        console.log('[displaySubscribers] Loading element:', el.id || el.className, 'display:', el.style.display, 'visibility:', el.style.visibility);
-                    });
-                }, 100);
             }
         };
         
