@@ -2526,22 +2526,24 @@ class ParkingUIIntegrationXML {
                             this.editSubscriber(currentSubscriber);
                         };
                         
-                        // Create row content
+                        // Create row content - match the structure from displaySubscribers
                         const validUntil = new Date(newSubscriber.validUntil || '2030-12-31');
                         const isExpired = validUntil < new Date();
                         
                         newRow.innerHTML = `
                             <td>${newSubscriber.companyNum || ''}</td>
                             <td>${newSubscriber.companyName || ''}</td>
-                            <td>${newSubscriber.subscriberNum || ''}</td>
+                            <td>${newSubscriber.subscriberNum || newSubscriber.id || ''}</td>
                             <td>${newSubscriber.firstName || ''}</td>
                             <td>${newSubscriber.lastName || ''}</td>
                             <td>${newSubscriber.tagNum ? `<span class="tag-badge">${newSubscriber.tagNum}</span>` : ''}</td>
                             <td>${newSubscriber.vehicle1 || ''}</td>
                             <td>${newSubscriber.vehicle2 || ''}</td>
                             <td>${newSubscriber.vehicle3 || ''}</td>
-                            <td>${newSubscriber.presence ? '<span class="badge badge-success">✓</span>' : '<span class="badge badge-danger">✗</span>'}</td>
-                            <td>${isExpired ? '<span class="badge badge-danger">פג תוקף</span>' : '<span class="badge badge-success">בתוקף</span>'}</td>
+                            <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(newSubscriber.validUntil) || ''}</td>
+                            <td style="color: #888;" title="פרופיל ${newSubscriber.profile || ''}">${newSubscriber.profileName || `פרופיל ${newSubscriber.profile || ''}`}</td>
+                            <td>${this.formatDate(newSubscriber.validFrom) || ''}</td>
+                            <td style="text-align: center; font-size: 18px;">${newSubscriber.presence ? '✅' : '❌'}</td>
                         `;
                         
                         tbody.appendChild(newRow);
