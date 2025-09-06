@@ -838,6 +838,9 @@ class ParkingUIIntegrationXML {
     async loadSubscribers(forceFullLoad = false) {
         if (!this.currentContract) return;
         
+        // Clear any existing progress messages first
+        this.hideProgressMessage();
+        
         this.setLoading(true, 'loadingState');
         this.showProgressMessage(forceFullLoad ? 'טוען את כל נתוני המנויים...' : 'טוען רשימת מנויים...');
         
@@ -972,13 +975,18 @@ class ParkingUIIntegrationXML {
             // Make sure loading is cleared on error
             this.setLoading(false, 'loadingState');
         } finally {
-            // Don't hide progress message here - let the onProgress callback handle it
-            // this.hideProgressMessage();
-            // Also hide the background loading message
+            // Hide background loading message
             this.hideBackgroundProgress();
             
-            // Don't set loading state to false here - let displaySubscribers handle it
-            // for proper timing with batch rendering
+            // If we're still showing the progress message after 5 seconds, something went wrong
+            setTimeout(() => {
+                const progressMsg = document.getElementById('progressMessage');
+                if (progressMsg && progressMsg.style.display !== 'none') {
+                    console.log('[loadSubscribers] Force removing stuck progress message');
+                    this.hideProgressMessage();
+                    this.setLoading(false, 'loadingState');
+                }
+            }, 5000);
         }
     }
     
@@ -1261,6 +1269,7 @@ class ParkingUIIntegrationXML {
      * Show progress message
      */
     showProgressMessage(message) {
+        console.log('[showProgressMessage] Showing:', message);
         let progressDiv = document.getElementById('progressMessage');
         if (!progressDiv) {
             progressDiv = document.createElement('div');
@@ -1290,9 +1299,15 @@ class ParkingUIIntegrationXML {
      * Hide progress message
      */
     hideProgressMessage() {
+        console.log('[hideProgressMessage] Hiding progress message');
         const progressDiv = document.getElementById('progressMessage');
         if (progressDiv) {
+            console.log('[hideProgressMessage] Found progressDiv, removing it');
             progressDiv.style.display = 'none';
+            // Also try to remove it completely to avoid issues
+            progressDiv.remove();
+        } else {
+            console.log('[hideProgressMessage] No progressDiv found');
         }
     }
     
@@ -1696,7 +1711,7 @@ class ParkingUIIntegrationXML {
             if (isVeryLarge) {
                 fragment.appendChild(row);
             } else {
-                tbody.appendChild(row);
+            tbody.appendChild(row);
             }
             }
             
@@ -1723,18 +1738,42 @@ class ParkingUIIntegrationXML {
                 console.log(`[displaySubscribers] Finished rendering ${subscribers.length} subscribers in ${currentBatch + 1} batches`);
                 
                 // Clear loading state after all batches are done
+                console.log('[displaySubscribers] Clearing all loading states...');
                 this.setLoading(false, 'loadingState');
                 this.hideProgressMessage();
                 this.hideBackgroundProgress();
                 
+                // Force remove any loading overlays
+                const loadingState = document.getElementById('loadingState');
+                if (loadingState) {
+                    console.log('[displaySubscribers] Force hiding loadingState');
+                    loadingState.style.display = 'none';
+                }
+                
+                const progressMsg = document.getElementById('progressMessage');
+                if (progressMsg) {
+                    console.log('[displaySubscribers] Force removing progressMessage');
+                    progressMsg.remove();
+                }
+                
                 // Make sure table is visible
                 const tableContainer = document.getElementById('tableContainer');
                 if (tableContainer) {
+                    console.log('[displaySubscribers] Making tableContainer visible');
                     tableContainer.style.display = 'block';
                 }
                 
                 // Show completion message
                 this.showNotification(`✅ נטענו ${subscribers.length} מנויים`, 'success', 3000);
+                
+                // Debug: check what's visible
+                setTimeout(() => {
+                    const allLoadingElements = document.querySelectorAll('.loading, #loadingState, #progressMessage, [id*="loading"], [class*="loading"]');
+                    console.log('[displaySubscribers] Found loading elements:', allLoadingElements.length);
+                    allLoadingElements.forEach(el => {
+                        console.log('[displaySubscribers] Loading element:', el.id || el.className, 'display:', el.style.display, 'visibility:', el.style.visibility);
+                    });
+                }, 100);
             }
         };
         
@@ -1803,8 +1842,8 @@ class ParkingUIIntegrationXML {
                     <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                     <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
-                tbody.appendChild(row);
-            });
+            tbody.appendChild(row);
+        });
             
             // Clear loading state for smaller companies
             this.setLoading(false, 'loadingState');
