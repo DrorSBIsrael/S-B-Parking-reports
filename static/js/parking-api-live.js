@@ -413,6 +413,7 @@ class ParkingAPIXML {
             }));
             
             // Skip heavy debug logs for performance
+            console.log(`[Progressive] Loading strategy: ${loadingStrategy} for ${subscriberCount} subscribers`);
             
             // Return basic data immediately
             onBasicLoaded(basicSubscribers);
