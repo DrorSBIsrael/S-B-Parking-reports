@@ -998,7 +998,11 @@ class ParkingUIIntegrationXML {
                     'G': 'אורח',
                     'N': 'מנוי חדש',
                     'P': 'עדכון פרופיל',
-                    'R': 'דוחות'
+                    'R': 'דוחות',
+                    'T': 'מספר תג',
+                    '1': 'רכב 1',
+                    '2': 'רכבים 1-2',
+                    '3': 'רכבים 1-3'
                 };
                 const permList = permissions.split('').map(p => permMap[p] || p).join(', ');
                 permissionText += permList;
