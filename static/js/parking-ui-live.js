@@ -2049,7 +2049,7 @@ class ParkingUIIntegrationXML {
                 // Calculate next available subscriber number
                 if (!subscriberData.subscriberNum || subscriberData.subscriberNum === '') {
                     // Check if this is a guest
-                    if (subscriberData.isGuest || subscriberData.firstName === 'אורח') {
+                    if (subscriberData.isGuest || subscriberData.profile === 'guest' || subscriberData.firstName === 'אורח') {
                         // Guest numbers start from 40001
                         const existingGuests = this.subscribers.filter(s => {
                             const num = parseInt(s.subscriberNum);
@@ -2104,9 +2104,36 @@ class ParkingUIIntegrationXML {
                         console.log(`[saveSubscriber] Server assigned ID: ${result.data.id}`);
                     }
                     // Send email notification if email provided for guest
-                    if ((subscriberData.isGuest || subscriberData.profile === 'guest') && subscriberData.email) {
-                        console.log(`Email notification would be sent to: ${subscriberData.email}`);
-                        // TODO: Implement email sending when server is ready
+                    if ((subscriberData.isGuest || subscriberData.profile === 'guest' || subscriberData.firstName === 'אורח') && subscriberData.email) {
+                        console.log(`Sending email notification to: ${subscriberData.email}`);
+                        try {
+                            const emailResponse = await fetch('/api/company-manager/send-guest-email', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    email: subscriberData.email,
+                                    name: `${subscriberData.lastName || ''} ${subscriberData.firstName || ''}`.trim() || 'אורח',
+                                    validFrom: subscriberData.validFrom,
+                                    validUntil: subscriberData.validUntil,
+                                    parkingName: this.currentParking?.name || this.currentContract.parkingName || this.currentContract.name || 'החניון',
+                                    companyName: this.currentContract.name || '',
+                                    vehicleNumber: subscriberData.vehicle1 || ''
+                                })
+                            });
+                            const emailResult = await emailResponse.json();
+                            if (emailResult.success) {
+                                console.log('Email sent successfully');
+                                showToast('מייל אישור נשלח לאורח', 'success');
+                            } else {
+                                console.error('Failed to send email:', emailResult.message);
+                                showToast('האורח נוצר בהצלחה אך לא ניתן לשלוח מייל', 'warning');
+                            }
+                        } catch (emailError) {
+                            console.error('Error sending email:', emailError);
+                            showToast('האורח נוצר בהצלחה אך לא ניתן לשלוח מייל', 'warning');
+                        }
                     }
                 }
             } else {
@@ -2288,7 +2315,15 @@ class ParkingUIIntegrationXML {
                     this.subscribers.push(newSubscriber);
                     
                     // Re-display the entire table (easier than inserting a new row)
+                    // But first, ensure we don't override existing company names
+                    const originalCompanyNames = this.subscribers.map(s => s.companyName);
                     this.displaySubscribers(this.subscribers);
+                    // Restore original company names after display
+                    this.subscribers.forEach((sub, idx) => {
+                        if (idx < originalCompanyNames.length - 1) {
+                            sub.companyName = originalCompanyNames[idx];
+                        }
+                    });
                     
                     // Update counts in header
                     this.updatePresentCount();
