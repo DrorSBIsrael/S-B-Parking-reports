@@ -1601,7 +1601,37 @@ class ParkingUIIntegrationXML {
         
         tbody.innerHTML = '';
         
-        subscribers.forEach((subscriber, index) => {
+        // For very large lists, use DocumentFragment for better performance
+        const fragment = document.createDocumentFragment();
+        const isVeryLarge = subscribers.length > 500;
+        
+        if (isVeryLarge) {
+            console.log(`[displaySubscribers] Rendering ${subscribers.length} subscribers using batch rendering for performance`);
+            
+            // Show loading message for very large companies
+            const loadingRow = document.createElement('tr');
+            loadingRow.innerHTML = `
+                <td colspan="11" style="text-align: center; padding: 20px;">
+                    <div style="font-size: 18px; color: #667eea;">
+                        <span>⏳ טוען ${subscribers.length} מנויים...</span>
+                        <br>
+                        <span style="font-size: 14px; color: #666;">פרטים מלאים ייטענו בעת מעבר עכבר</span>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(loadingRow);
+        }
+        
+        // Batch rendering for very large lists
+        const BATCH_SIZE = 100;
+        let currentBatch = 0;
+        
+        const renderBatch = () => {
+            const start = currentBatch * BATCH_SIZE;
+            const end = Math.min(start + BATCH_SIZE, subscribers.length);
+            
+            for (let index = start; index < end; index++) {
+                const subscriber = subscribers[index];
             const row = document.createElement('tr');
             
             // Always allow viewing subscriber details
@@ -1658,8 +1688,106 @@ class ParkingUIIntegrationXML {
                 <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                 <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
+            // Add to fragment for better performance
+            if (isVeryLarge) {
+                fragment.appendChild(row);
+            } else {
+                tbody.appendChild(row);
+            }
+            }
+            
+            // For batch rendering, schedule next batch
+            if (isVeryLarge && end < subscribers.length) {
+                currentBatch++;
+                // Append current batch
+                if (fragment.hasChildNodes()) {
+                    // Remove loading message on first batch
+                    if (currentBatch === 1) {
+                        tbody.innerHTML = '';
+                    }
+                    tbody.appendChild(fragment.cloneNode(true));
+                    fragment.innerHTML = '';
+                }
+                // Schedule next batch
+                setTimeout(renderBatch, 10);
+            } else if (isVeryLarge) {
+                // Last batch
+                if (currentBatch === 0) {
+                    tbody.innerHTML = '';
+                }
+                tbody.appendChild(fragment);
+                console.log(`[displaySubscribers] Finished rendering ${subscribers.length} subscribers in ${currentBatch + 1} batches`);
+            }
+        };
+        
+        // Start rendering
+        if (isVeryLarge) {
+            renderBatch();
+        } else {
+            // For smaller lists, use the regular forEach
+            subscribers.forEach((subscriber, index) => {
+                const row = document.createElement('tr');
+                
+                // Always allow viewing subscriber details
+                // P permission is only needed for profile updates
+                row.onclick = () => {
+                    // Find the current subscriber data
+                    const currentSubscriber = this.subscribers.find(s => 
+                        s.subscriberNum === subscriber.subscriberNum
+                    ) || subscriber;
+                    // Trigger the edit function from the HTML page
+                    if (window.editSubscriber) {
+                        window.editSubscriber(currentSubscriber);
+                    }
+                };
+                
+                row.dataset.subscriberNum = subscriber.subscriberNum;
+                row.dataset.index = index;
+                
+                // Add hover loading for large companies without full details
+                if (subscriber.isLargeCompany && !subscriber.hasFullDetails) {
+                    row.setAttribute('data-hover-loadable', 'true');
+                    if (canEdit) {
+                    row.title = 'עמוד עם העכבר לטעינת פרטים מלאים';
+                    } else {
+                        row.title = 'אין הרשאה לערוך מנויים (דרושה הרשאת P) | עמוד עם העכבר לטעינת פרטים מלאים';
+                    }
+                    if (!row.style.opacity || row.style.opacity === '1') {
+                    row.style.opacity = '0.85';
+                    }
+                    // Setup hover loading only once
+                    this.setupHoverLoading(row, subscriber, index);
+                } else if (!subscriber.hasFullDetails) {
+                    // For small/medium companies without full details
+                    if (!row.style.opacity || row.style.opacity === '1') {
+                    row.style.opacity = '0.85';
+                    }
+                    if (!row.title) {
+                        row.title = 'נתונים בסיסיים - טוען פרטים...';
+                    }
+                }
+                
+                const validUntil = new Date(subscriber.validUntil || subscriber.xValidUntil || '2030-12-31');
+                const isExpired = validUntil < new Date();
+                
+                row.innerHTML = `
+                    <td>${subscriber.companyNum || ''}</td>
+                    <td>${subscriber.companyName || ''}</td>
+                    <td>${subscriber.subscriberNum || subscriber.id || ''}</td>
+                    <td>${subscriber.firstName || ''}</td>
+                    <td>${subscriber.lastName || subscriber.name || ''}</td>
+                    <td>${subscriber.tagNum || subscriber.cardno ? `<span class="tag-badge">${subscriber.tagNum || subscriber.cardno}</span>` : ''}</td>
+                    <td>${subscriber.vehicle1 || subscriber.lpn1 || ''}</td>
+                    <td>${subscriber.vehicle2 || subscriber.lpn2 || ''}</td>
+                    <td>${subscriber.vehicle3 || subscriber.lpn3 || ''}</td>
+                    <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil || subscriber.xValidUntil) || ''}</td>
+                    <td style="color: #888;" title="פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}">${subscriber.profileName || `פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}`}</td>
+                    <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
+                    <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
+            `;
             tbody.appendChild(row);
         });
+        }
     }
     
     /**
