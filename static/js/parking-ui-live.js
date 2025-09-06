@@ -809,7 +809,7 @@ class ParkingUIIntegrationXML {
             
             targetRow.innerHTML = `
                 <td>${subscriber.companyNum || ''}</td>
-                <td>${subscriber.companyName || this.currentContract?.name || ''}</td>
+                <td>${subscriber.companyName || ''}</td>
                 <td>${subscriber.subscriberNum || subscriber.id || ''}</td>
                 <td>${subscriber.firstName || ''}</td>
                 <td>${subscriber.lastName || subscriber.surname || subscriber.name || ''}</td>
@@ -865,7 +865,10 @@ class ParkingUIIntegrationXML {
                     const companyName = this.currentContract.name || this.currentContract.firstName || `חברה ${this.currentContract.id}`;
                     const isLargeCompany = this.subscribers.length > 300;
                     this.subscribers.forEach(sub => {
+                        // Only update company name if it's missing
+                        if (!sub.companyName) {
                         sub.companyName = companyName.trim();
+                        }
                         sub.isLargeCompany = isLargeCompany;
                     });
                     
@@ -1162,7 +1165,7 @@ class ParkingUIIntegrationXML {
             
             targetRow.innerHTML = `
                 <td>${subscriber.companyNum || ''}</td>
-                <td>${subscriber.companyName || this.currentContract?.name || ''}</td>
+                <td>${subscriber.companyName || ''}</td>
                 <td>${subscriber.subscriberNum || subscriber.id || ''}</td>
                 <td>${subscriber.firstName || ''}</td>
                 <td>${subscriber.lastName || subscriber.surname || subscriber.name || ''}</td>
@@ -1634,7 +1637,7 @@ class ParkingUIIntegrationXML {
             
             row.innerHTML = `
                 <td>${subscriber.companyNum || ''}</td>
-                <td>${subscriber.companyName || this.currentContract?.name || ''}</td>
+                <td>${subscriber.companyName || ''}</td>
                 <td>${subscriber.subscriberNum || subscriber.id || ''}</td>
                 <td>${subscriber.firstName || ''}</td>
                 <td>${subscriber.lastName || subscriber.name || ''}</td>
@@ -2308,7 +2311,7 @@ class ParkingUIIntegrationXML {
                         subscriberNum: subscriberId,
                         hasFullDetails: true,
                         companyNum: this.currentContract.id,
-                        companyName: this.currentContract.name,
+                        companyName: subscriberData.companyName || this.currentContract.name,
                         // Ensure we have all required fields
                         firstName: subscriberData.firstName || '',
                         lastName: subscriberData.lastName || '',
@@ -2325,16 +2328,42 @@ class ParkingUIIntegrationXML {
                     // Add to subscribers array
                     this.subscribers.push(newSubscriber);
                     
-                    // Re-display the entire table (easier than inserting a new row)
-                    // But first, ensure we don't override existing company names
-                    const originalCompanyNames = this.subscribers.map(s => s.companyName);
-                    this.displaySubscribers(this.subscribers);
-                    // Restore original company names after display
-                    this.subscribers.forEach((sub, idx) => {
-                        if (idx < originalCompanyNames.length - 1) {
-                            sub.companyName = originalCompanyNames[idx];
-                        }
-                    });
+                    // Add only the new row instead of re-displaying the entire table
+                    const tbody = document.querySelector('#subscribersTable tbody');
+                    if (tbody) {
+                        const newRow = document.createElement('tr');
+                        const newIndex = this.subscribers.length - 1;
+                        
+                        // Set row attributes
+                        newRow.dataset.subscriberNum = newSubscriber.subscriberNum;
+                        newRow.onclick = () => {
+                            // Find the current subscriber data (might have been updated)
+                            const currentSubscriber = this.subscribers.find(s => 
+                                s.subscriberNum === newSubscriber.subscriberNum
+                            ) || newSubscriber;
+                            this.editSubscriber(currentSubscriber);
+                        };
+                        
+                        // Create row content
+                        const validUntil = new Date(newSubscriber.validUntil || '2030-12-31');
+                        const isExpired = validUntil < new Date();
+                        
+                        newRow.innerHTML = `
+                            <td>${newSubscriber.companyNum || ''}</td>
+                            <td>${newSubscriber.companyName || ''}</td>
+                            <td>${newSubscriber.subscriberNum || ''}</td>
+                            <td>${newSubscriber.firstName || ''}</td>
+                            <td>${newSubscriber.lastName || ''}</td>
+                            <td>${newSubscriber.tagNum ? `<span class="tag-badge">${newSubscriber.tagNum}</span>` : ''}</td>
+                            <td>${newSubscriber.vehicle1 || ''}</td>
+                            <td>${newSubscriber.vehicle2 || ''}</td>
+                            <td>${newSubscriber.vehicle3 || ''}</td>
+                            <td>${newSubscriber.presence ? '<span class="badge badge-success">✓</span>' : '<span class="badge badge-danger">✗</span>'}</td>
+                            <td>${isExpired ? '<span class="badge badge-danger">פג תוקף</span>' : '<span class="badge badge-success">בתוקף</span>'}</td>
+                        `;
+                        
+                        tbody.appendChild(newRow);
+                    }
                     
                     // Update counts in header
                     this.updatePresentCount();
