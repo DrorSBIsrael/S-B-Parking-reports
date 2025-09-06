@@ -3416,10 +3416,19 @@ def company_manager_proxy():
                     # Add consumer element if exists
                     if 'consumer' in payload:
                         consumer_elem = ET.SubElement(root, 'consumer')
+                        # Only set href if we have an ID (for guests)
                         if 'id' in payload['consumer'] and payload['consumer']['id']:
                             consumer_elem.set('href', f"/consumers/{payload['consumer'].get('contractid', '')},{payload['consumer']['id']}")
+                        
                         for key, value in payload['consumer'].items():
-                            if value is not None and value != '' and key != 'href':
+                            # Skip empty id for new regular subscribers - server will assign
+                            if key == 'id' and (value is None or value == ''):
+                                continue
+                            # Skip href
+                            if key == 'href':
+                                continue
+                            # Add all non-empty values
+                            if value is not None and value != '':
                                 elem = ET.SubElement(consumer_elem, key)
                                 elem.text = str(value)
                     
@@ -3439,10 +3448,10 @@ def company_manager_proxy():
                                 if key == 'usageProfile' and isinstance(value, dict):
                                     # Handle nested usageProfile
                                     usage_elem = ET.SubElement(ident_elem, 'usageProfile')
-                                    if 'id' in value:
+                                    if 'id' in value and value['id']:
                                         usage_elem.set('href', f"/usageProfile/{value['id']}")
                                     for uk, uv in value.items():
-                                        if uv is not None and uv != '':
+                                        if uk != 'href' and uv is not None and uv != '':
                                             uelem = ET.SubElement(usage_elem, uk)
                                             uelem.text = str(uv)
                                 else:
@@ -3459,6 +3468,8 @@ def company_manager_proxy():
                     xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
                     print(f"   📝 Sending XML for consumer creation (POST to {url}):")
                     print(f"   Consumer ID: {payload.get('consumer', {}).get('id', 'NEW')}")
+                    print(f"   📄 Full XML being sent:\n{xml_str}")
+                    print(f"   📏 XML length: {len(xml_str)} characters")
                     
                     # Send as XML
                     headers['Content-Type'] = 'application/xml'
@@ -3549,7 +3560,7 @@ def company_manager_proxy():
             print(f"   📦 Response headers: {response.headers.get('Content-Type')}")
             
             # החזרת התוצאה
-            if response.status_code == 200:
+            if response.status_code in [200, 201]:
                 # בדוק אם התגובה היא XML או JSON
                 content_type = response.headers.get('content-type', '')
                 # Checking content type
@@ -3963,6 +3974,27 @@ def company_manager_proxy():
                             result['message'] = 'הנתונים עודכנו בהצלחה בשרת החניון'
                         elif method == 'POST':
                             result['message'] = 'הנתונים נשמרו בהצלחה בשרת החניון'
+                            # For consumer creation, check if we got a created ID
+                            if 'contracts' in endpoint and 'consumers' in endpoint:
+                                print(f"   🆕 Consumer creation response: {response.text[:500]}")
+                                # Try to extract ID from response if exists
+                                try:
+                                    import xml.etree.ElementTree as ET
+                                    if response.text.startswith('<?xml'):
+                                        root = ET.fromstring(response.text.encode('utf-8'))
+                                        # Look for consumer ID in response
+                                        consumer_elem = root.find('.//{http://gsph.sub.com/cust/types}consumer')
+                                        if consumer_elem is None:
+                                            consumer_elem = root.find('.//consumer')
+                                        if consumer_elem is not None:
+                                            id_elem = consumer_elem.find('.//{http://gsph.sub.com/cust/types}id')
+                                            if id_elem is None:
+                                                id_elem = consumer_elem.find('.//id')
+                                            if id_elem is not None and id_elem.text:
+                                                result['data'] = {'id': id_elem.text}
+                                                print(f"   🆕 New consumer ID from server: {id_elem.text}")
+                                except:
+                                    pass
                         
                         return jsonify(result)
                     except Exception as e:
