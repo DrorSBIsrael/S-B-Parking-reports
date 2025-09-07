@@ -3084,12 +3084,12 @@ def company_manager_get_parkings():
                         'is_active': parking.get('is_active', False),
                         'api_url': f"https://{parking.get('ip_address', '')}:{parking.get('port', 443)}"
                     })
-                    print(f"   ✅ Added to results")
+                    # Added to results
             except Exception as e:
-                print(f"   ❌ Error: {e}")
+                # Error loading parking
                 pass
         
-        print(f"\n📊 Final: {len(parkings)} accessible parkings")
+        # Final parkings list ready
         
         return jsonify({
             'success': True,
@@ -3210,11 +3210,7 @@ def test_proxy():
 def company_manager_proxy():
     """Proxy לקריאות API לשרתי החניונים"""
     
-    # Debug log מפורט
-    print(f"\n{'='*70}")
-    print(f"🎯 PROXY ENDPOINT HIT: {request.method}")
-    print(f"🔥 v16 - FIXED: COMPANY NAME PRESERVE + BOOLEAN IGNOREPREENCE + DATES!")
-    print(f"{'='*70}")
+    # Debug log removed for production
     
     # Handle CORS preflight
     if request.method == 'OPTIONS':
@@ -3235,7 +3231,7 @@ def company_manager_proxy():
         })
     
     try:
-        print(f"\n📨 Proxy request received: {request.method} {request.path}")
+        # Proxy request received
         
         # בדיקה אם אנחנו במצב פיתוח מקומי
         is_local_dev = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
@@ -3243,15 +3239,15 @@ def company_manager_proxy():
         if 'user_email' not in session:
             if is_local_dev:
                 # במצב פיתוח - דלג על בדיקת login
-                print("   ⚠️ LOCAL DEV MODE - Skipping login check")
+                # LOCAL DEV MODE - Skipping login check
                 session['user_email'] = 'test@local.dev'  # משתמש דמה לבדיקות
             else:
-                print("   ❌ User not logged in")
+                # User not logged in
                 return jsonify({'success': False, 'message': 'לא מחובר'}), 401
         
         data = request.get_json()
         if not data:
-            print("   ❌ No JSON data in request")
+            # No JSON data in request
             return jsonify({'success': False, 'message': 'חסרים נתונים'}), 400
             
         parking_id = data.get('parking_id')
@@ -3259,9 +3255,7 @@ def company_manager_proxy():
         method = data.get('method', 'GET')
         payload = data.get('payload', {})
         
-        print(f"   Parking ID: {parking_id}")
-        print(f"   Endpoint: {endpoint}")
-        print(f"   Method: {method}")
+        # Request details received
         
         if not parking_id or not endpoint:
             return jsonify({'success': False, 'message': 'חסרים פרמטרים'}), 400
@@ -3560,8 +3554,6 @@ def company_manager_proxy():
                 return jsonify({'success': False, 'message': 'שיטה לא נתמכת'}), 400
             
             # Response received
-            print(f"   📦 Response status: {response.status_code}")
-            print(f"   📦 Response headers: {response.headers.get('Content-Type')}")
             
             # החזרת התוצאה
             if response.status_code in [200, 201]:
@@ -3572,8 +3564,7 @@ def company_manager_proxy():
                 if 'xml' in content_type.lower() or response.text.startswith('<?xml'):
                     # פרש XML לJSON
                     # Got XML response, parsing
-                    print(f"   🔍 XML PARSER - Endpoint: {endpoint}")
-                    print(f"   🔍 XML PARSER - '/detail' in endpoint? {'/detail' in endpoint}")
+                    # XML PARSER - checking endpoint type
                     
                     try:
                         import xml.etree.ElementTree as ET
@@ -3582,7 +3573,7 @@ def company_manager_proxy():
                         root = ET.fromstring(response.text.encode('utf-8'))
                         
                         # Check for detail endpoints FIRST
-                        print(f"   🔍 CHECKING: Is '/detail' in '{endpoint}'? {'/detail' in endpoint}")
+                        # Checking if detail endpoint
                         
                         # Skip the list endpoints if this is a detail request
                         is_detail_endpoint = '/detail' in endpoint
@@ -3760,14 +3751,7 @@ def company_manager_proxy():
                             
                             return jsonify({'success': True, 'data': consumer_detail})
                         elif '/detail' in endpoint and 'contracts' in endpoint:
-                            print(f"\n{'='*80}")
-                            print(f"   🔍 CONTRACT DETAIL - PARSING XML")
-                            print(f"   📥 Endpoint: {endpoint}")
-                            print(f"   📥 Response length: {len(response.text)} chars")
-                            print(f"   📥 First 1000 chars of XML:")
-                            print(f"{'='*80}")
-                            print(response.text[:1000])
-                            print(f"{'='*80}\n")
+                            # CONTRACT DETAIL - PARSING XML
                             # Parse contract detail with pooling data
                             def parse_element(element, preserve_text=False):
                                 """Recursively parse XML element to dict"""
@@ -3827,24 +3811,16 @@ def company_manager_proxy():
                                 return result
                             
                             # Check root tag
-                            print(f"   📊 Root tag: {root.tag}")
-                            print(f"   📊 Root children: {[child.tag for child in root]}")
+                            # Check root tag
                             
                             contract_detail = parse_element(root)
                             
-                            # Debug: print the parsed structure to see what we got
-                            print(f"   📊 Parsed contract detail - keys: {list(contract_detail.keys()) if isinstance(contract_detail, dict) else 'NOT A DICT'}")
-                            
-                            # Log only first 2000 chars to avoid huge logs
-                            full_json = json.dumps(contract_detail, indent=2, ensure_ascii=False)
-                            print(f"   📊 Structure preview (first 2000 chars): {full_json[:2000]}")
+                            # Debug: parsed structure
                             
                             # Check if we have the critical fields
                             if isinstance(contract_detail, dict):
-                                print(f"   ✅ Has 'pooling'? {'pooling' in contract_detail}")
-                                
-                                if 'pooling' in contract_detail:
-                                    print(f"   📊 Pooling data: {contract_detail['pooling']}")
+                                # Check for pooling data
+                                pass
                             
                             # Calculate summary data from pooling if available
                             # Check for pooling in different possible locations
@@ -3859,7 +3835,7 @@ def company_manager_proxy():
                                 if not isinstance(pooling_details, list):
                                     pooling_details = [pooling_details]
                                 
-                                print(f"   ✅ Found pooling data with {len(pooling_details)} details")
+                                # Found pooling data
                                 
                                 # Calculate totals
                                 total_present = 0
@@ -3879,14 +3855,14 @@ def company_manager_proxy():
                                 
                                 # Don't add consumerCount here - will be calculated from actual consumers
                                 # Remove totalVehicles as it's not accurate
-                                print(f"   📊 Facility data: presentCounter={total_present}, maxCounter={total_max}")
+                                # Facility data calculated
                             else:
-                                print(f"   ⚠️ No pooling data found in contract detail")
-                                print(f"   ⚠️ Contract detail structure: {json.dumps(contract_detail, indent=2, ensure_ascii=False)}")
+                                # No pooling data found
                                 # DO NOT add mock data - return real data only
+                                pass
                             
                             # Make sure we're returning the complete data including pooling
-                            print(f"   🚀 Returning contract detail with pooling to client")
+                            # Returning contract detail with pooling to client
                             
                             # ALSO return the raw XML for debugging
                             return jsonify({
@@ -3900,7 +3876,7 @@ def company_manager_proxy():
                             })
                         else:
                             # החזר כ-raw XML אם לא מזהים את הסוג
-                            print(f"   ⚠️ Unknown XML type, returning raw")
+                            # Unknown XML type, returning raw
                             return jsonify({'success': True, 'raw': response.text})
                             
                     except Exception as e:
@@ -3914,10 +3890,8 @@ def company_manager_proxy():
                         
                         # Log what we got if this is a detail endpoint
                         if '/detail' in endpoint:
-                            print(f"\n{'='*80}")
-                            print(f"   📊 Got JSON response for detail endpoint: {endpoint}")
-                            print(f"   📊 JSON data: {json.dumps(data, indent=2, ensure_ascii=False)}")
-                            print(f"{'='*80}\n")
+                            # Got JSON response for detail endpoint
+                            pass
                         
                         # Filter contracts if we're getting contracts
                         if ('contracts' in endpoint or 'contract' in endpoint.lower()) and not '/detail' in endpoint:
