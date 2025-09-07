@@ -13,8 +13,7 @@ class ParkingAPIXML {
             useProxy: true,  // Always use proxy
             currentParkingId: null
         };
-        console.log('☁️ Using secure proxy connection');
-        console.log('Parking API v2 initialized');
+        // Initialization complete - using secure proxy
     }
     
     setConfig(config) {
@@ -28,7 +27,7 @@ class ParkingAPIXML {
     
     setCurrentParking(parkingId) {
         this.config.currentParkingId = parkingId;
-        console.log('Current parking set to:', parkingId);
+        // Current parking set
     }
     
     parseXML(xmlString) {
@@ -85,7 +84,7 @@ class ParkingAPIXML {
             
             if (this.config.useProxy) {
                 // PRODUCTION: Use proxy to avoid CORS
-                console.log(`📡 Proxy request - endpoint: ${endpoint}`);
+                // Proxy request to endpoint
                 
                 // Make sure endpoint includes CustomerMediaWebService prefix
                 // Remove leading slash if exists
@@ -118,7 +117,7 @@ class ParkingAPIXML {
                     'Content-Type': 'application/json'
                 };
                 
-                console.log(`🔗 Direct request to: ${url}`);
+                // Direct request
                 
                 response = await fetch(url, {
                     method: method,
@@ -167,51 +166,21 @@ class ParkingAPIXML {
     }
     
     async getEnhancedContractDetails(contractId) {
-        console.log(`[getEnhancedContractDetails] Fetching details for contract ${contractId}`);
+        // Fetching enhanced contract details
         const result = await this.makeRequest(`contracts/${contractId}/detail`);
         
         // Log the response structure for debugging
         if (result.success) {
-            console.log(`[getEnhancedContractDetails] Response structure:`, result.data);
+            // Response received
             
-            // Check if we got a message or XML preview
-            if (result.data && result.data.message) {
-                console.log(`\n${'='.repeat(60)}`);
-                console.log(`📋 CONTRACT ${contractId} - MESSAGE: ${result.data.message}`);
-                console.log(`📋 ENDPOINT WAS: ${result.data.endpoint}`);
-                console.log(`${'='.repeat(60)}\n`);
-            }
-            
-            if (result.data && result.data.xml_preview) {
-                console.log(`\n${'='.repeat(60)}`);
-                console.log(`📋 CONTRACT ${contractId} - GOT XML PREVIEW!`);
-                console.log(`${'='.repeat(60)}`);
-                console.log(result.data.xml_preview);
-                console.log(`${'='.repeat(60)}\n`);
-            }
-            
-            // Show debug info if available
-            if (result.debug) {
-                console.log(`\n${'='.repeat(60)}`);
-                console.log(`📋 CONTRACT ${contractId} - RAW XML FROM SERVER:`);
-                console.log(`${'='.repeat(60)}`);
-                console.log(result.debug.raw_xml);
-                console.log(`${'='.repeat(60)}`);
-                console.log(`   - Has pooling: ${result.debug.has_pooling}`);
-                console.log(`   - Parsed keys: ${result.debug.parsed_keys}`);
-                console.log(`${'='.repeat(60)}\n`);
-            }
-            
-            if (result.data && result.data.pooling) {
-                console.log(`[getEnhancedContractDetails] ✅ Pooling data found:`, result.data.pooling);
-            }
+            // Debug info removed for production
         }
         
         return result;
     }
     
     async getConsumers(companyNum, contractId) {
-        console.log(`[getConsumers] Fetching consumers for contract ${contractId}`);
+        // Fetching consumers
         
         // Send contractId in payload - Flask will build the correct URL
         const result = await this.makeRequest('consumers', 'GET', { 
@@ -223,14 +192,13 @@ class ParkingAPIXML {
             // Handle both array and single object responses
             let consumers = Array.isArray(result.data) ? result.data : [result.data];
             // Minimal debug - just count
-            console.log(`[getConsumers] Got ${consumers.length} consumers from server`);
+            // Consumers received from server
             
             // SAFETY CHECK: If we got too many consumers, something is wrong!
             if (consumers.length > 500) {
-                console.error(`[getConsumers] ERROR: Got ${consumers.length} consumers! Server might be returning ALL consumers instead of just contract ${contractId}`);
-                console.warn('[getConsumers] This will cause performance issues. Check Flask proxy endpoint!');
+                // Large consumer list detected - server returned all consumers
             } else {
-                console.log(`[getConsumers] ✅ Got ${consumers.length} consumers for contract ${contractId}`);
+                // Consumers filtered successfully
             }
             
             return { success: true, data: consumers };
@@ -291,7 +259,7 @@ class ParkingAPIXML {
      * Used when hovering over subscribers in large companies
      */
     async getConsumerDetailOnDemand(contractId, consumerId) {
-        console.log(`[getConsumerDetailOnDemand] Loading details for consumer ${consumerId} in contract ${contractId}`);
+        // Loading consumer details on demand
         // Call the regular getConsumerDetail method
         return this.getConsumerDetail(contractId, consumerId);
     }
@@ -319,7 +287,7 @@ class ParkingAPIXML {
             
             // Filter by contractId if API returns all consumers
             if (consumersArray.length > 1000) {
-                console.log(`[Progressive] Got ${consumersArray.length} consumers - filtering by contractId ${companyId}`);
+                // Filtering consumers by contractId
                 const filtered = consumersArray.filter(c => 
                     c.contractId === companyId || 
                     c.contractId === String(companyId) ||
@@ -334,14 +302,9 @@ class ParkingAPIXML {
                 );
                 if (filtered.length > 0) {
                     consumers = filtered;
-                    console.log(`[Progressive] Filtered to ${filtered.length} consumers for contract ${companyId}`);
+                    // Consumers filtered successfully
                 } else {
-                    console.log(`[Progressive] No consumers found for contract ${companyId} after filtering`);
-                    // Log first consumer to see structure
-                    if (consumersArray.length > 0) {
-                        console.log(`[Progressive] First consumer structure:`, consumersArray[0]);
-                        console.log(`[Progressive] Looking for contractId: ${companyId}`);
-                    }
+                    // No consumers found after filtering
                     // No limit - return all consumers
                     consumers = consumersArray;
                 }
@@ -359,7 +322,7 @@ class ParkingAPIXML {
             if (forceFullLoad) {
                 // If forcing full load, use batch-50 strategy even for large companies
                 loadingStrategy = subscriberCount <= INSTANT_LOAD_THRESHOLD ? 'instant' : 'batch-50';
-                console.log(`[Progressive] Force full load requested for ${subscriberCount} subscribers`);
+                // Force full load requested
             } else if (subscriberCount <= INSTANT_LOAD_THRESHOLD) {
                 loadingStrategy = 'instant';
             } else if (subscriberCount <= BATCH_LOAD_THRESHOLD) {
@@ -413,7 +376,7 @@ class ParkingAPIXML {
             }));
             
             // Skip heavy debug logs for performance
-            console.log(`[Progressive] Loading strategy: ${loadingStrategy} for ${subscriberCount} subscribers`);
+            // Loading strategy determined
             
             // Return basic data immediately
             onBasicLoaded(basicSubscribers);
@@ -502,13 +465,13 @@ class ParkingAPIXML {
                         // Load in batches of 50 for companies up to 300 subscribers
                         const BATCH_SIZE = 50;
                         const totalBatches = Math.ceil(basicSubscribers.length / BATCH_SIZE);
-                        console.log(`[BATCH-50 Strategy] Loading ${basicSubscribers.length} subscribers in ${totalBatches} batches of up to ${BATCH_SIZE} each`);
+                        // Loading subscribers in batches
                         let allUpdated = [];
                         
                         for (let i = 0; i < basicSubscribers.length; i += BATCH_SIZE) {
                             const batch = basicSubscribers.slice(i, Math.min(i + BATCH_SIZE, basicSubscribers.length));
                             const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-                            console.log(`[BATCH-50] Loading batch ${batchNumber}/${totalBatches} (${batch.length} subscribers)`);
+                            // Loading batch
                             
                             const batchPromises = batch.map(processSubscriber);
                             const batchResults = await Promise.all(batchPromises);
@@ -541,10 +504,10 @@ class ParkingAPIXML {
                         }
                         
                         basicSubscribers = allUpdated;
-                        console.log('[BATCH-50] ✅ All details loaded');
+                        // All details loaded successfully
                     } else {
                         // Should not reach here with current strategy
-                        console.warn('[Strategy] Unknown loading strategy:', loadingStrategy);
+                        // Unknown loading strategy
                     }
                     
                     // Hide loading message (only if not already handled by instant loading)
@@ -582,7 +545,7 @@ class ParkingAPIXML {
      */
     async loadDetailsInBackground(contractId, consumers, subscribers, options) {
         // DISABLED - we don't need details loading, basic data is sufficient
-        console.log('[Background] Detail loading is DISABLED - basic data is enough');
+        // Background detail loading disabled
         return;
     }
     
@@ -611,7 +574,7 @@ class ParkingAPIXML {
     // Get parking transactions for a consumer
     async getParkingTransactions(contractId, consumerId, minDate = null, maxDate = null) {
         try {
-            console.log(`[ParkingAPIXML] Getting parking transactions for contract ${contractId}, consumer ${consumerId}`);
+            // Getting parking transactions
             
             // Build query parameters
             let queryParams = [];
