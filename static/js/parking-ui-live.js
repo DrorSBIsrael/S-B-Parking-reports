@@ -485,7 +485,25 @@ class ParkingUIIntegrationXML {
      * Refresh single company card data
      */
     async refreshCompanyCard(companyId) {
-        const company = this.companies.find(c => c.id === companyId);
+        // Find company from displayed companies
+        const companyCards = document.querySelectorAll('.company-card');
+        let company = null;
+        
+        // Look for the company in the current contract list
+        if (this.currentParking && this.currentParking.contracts) {
+            company = this.currentParking.contracts.find(c => c.id === companyId);
+        }
+        
+        if (!company) {
+            // Try to find in any available company data
+            const companyCard = Array.from(companyCards).find(card => 
+                card.innerHTML.includes(`#${companyId}`)
+            );
+            if (companyCard) {
+                company = { id: companyId, name: '' };
+            }
+        }
+        
         if (!company) return;
         
         // Show loading indicator on refresh button
