@@ -142,11 +142,7 @@ class ParkingUIIntegrationXML {
             password: globalConfig.password || '2022'
         });
         
-        console.log(`XML API configured for parking server:`, {
-            mode: useProxy ? 'via proxy' : 'direct',
-            baseUrl: this.api.config.baseUrl,
-            username: this.api.config.username
-        });
+        // XML API configured for parking server
     }
     
     /**
@@ -154,17 +150,17 @@ class ParkingUIIntegrationXML {
      */
     async loadCompanies() {
         this.setLoading(true);
-        console.log('[loadCompanies] Starting to load parkings from Flask...');
+        // Loading parkings from Flask
         
         try {
             // Get parkings list from Flask (not from parking API)
-            console.log('[loadCompanies] Calling Flask API /api/company-manager/get-parkings...');
+            // Calling Flask API
             const response = await fetch('/api/company-manager/get-parkings');
             const result = await response.json();
-            console.log('[loadCompanies] Flask API result:', result);
+            // Flask API result received
             
             if (result.success && result.parkings) {
-                console.log('[loadCompanies] Got parkings from Flask:', result.parkings);
+                // Got parkings from Flask
                 
                 // Use parkings instead of contracts/companies
                 const parkings = result.parkings;
@@ -175,11 +171,11 @@ class ParkingUIIntegrationXML {
                     return;
                 }
                 
-                console.log(`[loadCompanies] Found ${parkings.length} parkings:`, parkings);
+                // Found parkings
                 
                 // If only one parking, auto-select it (without displaying it)
                 if (parkings.length === 1) {
-                    console.log('[loadCompanies] Auto-selecting single parking:', parkings[0]);
+                    // Auto-selecting single parking
                     await this.selectParking(parkings[0]);
                 } else {
                     // Display parkings as cards only if multiple
@@ -189,8 +185,7 @@ class ParkingUIIntegrationXML {
 
             } else {
                 // Use mock data as fallback
-                console.log('[loadCompanies] API failed or no data, reason:', 
-                    result.error || result.message || 'No data in response');
+                // API failed or no data
                 await this.loadMockParkings();
             }
         } catch (error) {
@@ -206,7 +201,7 @@ class ParkingUIIntegrationXML {
      * Load mock parkings for fallback
      */
     async loadMockParkings() {
-        console.log('[loadMockParkings] Using mock parkings data');
+        // Using mock parkings data
         const mockParkings = [
             { 
                 id: 'mock-1', 
@@ -222,7 +217,7 @@ class ParkingUIIntegrationXML {
         
         // Auto-select if only one parking
         if (mockParkings.length === 1) {
-            console.log('[loadMockParkings] Auto-selecting single parking:', mockParkings[0]);
+            // Auto-selecting single parking
             await this.selectParking(mockParkings[0]);
         }
     }
@@ -269,7 +264,7 @@ class ParkingUIIntegrationXML {
      * Select a parking and then load its companies
      */
     async selectParking(parking) {
-        console.log('[selectParking] Selected parking:', parking);
+        // Selected parking
         
         // Show loading message immediately
         const companyList = document.getElementById('companyList');
@@ -312,26 +307,26 @@ class ParkingUIIntegrationXML {
         }
         
         this.setLoading(true);
-        console.log('[loadCompaniesFromParking] Loading companies from parking:', this.currentParking.name);
+        // Loading companies from parking
         
         try {
             // Now we can call the parking API
             const result = await this.api.getContracts();
             
             if (result.success && result.data) {
-                console.log('[loadCompaniesFromParking] Raw result.data:', JSON.stringify(result.data, null, 2));
+                // Received company data
                 
                 // Process contracts/companies - handle array, 'contracts' and 'contract'
                 let contracts = [];
                 
                 // Check if result.data is already an array (from XML parser)
                 if (Array.isArray(result.data)) {
-                    console.log('[loadCompaniesFromParking] Data is already an array with', result.data.length, 'items');
+                    // Data is already an array
                     contracts = result.data;
                 }
                 // Check for 'contracts' (plural)
                 else if (result.data.contracts) {
-                    console.log('[loadCompaniesFromParking] Found contracts object:', result.data.contracts);
+                    // Found contracts object
                     // If contracts.contract exists, use it
                     if (result.data.contracts.contract) {
                         contracts = Array.isArray(result.data.contracts.contract) 
@@ -341,34 +336,34 @@ class ParkingUIIntegrationXML {
                 } 
                 // Fallback to 'contract' (singular)
                 else if (result.data.contract) {
-                    console.log('[loadCompaniesFromParking] Found contract object:', result.data.contract);
+                    // Found contract object
                     contracts = Array.isArray(result.data.contract) 
                         ? result.data.contract 
                         : [result.data.contract];
                 }
                 
-                console.log(`[loadCompaniesFromParking] Total contracts found: ${contracts.length}`);
+                // Total contracts found
                 
                 // Filter companies based on user's company_list (if provided)
                 const userCompanyList = window.userCompanyList || localStorage.getItem('company_list') || '';
-                console.log('[loadCompaniesFromParking] User company_list:', userCompanyList);
+                // User company list retrieved
                 
                 let filteredContracts = contracts;
                 if (userCompanyList && userCompanyList !== 'all') {
                     // Use the new parseCompanyList function that supports ranges
                     const allowedIds = this.parseCompanyList(userCompanyList);
-                    console.log('[loadCompaniesFromParking] Filtering for companies (with ranges parsed):', allowedIds);
+                    // Filtering for companies
                     
                     filteredContracts = contracts.filter(contract => {
                         const contractId = String(contract.id?.['#text'] || contract.id || '');
                         const isAllowed = allowedIds.includes(contractId);
                         if (!isAllowed && contractId) {
-                            console.log(`[loadCompaniesFromParking] Filtering out company ${contractId} - ${contract.name}`);
+                            // Filtering out company
                         }
                         return isAllowed;
                     });
                     
-                    console.log(`[loadCompaniesFromParking] After filtering: ${filteredContracts.length} companies`);
+                    // After filtering
                 }
                 
                 // Convert to company format - extract the actual values from XML structure
@@ -379,8 +374,7 @@ class ParkingUIIntegrationXML {
                     
                     // Debug: log what we got
                     if (id === '2') {
-                        console.log('[DEBUG] Contract 2 raw data:', contract);
-                        console.log('[DEBUG] Contract 2 name:', name);
+                        // Debug contract data
                     }
                     
                     return {
@@ -391,14 +385,14 @@ class ParkingUIIntegrationXML {
                     };
                 });
                 
-                console.log(`[loadCompaniesFromParking] Displaying ${companies.length} companies`);
+                // Displaying companies
                 this.displayCompanies(companies);
                 
                 if (companies.length === 1) {
                     await this.selectCompany(companies[0]);
                 }
             } else {
-                console.log('[loadCompaniesFromParking] Using mock companies');
+                // Using mock companies
                 this.loadMockCompanies();
             }
         } catch (error) {
@@ -413,7 +407,7 @@ class ParkingUIIntegrationXML {
      * Load mock companies for fallback
      */
     async loadMockCompanies() {
-        console.log('[loadMockCompanies] Using mock companies data');
+        // Using mock companies data
         // Only show companies 2 and 1000 that match user's company_list
         const mockCompanies = [
             { id: '2', name: 'חברה בדיקה א', companyName: 'חברה בדיקה א', subscribersCount: 120 },
@@ -423,7 +417,7 @@ class ParkingUIIntegrationXML {
         
         // Auto-select if only one company
         if (mockCompanies.length === 1) {
-            console.log('[loadMockCompanies] Auto-selecting single company:', mockCompanies[0]);
+            // Auto-selecting single company
             await this.selectCompany(mockCompanies[0]);
         }
     }
@@ -446,7 +440,14 @@ class ParkingUIIntegrationXML {
             card.innerHTML = `
                 <div class="company-header">
                     <h3>${company.name || company.companyName || this.currentParking?.name || 'פלאזה'} <span style="color: #666; font-size: 0.9em;">[${company.id}]</span></h3>
-                    <span class="company-number">#${company.id}</span>
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <span class="company-number">#${company.id}</span>
+                        <button class="btn btn-sm" onclick="event.stopPropagation(); window.parkingUIXML.refreshCompanyCard('${company.id}')" 
+                                style="padding: 2px 6px; font-size: 12px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;"
+                                title="רענן נתוני חברה">
+                            🔄
+                        </button>
+                    </div>
                 </div>
                 <div class="stats-row">
                     <div class="stat-item">
@@ -481,16 +482,45 @@ class ParkingUIIntegrationXML {
     }
     
     /**
+     * Refresh single company card data
+     */
+    async refreshCompanyCard(companyId) {
+        const company = this.companies.find(c => c.id === companyId);
+        if (!company) return;
+        
+        // Show loading indicator on refresh button
+        const refreshBtn = document.querySelector(`button[onclick*="refreshCompanyCard('${companyId}')"]`);
+        if (refreshBtn) {
+            refreshBtn.innerHTML = '⏳';
+            refreshBtn.disabled = true;
+        }
+        
+        try {
+            // Reload company data
+            await this.loadCompanyCardData(company);
+            this.showNotification('✅ נתוני החברה עודכנו', 'success', 2000);
+        } catch (error) {
+            this.showNotification('❌ שגיאה ברענון נתוני החברה', 'error');
+        } finally {
+            // Restore refresh button
+            if (refreshBtn) {
+                refreshBtn.innerHTML = '🔄';
+                refreshBtn.disabled = false;
+            }
+        }
+    }
+    
+    /**
      * Load additional data for company card
      */
     async loadCompanyCardData(company) {
         try {
             // Get company contract data with facility info
-            console.log(`Loading detailed data for company ${company.id}`);
+            // Loading detailed data for company
             
             // Get company basic data
             const directResult = await this.api.makeRequest(`/contracts/${company.id}`);
-            console.log(`Company ${company.id} - Direct API response:`, directResult);
+            // Direct API response received
             
             // Get enhanced details with pooling data
             const result = await this.api.getEnhancedContractDetails(company.id);
@@ -498,14 +528,13 @@ class ParkingUIIntegrationXML {
             if (result.success && result.data) {
                 // Handle both array and single object responses
                 let contractData = Array.isArray(result.data) ? result.data[0] : result.data;
-                console.log(`Company ${company.id} - Enhanced contract data received:`, contractData);
-                console.log(`Company ${company.id} - Full structure:`, JSON.stringify(contractData, null, 2));
+                // Enhanced contract data received
                 
                 // DON'T USE totalVehicles - removed from API as it's not accurate
                 // We'll count actual subscribers later when we fetch them
                 
                 // For now, don't update subscriber count here - will be done when fetching actual subscribers
-                console.log(`Company ${company.id} - Contract detail received, pooling data available`)
+                // Contract detail received
                 
                 // Process facilities data - check for pooling data!
                 let facilityData = null;
@@ -513,16 +542,15 @@ class ParkingUIIntegrationXML {
                 // Check for pooling data
                 if (contractData.pooling && contractData.pooling.poolingDetail) {
                     facilityData = contractData.pooling.poolingDetail;
-                    console.log(`Company ${company.id} - ✅ Found facility data in pooling.poolingDetail:`, facilityData);
+                    // Found facility data in pooling.poolingDetail
                 } else if (contractData.poolingDetail) {
                     // Sometimes poolingDetail is at the root level
                     facilityData = contractData.poolingDetail;
-                    console.log(`Company ${company.id} - ✅ Found facility data at root level:`, facilityData);
+                    // Found facility data at root level
                 } 
                 
                 if (!facilityData) {
-                    console.log(`Company ${company.id} - ⚠️ No pooling data found. Contract data keys:`, Object.keys(contractData));
-                    console.log(`Company ${company.id} - Full contractData:`, contractData);
+                    // No pooling data found
                 }
                 
                 // DON'T use consumerCount from pooling - it's not accurate
@@ -531,13 +559,13 @@ class ParkingUIIntegrationXML {
                 
                 if (facilityData) {
                     const facilities = Array.isArray(facilityData) ? facilityData : [facilityData];
-                    console.log(`Company ${company.id} - Processing ${facilities.length} facilities`);
+                    // Processing facilities
                     
                     // Find main facility (facility: "0" with extCardProfile: "0") - this is the general company data
                     const mainFacility = facilities.find(f => {
                         const facilityId = f.facility;
                         const profileId = f.extCardProfile;
-                        console.log(`Checking facility:`, f, `facility=${facilityId}, extCardProfile=${profileId}`);
+                        // Checking facility
                         // Look for facility="0" with extCardProfile="0"
                         return (facilityId === "0" || facilityId === 0) && (profileId === "0" || profileId === 0);
                     });
@@ -549,14 +577,14 @@ class ParkingUIIntegrationXML {
                         // Use main facility data (facility="0" is the general company data)
                         presentCount = parseInt(mainFacility.presentCounter) || 0;
                         maxCount = parseInt(mainFacility.maxCounter) || 0;
-                        console.log(`Company ${company.id} - ✅ Main facility found:`, mainFacility, `present=${presentCount}, max=${maxCount}`);
+                        // Main facility found
                     } else {
                         // If no main facility found, sum all facilities
-                        console.log(`Company ${company.id} - No main facility (0) found, facilities:`, facilities);
+                        // No main facility found
                         facilities.forEach(f => {
                             const present = parseInt(f.presentCounter) || 0;
                             const max = parseInt(f.maxCounter) || 0;
-                            console.log(`Facility ${f.facility}: present=${present}, max=${max}`);
+                            // Facility stats
                             presentCount += present;
                             maxCount += max;
                         });
@@ -572,7 +600,7 @@ class ParkingUIIntegrationXML {
                         }));
                     
                     if (facilitiesBreakdown.length > 0) {
-                        console.log(`Company ${company.id} - Parking lots breakdown:`, facilitiesBreakdown);
+                        // Parking lots breakdown calculated
                     }
                     
                     // Update presence data
@@ -580,11 +608,11 @@ class ParkingUIIntegrationXML {
                     const maxEl = document.getElementById(`max-${company.id}`);
                     if (presentEl) {
                         presentEl.textContent = presentCount.toString();
-                        console.log(`Company ${company.id} - ✅ Setting present to: ${presentCount}`);
+                        // Setting present count
                     }
                     if (maxEl) {
                         maxEl.textContent = maxCount.toString();
-                        console.log(`Company ${company.id} - ✅ Setting max to: ${maxCount}`);
+                        // Setting max count
                     }
                     
                     // Update occupancy bar
@@ -621,8 +649,7 @@ class ParkingUIIntegrationXML {
                     }
                 } else {
                     // No facility data found
-                    console.log(`Company ${company.id} - ⚠️⚠️⚠️ NO FACILITY DATA FOUND`);
-                    console.log(`Company ${company.id} - Full response was:`, contractData);
+                    // No facility data found
                     
                     const presentEl = document.getElementById(`present-${company.id}`);
                     const maxEl = document.getElementById(`max-${company.id}`);
@@ -630,11 +657,11 @@ class ParkingUIIntegrationXML {
                     // Show real data: 0 if no data
                     if (presentEl) {
                         presentEl.textContent = "?";
-                        console.log(`Company ${company.id} - No data: showing ? for present`);
+                        // No data for present
                     }
                     if (maxEl) {
                         maxEl.textContent = "?";
-                        console.log(`Company ${company.id} - No data: showing ? for max`);
+                        // No data for max
                     }
                     
                     // Hide occupancy bar when no data
@@ -646,7 +673,7 @@ class ParkingUIIntegrationXML {
                 }
             } else {
                 // No contract data - but check if we have it from enhanced API
-                console.log(`Company ${company.id} - No contract data in response, checking for API data`);
+                // No contract data in response
                 const presentEl = document.getElementById(`present-${company.id}`);
                 const maxEl = document.getElementById(`max-${company.id}`);
                 
@@ -660,7 +687,7 @@ class ParkingUIIntegrationXML {
                 if (presentEl) presentEl.textContent = present.toString();
                 if (maxEl) maxEl.textContent = max.toString();
                 
-                console.log(`Company ${company.id} - Using enhanced API data: present=${present}, max=${max}`);
+                // Using enhanced API data
             }
         } catch (error) {
             console.warn(`Could not load detailed data for company ${company.id}:`, error);
@@ -704,9 +731,7 @@ class ParkingUIIntegrationXML {
         }
         
         // Log company name for debugging
-        console.log(`[selectCompany] Selected company: ${company.id} - "${contractName}"`);
-        console.log(`[selectCompany] currentContract.name set to: "${this.currentContract.name}"`);
-        console.log(`[selectCompany] Original company object:`, company);
+        // Company selected
         
         // Hide company selector if only one company
         const companySelector = document.getElementById('companySelector');
@@ -1843,7 +1868,7 @@ class ParkingUIIntegrationXML {
         if (!this.currentContract) return [];
         
         try {
-            console.log('[getCompanyProfiles] Getting profiles for company:', this.currentContract.id);
+            // Getting profiles for company
             
             // Get all subscribers to see what profiles are in use
             const profilesInUse = new Map();
@@ -1893,7 +1918,7 @@ class ParkingUIIntegrationXML {
             if (isNewSubscriber) {
                 profiles = await this.getCompanyProfiles();
                 
-                console.log('[loadUsageProfiles] Got company profiles:', profiles);
+                // Got company profiles
                 
                 // Clear and populate select
                 profileSelect.innerHTML = '';
@@ -1979,7 +2004,7 @@ class ParkingUIIntegrationXML {
             try {
                 // Check if this is from a large company
                 if (subscriber.isLargeCompany) {
-                    console.log(`[UI] Large company subscriber - loading details on-demand`);
+                    // Large company subscriber - loading details on-demand
                 }
                 
                 // Get full details on demand
@@ -2039,7 +2064,7 @@ class ParkingUIIntegrationXML {
                     }
                     
                     if (subscriber.isLargeCompany) {
-                        console.log(`[UI] Full details loaded successfully for large company subscriber`);
+                        // Full details loaded successfully
                     }
                 }
             } catch (error) {
@@ -2108,8 +2133,7 @@ class ParkingUIIntegrationXML {
             let consumerData;
             
             if (shouldUpdate) {
-                console.log(`[saveSubscriber] Preparing UPDATE data for subscriber ${subscriberData.subscriberNum}`);
-                console.log(`[saveSubscriber] Raw dates from form - validFrom: ${subscriberData.validFrom}, validUntil: ${subscriberData.validUntil}`);
+                // Preparing UPDATE data
 
                 
                 // For UPDATE - structure data according to API spec for /detail endpoint
@@ -2172,7 +2196,7 @@ class ParkingUIIntegrationXML {
                     lpn3: (subscriberData.vehicle3 || '').replace(/-/g, '')
                 };
                 
-                console.log(`[saveSubscriber] Full UPDATE payload:`, JSON.stringify(consumerData, null, 2));
+                // UPDATE payload prepared
             } else {
                 // For NEW subscriber - send full structure matching documentation
                 const formatDateWithTimezone = (date) => {
@@ -2232,13 +2256,13 @@ class ParkingUIIntegrationXML {
                     lpn3: (subscriberData.vehicle3 || '').replace(/-/g, '')
                 };
                 
-                console.log(`[saveSubscriber] Full NEW payload:`, JSON.stringify(consumerData, null, 2));
+                // NEW payload prepared
             }
             
             if (isReallyNew) {
                 // Need to ensure subscribers list is loaded
                 if (!this.subscribers || this.subscribers.length === 0) {
-                    console.log('[saveSubscriber] Loading subscribers list for numbering...');
+                    // Loading subscribers list for numbering
                     await this.loadSubscribers();
                 }
                 
@@ -2259,8 +2283,7 @@ class ParkingUIIntegrationXML {
                         }
                         
                         consumerData.consumer.id = String(nextGuestId);
-                        console.log(`[saveSubscriber] Creating guest with ID: ${consumerData.consumer.id}`);
-                        console.log(`[saveSubscriber] Found ${existingGuests.length} existing guests`);
+                        // Creating guest
                     } else {
                         // Regular subscriber - get next number in company
                         const companySubscribers = this.subscribers.filter(s => {
@@ -2276,20 +2299,18 @@ class ParkingUIIntegrationXML {
                         
                         // Don't send ID for regular subscribers - let server assign
                         consumerData.consumer.id = '';
-                        console.log(`[saveSubscriber] Creating regular subscriber - server will assign ID`);
-                        console.log(`[saveSubscriber] Found ${companySubscribers.length} existing subscribers`);
-                        console.log(`[saveSubscriber] Current contract name: "${this.currentContract.name}"`);
+                        // Creating regular subscriber
                     }
                 } else {
                     // Use provided subscriber number
                     consumerData.consumer.id = subscriberData.subscriberNum;
-                    console.log(`[saveSubscriber] Using provided subscriber number: ${consumerData.consumer.id}`);
+                    // Using provided subscriber number
                 }
                 
                 // Create new consumer with all details in one call
                 result = await this.api.addConsumer(this.currentContract.id, consumerData);
                 
-                console.log('[saveSubscriber] Server response for new consumer:', result);
+                // Server response received
                 
                 if (result.success) {
                     console.log('New consumer created successfully');
@@ -2297,7 +2318,7 @@ class ParkingUIIntegrationXML {
                     // Check if we got the created consumer ID from server
                     if (result.data && result.data.id) {
                         consumerData.consumer.id = result.data.id;
-                        console.log(`[saveSubscriber] Server assigned ID: ${result.data.id}`);
+                        // Server assigned ID
                     }
                     // Send email notification if email provided
                     if (subscriberData.email) {
@@ -2334,20 +2355,20 @@ class ParkingUIIntegrationXML {
                 }
             } else {
                 // Update existing consumer with all details
-                console.log('[saveSubscriber] Updating existing consumer:', subscriberData.subscriberNum);
+                // Updating existing consumer
                 result = await this.api.updateConsumer(
                     this.currentContract.id,
                     subscriberData.subscriberNum,
                     consumerData
                 );
                 
-                console.log(`[saveSubscriber] Server response:`, result);
+                // Server response
                 
 
                 
                 // If update failed with 500 error, try different approaches
                 if (!result.success && result.error && result.error.includes('500')) {
-                    console.log('[saveSubscriber] Update failed with 500, analyzing issue...');
+                    // Update failed with 500
                     
                     // Check if this is company 8 or other large companies
                     const isLargeCompany = this.currentContract.id === '8' || 
@@ -2355,7 +2376,7 @@ class ParkingUIIntegrationXML {
                                           this.currentContract.id === '10';
                     
                     if (isLargeCompany) {
-                        console.log('[saveSubscriber] Large company detected, trying simplified update...');
+                        // Large company detected
                         
                         // For large companies, try WITHOUT identification at all
                         const minimalData = {
@@ -2370,7 +2391,7 @@ class ParkingUIIntegrationXML {
                             // NO identification block at all for large companies
                         };
                         
-                        console.log('[saveSubscriber] Trying with minimal data structure (NO identification):', JSON.stringify(minimalData, null, 2));
+                        // Trying with minimal data
                         result = await this.api.updateConsumer(
                             this.currentContract.id,
                             subscriberData.subscriberNum,
@@ -2378,14 +2399,14 @@ class ParkingUIIntegrationXML {
                         );
                         
                         if (result.success) {
-                            console.log('Consumer updated successfully with minimal data');
+                            // Consumer updated successfully
                             this.showNotification('✅ הנתונים הבסיסיים נשמרו בהצלחה', 'success');
                         }
                     }
                     
                     // If still failed, try without identification at all for problematic companies
                     if (!result.success) {
-                        console.log('[saveSubscriber] Still failing, trying without identification block...');
+                        // Still failing
                         
                         // Create a copy without identification
                         const dataWithoutIdentification = {
@@ -2407,14 +2428,14 @@ class ParkingUIIntegrationXML {
                         );
                         
                         if (result.success) {
-                            console.log('Consumer updated successfully without usage profile');
+                            // Consumer updated successfully
                             this.showNotification('⚠️ הנתונים נשמרו ללא פרופיל שימוש', 'warning');
                         }
                     }
                 }
                 
                 if (result.success) {
-                    console.log('Consumer updated successfully');
+                    // Consumer updated successfully
                 }
             }
             
@@ -2430,18 +2451,17 @@ class ParkingUIIntegrationXML {
                     // Convert to string for comparison
                     const subscriberNumStr = String(subscriberData.subscriberNum);
                     
-                    console.log(`[saveSubscriber] Looking for subscriber ${subscriberNumStr} in array of ${this.subscribers.length} subscribers`);
-                    console.log(`[saveSubscriber] First 3 subscribers:`, this.subscribers.slice(0, 3).map(s => ({id: s.id, subscriberNum: s.subscriberNum})));
+                    // Looking for subscriber in array
                     
                     const index = this.subscribers.findIndex(s => 
                         String(s.subscriberNum) === subscriberNumStr || 
                         String(s.id) === subscriberNumStr
                     );
                     
-                    console.log(`[saveSubscriber] Found subscriber at index: ${index}`);
+                    // Found subscriber
                     
                     if (index !== -1) {
-                        console.log(`[saveSubscriber] Updating subscriber at index ${index} with new data:`, subscriberData);
+                        // Updating subscriber
                         
                         // Update local data - preserve important fields
                         const updatedSubscriber = {
@@ -2476,8 +2496,7 @@ class ParkingUIIntegrationXML {
                         // CRITICAL: Actually update the subscriber in the array!
                         this.subscribers[index] = updatedSubscriber;
                         
-                        console.log(`[saveSubscriber] Updated subscriber in array, hasFullDetails: ${this.subscribers[index].hasFullDetails}`);
-                        console.log(`[saveSubscriber] Updated data:`, this.subscribers[index]);
+                        // Updated subscriber in array
                         
                         // Update the specific row in the table
                         this.updateSubscriberRow(this.subscribers[index], index);
