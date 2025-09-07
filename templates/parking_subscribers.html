@@ -2088,7 +2088,7 @@
                 subscribers = currentSubscribers;
                 // Using current subscribers
             } else {
-                console.warn('[loadReportSubscribers] No subscribers found');
+                // No subscribers found
             }
             
             // Get current company
@@ -2132,13 +2132,13 @@
                 </table>
             `;
             
-            console.log('[loadReportSubscribers] Loaded', subscribers.length, 'subscribers to report list');
+            // Loaded subscribers to report list
         }
         
         function filterReportSubscribers() {
             const searchText = document.getElementById('reportSearchBox').value.toLowerCase();
             const rows = document.querySelectorAll('.report-subscriber-row');
-            console.log('[filterReportSubscribers] Filtering with text:', searchText, 'Total rows:', rows.length);
+            // Filtering subscribers
             
             let visibleCount = 0;
             rows.forEach(row => {
@@ -2153,7 +2153,7 @@
                 }
             });
             
-            console.log('[filterReportSubscribers] Visible rows after filter:', visibleCount);
+            // Filtered results
         }
         
         function searchAndSelectSubscriber() {
@@ -2205,7 +2205,7 @@
         }
         
         function selectSubscriberForReport(companyNum, subscriberNum) {
-            console.log('[selectSubscriberForReport] Selected:', { companyNum, subscriberNum });
+            // Selected subscriber for report
             closeReportsModal();
             
             // Call viewTransactions to show the report
@@ -2217,8 +2217,7 @@
         
         // View transactions report for a subscriber
         async function viewTransactions(companyNum, subscriberNum) {
-            console.log('[viewTransactions] Loading transactions for subscriber:', subscriberNum);
-            console.log('[viewTransactions] Company:', companyNum);
+            // Loading transactions
             
             // Store subscriber number for later use
             currentReportSubscriber = subscriberNum;
@@ -2624,14 +2623,14 @@
             
             editingSubscriber = null; // New subscriber
             window.currentEditingSubscriber = null; // Clear global reference for new subscriber
-            console.log('[addNewSubscriber] Cleared both editingSubscriber and window.currentEditingSubscriber for new subscriber');
+            // Cleared editing subscriber for new subscriber
             
             // CRITICAL: Store the edit mode in the modal itself
             const modal = document.getElementById('editModal');
             if (modal) {
                 modal.setAttribute('data-edit-mode', 'new');
                 modal.removeAttribute('data-subscriber-num');
-                console.log('[addNewSubscriber] Set modal data-edit-mode to NEW');
+                // Set modal to new mode
             }
             
             // Force show buttons
@@ -2758,8 +2757,8 @@
                 modal.removeAttribute('data-edit-mode');
                 modal.removeAttribute('data-subscriber-num');
                 
-                console.log('[closeModal] Cleared both editingSubscriber and window.currentEditingSubscriber');
-                console.log('[closeModal] Cleared modal data attributes');
+                // Cleared editing subscriber
+                // Cleared modal data attributes
             }
         }
         
@@ -3037,28 +3036,25 @@
                 const uiIntegration = window.parkingUIXML || window.parkingUI;
                 
                 // Debug logging
-                console.log('[saveSubscriber] CRITICAL CHECK - editingSubscriber:', editingSubscriber);
-                console.log('[saveSubscriber] CRITICAL CHECK - window.currentEditingSubscriber:', window.currentEditingSubscriber);
-                console.log('[saveSubscriber] typeof editingSubscriber:', typeof editingSubscriber);
-                console.log('[saveSubscriber] typeof window.currentEditingSubscriber:', typeof window.currentEditingSubscriber);
+                // Check editing state
                 
                 // Use both local and global to ensure we have the right value
                 const currentlyEditing = editingSubscriber || window.currentEditingSubscriber;
-                console.log('[saveSubscriber] currentlyEditing:', currentlyEditing);
+                // Current editing state
                 
                 // Extra validation
                 const subscriberNumFromForm = document.getElementById('editSubscriberNum').value;
-                console.log('[saveSubscriber] Subscriber number from form:', subscriberNumFromForm);
+                // Subscriber number from form
                 
                 // If we have a subscriber number in the form and it's not empty, it's definitely an update
                 const isDefinitelyUpdate = subscriberNumFromForm && subscriberNumFromForm !== '' && subscriberNumFromForm !== '0';
-                console.log('[saveSubscriber] isDefinitelyUpdate (has subscriber number):', isDefinitelyUpdate);
+                // Check if definitely update
                 
                 // ULTIMATE FIX: Check the modal's data attribute for edit mode
                 const modal = document.getElementById('editModal');
                 const modalEditMode = modal ? modal.getAttribute('data-edit-mode') : null;
                 const modalSubscriberNum = modal ? modal.getAttribute('data-subscriber-num') : null;
-                console.log('[saveSubscriber] Modal edit mode:', modalEditMode, 'Modal subscriber num:', modalSubscriberNum);
+                // Modal edit mode
                 
                 // Determine if new based on multiple factors
                 let isNew = false;
@@ -3066,28 +3062,28 @@
                 // PRIMARY CHECK: If we have a subscriber number, it's ALWAYS an update
                 if (isDefinitelyUpdate) {
                     isNew = false;
-                    console.log('[saveSubscriber] Has subscriber number - DEFINITELY UPDATE');
+                    // Has subscriber number - DEFINITELY UPDATE
                 } else if (modalEditMode === 'UPDATE' || modalEditMode === 'update') {
                     isNew = false;
-                    console.log('[saveSubscriber] Modal says UPDATE');
+                    // Modal says UPDATE
                 } else if (currentlyEditing) {
                     isNew = false;
-                    console.log('[saveSubscriber] Has editing context - UPDATE');
+                    // Has editing context - UPDATE
                 } else if (modalEditMode === 'NEW' || modalEditMode === 'new') {
                     isNew = true;
-                    console.log('[saveSubscriber] Modal says NEW');
+                    // Modal says NEW
                 } else {
                     // If no clear indication but we have a subscriber num, it's update
                     if (subscriberNumFromForm && subscriberNumFromForm !== '' && subscriberNumFromForm !== '0') {
                         isNew = false;
-                        console.log('[saveSubscriber] No mode but has subscriber number - UPDATE');
+                        // No mode but has subscriber number - UPDATE
                     } else {
                         isNew = true;
-                        console.log('[saveSubscriber] No clear indication - assuming NEW');
+                        // No clear indication - assuming NEW
                     }
                 }
                 
-                console.log('[saveSubscriber] FINAL isNew decision:', isNew);
+                // Final isNew decision
                 
                 // Collect form data
                 const formData = {
@@ -3112,7 +3108,7 @@
                             document.getElementById('editModal')?.classList.contains('guest-mode')
                 };
                 
-                console.log('[saveSubscriber] formData:', formData);
+                // Form data prepared
                 
                 // Validate required fields
                 // Last name is required
@@ -3408,7 +3404,7 @@
             // Limit date to maximum 31.12.2035
             const MAX_DATE = '2035-12-31';
             if (resultDate > MAX_DATE) {
-                console.log(`Date ${resultDate} exceeds maximum, limiting to ${MAX_DATE}`);
+                // Date exceeds maximum, limiting
                 return MAX_DATE;
             }
             
