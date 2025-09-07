@@ -1082,6 +1082,9 @@
                     <button class="btn btn-primary action-btn" onclick="exportToExcel()">
                         <span data-translate="export">📥 ייצוא לאקסל</span>
                     </button>
+                    <button class="btn btn-secondary action-btn" onclick="refreshSubscribers()" title="רענן רשימת מנויים">
+                        <span>🔄 רענון</span>
+                    </button>
                     <button class="btn btn-secondary action-btn" id="reloadFullButton" onclick="reloadFullData()" style="display: none;">
                         <span data-translate="reloadFull">🔄 טעינה מלאה</span>
                     </button>
@@ -1487,7 +1490,7 @@
         // G-guest, N-New, P-profile, R-report
         function checkUserPermission(action) {
             const permissions = getUserPermissions();
-            console.log(`[checkUserPermission] Checking ${action} against permissions: ${permissions}`);
+            // Checking permission
             
             switch(action) {
                 case 'add_subscriber':
@@ -1510,7 +1513,7 @@
         // Update button states based on permissions
         function updateButtonPermissions() {
             const permissions = getUserPermissions();
-            console.log('[updateButtonPermissions] Updating buttons based on permissions:', permissions);
+            // Updating buttons based on permissions
             
             // Add New Subscriber button
             const addNewBtn = document.querySelector('button[onclick="addNewSubscriber()"]');
@@ -1873,7 +1876,7 @@
 
         // Edit subscriber
         async function editSubscriber(subscriber) {
-            console.log('[editSubscriber] Called with subscriber:', subscriber);
+            // Editing subscriber
             
             // Always allow viewing/editing subscriber details
             // Permission check will be done when saving (for profile updates)
@@ -1888,16 +1891,14 @@
             
             window.currentEditingSubscriber = subscriber;
             editingSubscriber = subscriber;
-            console.log('[editSubscriber] Set editingSubscriber:', editingSubscriber);
-            console.log('[editSubscriber] Set window.currentEditingSubscriber:', window.currentEditingSubscriber);
-            console.log('[editSubscriber] Subscriber number:', subscriber.subscriberNum);
+            // Set editing subscriber data
             
             // CRITICAL: Store the edit mode in the modal itself
             const modal = document.getElementById('editModal');
             if (modal) {
                 modal.setAttribute('data-edit-mode', 'UPDATE');
                 modal.setAttribute('data-subscriber-num', subscriber.subscriberNum);
-                console.log('[editSubscriber] Set modal data-edit-mode to UPDATE');
+                // Set modal to update mode
             }
             
             // Force show buttons
@@ -1923,7 +1924,7 @@
             const validFrom = subscriber.validFrom || subscriber.xValidFrom || '';
             const validUntil = subscriber.validUntil || subscriber.xValidUntil || '';
             
-            console.log(`[editSubscriber] Date mapping - validFrom: ${validFrom}, validUntil: ${validUntil}`);
+            // Date mapping completed
             
             document.getElementById('editValidFrom').value = formatDateForDisplay(validFrom) || '';
             document.getElementById('editValidUntil').value = formatDateForDisplay(validUntil) || '';
@@ -2012,7 +2013,7 @@
         
         // Open reports modal
         function openReportsModal() {
-            console.log('[openReportsModal] Opening reports modal');
+            // Opening reports modal
             
             // Check user permissions
             if (!checkUserPermission('view_reports')) {
@@ -2021,7 +2022,7 @@
             }
             const modal = document.getElementById('reportsModal');
             if (!modal) {
-                console.log('[openReportsModal] Creating modal HTML');
+                // Creating modal HTML
                 // Create modal if it doesn't exist
                 const modalHtml = `
                     <div id="reportsModal" class="modal">
@@ -2056,10 +2057,10 @@
             }
             
             // Load subscribers for current company
-            console.log('[openReportsModal] Loading report subscribers');
+            // Loading report subscribers
             loadReportSubscribers();
             
-            console.log('[openReportsModal] Showing modal');
+            // Showing modal
             document.getElementById('reportsModal').classList.add('show');
         }
         
@@ -2069,7 +2070,7 @@
         }
         
         function loadReportSubscribers() {
-            console.log('[loadReportSubscribers] Starting to load subscribers for reports');
+            // Starting to load subscribers for reports
             const list = document.getElementById('reportSubscriberList');
             if (!list) {
                 console.error('[loadReportSubscribers] List element not found');
@@ -2082,10 +2083,10 @@
             // Try to get from parkingUIXML first (most reliable)
             if (window.parkingUIXML && window.parkingUIXML.subscribers) {
                 subscribers = window.parkingUIXML.subscribers;
-                console.log('[loadReportSubscribers] Using parkingUIXML.subscribers:', subscribers.length, 'subscribers');
+                // Using existing subscribers
             } else if (currentSubscribers && currentSubscribers.length > 0) {
                 subscribers = currentSubscribers;
-                console.log('[loadReportSubscribers] Using currentSubscribers:', subscribers.length, 'subscribers');
+                // Using current subscribers
             } else {
                 console.warn('[loadReportSubscribers] No subscribers found');
             }
@@ -2094,13 +2095,13 @@
             let currentCompanyNum = null;
             if (window.parkingUIXML && window.parkingUIXML.currentContract) {
                 currentCompanyNum = window.parkingUIXML.currentContract.id;
-                console.log('[loadReportSubscribers] Current company:', currentCompanyNum);
+                // Current company found
             } else if (currentCompany) {
                 currentCompanyNum = currentCompany.id;
-                console.log('[loadReportSubscribers] Current company (fallback):', currentCompanyNum);
+                // Current company (fallback)
             }
             
-            console.log('[loadReportSubscribers] Total subscribers before filtering:', subscribers.length);
+            // Total subscribers loaded
             
             list.innerHTML = `
                 <table style="width: 100%; border-collapse: collapse;">
@@ -2556,6 +2557,25 @@
             // Clone and replace to remove all event listeners
             const newUntilInput = validUntilInput.cloneNode(true);
             validUntilInput.parentNode.replaceChild(newUntilInput, validUntilInput);
+        }
+        
+        // Refresh subscribers list (reload current company)
+        async function refreshSubscribers() {
+            if (window.parkingUIXML && window.parkingUIXML.currentContract) {
+                const currentCompany = window.parkingUIXML.currentContract;
+                showToast('🔄 מרענן רשימת מנויים...', 'info');
+                
+                try {
+                    // Reload subscribers for current company
+                    await window.parkingUIXML.loadSubscribers();
+                    showToast('✅ הרשימה עודכנה בהצלחה', 'success');
+                } catch (error) {
+                    showToast('❌ שגיאה ברענון הרשימה', 'error');
+                    // Error refreshing subscribers
+                }
+            } else {
+                showToast('⚠️ יש לבחור חברה תחילה', 'warning');
+            }
         }
         
         // Add new subscriber
@@ -3686,8 +3706,29 @@
         // Pass company_list from Flask to JavaScript
         window.userCompanyList = "{{ company_list }}";
         window.userPermissions = "{{ permissions }}";
-        console.log('[Init] User company_list:', window.userCompanyList);
-        console.log('[Init] User permissions:', window.userPermissions);
+        // Init logs removed
+        
+        // Auto-logout after 30 minutes of inactivity
+        let inactivityTimer;
+        const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
+        
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                alert('הופסקת מהמערכת עקב חוסר פעילות');
+                window.location.href = '/logout';
+            }, INACTIVITY_TIMEOUT);
+        }
+        
+        // Track user activity
+        document.addEventListener('mousemove', resetInactivityTimer);
+        document.addEventListener('keypress', resetInactivityTimer);
+        document.addEventListener('click', resetInactivityTimer);
+        document.addEventListener('scroll', resetInactivityTimer);
+        document.addEventListener('touchstart', resetInactivityTimer); // For mobile
+        
+        // Start the timer when page loads
+        resetInactivityTimer();
     </script>
     
     <script src="/static/js/config.js?v=20251216_fixed20"></script>
@@ -3702,7 +3743,7 @@
 
             // Use XML API integration
             if (window.parkingUIXML) {
-                console.log('XML API Integration available, connecting to parking server');
+                // XML API Integration available
                 // The parkingUIXML will handle loading companies and subscribers
             }
         };
