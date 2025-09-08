@@ -2458,7 +2458,7 @@
                 const dayOfWeek = fromDate.getDay();
                 
                 // Calculate days until Saturday (end of week)
-                const daysUntilSaturday = (6 - dayOfWeek + 7) % 7 || 7; // If it's Saturday, set to same day
+                const daysUntilSaturday = (6 - dayOfWeek + 1) % 1 || 1; // If it's Saturday, set to same day
                 
                 // Calculate end date (max Saturday of same week)
                 const maxEndDate = new Date(fromDate);
