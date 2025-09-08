@@ -284,6 +284,11 @@ class ParkingUIIntegrationXML {
         this.currentParking = parking;
         window.currentParking = parking;
         
+        // Update user display with parking name
+        if (typeof loadCurrentUser === 'function') {
+            loadCurrentUser();
+        }
+        
         // Update UI
         document.querySelectorAll('.company-card').forEach(card => {
             card.classList.remove('selected');
@@ -751,12 +756,10 @@ class ParkingUIIntegrationXML {
         // Log company name for debugging
         // Company selected
         
-        // Hide company selector if only one company
+        // Keep company selector visible even with one company (for occupancy data)
         const companySelector = document.getElementById('companySelector');
         const companies = document.querySelectorAll('.company-card');
-        if (companies.length === 1 && companySelector) {
-            companySelector.style.display = 'none';
-        }
+        // Removed hiding logic - always show company card for occupancy info
         
         // Show main content
         const mainContent = document.getElementById('mainContent');
@@ -1941,7 +1944,29 @@ class ParkingUIIntegrationXML {
                 // Clear and populate select
                 profileSelect.innerHTML = '';
                 
+                // Check if user has permission to change profile
+                const permissions = window.userPermissions || '';
+                const canChangeProfile = permissions.includes('P');
+                
                 if (profiles.length > 0) {
+                    // If user can't change profile, get the last subscriber's profile
+                    let defaultProfileId = null;
+                    if (!canChangeProfile && this.subscribers && this.subscribers.length > 0) {
+                        // Find the last subscriber (highest ID or last in array)
+                        const lastSubscriber = this.subscribers[this.subscribers.length - 1];
+                        defaultProfileId = lastSubscriber.profileId || lastSubscriber.profile || '1';
+                        
+                        // Find if this profile exists in our profiles list
+                        const profileExists = profiles.some(p => p.id === defaultProfileId);
+                        if (!profileExists && lastSubscriber.profile) {
+                            // Add the last subscriber's profile to the list
+                            profiles.push({
+                                id: defaultProfileId,
+                                name: lastSubscriber.profile || `פרופיל ${defaultProfileId}`
+                            });
+                        }
+                    }
+                    
                     profiles.forEach(profile => {
                         const option = document.createElement('option');
                         option.value = profile.id;
@@ -1949,6 +1974,20 @@ class ParkingUIIntegrationXML {
                         option.textContent = profile.name;
                         profileSelect.appendChild(option);
                     });
+                    
+                    // Set default value
+                    if (!canChangeProfile && defaultProfileId) {
+                        profileSelect.value = defaultProfileId;
+                        profileSelect.disabled = true;
+                        profileSelect.style.backgroundColor = '#f0f0f0';
+                        profileSelect.style.cursor = 'not-allowed';
+                        profileSelect.title = 'אין הרשאה לשנות פרופיל';
+                    } else {
+                        profileSelect.disabled = false;
+                        profileSelect.style.backgroundColor = '';
+                        profileSelect.style.cursor = '';
+                        profileSelect.title = '';
+                    }
                     
                     // If only one profile, disable the select
                     if (profiles.length === 1) {
