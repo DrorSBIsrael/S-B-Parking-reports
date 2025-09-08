@@ -439,7 +439,7 @@ class ParkingUIIntegrationXML {
             // Start with basic info
             card.innerHTML = `
                 <div class="company-header">
-                    <h3>${company.name || company.companyName || this.currentParking?.name || 'פלאזה'} <span style="color: #666; font-size: 0.9em;">[${company.id}]</span></h3>
+                    <h3>${company.name || company.companyName || this.currentParking?.name || 'חניון'} <span style="color: #666; font-size: 0.9em;">[${company.id}]</span></h3>
                     <div style="display: flex; gap: 5px; align-items: center;">
                         <span class="company-number">#${company.id}</span>
                         <button class="btn btn-sm" onclick="event.stopPropagation(); window.parkingUIXML.refreshCompanyCard('${company.id}')" 
@@ -727,7 +727,7 @@ class ParkingUIIntegrationXML {
         // Store the full company object with correct name
         // If no name, use the parking name or a default
         const contractName = company.name || company.firstName || company.companyName || 
-                            this.currentParking?.name || 'פלאזה';
+                            this.currentParking?.name || 'חניון';
         
         this.currentContract = {
             ...company,
@@ -1911,14 +1911,14 @@ class ParkingUIIntegrationXML {
             }
             
             // If no profiles in use, return a default based on company
-            // Company 2 typically uses profile 2 (פלאזה מזרח)
+            // Company 2 typically uses profile 1 (חניון ראשי)
             console.log('[getCompanyProfiles] No profiles found in use, returning default');
-            return [{ id: '2', name: 'פלאזה מזרח' }];
+            return [{ id: '1', name: 'חניון ראשי' }];
             
         } catch (error) {
             console.error('[getCompanyProfiles] Error:', error);
             // Return default profile on error
-            return [{ id: '2', name: 'פלאזה מזרח' }];
+            return [{ id: '1', name: 'חניון ראשי' }];
         }
     }
     
@@ -1978,8 +1978,8 @@ class ParkingUIIntegrationXML {
                 } else {
                     // No profiles - shouldn't happen but add fallback
                     const option = document.createElement('option');
-                    option.value = '2';
-                    option.textContent = 'פלאזה מזרח';
+                    option.value = '1';
+                    option.textContent = 'חניון ראשי';
                     profileSelect.appendChild(option);
                     profileSelect.disabled = true;
                 }
@@ -2708,29 +2708,27 @@ class ParkingUIIntegrationXML {
     // Get parking transactions report for a subscriber
     async getSubscriberReport(subscriberNum, minDate = null, maxDate = null) {
         try {
-            console.log(`[getSubscriberReport] Starting report for subscriber ${subscriberNum}`);
-            console.log(`[getSubscriberReport] Current contract:`, this.currentContract);
+            // Starting report for subscriber
             
             if (!this.currentContract || !this.currentContract.id) {
-                console.error('[getSubscriberReport] No current contract set');
+                // No current contract set
                 throw new Error('לא נבחרה חברה');
             }
             
             const contractId = this.currentContract.id;
             
-            console.log(`[getSubscriberReport] Getting report for subscriber ${subscriberNum}, contract ${contractId}`);
-            console.log(`[getSubscriberReport] Date range: ${minDate} to ${maxDate}`);
+            // Getting report for subscriber
             
             // Get parking transactions from API
             const result = await this.api.getParkingTransactions(contractId, subscriberNum, minDate, maxDate);
-            console.log(`[getSubscriberReport] API Response:`, result);
+            // API response received
             
             if (!result.success) {
                 throw new Error(result.error || 'Failed to get parking transactions');
             }
             
             const transactions = result.data || [];
-            console.log(`[getSubscriberReport] Found ${transactions.length} transactions`);
+            // Found transactions
             
             // Filter transactions by type (1, 2, 11, 12)
             const allowedTypes = ['1', '2', '11', '12'];
@@ -2739,7 +2737,7 @@ class ParkingUIIntegrationXML {
                 return allowedTypes.includes(typeStr);
             });
             
-            console.log(`[getSubscriberReport] After filtering: ${filteredTransactions.length} relevant transactions`);
+            // Filtered transactions
             
             // Format transactions for display
             const formattedTransactions = filteredTransactions.map(trans => ({
