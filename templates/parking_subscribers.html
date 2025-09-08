@@ -2482,7 +2482,7 @@
                     helpText.style.marginTop = '5px';
                     validUntilInput.parentElement.appendChild(helpText);
                 }
-                helpText.textContent = `* אורח מוגבל לשבוע הנוכחי (עד יום שבת ${endDay}/${endMonth})`;
+                helpText.textContent = `* אורח מוגבל לשבוע הנוכחי (כרגע עד מחר   ${endDay}/${endMonth})`;
             };
             
             // Add event listener
@@ -3556,14 +3556,14 @@
             
             try {
                 const api = window.parkingAPIXML || new ParkingAPIXML();
-                const url = `/consumers/${currentTransactionCompany},${currentTransactionSubscriber}/parktrans?minDate=${startDate}&maxDate=${endDate}`;
                 
-                const result = await api.makeRequest(url);
+                // Use the proper API method for parking transactions
+                const result = await api.getParkingTransactions(currentTransactionCompany, currentTransactionSubscriber, startDate, endDate);
                 
-                if (result.success && result.data && result.data.parkTransaction) {
-                    const transactions = Array.isArray(result.data.parkTransaction) 
-                        ? result.data.parkTransaction 
-                        : [result.data.parkTransaction];
+                if (result.success && result.data) {
+                    const transactions = Array.isArray(result.data) 
+                        ? result.data 
+                        : [result.data];
                     
                     // Filter out code 42 and map data
                     allTransactions = transactions
@@ -3753,7 +3753,15 @@
                 if (data.success && data.user) {
                     const usernameElement = document.getElementById('currentUsername');
                     if (usernameElement) {
-                        usernameElement.textContent = data.user.username || data.user.email;
+                        // Get parking name if available
+                        let displayText = data.user.username || data.user.email;
+                        
+                        // Add parking name before username
+                        if (window.parkingUIXML && window.parkingUIXML.currentParking && window.parkingUIXML.currentParking.name) {
+                            displayText = window.parkingUIXML.currentParking.name + ' - ' + displayText;
+                        }
+                        
+                        usernameElement.textContent = displayText;
                     }
                 }
             } catch (error) {
