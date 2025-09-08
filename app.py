@@ -563,11 +563,11 @@ def convert_to_csv_import_format(csv_rows):
             print(f"✅ Row {index+1}: project {converted_row['project_number']}, cash: {cash_shekels} shekels, text: '{ctext_value}'")
             
         except Exception as e:
-            print(f"❌ Error converting row {index+1}: {str(e)}")
+            # Error converting row {index+1}: {str(e)}")
             print(f"   Row data: {row}")
             continue  # ממשיך לשורה הבאה במקום להפסיק
     
-    print(f"🎯 Successfully converted {len(converted_rows)} out of {len(csv_rows)} rows")
+    # Successfully converted rows
     return converted_rows
 
 def insert_to_csv_import_shekels(converted_data):
@@ -661,7 +661,7 @@ def insert_to_csv_import_shekels(converted_data):
                 cleaned_data.append(cleaned_row)
                 
             except Exception as row_error:
-                print(f"❌ Error cleaning row {i}: {str(row_error)}")
+                # Error cleaning row {i}: {str(row_error)}")
                 print(f"   Problematic row: {row}")
                 continue
         
@@ -692,7 +692,7 @@ def insert_to_csv_import_shekels(converted_data):
                     print(f"⚠️ Batch {batch_num} returned no data")
                     
             except Exception as batch_error:
-                print(f"❌ Error in batch {batch_num}: {str(batch_error)}")
+                # Error in batch {batch_num}: {str(batch_error)}")
                 
                 # אם הקבוצה נכשלה, ננסה שורה אחת בכל פעם
                 print(f"🔄 Trying individual rows for batch {batch_num}...")
@@ -733,7 +733,7 @@ def transfer_to_parking_data():
             print("⚠️ No data in csv_import_shekels to transfer")
             return 0
         
-        print(f"📊 Found {len(csv_result.data)} rows in csv_import_shekels")
+        # Found rows in csv_import_shekels
         
         # פונקציה לקבלת parking_id
         def get_parking_id(project_number):
@@ -745,7 +745,7 @@ def transfer_to_parking_data():
                     return result.data[0]['parking_id']
                 return None
             except Exception as e:
-                print(f"❌ Error getting parking_id: {str(e)}")
+                # Error getting parking_id: {str(e)}")
                 return None
         
         # עיבוד הנתונים להעברה - עם בדיקות כפילות משופרות
@@ -846,7 +846,7 @@ def transfer_to_parking_data():
                     
                     if result.data:
                         successful_transfers += 1
-                        print(f"✅ Row {i+1}: Successfully inserted as NEW record")
+                        # Row inserted as new record
                     else:
                         failed_transfers += 1
                         print(f"❌ Row {i+1}: Insert failed - no data returned")
@@ -870,9 +870,9 @@ def transfer_to_parking_data():
         # דוח סיכום מפורט
         total_processed = successful_transfers + skipped_duplicates + failed_transfers
         print(f"\n📊 Transfer Summary:")
-        print(f"   ✅ Successfully transferred: {successful_transfers} NEW records")
-        print(f"   🔄 Skipped duplicates: {skipped_duplicates} existing records")
-        print(f"   ❌ Failed: {failed_transfers} records")
+        # Successfully transferred records
+        # Skipped duplicates
+        # Failed transfers
         print(f"   📈 Total processed: {total_processed} out of {len(csv_result.data)} rows")
         
         # מחיקת csv_import_shekels אחרי העברה
@@ -887,7 +887,7 @@ def transfer_to_parking_data():
         return successful_transfers
             
     except Exception as e:
-        print(f"❌ Error transferring to parking_data: {str(e)}")
+        # Error transferring to parking_data: {str(e)}")
         return 0
 
 def process_single_email(mail, email_id):
@@ -899,14 +899,14 @@ def process_single_email(mail, email_id):
         
         # בדיקה שיש נתונים
         if not msg_data or len(msg_data) == 0:
-            print(f"❌ No data for email ID: {email_id}")
+            # No data for email
             return False
             
         email_body = msg_data[0][1]
         
         # בדיקה שיש body
         if not email_body:
-            print(f"❌ Empty email body for ID: {email_id}")
+            # Empty email body
             return False
             
         email_message = email.message_from_bytes(email_body)
@@ -916,7 +916,7 @@ def process_single_email(mail, email_id):
         subject = email_message.get('Subject', 'No Subject') or 'No Subject'
         date = email_message.get('Date', 'No Date') or 'No Date'
         
-        print(f"\n📧 Processing email from: {sender}")
+        # Processing email from sender
         print(f"   Subject: {subject}")
         print(f"   Date: {date}")
         
@@ -929,15 +929,16 @@ def process_single_email(mail, email_id):
         if not is_authorized_sender(sender):
             print(f"🚫 UNAUTHORIZED SENDER: {sender}")
             print(f"✅ Authorized senders: {AUTHORIZED_SENDERS}")
-            print(f"⏭️ Skipping email from unauthorized sender")
+            # Skipping unauthorized sender
             
             # 🆕 סימון המייל כדי לא לבדוק אותו שוב
             try:
-                print(f"🏷️ Marking unauthorized email as processed (ID: {email_id})...")
+                # Marking unauthorized email
                 mail.store(email_id, '+FLAGS', '\\Seen \\Flagged')
-                print(f"✅ Unauthorized email marked as processed")
+                # Unauthorized email marked
             except Exception as mark_error:
-                print(f"⚠️ Could not mark unauthorized email: {str(mark_error)}")
+                # Could not mark unauthorized email
+                pass
             
             print(f"📝 UNAUTHORIZED ACCESS LOGGED: {sender} tried to send data files")
             return False
@@ -947,7 +948,7 @@ def process_single_email(mail, email_id):
         csv_files = download_csv_from_email(email_message)
         
         if not csv_files:
-            print("⚠️ No CSV files found in email")
+            # No CSV files found
             # 🆕 שליחת מייל על חוסר קבצים
             send_error_notification(sender, 
                 "לא נמצאו קבצי CSV במייל. אנא ודא שצירפת קבצי נתונים תקינים.")
@@ -1007,29 +1008,30 @@ def process_single_email(mail, email_id):
         
         if transferred_count > 0:
             success_msg = f"עובדו {transferred_count} רשומות חדשות מתוך {total_processed} רשומות כולל"
-            print(f"🎉 Email processed successfully: {success_msg}")
+            # Email processed successfully
         else:
             success_msg = f"כל {total_processed} הרשומות כבר קיימות במערכת (כפילויות)"
-            print(f"🎉 Email processed successfully: {success_msg}")
+            # Email processed successfully
         
         # 🆕 שליחת מייל הצלחה עם פרטים מלאים
         send_success_notification(sender, processed_files, transferred_count, total_processed)
         
 # 🏷️ סימון המייל כמעובד במקום מחיקה
         try:
-            print(f"🏷️ Marking email as processed (ID: {email_id})...")
+            # Marking email as processed
             mail.store(email_id, '+FLAGS', '\\Seen \\Flagged')
-            print(f"✅ Email marked as processed successfully")
+            # Email marked as processed
             
         except Exception as mark_error:
-            print(f"⚠️ Could not mark email as processed: {str(mark_error)}")
+            # Could not mark email
             # לא מפסיקים את התהליך בגלל זה
+            pass
         
         return True
         
     except Exception as e:
         error_msg = f"שגיאה טכנית בעיבוד המייל: {str(e)}"
-        print(f"❌ Error processing email: {error_msg}")
+        # Error processing email
         
         # 🆕 שליחת מייל שגיאה עם פרטים
         if sender and sender != 'unknown@unknown.com':
@@ -1055,7 +1057,7 @@ def send_success_notification(sender_email, processed_files, new_rows, total_row
     # הגבלה ל-100 מיילי הצלחה ביום
     if send_success_notification.daily_count >= 100:
         files_summary = ', '.join([f['name'] for f in processed_files])
-        print(f"⚠️ Daily success email limit reached (100/day) - logging only: {new_rows} new, {total_rows} total from {files_summary}")
+        # Daily email limit reached
         return
     
     # בדיקת נתונים
@@ -1065,11 +1067,11 @@ def send_success_notification(sender_email, processed_files, new_rows, total_row
     if not gmail_user or not gmail_password:
         print(f"❌ Missing Gmail credentials for success notification")
         files_summary = ', '.join([f['name'] for f in processed_files])
-        print(f"📝 Success logged: {new_rows} new, {total_rows} total from {files_summary}")
+        # Success logged
         return
         
     try:
-        print(f"📧 Sending success notification to {sender_email}...")
+        # Sending success notification
         
         msg = MIMEMultipart()
         msg['From'] = gmail_user
@@ -1115,7 +1117,7 @@ def send_success_notification(sender_email, processed_files, new_rows, total_row
         server.quit()
         
         send_success_notification.daily_count += 1
-        print(f"✅ Success notification sent to {sender_email} ({send_success_notification.daily_count}/100 today)")
+        # Success notification sent
         
     except Exception as e:
         error_str = str(e)
@@ -1125,37 +1127,34 @@ def send_success_notification(sender_email, processed_files, new_rows, total_row
         else:
             print(f"❌ Failed to send success notification: {str(e)}")
             files_summary = ', '.join([f['name'] for f in processed_files])
-            print(f"📝 Success logged: {new_rows} new, {total_rows} total from {files_summary}")
+            # Success logged
 
 def send_error_notification(sender_email, error_message):
     """שליחת התראת שגיאה - מושבת, רק לוג"""
     
     # בדיקה אם מיילי שגיאה מושבתים
     if ERROR_EMAILS_DISABLED:
-        print(f"🚫 Error email DISABLED - logging only")
-        print(f"📝 Error for {sender_email}: {error_message}")
+        # Error email disabled
+        # Error logged
         return
     
     # אם לא מושבת, רק לוג (ללא שליחת מייל)
-    print(f"📝 ERROR LOGGED (no email sent): {sender_email} - {error_message}")
+    # Error logged
             
 def verify_email_system():
     """בדיקת התקינות של מערכת המיילים"""
     if not EMAIL_MONITORING_AVAILABLE:
-        print("⚠️ Email libraries not available - email monitoring disabled")
+        # Email libraries not available
         return False
         
-    print("🔧 Verifying email system configuration...")
+    # Verifying email system configuration
     
     # בדיקת משתני סביבה
     gmail_user = os.environ.get('GMAIL_USERNAME')
     gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
     
-    print(f"📧 Gmail Username: {'✅ SET' if gmail_user else '❌ MISSING'}")
-    print(f"🔑 Gmail Password: {'✅ SET' if gmail_password else '❌ MISSING'}")
-    
     if not gmail_user or not gmail_password:
-        print("⚠️ WARNING: Gmail credentials missing! Email monitoring will not work.")
+        # Gmail credentials missing
         return False
     
     # בדיקת חיבור IMAP (מהיר)
@@ -1172,26 +1171,26 @@ def verify_email_system():
 def start_email_monitoring_with_logs():
     """הפעלת מעקב מיילים עם לוגים מפורטים - ללא כפילות"""
     if not EMAIL_MONITORING_AVAILABLE:
-        print("⚠️ Email monitoring not available - libraries missing")
+        # Email monitoring not available
         return
         
     try:
-        print("🚀 Starting email monitoring system...")
+        # Starting email monitoring system
         
         # בדיקת תקינות המערכת
         if not verify_email_system():
-            print("❌ Email system verification failed. Monitoring will not start.")
+            # Email system verification failed
             return
         
         def monitoring_loop():
-            print("🔄 Email monitoring loop started")
+            # Email monitoring loop started
             check_count = 0
             
             while True:
                 try:
                     # בדיקת מיילים כל 5 דקות (300 שניות)
                     with app.app_context():
-                        print(f"⏰ Email check triggered at {datetime.now()}")
+                        # Email check triggered
                         check_for_new_emails()
                     
                     # המתנה של 5 דקות
@@ -1199,25 +1198,24 @@ def start_email_monitoring_with_logs():
                     
                     check_count += 1
                     if check_count % 6 == 0:  # כל 30 דקות (6 * 5 דקות)
-                        print(f"💓 Email monitoring alive - {check_count * 5} minutes running")
+                        # Email monitoring alive
+                        pass
                         
                 except KeyboardInterrupt:
-                    print("\n🛑 Email monitoring stopped by user")
+                    # Email monitoring stopped by user
                     break
                 except Exception as e:
-                    print(f"❌ Email monitoring error: {str(e)}")
-                    print("⏳ Retrying in 5 minutes...")
+                    # Email monitoring error - retrying
                     time.sleep(300)  # 5 דקות המתנה לפני ניסיון חוזר
         
         # הרצת הלולאה ברקע
         monitor_thread = threading.Thread(target=monitoring_loop, daemon=True)
         monitor_thread.start()
         
-        print("✅ Email monitoring started successfully in background")
-        print(f"⏰ Email checks scheduled every {EMAIL_CHECK_INTERVAL} minutes")
+        # Email monitoring started successfully
         
         # בדיקה ראשונית מעוכבת למניעת כפילות
-        print("🚀 Running initial email check in 15 seconds...")
+        # Running initial email check
         def delayed_initial_check():
             time.sleep(15)  # המתנה של 15 שניות
             with app.app_context():
@@ -1225,7 +1223,8 @@ def start_email_monitoring_with_logs():
         threading.Thread(target=delayed_initial_check, daemon=True).start()
         
     except Exception as e:
-        print(f"❌ Failed to start email monitoring: {str(e)}")
+        # Failed to start email monitoring
+        pass
 
 def start_background_email_monitoring():
     """נקודת כניסה להפעלת מעקב מיילים ברקע"""
@@ -1238,7 +1237,7 @@ def start_background_email_monitoring():
         
         def delayed_start():
             time.sleep(5)
-            print("📧 About to start email monitoring with logs...")  # 🆕 הוסף דיבוג
+            # Starting email monitoring  # 🆕 הוסף דיבוג
             start_email_monitoring_with_logs()
         
         startup_thread = threading.Thread(target=delayed_start, daemon=True)
@@ -1278,37 +1277,36 @@ def check_for_new_emails():
     if last_cache_reset is None or (datetime.now() - last_cache_reset).seconds > 3600:
         processed_email_ids = []
         last_cache_reset = datetime.now()
-        print(f"🔄 Hourly cache reset completed")
+        # Hourly cache reset completed
     
     # ניקוי זיכרון אם יש יותר מדי
     if len(processed_email_ids) > 50:
         processed_email_ids = processed_email_ids[-20:]
-        print(f"🧹 Email cache cleaned - kept last 20 emails")
+        # Email cache cleaned
     
     if not EMAIL_MONITORING_AVAILABLE:
-        print("⚠️ Email check skipped - libraries not available")
+        # Email check skipped
         return
     
-    print(f"\n🔍 ===== EMAIL CHECK STARTED at {datetime.now()} =====")
+    # Email check started
     
     # בדיקת משתני סביבה
     gmail_user = os.environ.get('GMAIL_USERNAME')
     gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
     
     if not gmail_user or not gmail_password:
-        print("❌ Missing Gmail credentials - skipping email check")
+        # Missing Gmail credentials
         return
     
-    print(f"📧 Gmail user: {gmail_user}")
-    print(f"🔑 Gmail password: {'***' if gmail_password else 'MISSING'}")
+    # Gmail credentials present
     
     mail = connect_to_gmail_imap()
     if not mail:
-        print("❌ Failed to connect to Gmail IMAP")
+        # Failed to connect to Gmail IMAP
         return
     
     try:
-        print("📂 Selecting inbox...")
+        # Selecting inbox
         mail.select('inbox')
         
         # תיקון תאריכים - מחפש מהיומיים האחרונים
@@ -1318,19 +1316,17 @@ def check_for_new_emails():
         # חיפוש מיילים מהיומיים האחרונים
         search_criteria = f'OR SINCE {yesterday} SINCE {today}'
         
-        print(f"🔍 Search criteria: {search_criteria}")
-        print(f"📅 Today: {today}, Yesterday: {yesterday}")
+        # Search criteria set
         
         _, message_ids = mail.search(None, f'({search_criteria}) UNFLAGGED')
         
         if not message_ids[0]:
-            print("📭 No emails found from the last 2 days")
-            print(f"📊 Processed emails cache: {len(processed_email_ids)} emails")
+            # No new emails found
             mail.logout()
             return
         
         email_ids = message_ids[0].split()
-        print(f"📧 Found {len(email_ids)} emails from the last 2 days")
+        # Found emails
         
         new_emails = 0
         processed_successfully = 0
@@ -1339,10 +1335,10 @@ def check_for_new_emails():
             email_id_str = email_id.decode() if isinstance(email_id, bytes) else str(email_id)
             
             if email_id_str in processed_email_ids:
-                print(f"⏭️ Skipping already processed email: {email_id_str}")
+                # Skipping already processed email
                 continue
             
-            print(f"\n🆕 Processing new email ID: {email_id_str}")
+            # Processing new email
             
             # עיבוד המייל
             success = process_single_email(mail, email_id)
@@ -1350,51 +1346,50 @@ def check_for_new_emails():
             # 🔧 תיקון: הוסף לרשימה רק אם הצליח!
             if success:
                 processed_email_ids.append(email_id_str)
-                print(f"✅ Email {email_id_str} added to processed cache")
+                # Email added to processed cache
             else:
                 # לא מוסיפים לרשימה - ננסה שוב בפעם הבאה
-                print(f"❌ Email {email_id_str} NOT added to cache - will retry next time")
+                # Email not added to cache - will retry
+                pass
             
             new_emails += 1
             
             # ספירת הצלחות בלבד
             if success:
                 processed_successfully += 1
-                print(f"✅ Email {email_id_str} processed successfully")
+                # Email processed successfully
             else:
-                print(f"⚠️ Email {email_id_str} was rejected or failed")
+                # Email rejected or failed
+                pass
             
             # ניקוי cache אם יש יותר מדי מיילים
             if len(processed_email_ids) > PROCESSED_EMAILS_LIMIT:
                 processed_email_ids = processed_email_ids[-PROCESSED_EMAILS_LIMIT:]
-                print(f"🧹 Cleaned processed emails cache, now: {len(processed_email_ids)}")
+                # Cleaned processed emails cache
             
             # המתנה קצרה בין מיילים
             time.sleep(2)
         
         # סיכום מפורט
-        print(f"✅ Email check completed:")
-        print(f"   📧 New emails checked: {new_emails}")
-        print(f"   🎉 Successfully processed: {processed_successfully}")
-        print(f"   🚫 Rejected/Failed: {new_emails - processed_successfully}")
-        print(f"   📊 Total emails in cache: {len(processed_email_ids)}")
+        # Email check completed
         
     except Exception as e:
-        print(f"❌ Error in email check: {str(e)}")
+        # Error in email check
+        pass
     
     finally:
         try:
             mail.logout()
-            print("🔓 Gmail connection closed")
+            # Gmail connection closed
         except:
             pass
         
-        print(f"===== EMAIL CHECK ENDED at {datetime.now()} =====\n")
+        # Email check ended
 
 def keep_service_alive():
     """פונקציה לשמירה על השירות ערני - גרסה מתוקנת"""
     def ping_self():
-        print("🏓 Keep-alive service started")
+        # Keep-alive service started
         
         # קבלת URL של השרת מהמשתנה שהגדרנו
         app_url = os.environ.get('RENDER_EXTERNAL_URL', 'https://s-b-parking-reports.onrender.com')
@@ -1402,16 +1397,18 @@ def keep_service_alive():
         while True:
             try:
                 # שליחת בקשה לעצמנו כל 10 דקות
-                print(f"🏓 Sending keep-alive ping to {app_url}")
+                # Sending keep-alive ping
                 response = requests.get(f'{app_url}/ping', timeout=30000)
-                print(f"🏓 Keep-alive ping successful: {response.status_code}")
+                # Keep-alive ping successful
                 
             except requests.exceptions.RequestException as e:
-                print(f"⚠️ Keep-alive ping failed: {str(e)}")
+                # Keep-alive ping failed
                 # ממשיכים גם במקרה של שגיאה
+                pass
                 
             except Exception as e:
-                print(f"⚠️ Unexpected error in keep-alive: {str(e)}")
+                # Unexpected error in keep-alive
+                pass
             
             # המתנה של 10 דקות (600 שניות)
             time.sleep(600)
@@ -1419,7 +1416,7 @@ def keep_service_alive():
     # הרצת הפונקציה ברקע
     ping_thread = threading.Thread(target=ping_self, daemon=True)
     ping_thread.start()
-    print("🏓 Keep-alive service initialized")
+    # Keep-alive service initialized
 
 def validate_username(username):
     """
@@ -1572,7 +1569,7 @@ def get_user_info():
         })
         
     except Exception as e:
-        print(f"❌ Error getting user info: {str(e)}")
+        # Error getting user info: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני משתמש'})
 
 @app.route('/api/user-parkings', methods=['GET'])
@@ -1619,7 +1616,7 @@ def get_user_parkings():
         })
         
     except Exception as e:
-        print(f"❌ Error getting user parkings: {str(e)}")
+        # Error getting user parkings: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בקבלת רשימת חניונים'})
 
 @app.route('/api/parking-data', methods=['GET'])
@@ -1766,7 +1763,7 @@ def get_parking_data():
             }
             processed_data.append(processed_row)
         
-        print(f"✅ Retrieved {len(processed_data)} parking records for user {email}")
+        # Retrieved parking records
         
         return jsonify({
             'success': True,
@@ -1775,7 +1772,7 @@ def get_parking_data():
         })
         
     except Exception as e:
-        print(f"❌ Error getting parking data: {str(e)}")
+        # Error getting parking data: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני חניון'})
 
 @app.route('/api/check-emails-now', methods=['POST'])
@@ -2199,7 +2196,7 @@ def verify_code():
                     return jsonify({'success': True, 'redirect': '/dashboard'})
                     
             except Exception as e:
-                print(f"❌ Error getting user data: {str(e)}")
+                # Error getting user data: {str(e)}")
                 # במקרה של שגיאה, נפנה לדשבורד רגיל
                 return jsonify({'success': True, 'redirect': '/dashboard'})
         else:
@@ -2234,7 +2231,7 @@ def get_user_redirect_url(email):
             return '/dashboard'
             
     except Exception as e:
-        print(f"❌ Error in get_user_redirect_url: {str(e)}")
+        # Error in get_user_redirect_url: {str(e)}")
         return '/dashboard'
 
 @app.route('/logout')
@@ -2245,8 +2242,7 @@ def logout():
 @app.route('/ping')
 def ping():
     current_time = datetime.now()
-    print(f"🏓 Ping received at {current_time}")
-    print(f"🔋 Service status: Active and responsive")
+    # Ping received
     
     return jsonify({
         'status': 'pong',
@@ -2506,7 +2502,7 @@ def master_users_page():
             print(f"⚠️ Unauthorized access attempt to master-users by {session['user_email']}")
             return redirect(url_for('dashboard'))
     except Exception as e:
-        print(f"❌ Error checking master permissions: {str(e)}")
+        # Error checking master permissions: {str(e)}")
         return redirect(url_for('dashboard'))
     
     return render_template('master_users.html')
@@ -2524,7 +2520,7 @@ def parking_manager_users_page():
             print(f"⚠️ Unauthorized access attempt to parking-manager-users by {session['user_email']}")
             return redirect(url_for('dashboard'))
     except Exception as e:
-        print(f"❌ Error checking parking manager permissions: {str(e)}")
+        # Error checking parking manager permissions: {str(e)}")
         return redirect(url_for('dashboard'))
     
     return render_template('parking_manager_users.html')
@@ -2554,7 +2550,7 @@ def master_get_all_users():
         })
         
     except Exception as e:
-        print(f"❌ Error getting all users: {str(e)}")
+        # Error getting all users: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בקבלת רשימת משתמשים'})
 
 @app.route('/api/master/create-user', methods=['POST'])
@@ -2628,7 +2624,7 @@ def master_create_user():
             print(f"🆔 Next user_id will be: {next_user_id}")
             
         except Exception as e:
-            print(f"❌ Error getting max user_id: {str(e)}")
+            # Error getting max user_id: {str(e)}")
             import random
             next_user_id = random.randint(1000, 9999)
             print(f"🎲 Using random user_id: {next_user_id}")
@@ -2760,7 +2756,7 @@ def parking_manager_create_user():
            print(f"🆔 Next user_id will be: {next_user_id}")
            
        except Exception as e:
-           print(f"❌ Error getting max user_id: {str(e)}")
+           # Error getting max user_id: {str(e)}")
            import random
            next_user_id = random.randint(1000, 9999)
            print(f"🎲 Using random user_id: {next_user_id}")
@@ -2934,7 +2930,7 @@ def company_manager_page():
         session['user_access_level'] = access_level
             
     except Exception as e:
-        print(f"❌ Error checking company manager permissions: {str(e)}")
+        # Error checking company manager permissions: {str(e)}")
         return redirect(url_for('dashboard'))
     
     response = make_response(render_template('parking_subscribers.html',
@@ -2982,7 +2978,7 @@ def get_current_user():
                 }
             })
     except Exception as e:
-        print(f"❌ Error getting current user: {str(e)}")
+        # Error getting current user: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני משתמש'}), 500
 
 @app.route('/api/company-manager/get-parkings', methods=['GET'])
@@ -3099,7 +3095,7 @@ def company_manager_get_parkings():
         })
         
     except Exception as e:
-        print(f"❌ Error getting parkings: {str(e)}")
+        # Error getting parkings: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בטעינת חניונים'}), 500
 
 
@@ -3178,7 +3174,7 @@ def company_manager_get_subscribers():
         })
         
     except Exception as e:
-        print(f"❌ Error getting subscribers: {str(e)}")
+        # Error getting subscribers: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בטעינת מנויים'}), 500
 
 
@@ -3322,10 +3318,7 @@ def company_manager_proxy():
             # Remove CustomerMediaWebService prefix if it exists
             clean_endpoint = endpoint.replace('CustomerMediaWebService/', '')
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{clean_endpoint}"
-            print(f"   ✅ DIRECT CONTRACT-SPECIFIC URL: {url}")
-            print(f"   📍 Clean endpoint: {clean_endpoint}")
-            print(f"   📍 Method: {method}")
-            print(f"   📍 Full URL: {url}")
+            # Direct contract-specific URL
             # Don't override method for POST requests!
             # method = 'GET'
         elif 'consumers' in endpoint.lower() and '/detail' not in endpoint:
@@ -3335,20 +3328,20 @@ def company_manager_proxy():
             if contract_id:
                 # Get consumers for SPECIFIC CONTRACT ONLY - Critical for performance!
                 url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts/{contract_id}/consumers"
-                print(f"   ✅ OPTIMIZED: Getting consumers ONLY for contract {contract_id} (not all 7000+)")
+                # Getting consumers for specific contract
             else:
                 # Fallback to getting all consumers (should not happen)
                 url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
-                print(f"   ⚠️ ERROR: Getting ALL consumers (no contractId) - THIS WILL BE SLOW!")
+                # Getting all consumers - performance warning
             
-            print(f"   📍 CONSUMERS ENDPOINT v6 - FILTERED BY CONTRACT!")
+            # Consumers endpoint - filtered by contract
             method = 'GET'  # תמיד GET למנויים
         elif endpoint.startswith('consumers/'):
             # Alternative format: consumers/{contractId} or consumers/{contractId},{consumerId}
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
             # Keep the original method (could be GET, PUT, DELETE)
             # method = 'GET' # Don't override the method!
-            print(f"   📍 CONSUMERS endpoint: {endpoint}, method: {method}")
+            # Consumers endpoint
         elif '/detail' in endpoint:
             # Handle both contracts/X/detail AND consumers/X,Y/detail endpoints
             # Remove CustomerMediaWebService prefix if exists
@@ -3370,9 +3363,12 @@ def company_manager_proxy():
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{clean_endpoint}"
             # Preserve the original method for detail endpoints (GET for read, PUT for update)
             # method = 'GET'  # Don't override the method!
-            print(f"   🔍 DETAIL REQUEST: {url}")
-            print(f"   🔍 Clean endpoint: {clean_endpoint}")
-            print(f"   🔍 Method: {method}")
+            # Detail request
+        elif '/parktrans' in endpoint:
+            # Handle parking transactions endpoint
+            # Format: consumers/{contractId},{consumerId}/parktrans
+            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
+            method = 'GET'  # Parking transactions are always GET
         elif 'CustomerMediaWebService' in endpoint:
             # אם כבר יש CustomerMediaWebService ב-endpoint
             url = f"{protocol}://{ip_address}:{port}/{endpoint}"
@@ -3632,7 +3628,7 @@ def company_manager_proxy():
                             if not consumer_elements:
                                 consumer_elements = root.findall('.//consumer')
                             
-                            print(f"   ✅ Found {len(consumer_elements)} consumers")
+                            # Found consumers
                             
                             for idx, consumer in enumerate(consumer_elements):
                                 consumer_data = {}
@@ -3658,12 +3654,15 @@ def company_manager_proxy():
                                 
                                 consumers.append(consumer_data)
                             
+                            # Found consumers
+                            pass
+                            
                             # Check if we're getting consumers from contract-specific endpoint3482
                             is_contract_specific = 'contracts/' in url and '/consumers' in url
                             
                             if is_contract_specific:
-                                print(f"   ✅ Got consumers from contract-specific endpoint")
-                                print(f"   ✅ No filtering needed - already filtered by server!")
+                                # Got consumers from contract-specific endpoint
+                                pass
                             elif payload and 'contractId' in payload:
                                 # Only filter if we got ALL consumers (old behavior)
                                 contract_id = str(payload['contractId'])
@@ -3699,12 +3698,14 @@ def company_manager_proxy():
                             
                             # Minimal logging for performance
                             if consumers:
-                                print(f"   ✅ Returning {len(consumers)} consumers")
+                                # Returning consumers
+                                pass
                             
                             # CRITICAL PERFORMANCE FIX: Limit consumers to avoid browser freezing
                             # No limit on consumers - let the frontend handle it with smart loading
                             # MAX_CONSUMERS_PER_REQUEST = 100  # REMOVED - no limit
-                            print(f"   ✅ Returning all {len(consumers)} consumers (no limit)")
+                            # Returning all consumers
+                            pass
                             
                             # Returning consumers from XML
                             return jsonify({'success': True, 'data': consumers})
@@ -4085,7 +4086,7 @@ def parking_manager_get_info():
         })
         
     except Exception as e:
-        print(f"❌ Error getting parking manager info: {str(e)}")
+        # Error getting parking manager info: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני חניון'})
 
 # ========== פונקציות מיילים ==========
@@ -4498,7 +4499,7 @@ def send_guest_email():
             return jsonify({'success': False, 'message': 'מערכת המייל לא זמינה'})
             
     except Exception as e:
-        print(f"❌ Error in send_guest_email: {str(e)}")
+        # Error in send_guest_email: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בשליחת מייל'})
 
 @app.route('/api/company-manager/consumer-detail', methods=['POST'])
@@ -4510,12 +4511,12 @@ def get_consumer_detail():
         contract_id = data.get('contract_id')
         consumer_id = data.get('consumer_id')
         
-        print(f"   📝 Consumer detail: parking={parking_id}, contract={contract_id}, consumer={consumer_id}")
+        # Consumer detail request
         
         # For now, just return basic data - the consumer list already has most info we need
         # The parking server's consumer/detail endpoint needs proper authentication
         # and we already have the consumer data from the list
-        print(f"   ℹ️ Returning enhanced basic data for consumer {consumer_id}")
+        # Returning enhanced basic data
         
         return jsonify({
             'success': True,
@@ -4538,17 +4539,13 @@ def get_consumer_detail():
         })
             
     except Exception as e:
-        print(f"Error in get_consumer_detail: {str(e)}")
+        # Error in consumer detail
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/test-render-connection', methods=['GET'])
 def test_render_connection():
     """בדיקת חיבור לשרת החניון מ-Render"""
-    print(f"\n{'='*70}")
-    print(f"🧪 TESTING CONNECTION FROM RENDER")
-    print(f"⏰ Time: {datetime.now()}")
-    print(f"🌐 Host: {request.host}")
-    print(f"{'='*70}")
+    # Testing connection from Render
     
     import base64
     import requests
@@ -4562,11 +4559,11 @@ def test_render_connection():
     if is_local:
         server = '10.35.240.100'
         port = 8443
-        print(f"📍 Running locally, testing local server: {server}:{port}")
+        # Running locally
     else:
         server = '192.117.0.122'
         port = 8240
-        print(f"🌍 Running on Render, testing external server: {server}:{port}")
+        # Running on Render
     
     # Basic Auth
     auth = base64.b64encode(b'2022:2022').decode('ascii')
@@ -4748,7 +4745,7 @@ def test_parking_connection():
                     'success': True,
                     'content_preview': response.text[:100]
                 })
-                print(f"✅ Success: {url} - {response.status_code}")
+                # Success
             except Exception as e:
                 results.append({
                     'url': url,
@@ -4811,7 +4808,8 @@ def test_parking_endpoints():
                 })
                 
                 if response.status_code != 404:
-                    print(f"✅ Found working endpoint: {endpoint} - {response.status_code}")
+                    # Found working endpoint
+                    pass
                 
             except Exception as e:
                 results.append({
@@ -4868,7 +4866,8 @@ def test_parking_auth():
                 })
                 
                 if response.status_code in [200, 201]:
-                    print(f"✅ Success with auth: {endpoint}")
+                    # Success with auth
+                    pass
                     
             except Exception as e:
                 results.append({
@@ -4947,7 +4946,8 @@ def test_scheidt_endpoints():
                 })
                 
                 if is_success:
-                    print(f"✅ Found working Scheidt endpoint: {endpoint} - {response.status_code}")
+                    # Found working Scheidt endpoint
+                    pass
                     
             except Exception as e:
                 results.append({
@@ -5170,7 +5170,8 @@ def test_manager_paths():
                 })
                 
                 if is_success:
-                    print(f"✅ Found working path: {path} - {response.status_code}")
+                    # Found working path
+                    pass
                     
             except Exception as e:
                 results.append({
@@ -5190,32 +5191,32 @@ def test_manager_paths():
 
 # הפעלה אוטומטית כשהאפליקציה מתחילה
 if __name__ == '__main__':
-    print("\n🔧 Pre-flight email system check...")
+    # Pre-flight email system check
     
     if EMAIL_MONITORING_AVAILABLE:
         email_system_ready = verify_email_system()
         
         if email_system_ready:
-            print("✅ Email system ready - starting background monitoring")
+            # Email system ready
             start_background_email_monitoring()
         else:
-            print("⚠️ Email system not ready - monitoring disabled")
-            print("💡 You can still use manual email checks via API")
+            # Email system not ready
+            pass
     else:
-        print("⚠️ Email libraries not available - monitoring disabled")
+        # Email libraries not available
+        pass
     
-    print("\n🌐 Starting Flask web server...")
+    # Starting Flask web server
     
     port = int(os.environ.get('PORT', 5000))
     debug_mode = os.environ.get('FLASK_ENV') == 'development'
     
-    print(f"🔍 Port: {port}")
-    print(f"🔍 Debug mode: {debug_mode}")
+    # Port and debug mode set
     
     keep_service_alive()
 
     app.run(host='0.0.0.0', port=port, debug=debug_mode)
 else:
     if EMAIL_MONITORING_AVAILABLE:
-        print("📧 Initializing email monitoring for production...")
+        # Initializing email monitoring
         start_background_email_monitoring()
