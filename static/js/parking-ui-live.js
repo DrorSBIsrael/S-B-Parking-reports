@@ -446,7 +446,7 @@ class ParkingUIIntegrationXML {
                 <div class="company-header">
                     <h3>${company.name || company.companyName || this.currentParking?.name || 'חניון'} <span style="color: #666; font-size: 0.9em;">[${company.id}]</span></h3>
                     <div style="display: flex; gap: 5px; align-items: center;">
-                        <span class="company-number">#${company.id}</span>
+                    <span class="company-number">#${company.id}</span>
                         <button class="btn btn-sm" onclick="event.stopPropagation(); window.parkingUIXML.refreshCompanyCard('${company.id}')" 
                                 style="padding: 2px 6px; font-size: 12px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;"
                                 title="רענן נתוני חברה">
@@ -1893,14 +1893,51 @@ class ParkingUIIntegrationXML {
             
             // Get all subscribers to see what profiles are in use
             const profilesInUse = new Map();
+            let needToLoadDetails = true;
             
+            // First check if we already have profiles in current subscribers
             if (this.subscribers && this.subscribers.length > 0) {
                 this.subscribers.forEach(subscriber => {
                     if (subscriber.profileId && subscriber.profile) {
                         profilesInUse.set(subscriber.profileId, subscriber.profile);
-                        console.log('[getCompanyProfiles] Found profile in use:', subscriber.profileId, subscriber.profile);
+                        needToLoadDetails = false;
                     }
                 });
+            }
+            
+            // If we don't have profiles, load details for a few subscribers
+            if (needToLoadDetails && this.subscribers && this.subscribers.length > 0) {
+                // Load details for up to 5 subscribers to find profiles
+                const subscribersToCheck = this.subscribers.slice(0, Math.min(5, this.subscribers.length));
+                
+                for (const subscriber of subscribersToCheck) {
+                    try {
+                        const details = await this.api.getConsumerDetails(
+                            this.currentContract.id,
+                            subscriber.subscriberNum || subscriber.id
+                        );
+                        
+                        if (details.success && details.data) {
+                            const profileId = details.data.profileId || 
+                                           details.data.profile || 
+                                           details.data.extCardProfile ||
+                                           details.data.identification?.usageProfile?.id;
+                            
+                            const profileName = details.data.profileName || 
+                                              details.data.identification?.usageProfile?.name ||
+                                              (profileId === '1' ? 'כול החניונים' : 
+                                               profileId === '0' ? 'רגיל' : 
+                                               profileId === '2' ? 'חניון ראשי' :
+                                               `פרופיל ${profileId}`);
+                            
+                            if (profileId && profileName) {
+                                profilesInUse.set(profileId, profileName);
+                            }
+                        }
+                    } catch (err) {
+                        // Continue to next subscriber
+                    }
+                }
             }
             
             // If we found profiles in use, return them
@@ -1909,13 +1946,11 @@ class ParkingUIIntegrationXML {
                 profilesInUse.forEach((name, id) => {
                     profiles.push({ id, name });
                 });
-                console.log('[getCompanyProfiles] Returning profiles in use:', profiles);
                 return profiles;
             }
             
             // If no profiles in use, return a default based on company
             // Company 2 typically uses profile 1 (חניון ראשי)
-            console.log('[getCompanyProfiles] No profiles found in use, returning default');
             return [{ id: '1', name: 'חניון ראשי' }];
             
         } catch (error) {
@@ -1952,17 +1987,48 @@ class ParkingUIIntegrationXML {
                     // If user can't change profile, get the last subscriber's profile
                     let defaultProfileId = null;
                     if (!canChangeProfile && this.subscribers && this.subscribers.length > 0) {
-                        // Find the last subscriber (highest ID or last in array)
-                        const lastSubscriber = this.subscribers[this.subscribers.length - 1];
-                        defaultProfileId = lastSubscriber.profileId || lastSubscriber.profile || '1';
+                        // Try to find the last subscriber with a profile
+                        // First check if any subscriber already has profile info
+                        for (let i = this.subscribers.length - 1; i >= 0; i--) {
+                            const sub = this.subscribers[i];
+                            if (sub.profileId || sub.profile) {
+                                defaultProfileId = sub.profileId || sub.profile;
+                                break;
+                            }
+                        }
+                        
+                        // If still no profile found, load details of the last subscriber
+                        if (!defaultProfileId) {
+                            try {
+                                const lastSubscriber = this.subscribers[this.subscribers.length - 1];
+                                const details = await this.api.getConsumerDetails(
+                                    this.currentContract.id,
+                                    lastSubscriber.subscriberNum || lastSubscriber.id
+                                );
+                                
+                                if (details.success && details.data) {
+                                    defaultProfileId = details.data.profileId || 
+                                                     details.data.profile || 
+                                                     details.data.extCardProfile ||
+                                                     details.data.identification?.usageProfile?.id || '1';
+                                }
+                            } catch (err) {
+                                defaultProfileId = '1'; // Default fallback
+                            }
+                        }
                         
                         // Find if this profile exists in our profiles list
                         const profileExists = profiles.some(p => p.id === defaultProfileId);
-                        if (!profileExists && lastSubscriber.profile) {
-                            // Add the last subscriber's profile to the list
+                        if (!profileExists) {
+                            // Add the profile to the list
+                            let profileName = `פרופיל ${defaultProfileId}`;
+                            if (defaultProfileId === '1') profileName = 'כול החניונים';
+                            else if (defaultProfileId === '0') profileName = 'רגיל';
+                            else if (defaultProfileId === '2') profileName = 'חניון ראשי';
+                            
                             profiles.push({
                                 id: defaultProfileId,
-                                name: lastSubscriber.profile || `פרופיל ${defaultProfileId}`
+                                name: profileName
                             });
                         }
                     }
