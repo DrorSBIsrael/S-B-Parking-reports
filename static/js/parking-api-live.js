@@ -589,46 +589,77 @@ class ParkingAPIXML {
             }
             
             const queryString = queryParams.length > 0 ? '?' + queryParams.join('&') : '';
-            const url = `/consumers/${contractId},${consumerId}/parktrans${queryString}`;
+            const endpoint = `consumers/${contractId},${consumerId}/parktrans${queryString}`;
             
-            console.log(`[ParkingAPIXML] Requesting parking transactions from: ${url}`);
-            console.log(`[ParkingAPIXML] Date range: ${minDate} to ${maxDate}`);
+            // Requesting parking transactions through proxy
             
-            const response = await fetch(url, {
-                method: 'GET',
+            // Use the proxy for parking transactions
+            const proxyUrl = `${this.config.proxy.baseURL}`;
+            const requestData = {
+                parking_id: this.currentParkingId,
+                endpoint: endpoint,
+                method: 'GET'
+            };
+            
+            const response = await fetch(proxyUrl, {
+                method: 'POST',
                 headers: {
-                    'Accept': 'application/xml, text/xml',
-                    'Content-Type': 'application/xml'
-                }
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(requestData)
             });
             
-            console.log(`[ParkingAPIXML] Response status: ${response.status}`);
+            // Response received
             
             if (!response.ok) {
                 if (response.status === 204) {
-                    console.log('[ParkingAPIXML] No parking transactions found');
+                    // No parking transactions found
                     return { success: true, data: [] };
                 }
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             
-            const xmlText = await response.text();
-            console.log('[ParkingAPIXML] Received XML response:', xmlText.substring(0, 500) + (xmlText.length > 500 ? '...' : ''));
-            console.log('[ParkingAPIXML] Response length:', xmlText.length);
+            const proxyResponse = await response.json();
+            // Received proxy response
             
-            // Parse XML response
+            if (!proxyResponse.success) {
+                return { success: false, error: proxyResponse.error || 'Failed to get transactions' };
+            }
+            
+            // Handle both XML and JSON responses from proxy
+            const data = proxyResponse.data;
+            
+            // Check if data is already parsed (JSON) or needs XML parsing
+            if (typeof data === 'object' && data !== null) {
+                // Data is already parsed - handle the transaction data
+                if (data.parkTransactions && data.parkTransactions.parkTransaction) {
+                    const transData = data.parkTransactions.parkTransaction;
+                    const transactions = Array.isArray(transData) ? transData : [transData];
+                    return { success: true, data: transactions };
+                } else if (data.length === 0 || Object.keys(data).length === 0) {
+                    // Empty response - no transactions
+                    return { success: true, data: [] };
+                } else {
+                    // Unexpected format
+                    return { success: false, error: 'Unexpected response format' };
+                }
+            }
+            
+            // If data is a string, it might be XML that needs parsing
+            const xmlText = typeof data === 'string' ? data : JSON.stringify(data);
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
             
             // Check for parsing errors
             if (xmlDoc.getElementsByTagName('parsererror').length > 0) {
                 console.error('[ParkingAPIXML] XML parsing error');
-                return { success: false, error: 'Failed to parse XML response' };
+                return { success: false, error: 'Failed to parse response' };
             }
             
             // Also check for namespace issues
             const rootElement = xmlDoc.documentElement;
-            console.log(`[ParkingAPIXML] Root element: ${rootElement?.tagName}, namespace: ${rootElement?.namespaceURI}`);
+            // Root element found
             
             // Extract parking transactions
             const transactions = [];
@@ -636,12 +667,12 @@ class ParkingAPIXML {
             
             // If no nodes found, try with namespace
             if (transactionNodes.length === 0) {
-                console.log('[ParkingAPIXML] No nodes found with getElementsByTagName, trying with namespace');
+                // Trying with namespace
                 const namespace = 'http://gsph.sub.com/cust/types';
                 transactionNodes = xmlDoc.getElementsByTagNameNS(namespace, 'parkTransaction');
             }
             
-            console.log(`[ParkingAPIXML] Found ${transactionNodes.length} transaction nodes`);
+            // Found transaction nodes
             
             for (let node of transactionNodes) {
                 const transaction = {
@@ -654,19 +685,18 @@ class ParkingAPIXML {
                     amount: this.getXMLNodeValue(node, 'amount')
                 };
                 
-                console.log(`[ParkingAPIXML] Transaction: Type=${transaction.transactionType}, Time=${transaction.transactionTime}, Amount=${transaction.amount}`);
+                // Transaction parsed
                 transactions.push(transaction);
             }
             
-            console.log(`[ParkingAPIXML] Found ${transactions.length} parking transactions`);
+            // Found parking transactions
             
             // If no transactions found, check if we got an empty response
             if (transactions.length === 0) {
                 if (xmlText.includes('parkTransactions')) {
-                    console.log('[ParkingAPIXML] Empty parkTransactions response - no transactions for this period');
+                    // Empty parkTransactions response
                 } else {
-                    console.log('[ParkingAPIXML] Unexpected response format - no parkTransactions element found');
-                    console.log('[ParkingAPIXML] Response first 500 chars:', xmlText.substring(0, 500));
+                    // Unexpected response format - no parkTransactions element found
                 }
             }
             
