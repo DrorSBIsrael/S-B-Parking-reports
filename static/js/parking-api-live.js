@@ -594,9 +594,9 @@ class ParkingAPIXML {
             // Requesting parking transactions through proxy
             
             // Use the proxy for parking transactions
-            const proxyUrl = `${this.config.proxy.baseURL}`;
+            const proxyUrl = this.config.baseUrl || '/api/company-manager/proxy';
             const requestData = {
-                parking_id: this.currentParkingId,
+                parking_id: this.config.currentParkingId,
                 endpoint: endpoint,
                 method: 'GET'
             };
