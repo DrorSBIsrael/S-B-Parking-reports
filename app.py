@@ -147,6 +147,7 @@ print(f"""
 📁 Log Directory: {LOG_DIR}
 📝 Logging only PARKTRANS (parking transactions) requests
 🔍 To view logs: GET /api/parktrans-logs
+🆕 VERSION: 2025-01-09-DEBUG-PARKTRANS
 {'='*60}
 """)
 # הגדרות מיילים אוטומטיים - להוסיף אחרי ההגדרות הקיימות:
@@ -3293,7 +3294,7 @@ def api_status():
     """בדיקת סטטוס המערכת"""
     return jsonify({
         'success': True,
-        'version': '2.0.8',  # Direct proxy in app.py
+        'version': '2025-01-09-DEBUG-PARKTRANS',  # Debug version
         'timestamp': datetime.now().isoformat(),
         'message': 'Server is running with proxy fix',
         'endpoints': {
@@ -3312,11 +3313,36 @@ def test_proxy():
         'timestamp': datetime.now().isoformat()
     })
 
+@app.route('/api/test-parktrans', methods=['GET'])
+def test_parktrans():
+    """Test endpoint specifically for parktrans debugging"""
+    print("\n🎯 TEST PARKTRANS ENDPOINT CALLED!")
+    return jsonify({
+        'success': True,
+        'message': 'Parktrans test endpoint is working!',
+        'version': '2025-01-09-DEBUG',
+        'timestamp': datetime.now().isoformat(),
+        'debug_info': {
+            'log_dir': LOG_DIR,
+            'log_dir_exists': os.path.exists(LOG_DIR)
+        }
+    })
+
 @app.route('/api/company-manager/proxy', methods=['POST', 'OPTIONS', 'GET'])
 def company_manager_proxy():
     """Proxy לקריאות API לשרתי החניונים"""
     
-    # Debug log removed for production
+    # הודעת דיבאג מיידית
+    print(f"\n🔵 PROXY CALLED! Method: {request.method}")
+    if request.method == 'POST':
+        try:
+            data = request.get_json()
+            if data and 'endpoint' in data:
+                print(f"📍 Endpoint in request: {data['endpoint']}")
+                if 'parktrans' in data['endpoint']:
+                    print(f"🎯 THIS IS A PARKTRANS REQUEST!")
+        except:
+            pass
     
     # Handle CORS preflight
     if request.method == 'OPTIONS':
@@ -3360,6 +3386,13 @@ def company_manager_proxy():
         endpoint = data.get('endpoint')
         method = data.get('method', 'GET')
         payload = data.get('payload', {})
+        
+        # הדפסת ה-endpoint כדי לבדוק אם זה parktrans
+        if endpoint and 'parktrans' in endpoint:
+            print(f"\n🎯 DETECTED PARKTRANS REQUEST!")
+            print(f"📍 Endpoint: {endpoint}")
+            print(f"🏢 Parking ID: {parking_id}")
+            print(f"📋 Method: {method}")
         
         # Request details received
         
@@ -3475,7 +3508,7 @@ def company_manager_proxy():
             # Preserve the original method for detail endpoints (GET for read, PUT for update)
             # method = 'GET'  # Don't override the method!
             # Detail request
-        elif '/parktrans' in endpoint:
+        elif 'parktrans' in endpoint:  # הסרתי את ה-/ כדי לתפוס גם עם query params
             # Handle parking transactions endpoint
             # Format: consumers/{contractId},{consumerId}/parktrans
             
@@ -3684,7 +3717,7 @@ def company_manager_proxy():
             # Response received
             
             # לוגינג רק לדוחות תנועות (parktrans)
-            if '/parktrans' in endpoint:
+            if 'parktrans' in endpoint:  # הסרתי את ה-/ כדי לתפוס גם עם query params
                 # לוגינג לקונסול - יופיע בלוגים של Render
                 print(f"\n{'='*60}")
                 print(f"🔔 PARKING TRANSACTIONS RESPONSE")
@@ -4032,6 +4065,65 @@ def company_manager_proxy():
                                     'has_pooling': 'pooling' in contract_detail if isinstance(contract_detail, dict) else False
                                 }
                             })
+                        elif 'parktrans' in endpoint:
+                            # Parse parking transactions from XML
+                            print(f"\n🚗 PARSING PARKING TRANSACTIONS XML")
+                            print(f"📄 First 500 chars of XML:")
+                            print(response.text[:500])
+                            
+                            transactions = []
+                            # Try to find transaction elements in different XML structures
+                            # First try with namespace
+                            trans_elements = root.findall('.//{http://gsph.sub.com/cust/types}transaction')
+                            
+                            # If not found, try without namespace
+                            if not trans_elements:
+                                trans_elements = root.findall('.//transaction')
+                            
+                            # If still not found, try other possible element names
+                            if not trans_elements:
+                                trans_elements = root.findall('.//parkingTransaction')
+                            if not trans_elements:
+                                trans_elements = root.findall('.//ParkingTransaction')
+                            
+                            print(f"📊 Found {len(trans_elements)} transaction elements")
+                            
+                            for trans in trans_elements:
+                                transaction_data = {}
+                                # Extract all fields from transaction
+                                for child in trans:
+                                    tag = child.tag.replace('{http://gsph.sub.com/cust/types}', '')
+                                    transaction_data[tag] = child.text
+                                
+                                # Also check attributes
+                                for key, value in trans.attrib.items():
+                                    transaction_data[key] = value
+                                
+                                if transaction_data:
+                                    transactions.append(transaction_data)
+                            
+                            # If no transaction elements found, maybe the whole response is transaction data
+                            if not transactions:
+                                print("⚠️ No transaction elements found, parsing root as transaction")
+                                transaction_data = {}
+                                for child in root:
+                                    tag = child.tag.replace('{http://gsph.sub.com/cust/types}', '')
+                                    if child.text:
+                                        transaction_data[tag] = child.text
+                                    # Check for nested elements
+                                    for subchild in child:
+                                        subtag = subchild.tag.replace('{http://gsph.sub.com/cust/types}', '')
+                                        if subchild.text:
+                                            transaction_data[subtag] = subchild.text
+                                
+                                if transaction_data:
+                                    transactions = [transaction_data]
+                            
+                            print(f"✅ Parsed {len(transactions)} transactions")
+                            if transactions:
+                                print(f"🔍 First transaction: {transactions[0]}")
+                            
+                            return jsonify({'success': True, 'data': transactions})
                         else:
                             # החזר כ-raw XML אם לא מזהים את הסוג
                             # Unknown XML type, returning raw
@@ -4100,7 +4192,7 @@ def company_manager_proxy():
                                         data = filtered
                         
                         # לוגינג רק לדוחות תנועות בפורמט JSON
-                        if '/parktrans' in endpoint and isinstance(data, (list, dict)):
+                        if 'parktrans' in endpoint and isinstance(data, (list, dict)):  # הסרתי את ה-/ כדי לתפוס גם עם query params
                             # לוגינג לקונסול
                             print(f"\n{'='*60}")
                             print(f"📊 PARKING TRANSACTIONS DATA (Processed)")
