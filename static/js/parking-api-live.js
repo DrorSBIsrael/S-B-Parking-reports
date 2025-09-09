@@ -574,7 +574,6 @@ class ParkingAPIXML {
     // Get parking transactions for a consumer
     async getParkingTransactions(contractId, consumerId, minDate = null, maxDate = null) {
         try {
-            
             // Getting parking transactions
             
             // Build query parameters
@@ -592,16 +591,15 @@ class ParkingAPIXML {
             const queryString = queryParams.length > 0 ? '?' + queryParams.join('&') : '';
             const endpoint = `consumers/${contractId},${consumerId}/parktrans${queryString}`;
             
+            // Requesting parking transactions through proxy
             
             // Use the proxy for parking transactions
-            const proxyUrl = this.config.baseUrl || '/api/company-manager/proxy';
-            
+            const proxyUrl = `${this.config.proxy.baseURL}`;
             const requestData = {
-                parking_id: this.config.currentParkingId,
+                parking_id: this.currentParkingId,
                 endpoint: endpoint,
                 method: 'GET'
             };
-            
             
             const response = await fetch(proxyUrl, {
                 method: 'POST',
@@ -612,72 +610,30 @@ class ParkingAPIXML {
                 body: JSON.stringify(requestData)
             });
             
+            // Response received
             
             if (!response.ok) {
                 if (response.status === 204) {
                     // No parking transactions found
                     return { success: true, data: [] };
                 }
-                console.error('❌ HTTP Error:', response.status);
-                const errorText = await response.text();
-                console.error('❌ Error Response:', errorText);
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             
             const proxyResponse = await response.json();
+            // Received proxy response
             
             if (!proxyResponse.success) {
-                console.error('❌ Proxy Failed:', proxyResponse.error);
                 return { success: false, error: proxyResponse.error || 'Failed to get transactions' };
             }
             
             // Handle both XML and JSON responses from proxy
             const data = proxyResponse.data;
-            console.log('📦 Response Data:', data);
-            console.log('📝 Data Type:', typeof data);
-            console.log('📊 Is Array?', Array.isArray(data));
-            
-            // Check if we got raw XML in the response
-            if (proxyResponse.raw && typeof proxyResponse.raw === 'string') {
-                console.log('🔍 Got raw XML response, parsing...');
-                console.log('📄 First 500 chars:', proxyResponse.raw.substring(0, 500));
-                // Parse the raw XML
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(proxyResponse.raw, 'text/xml');
-                
-                // Extract transactions from XML
-                const transactions = [];
-                const transNodes = xmlDoc.getElementsByTagName('transaction') || 
-                                 xmlDoc.getElementsByTagName('parkingTransaction') ||
-                                 xmlDoc.getElementsByTagName('ParkingTransaction');
-                
-                
-                for (let i = 0; i < transNodes.length; i++) {
-                    const node = transNodes[i];
-                    const trans = {};
-                    // Extract all child elements
-                    for (let j = 0; j < node.childNodes.length; j++) {
-                        const child = node.childNodes[j];
-                        if (child.nodeType === 1) { // Element node
-                            trans[child.nodeName] = child.textContent;
-                        }
-                    }
-                    if (Object.keys(trans).length > 0) {
-                        transactions.push(trans);
-                    }
-                }
-                
-                return { success: true, data: transactions };
-            }
             
             // Check if data is already parsed (JSON) or needs XML parsing
             if (typeof data === 'object' && data !== null) {
-                // Check if data is already an array of transactions
-                if (Array.isArray(data)) {
-                    return { success: true, data: data };
-                }
                 // Data is already parsed - handle the transaction data
-                else if (data.parkTransactions && data.parkTransactions.parkTransaction) {
+                if (data.parkTransactions && data.parkTransactions.parkTransaction) {
                     const transData = data.parkTransactions.parkTransaction;
                     const transactions = Array.isArray(transData) ? transData : [transData];
                     return { success: true, data: transactions };
