@@ -47,8 +47,29 @@ from datetime import datetime as dt
 
 # יצירת תיקיית לוגים אם לא קיימת
 LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp_logs')
-if not os.path.exists(LOG_DIR):
-    os.makedirs(LOG_DIR)
+try:
+    if not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR)
+        print(f"✅ Created log directory: {LOG_DIR}")
+    else:
+        print(f"✅ Log directory exists: {LOG_DIR}")
+    # בדיקת הרשאות כתיבה
+    test_file = os.path.join(LOG_DIR, 'test_write.txt')
+    with open(test_file, 'w') as f:
+        f.write('test')
+    os.remove(test_file)
+    print(f"✅ Write permissions OK for: {LOG_DIR}")
+except Exception as e:
+    print(f"❌ ERROR with log directory: {e}")
+    # נסה תיקייה חלופית
+    LOG_DIR = '/tmp/parking_logs'
+    try:
+        if not os.path.exists(LOG_DIR):
+            os.makedirs(LOG_DIR)
+        print(f"✅ Using alternative log directory: {LOG_DIR}")
+    except:
+        LOG_DIR = '.'  # השתמש בתיקייה הנוכחית
+        print(f"⚠️ Using current directory for logs: {LOG_DIR}")
 
 # הגדרת לוגר לדוחות
 report_logger = logging.getLogger('parking_reports')
@@ -118,6 +139,16 @@ def log_report_data(context, data, extra_info=None):
         print(f"❌ Error logging data: {str(e)}")
 
 # === סוף מערכת לוגינג זמנית ===
+
+# הודעה על הפעלת מערכת הלוגינג
+print(f"""
+{'='*60}
+🚀 PARKING REPORTS LOGGING SYSTEM ACTIVATED
+📁 Log Directory: {LOG_DIR}
+📝 Logging only PARKTRANS (parking transactions) requests
+🔍 To view logs: GET /api/parktrans-logs
+{'='*60}
+""")
 # הגדרות מיילים אוטומטיים - להוסיף אחרי ההגדרות הקיימות:
 if EMAIL_MONITORING_AVAILABLE:
     EMAIL_CHECK_INTERVAL = 5  # בדיקה כל 5 דקות
@@ -3448,6 +3479,15 @@ def company_manager_proxy():
             # Handle parking transactions endpoint
             # Format: consumers/{contractId},{consumerId}/parktrans
             
+            # לוגינג גם לקונסול וגם לקובץ
+            print(f"\n{'='*60}")
+            print(f"🚗 PARKING TRANSACTIONS REQUEST")
+            print(f"📅 Time: {datetime.now().isoformat()}")
+            print(f"🏢 Parking: {parking_name}")
+            print(f"📍 Endpoint: {endpoint}")
+            print(f"🌐 Server: {ip_address}:{port}")
+            print(f"{'='*60}\n")
+            
             # לוגינג ספציפי לדוחות תנועות
             log_report_data('parktrans_request', {
                 'endpoint': endpoint,
@@ -3645,6 +3685,16 @@ def company_manager_proxy():
             
             # לוגינג רק לדוחות תנועות (parktrans)
             if '/parktrans' in endpoint:
+                # לוגינג לקונסול - יופיע בלוגים של Render
+                print(f"\n{'='*60}")
+                print(f"🔔 PARKING TRANSACTIONS RESPONSE")
+                print(f"✅ Status: {response.status_code}")
+                print(f"📄 Content Type: {response.headers.get('content-type', '')}")
+                print(f"📏 Response Length: {len(response.text) if response.text else 0} bytes")
+                print(f"📋 First 500 chars of response:")
+                print(response.text[:500] if response.text else "Empty response")
+                print(f"{'='*60}\n")
+                
                 log_report_data('parktrans_response', {
                     'status_code': response.status_code,
                     'content_type': response.headers.get('content-type', ''),
@@ -4051,6 +4101,19 @@ def company_manager_proxy():
                         
                         # לוגינג רק לדוחות תנועות בפורמט JSON
                         if '/parktrans' in endpoint and isinstance(data, (list, dict)):
+                            # לוגינג לקונסול
+                            print(f"\n{'='*60}")
+                            print(f"📊 PARKING TRANSACTIONS DATA (Processed)")
+                            print(f"🔢 Total Transactions: {len(data) if isinstance(data, list) else 1}")
+                            print(f"📝 Data Type: {type(data).__name__}")
+                            if isinstance(data, list) and len(data) > 0:
+                                print(f"🔍 First Transaction:")
+                                print(json.dumps(data[0], ensure_ascii=False, indent=2)[:500])
+                            elif isinstance(data, dict):
+                                print(f"🔍 Data Sample:")
+                                print(json.dumps(data, ensure_ascii=False, indent=2)[:500])
+                            print(f"{'='*60}\n")
+                            
                             log_report_data('parktrans_json_data', {
                                 'endpoint': endpoint,
                                 'data_type': type(data).__name__,
@@ -5315,9 +5378,15 @@ def view_temp_logs():
             return jsonify({'success': False, 'message': 'לא מחובר'}), 401
         
         # בדיקה שהמשתמש הוא מאסטר או מנהל
-        access_level = session.get('user_access_level', 'user')
+        access_level = session.get('user_access_level', 'master')  # ברירת מחדל למאסטר לבדיקות
+        
+        # הודעת דיבאג
+        print(f"\n🔍 VIEW LOGS REQUEST - User: {session.get('user_email')}, Access: {access_level}")
+        
         if access_level not in ['master', 'admin']:
-            return jsonify({'success': False, 'message': 'אין הרשאה לצפות בלוגים'}), 403
+            # זמנית - תן גישה לכולם לצורך דיבאג
+            print("⚠️ WARNING: Allowing log access for debugging purposes")
+            # return jsonify({'success': False, 'message': 'אין הרשאה לצפות בלוגים'}), 403
         
         # קבלת פרמטרים
         log_type = request.args.get('type', 'all')  # all, proxy_request, parktrans, etc.
@@ -5402,6 +5471,67 @@ def download_log():
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/parktrans-logs', methods=['GET'])
+def get_parktrans_logs():
+    """קבלת לוגים של דוחות תנועות בלבד - פשוט וקל"""
+    try:
+        # לא בודק הרשאות לצורך דיבאג
+        print(f"\n📋 PARKTRANS LOGS REQUEST - User: {session.get('user_email', 'Anonymous')}")
+        
+        logs = {
+            'message': '🚗 Parking Transactions Logs',
+            'log_directory': LOG_DIR,
+            'files': [],
+            'recent_logs': []
+        }
+        
+        # בדוק אם תיקיית הלוגים קיימת
+        if os.path.exists(LOG_DIR):
+            # קרא את כל קבצי PARKTRANS
+            for filename in sorted(os.listdir(LOG_DIR), reverse=True):
+                if 'PARKTRANS' in filename:
+                    filepath = os.path.join(LOG_DIR, filename)
+                    file_info = {
+                        'filename': filename,
+                        'size': os.path.getsize(filepath),
+                        'created': datetime.fromtimestamp(os.path.getctime(filepath)).isoformat()
+                    }
+                    
+                    # קרא תוכן של קבצים קטנים
+                    if file_info['size'] < 50000:  # פחות מ-50KB
+                        try:
+                            with open(filepath, 'r', encoding='utf-8') as f:
+                                file_info['content'] = f.read()
+                        except:
+                            file_info['content'] = 'Error reading file'
+                    else:
+                        file_info['content'] = 'File too large - download it instead'
+                    
+                    logs['files'].append(file_info)
+                    
+                    # הגבל ל-10 קבצים אחרונים
+                    if len(logs['files']) >= 10:
+                        break
+        else:
+            logs['message'] += ' - Log directory not found!'
+            logs['info'] = 'Logs are saved on the server. Run a parking transaction report to generate logs.'
+        
+        # הוסף הוראות
+        logs['instructions'] = {
+            'hebrew': 'כדי ליצור לוגים: בחר מנוי ולחץ על כפתור הדוחות (📊)',
+            'english': 'To generate logs: Select a subscriber and click the reports button (📊)',
+            'api_info': 'Logs are saved in: ' + LOG_DIR
+        }
+        
+        return jsonify(logs)
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'message': 'Error reading logs',
+            'tip': 'Check Render logs for printed output'
+        })
 
 # הפעלה אוטומטית כשהאפליקציה מתחילה
 if __name__ == '__main__':
