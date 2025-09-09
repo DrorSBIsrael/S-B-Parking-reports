@@ -1746,6 +1746,10 @@ class ParkingUIIntegrationXML {
                 <td style="color: #888;" title="פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}">${subscriber.profileName || `פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}`}</td>
                 <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                 <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
+                ${canEdit ? `<td style="text-align: center;">
+                    <button class="btn btn-sm btn-info" onclick="event.stopPropagation();" style="padding: 2px 8px; margin: 0 2px;" title="ערוך">✏️</button>
+                    <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); if(window.parkingUIXML) window.parkingUIXML.deleteSubscriber('${subscriber.subscriberNum}');" style="padding: 2px 8px; margin: 0 2px;" title="מחק">🗑️</button>
+                </td>` : ''}
             `;
             // Add to fragment for better performance
             if (isVeryLarge) {
@@ -1871,6 +1875,10 @@ class ParkingUIIntegrationXML {
                     <td style="color: #888;" title="פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}">${subscriber.profileName || `פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}`}</td>
                     <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                     <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
+                    ${canEdit ? `<td style="text-align: center;">
+                        <button class="btn btn-sm btn-info" onclick="event.stopPropagation();" style="padding: 2px 8px; margin: 0 2px;" title="ערוך">✏️</button>
+                        <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); if(window.parkingUIXML) window.parkingUIXML.deleteSubscriber('${subscriber.subscriberNum}');" style="padding: 2px 8px; margin: 0 2px;" title="מחק">🗑️</button>
+                    </td>` : ''}
             `;
             tbody.appendChild(row);
         });
@@ -2131,7 +2139,6 @@ class ParkingUIIntegrationXML {
      * Edit subscriber - prepare data for modal
      */
     async editSubscriber(subscriber) {
-        console.log(`[editSubscriber] Called with subscriber ${subscriber.subscriberNum}, hasFullDetails: ${subscriber.hasFullDetails}`);
         
         // Always allow viewing subscriber details
         // Permission check will be done when saving changes
@@ -2158,14 +2165,6 @@ class ParkingUIIntegrationXML {
                 if (result.success) {
                     const detail = result.data;
                     
-                    console.log(`[editSubscriber] Loaded detail from server:`, JSON.stringify({
-                        validFrom: detail.identification?.validFrom,
-                        validUntil: detail.identification?.validUntil,
-                        xValidFrom: detail.consumer?.xValidFrom,
-                        xValidUntil: detail.consumer?.xValidUntil,
-
-                        present: detail.identification?.present
-                    }, null, 2));
                     
                     // Preserve important fields and map correctly
                     const preservedFields = {
@@ -2228,7 +2227,6 @@ class ParkingUIIntegrationXML {
             subscriber.vehicle2 = subscriber.vehicle2 || subscriber.lpn2 || '';
             subscriber.vehicle3 = subscriber.vehicle3 || subscriber.lpn3 || '';
             
-            console.log('[editSubscriber from UI] Full subscriber data:', JSON.stringify(subscriber, null, 2));
             window.editSubscriber(subscriber);
         } else {
             console.error('[editSubscriber] window.editSubscriber function not found!');
@@ -2691,6 +2689,9 @@ class ParkingUIIntegrationXML {
                         const validUntil = new Date(newSubscriber.validUntil || '2030-12-31');
                         const isExpired = validUntil < new Date();
                         
+                        const permissions = window.userPermissions || '';
+                        const canEditNew = permissions !== 'B' && permissions !== '';
+                        
                         newRow.innerHTML = `
                             <td>${newSubscriber.companyNum || ''}</td>
                             <td>${newSubscriber.companyName || ''}</td>
@@ -2705,6 +2706,10 @@ class ParkingUIIntegrationXML {
                             <td style="color: #888;" title="פרופיל ${newSubscriber.profile || ''}">${newSubscriber.profileName || `פרופיל ${newSubscriber.profile || ''}`}</td>
                             <td>${this.formatDate(newSubscriber.validFrom) || ''}</td>
                             <td style="text-align: center; font-size: 18px;">${newSubscriber.presence ? '✅' : '❌'}</td>
+                            ${canEditNew ? `<td style="text-align: center;">
+                                <button class="btn btn-sm btn-info" onclick="event.stopPropagation();" style="padding: 2px 8px; margin: 0 2px;" title="ערוך">✏️</button>
+                                <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); if(window.parkingUIXML) window.parkingUIXML.deleteSubscriber('${newSubscriber.subscriberNum}');" style="padding: 2px 8px; margin: 0 2px;" title="מחק">🗑️</button>
+                            </td>` : ''}
                         `;
                         
                         tbody.appendChild(newRow);
@@ -2801,6 +2806,13 @@ class ParkingUIIntegrationXML {
      */
     async deleteSubscriber(subscriberId) {
         if (!this.currentContract) return;
+        
+        // Check permissions
+        const permissions = window.userPermissions || '';
+        if (permissions === 'B' || permissions === '') {
+            this.showNotification('אין לך הרשאה למחוק מנויים', 'error');
+            return;
+        }
         
         if (!confirm('האם אתה בטוח שברצונך למחוק מנוי זה?')) {
             return;
