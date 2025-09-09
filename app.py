@@ -4435,6 +4435,9 @@ def company_manager_proxy():
             print(f"   ❌ UNEXPECTED ERROR: {str(e)[:500]}")
             print(f"   ❌ Failed URL: {url}")
             print(f"   ❌ Server: {ip_address}:{port}")
+            import traceback
+            print(f"   ❌ Full traceback:")
+            traceback.print_exc()
             return jsonify({
                 'success': False, 
                 'error': str(e)[:200],
@@ -4443,6 +4446,9 @@ def company_manager_proxy():
             
     except Exception as e:
         print(f"❌ General proxy error: {str(e)}")
+        import traceback
+        print(f"❌ Full traceback:")
+        traceback.print_exc()
         return jsonify({'success': False, 'error': 'שגיאה כללית במערכת'}), 500
 
 # ========== API למנהל חניון ==========
