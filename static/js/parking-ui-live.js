@@ -1906,24 +1906,27 @@ class ParkingUIIntegrationXML {
             if (this.subscribers && this.subscribers.length > 0) {
                 console.log('[getCompanyProfiles] Checking existing subscribers for profiles');
                 this.subscribers.forEach((subscriber, idx) => {
-                    // Log what we have for each subscriber
-                    if (idx < 5) { // Log first 5 subscribers
-                        console.log(`[getCompanyProfiles] Subscriber ${idx}:`, {
-                            profileId: subscriber.profileId,
-                            profile: subscriber.profile,
-                            extCardProfile: subscriber.extCardProfile,
-                            identification: subscriber.identification
-                        });
-                    }
                     
                     // Check multiple places for profile info
                     const profileId = subscriber.profileId || subscriber.profile || subscriber.extCardProfile || 
                                      subscriber.identification?.usageProfile?.id;
-                    const profileName = subscriber.profileName || subscriber.identification?.usageProfile?.name || 
-                                       (subscriber.profile ? subscriber.profile : null);
+                    // Profile name might be the profile field itself if it contains name
+                    let profileName = subscriber.profileName || subscriber.identification?.usageProfile?.name;
+                    
+                    // If no profile name but we have profile field with text, use it
+                    if (!profileName && subscriber.profile && isNaN(subscriber.profile)) {
+                        profileName = subscriber.profile;
+                    }
+                    
+                    // If still no name, create default based on ID
+                    if (!profileName && profileId) {
+                        profileName = profileId === '1' ? 'כול החניונים' : 
+                                    profileId === '0' ? 'רגיל' : 
+                                    profileId === '2' ? 'חניון ראשי' :
+                                    `פרופיל ${profileId}`;
+                    }
                     
                     if (profileId && profileName) {
-                        console.log(`[getCompanyProfiles] Found profile in subscriber ${idx}:`, profileId, profileName);
                         profilesInUse.set(profileId, profileName);
                         needToLoadDetails = false;
                     }
@@ -2022,146 +2025,130 @@ class ParkingUIIntegrationXML {
                 return;
             }
             
-            let profiles = [];
-            
-            // For new subscriber - get company profiles
-            if (isNewSubscriber) {
-                console.log('[loadUsageProfiles] Loading profiles for new subscriber');
-                profiles = await this.getCompanyProfiles();
-                console.log('[loadUsageProfiles] Got profiles:', profiles);
+            // Always get company profiles (for both new and existing subscribers)
+            console.log('[loadUsageProfiles] Loading profiles from company');
+            const profiles = await this.getCompanyProfiles();
+            console.log('[loadUsageProfiles] Got profiles:', profiles);
                 
                 // Clear and populate select
                 profileSelect.innerHTML = '';
-                
-                // Check if user has permission to change profile
-                const permissions = window.userPermissions || '';
-                const canChangeProfile = permissions.includes('P');
-                console.log('[loadUsageProfiles] User permissions:', permissions, 'Can change profile:', canChangeProfile);
+            
+            // Check if user has permission to change profile
+            const permissions = window.userPermissions || '';
+            const canChangeProfile = permissions.includes('P');
+            console.log('[loadUsageProfiles] User permissions:', permissions, 'Can change profile:', canChangeProfile);
                 
                 if (profiles.length > 0) {
-                    // If user can't change profile, get the last subscriber's profile
-                    let defaultProfileId = null;
-                    if (!canChangeProfile && this.subscribers && this.subscribers.length > 0) {
-                        console.log('[loadUsageProfiles] User cannot change profile - looking for last subscriber profile');
-                        // Try to find the last subscriber with a profile
-                        // First check if any subscriber already has profile info
-                        for (let i = this.subscribers.length - 1; i >= 0; i--) {
-                            const sub = this.subscribers[i];
-                            if (sub.profileId || sub.profile) {
-                                defaultProfileId = sub.profileId || sub.profile;
-                                console.log('[loadUsageProfiles] Found profile in subscriber', i, ':', defaultProfileId);
-                                break;
-                            }
+                // If user can't change profile, get the last subscriber's profile
+                let defaultProfileId = null;
+                if (!canChangeProfile && this.subscribers && this.subscribers.length > 0) {
+                    console.log('[loadUsageProfiles] User cannot change profile - looking for last subscriber profile');
+                    // Try to find the last subscriber with a profile
+                    // First check if any subscriber already has profile info
+                    for (let i = this.subscribers.length - 1; i >= 0; i--) {
+                        const sub = this.subscribers[i];
+                        if (sub.profileId || sub.profile) {
+                            defaultProfileId = sub.profileId || sub.profile;
+                            console.log('[loadUsageProfiles] Found profile in subscriber', i, ':', defaultProfileId);
+                            break;
                         }
-                        
-                        // If still no profile found, load details of the last subscriber
-                        if (!defaultProfileId) {
-                            try {
-                                const lastSubscriber = this.subscribers[this.subscribers.length - 1];
-                                const details = await this.api.getConsumerDetailOnDemand(
-                                    this.currentContract.id,
-                                    lastSubscriber.subscriberNum || lastSubscriber.id
-                                );
-                                
-                                if (details.success && details.data) {
-                                    defaultProfileId = details.data.profileId || 
-                                                     details.data.profile || 
-                                                     details.data.extCardProfile ||
-                                                     details.data.identification?.usageProfile?.id || '1';
-                                }
-                            } catch (err) {
-                                defaultProfileId = '1'; // Default fallback
-                            }
-                        }
-                        
-                        // Find if this profile exists in our profiles list
-                        const profileExists = profiles.some(p => p.id === defaultProfileId);
-                        if (!profileExists) {
-                            // Add the profile to the list
-                            let profileName = `פרופיל ${defaultProfileId}`;
-                            if (defaultProfileId === '1') profileName = 'כול החניונים';
-                            else if (defaultProfileId === '0') profileName = 'רגיל';
-                            else if (defaultProfileId === '2') profileName = 'חניון ראשי';
+                    }
+                    
+                    // If still no profile found, load details of the last subscriber
+                    if (!defaultProfileId) {
+                        try {
+                            const lastSubscriber = this.subscribers[this.subscribers.length - 1];
+                            const details = await this.api.getConsumerDetailOnDemand(
+                                this.currentContract.id,
+                                lastSubscriber.subscriberNum || lastSubscriber.id
+                            );
                             
-                            profiles.push({
-                                id: defaultProfileId,
-                                name: profileName
-                            });
+                            if (details.success && details.data) {
+                                defaultProfileId = details.data.profileId || 
+                                                 details.data.profile || 
+                                                 details.data.extCardProfile ||
+                                                 details.data.identification?.usageProfile?.id || '1';
+                            }
+                        } catch (err) {
+                            defaultProfileId = '1'; // Default fallback
                         }
                     }
-                    
-                    profiles.forEach(profile => {
-                        const option = document.createElement('option');
-                        option.value = profile.id;
-                        option.setAttribute('data-profile-name', profile.name);
-                        option.textContent = profile.name;
-                        profileSelect.appendChild(option);
-                    });
-                    
-                    // Set default value
-                    if (!canChangeProfile && defaultProfileId) {
-                        console.log('[loadUsageProfiles] Setting default profile for user without permission:', defaultProfileId);
-                        profileSelect.value = defaultProfileId;
-                        profileSelect.disabled = true;
-                        profileSelect.style.backgroundColor = '#f0f0f0';
-                        profileSelect.style.cursor = 'not-allowed';
-                        profileSelect.title = 'אין הרשאה לשנות פרופיל';
-                    } else {
-                        console.log('[loadUsageProfiles] User can change profile - enabling select');
-                        profileSelect.disabled = false;
-                        profileSelect.style.backgroundColor = '';
-                        profileSelect.style.cursor = '';
-                        profileSelect.title = '';
+                        
+                    // Find if this profile exists in our profiles list
+                    const profileExists = profiles.some(p => p.id === defaultProfileId);
+                    if (!profileExists) {
+                        // Add the profile to the list
+                        let profileName = `פרופיל ${defaultProfileId}`;
+                        if (defaultProfileId === '1') profileName = 'כול החניונים';
+                        else if (defaultProfileId === '0') profileName = 'רגיל';
+                        else if (defaultProfileId === '2') profileName = 'חניון ראשי';
+                        
+                        profiles.push({
+                            id: defaultProfileId,
+                            name: profileName
+                        });
                     }
+                }
                     
-                    // If only one profile, disable the select
-                    if (profiles.length === 1) {
-                        profileSelect.disabled = true;
-                        profileSelect.style.backgroundColor = '#f0f0f0';
-                        profileSelect.style.color = '#888';
-                        profileSelect.style.cursor = 'not-allowed';
+                profiles.forEach(profile => {
+                    const option = document.createElement('option');
+                    option.value = profile.id;
+                    option.setAttribute('data-profile-name', profile.name);
+                    option.textContent = profile.name;
+                    profileSelect.appendChild(option);
+                });
+                
+                // Set default value
+                if (!canChangeProfile && defaultProfileId) {
+                    console.log('[loadUsageProfiles] Setting default profile for user without permission:', defaultProfileId);
+                    profileSelect.value = defaultProfileId;
+                    profileSelect.disabled = true;
+                    profileSelect.style.backgroundColor = '#f0f0f0';
+                    profileSelect.style.cursor = 'not-allowed';
+                    profileSelect.title = 'אין הרשאה לשנות פרופיל';
+                } else {
+                    console.log('[loadUsageProfiles] User can change profile - enabling select');
+                    profileSelect.disabled = false;
+                    profileSelect.style.backgroundColor = '';
+                    profileSelect.style.cursor = '';
+                    profileSelect.title = '';
+                }
+                
+                // If only one profile, disable the select
+                if (profiles.length === 1) {
+                    profileSelect.disabled = true;
+                    profileSelect.style.backgroundColor = '#f0f0f0';
+                    profileSelect.style.color = '#888';
+                    profileSelect.style.cursor = 'not-allowed';
                         
-                        const profileHelpText = document.getElementById('profileHelpText');
-                        if (profileHelpText) {
-                            profileHelpText.textContent = '* פרופיל יחיד בחברה';
-                            profileHelpText.style.color = '#666';
-                        }
-                    } else {
-                        // Multiple profiles - enable selection
-                        profileSelect.disabled = false;
-                        profileSelect.style.backgroundColor = '';
-                        profileSelect.style.color = '';
-                        profileSelect.style.cursor = '';
-                        
-                        const profileHelpText = document.getElementById('profileHelpText');
-                        if (profileHelpText) {
-                            profileHelpText.textContent = '* בחר פרופיל מהרשימה';
-                            profileHelpText.style.color = '#666';
-                        }
+                    const profileHelpText = document.getElementById('profileHelpText');
+                    if (profileHelpText) {
+                        profileHelpText.textContent = '* פרופיל יחיד בחברה';
+                        profileHelpText.style.color = '#666';
                     }
                 } else {
-                    // No profiles - shouldn't happen but add fallback
-                    const option = document.createElement('option');
-                    option.value = '1';
-                    option.textContent = 'חניון ראשי';
-                    profileSelect.appendChild(option);
-                    profileSelect.disabled = true;
+                    // Multiple profiles - enable selection
+                    profileSelect.disabled = false;
+                    profileSelect.style.backgroundColor = '';
+                    profileSelect.style.color = '';
+                    profileSelect.style.cursor = '';
+                    
+                    const profileHelpText = document.getElementById('profileHelpText');
+                    if (profileHelpText) {
+                        profileHelpText.textContent = '* בחר פרופיל מהרשימה';
+                        profileHelpText.style.color = '#666';
+                    }
                 }
-                
-                console.log('[loadUsageProfiles] Profile select configured for new subscriber');
             } else {
-                // For existing subscriber - keep disabled
+                // No profiles - shouldn't happen but add fallback
+                const option = document.createElement('option');
+                option.value = '1';
+                option.textContent = 'חניון ראשי';
+                profileSelect.appendChild(option);
                 profileSelect.disabled = true;
-                profileSelect.style.backgroundColor = '#f0f0f0';
-                profileSelect.style.color = '#888';
-                profileSelect.style.cursor = 'not-allowed';
-                
-                const profileHelpText = document.getElementById('profileHelpText');
-                if (profileHelpText) {
-                    profileHelpText.textContent = '* לא ניתן לשינוי למנויים קיימים';
-                    profileHelpText.style.color = '#888';
-                }
             }
+            
+            console.log('[loadUsageProfiles] Profile select configured');
             
             // Log final state
             console.log('[loadUsageProfiles] Completed - final state:', {
