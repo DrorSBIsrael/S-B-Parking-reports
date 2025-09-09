@@ -1945,9 +1945,7 @@
             // Set the current profile as selected (if it exists in the options)
             if (profileSelect.querySelector(`option[value="${profileId}"]`)) {
                 profileSelect.value = profileId;
-                console.log('[editSubscriber] Set profile to current value:', profileId);
             } else {
-                console.log('[editSubscriber] Current profile not found in options:', profileId);
                 // If the current profile is not in the company profiles, we may need to add it
             const profileName = subscriber.profileName || 
                                    subscriber.identification?.usageProfile?.name ||
