@@ -40,116 +40,6 @@ except ImportError as e:
 
 ERROR_EMAILS_DISABLED = True
 
-# === מערכת לוגינג זמנית לדוחות ===
-import logging
-from logging.handlers import RotatingFileHandler
-from datetime import datetime as dt
-
-# יצירת תיקיית לוגים אם לא קיימת
-LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp_logs')
-try:
-    if not os.path.exists(LOG_DIR):
-        os.makedirs(LOG_DIR)
-        print(f"✅ Created log directory: {LOG_DIR}")
-    else:
-        print(f"✅ Log directory exists: {LOG_DIR}")
-    # בדיקת הרשאות כתיבה
-    test_file = os.path.join(LOG_DIR, 'test_write.txt')
-    with open(test_file, 'w') as f:
-        f.write('test')
-    os.remove(test_file)
-    print(f"✅ Write permissions OK for: {LOG_DIR}")
-except Exception as e:
-    print(f"❌ ERROR with log directory: {e}")
-    # נסה תיקייה חלופית
-    LOG_DIR = '/tmp/parking_logs'
-    try:
-        if not os.path.exists(LOG_DIR):
-            os.makedirs(LOG_DIR)
-        print(f"✅ Using alternative log directory: {LOG_DIR}")
-    except:
-        LOG_DIR = '.'  # השתמש בתיקייה הנוכחית
-        print(f"⚠️ Using current directory for logs: {LOG_DIR}")
-
-# הגדרת לוגר לדוחות
-report_logger = logging.getLogger('parking_reports')
-report_logger.setLevel(logging.DEBUG)
-
-# יצירת handler עם רוטציה (עד 10MB, 5 קבצים)
-log_file = os.path.join(LOG_DIR, f'parking_reports_{dt.now().strftime("%Y%m%d")}.log')
-handler = RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=5)
-handler.setLevel(logging.DEBUG)
-
-# פורמט הלוג
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-report_logger.addHandler(handler)
-
-# פונקציה לכתיבת נתוני דוחות ללוג
-def log_report_data(context, data, extra_info=None):
-    """
-    כותב נתוני דוחות ללוג זמני - רק לדוחות תנועות (parktrans)
-    :param context: הקשר הלוג (למשל: 'proxy_request', 'parking_data', 'transaction')
-    :param data: הנתונים לשמירה
-    :param extra_info: מידע נוסף אופציונלי
-    """
-    try:
-        # לוגינג רק לדוחות תנועות
-        if 'parktrans' not in context:
-            return
-            
-        log_entry = {
-            'timestamp': dt.now().isoformat(),
-            'context': context,
-            'data': data,
-            'extra_info': extra_info
-        }
-        
-        # כתיבה ללוג
-        report_logger.debug(f"[{context}] {json.dumps(log_entry, ensure_ascii=False, indent=2)}")
-        
-        # כתיבה ל-JSON נפרד לניתוח קל יותר
-        json_file = os.path.join(LOG_DIR, f'{context}_{dt.now().strftime("%Y%m%d_%H%M%S_%f")}.json')
-        with open(json_file, 'w', encoding='utf-8') as f:
-            json.dump(log_entry, f, ensure_ascii=False, indent=2)
-        
-        # גם יצירת קובץ פשוט יותר עם רק הנתונים החשובים
-        if context == 'parktrans_response':
-            simple_file = os.path.join(LOG_DIR, f'PARKTRANS_RAW_{dt.now().strftime("%Y%m%d_%H%M%S")}.txt')
-            with open(simple_file, 'w', encoding='utf-8') as f:
-                f.write(f"=== דוח תנועות מ-{data.get('parking_name', 'Unknown')} ===\n")
-                f.write(f"זמן: {data.get('timestamp', '')}\n")
-                f.write(f"Endpoint: {data.get('endpoint', '')}\n")
-                f.write(f"Status: {data.get('status_code', '')}\n")
-                f.write(f"Content Type: {data.get('content_type', '')}\n")
-                f.write("\n=== תגובה גולמית מהשרת ===\n")
-                f.write(data.get('raw_response', ''))
-                
-        elif context == 'parktrans_json_data':
-            simple_file = os.path.join(LOG_DIR, f'PARKTRANS_DATA_{dt.now().strftime("%Y%m%d_%H%M%S")}.json')
-            with open(simple_file, 'w', encoding='utf-8') as f:
-                json.dump({
-                    'parking_name': data.get('parking_name', 'Unknown'),
-                    'timestamp': data.get('timestamp', ''),
-                    'total_transactions': data.get('total_transactions', 0),
-                    'transactions': data.get('transactions', [])
-                }, f, ensure_ascii=False, indent=2)
-            
-    except Exception as e:
-        print(f"❌ Error logging data: {str(e)}")
-
-# === סוף מערכת לוגינג זמנית ===
-
-# הודעה על הפעלת מערכת הלוגינג
-print(f"""
-{'='*60}
-🚀 PARKING REPORTS LOGGING SYSTEM ACTIVATED
-📁 Log Directory: {LOG_DIR}
-📝 Logging only PARKTRANS (parking transactions) requests
-🔍 To view logs: GET /api/parktrans-logs
-🆕 VERSION: 2025-01-09-DEBUG-PARKTRANS
-{'='*60}
-""")
 # הגדרות מיילים אוטומטיים - להוסיף אחרי ההגדרות הקיימות:
 if EMAIL_MONITORING_AVAILABLE:
     EMAIL_CHECK_INTERVAL = 5  # בדיקה כל 5 דקות
@@ -3313,90 +3203,10 @@ def test_proxy():
         'timestamp': datetime.now().isoformat()
     })
 
-@app.route('/api/test-parktrans', methods=['GET'])
-def test_parktrans():
-    """Test endpoint specifically for parktrans debugging"""
-    print("\n🎯 TEST PARKTRANS ENDPOINT CALLED!")
-    
-    # נסה לשלוח בקשה ישירה לשרת החניון
-    try:
-        # השתמש בחניון הראשון לבדיקה
-        parking_result = supabase.table('parkings').select('*').limit(1).execute()
-        if parking_result.data:
-            parking = parking_result.data[0]
-            ip = parking.get('ip_address', '192.117.0.122')
-            port = parking.get('port', 8240)
-            
-            # בנה כמה URLs אפשריים
-            test_urls = [
-                # עם CustomerMediaWebService
-                f"https://{ip}:{port}/CustomerMediaWebService/consumers/2,1/parktrans",
-                f"https://{ip}:{port}/CustomerMediaWebService/consumers/2,1/parktrans?minDate=2025-01-01&maxDate=2025-12-31",
-                # בלי CustomerMediaWebService
-                f"https://{ip}:{port}/consumers/2,1/parktrans",
-                f"https://{ip}:{port}/consumers/2,1/parktrans?minDate=2025-01-01&maxDate=2025-12-31",
-                # אפשרויות אחרות
-                f"https://{ip}:{port}/api/consumers/2,1/parktrans",
-                f"https://{ip}:{port}/parktrans/2/1",
-                f"https://{ip}:{port}/parkingTransactions/2/1"
-            ]
-            
-            results = []
-            for test_url in test_urls:
-                try:
-                    headers = {
-                        'Authorization': f'Basic {base64.b64encode(b"2022:2022").decode("ascii")}'
-                    }
-                    r = requests.get(test_url, headers=headers, verify=False, timeout=5)
-                    results.append({
-                        'url': test_url,
-                        'status': r.status_code,
-                        'content_type': r.headers.get('content-type', ''),
-                        'response_preview': r.text[:200]
-                    })
-                except Exception as e:
-                    results.append({
-                        'url': test_url,
-                        'error': str(e)
-                    })
-            
-            return jsonify({
-                'success': True,
-                'message': 'Tested various parktrans endpoints',
-                'results': results
-            })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        })
-    
-    return jsonify({
-        'success': True,
-        'message': 'Parktrans test endpoint is working!',
-        'version': '2025-01-09-DEBUG',
-        'timestamp': datetime.now().isoformat(),
-        'debug_info': {
-            'log_dir': LOG_DIR,
-            'log_dir_exists': os.path.exists(LOG_DIR)
-        }
-    })
-
 @app.route('/api/company-manager/proxy', methods=['POST', 'OPTIONS', 'GET'])
 def company_manager_proxy():
     """Proxy לקריאות API לשרתי החניונים"""
     
-    # הודעת דיבאג מיידית
-    print(f"\n🔵 PROXY CALLED! Method: {request.method}")
-    if request.method == 'POST':
-        try:
-            data = request.get_json()
-            if data and 'endpoint' in data:
-                print(f"📍 Endpoint in request: {data['endpoint']}")
-                if 'parktrans' in data['endpoint']:
-                    print(f"🎯 THIS IS A PARKTRANS REQUEST!")
-        except:
-            pass
     
     # Handle CORS preflight
     if request.method == 'OPTIONS':
@@ -3441,12 +3251,6 @@ def company_manager_proxy():
         method = data.get('method', 'GET')
         payload = data.get('payload', {})
         
-        # הדפסת ה-endpoint כדי לבדוק אם זה parktrans
-        if endpoint and 'parktrans' in endpoint:
-            print(f"\n🎯 DETECTED PARKTRANS REQUEST!")
-            print(f"📍 Endpoint: {endpoint}")
-            print(f"🏢 Parking ID: {parking_id}")
-            print(f"📋 Method: {method}")
         
         # Request details received
         
@@ -3562,61 +3366,9 @@ def company_manager_proxy():
             # Preserve the original method for detail endpoints (GET for read, PUT for update)
             # method = 'GET'  # Don't override the method!
             # Detail request
-        elif 'parktrans' in endpoint:  # הסרתי את ה-/ כדי לתפוס גם עם query params
+        elif 'parktrans' in endpoint:
             # Handle parking transactions endpoint
-            # Format: consumers/{contractId},{consumerId}/parktrans
-            
-            # בדיקה מיוחדת לשרת החיצוני
-            if ip_address == '192.117.0.122':
-                print(f"🎯 EXTERNAL SERVER DETECTED - checking special handling...")
-                # אולי השרת החיצוני צריך מבנה אחר?
-            
-            # לוגינג גם לקונסול וגם לקובץ
-            print(f"\n{'='*60}")
-            print(f"🚗 PARKING TRANSACTIONS REQUEST")
-            print(f"📅 Time: {datetime.now().isoformat()}")
-            print(f"🏢 Parking: {parking_name}")
-            print(f"📍 Endpoint: {endpoint}")
-            print(f"🌐 Server: {ip_address}:{port}")
-            
-            # תיקון: וודא שה-URL נבנה נכון
-            # הסר query parameters מה-endpoint לבניית ה-URL
-            clean_endpoint = endpoint.split('?')[0]
-            query_params = '?' + endpoint.split('?')[1] if '?' in endpoint else ''
-            
-            print(f"📝 Clean endpoint: {clean_endpoint}")
-            print(f"❓ Query params: {query_params}")
-            print(f"{'='*60}\n")
-            
-            # לוגינג ספציפי לדוחות תנועות
-            log_report_data('parktrans_request', {
-                'endpoint': endpoint,
-                'parking_name': parking_name,
-                'parking_connection': {
-                    'ip': ip_address,
-                    'port': port
-                },
-                'timestamp': datetime.now().isoformat()
-            })
-            
-            # בניית URL עם טיפול נכון ב-query parameters
-            if '?' in endpoint:
-                base_endpoint = endpoint.split('?')[0]
-                query_string = '?' + endpoint.split('?')[1]
-            else:
-                base_endpoint = endpoint
-                query_string = ''
-            
-            # בדיקה: האם כבר יש CustomerMediaWebService ב-endpoint?
-            if 'CustomerMediaWebService' in base_endpoint:
-                # אם כן, אל תוסיף שוב
-                url = f"{protocol}://{ip_address}:{port}/{base_endpoint}{query_string}"
-            else:
-                # אם לא, הוסף
-                url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{base_endpoint}{query_string}"
-            
-            print(f"🔗 Full URL: {url}")
-            print(f"🔍 Debug: base_endpoint={base_endpoint}, query_string={query_string}")
+            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
             method = 'GET'  # Parking transactions are always GET
         elif 'CustomerMediaWebService' in endpoint:
             # אם כבר יש CustomerMediaWebService ב-endpoint
@@ -3800,45 +3552,6 @@ def company_manager_proxy():
             
             # Response received
             
-            # לוגינג רק לדוחות תנועות (parktrans)
-            if 'parktrans' in endpoint:  # הסרתי את ה-/ כדי לתפוס גם עם query params
-                # לוגינג לקונסול - יופיע בלוגים של Render
-                print(f"\n{'='*60}")
-                print(f"🔔 PARKING TRANSACTIONS RESPONSE")
-                print(f"✅ Status: {response.status_code}")
-                print(f"📄 Content Type: {response.headers.get('content-type', '')}")
-                print(f"📏 Response Length: {len(response.text) if response.text else 0} bytes")
-                print(f"🔗 Request URL was: {url}")
-                print(f"📋 First 500 chars of response:")
-                print(response.text[:500] if response.text else "Empty response")
-                
-                # בדיקה מיוחדת - האם קיבלנו consumers במקום transactions?
-                if '<consumers' in response.text[:500]:
-                    print(f"\n⚠️ WARNING: Response contains CONSUMERS data!")
-                    print(f"🤔 Expected: parking transactions XML")
-                    print(f"❌ Got: consumers list XML")
-                    print(f"💡 Possible issue: Wrong endpoint or server misconfiguration")
-                    
-                    # נסיון אחרון - אולי השרת מחזיר consumers רק כשאין תנועות?
-                    # בוא נבדוק אם יש אלמנטים של transactions בהמשך
-                    if 'transaction' in response.text.lower() or 'parktrans' in response.text.lower():
-                        print(f"🔍 Found 'transaction' keyword in response - checking full content...")
-                        # חפש היכן מופיעה המילה
-                        idx = response.text.lower().find('transaction')
-                        if idx > 0:
-                            print(f"📍 Found at position {idx}: {response.text[max(0,idx-50):idx+50]}")
-                
-                print(f"{'='*60}\n")
-                
-                log_report_data('parktrans_response', {
-                    'status_code': response.status_code,
-                    'content_type': response.headers.get('content-type', ''),
-                    'content_length': len(response.text) if response.text else 0,
-                    'raw_response': response.text,  # כל התגובה לדוחות
-                    'endpoint': endpoint,
-                    'parking_name': parking_name,
-                    'timestamp': datetime.now().isoformat()
-                })
             
             # החזרת התוצאה
             if response.status_code == 204:
@@ -4169,27 +3882,6 @@ def company_manager_proxy():
                             })
                         elif 'parktrans' in endpoint:
                             # Parse parking transactions from XML
-                            print(f"\n🚗 PARSING PARKING TRANSACTIONS XML")
-                            print(f"📄 First 500 chars of XML:")
-                            print(response.text[:500])
-                            
-                            # בדיקה: האם קיבלנו consumers במקום transactions?
-                            if '<consumers' in response.text or 'consumer href' in response.text:
-                                print(f"\n❌ ERROR: Got CONSUMERS instead of TRANSACTIONS!")
-                                print(f"🔍 This means the server returned the wrong data")
-                                print(f"📍 Requested endpoint was: {endpoint}")
-                                print(f"🔗 Full URL was: {url if 'url' in locals() else 'Unknown'}")
-                                
-                                # נסה להחזיר הודעת שגיאה ברורה
-                                return jsonify({
-                                    'success': False,
-                                    'error': 'השרת החזיר רשימת מנויים במקום תנועות חניה',
-                                    'debug': {
-                                        'endpoint': endpoint,
-                                        'response_type': 'consumers',
-                                        'expected_type': 'transactions'
-                                    }
-                                })
                             
                             transactions = []
                             # Try to find transaction elements in different XML structures
@@ -4206,7 +3898,6 @@ def company_manager_proxy():
                             if not trans_elements:
                                 trans_elements = root.findall('.//ParkingTransaction')
                             
-                            print(f"📊 Found {len(trans_elements)} transaction elements")
                             
                             for trans in trans_elements:
                                 transaction_data = {}
@@ -4239,9 +3930,6 @@ def company_manager_proxy():
                                 if transaction_data:
                                     transactions = [transaction_data]
                             
-                            print(f"✅ Parsed {len(transactions)} transactions")
-                            if transactions:
-                                print(f"🔍 First transaction: {transactions[0]}")
                             
                             return jsonify({'success': True, 'data': transactions})
                         else:
@@ -4311,30 +3999,6 @@ def company_manager_proxy():
                                     else:
                                         data = filtered
                         
-                        # לוגינג רק לדוחות תנועות בפורמט JSON
-                        if 'parktrans' in endpoint and isinstance(data, (list, dict)):  # הסרתי את ה-/ כדי לתפוס גם עם query params
-                            # לוגינג לקונסול
-                            print(f"\n{'='*60}")
-                            print(f"📊 PARKING TRANSACTIONS DATA (Processed)")
-                            print(f"🔢 Total Transactions: {len(data) if isinstance(data, list) else 1}")
-                            print(f"📝 Data Type: {type(data).__name__}")
-                            if isinstance(data, list) and len(data) > 0:
-                                print(f"🔍 First Transaction:")
-                                print(json.dumps(data[0], ensure_ascii=False, indent=2)[:500])
-                            elif isinstance(data, dict):
-                                print(f"🔍 Data Sample:")
-                                print(json.dumps(data, ensure_ascii=False, indent=2)[:500])
-                            print(f"{'='*60}\n")
-                            
-                            log_report_data('parktrans_json_data', {
-                                'endpoint': endpoint,
-                                'data_type': type(data).__name__,
-                                'total_transactions': len(data) if isinstance(data, list) else 1,
-                                'transactions': data,  # כל הנתונים
-                                'parking_name': parking_name,
-                                'timestamp': datetime.now().isoformat()
-                            })
-                        
                         # Add success message for PUT/POST requests
                         result = {
                             'success': True,
@@ -4348,9 +4012,6 @@ def company_manager_proxy():
                             result['message'] = 'הנתונים נשמרו בהצלחה בשרת החניון'
                             # For consumer creation, check if we got a created ID
                             if 'contracts' in endpoint and 'consumers' in endpoint:
-                                print(f"   🆕 Consumer creation response status: {response.status_code}")
-                                print(f"   🆕 Consumer creation response: {response.text[:1000]}")
-                                print(f"   🆕 Response content-type: {response.headers.get('content-type', 'unknown')}")
                                 # Try to extract ID from response if exists
                                 try:
                                     import xml.etree.ElementTree as ET
@@ -4435,9 +4096,6 @@ def company_manager_proxy():
             print(f"   ❌ UNEXPECTED ERROR: {str(e)[:500]}")
             print(f"   ❌ Failed URL: {url}")
             print(f"   ❌ Server: {ip_address}:{port}")
-            import traceback
-            print(f"   ❌ Full traceback:")
-            traceback.print_exc()
             return jsonify({
                 'success': False, 
                 'error': str(e)[:200],
@@ -4446,9 +4104,6 @@ def company_manager_proxy():
             
     except Exception as e:
         print(f"❌ General proxy error: {str(e)}")
-        import traceback
-        print(f"❌ Full traceback:")
-        traceback.print_exc()
         return jsonify({'success': False, 'error': 'שגיאה כללית במערכת'}), 500
 
 # ========== API למנהל חניון ==========
@@ -4781,7 +4436,6 @@ def debug_why_no_access():
             'error': str(e)
         })
 
-print("🔧 DEBUG ENDPOINT ADDED!")
 
 @app.route('/api/company-manager/send-guest-email', methods=['POST'])
 def send_guest_email():
@@ -5588,168 +5242,6 @@ def test_manager_paths():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
-@app.route('/api/view-temp-logs', methods=['GET'])
-def view_temp_logs():
-    """צפייה בלוגים הזמניים של דוחות"""
-    try:
-        if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
-        
-        # בדיקה שהמשתמש הוא מאסטר או מנהל
-        access_level = session.get('user_access_level', 'master')  # ברירת מחדל למאסטר לבדיקות
-        
-        # הודעת דיבאג
-        print(f"\n🔍 VIEW LOGS REQUEST - User: {session.get('user_email')}, Access: {access_level}")
-        
-        if access_level not in ['master', 'admin']:
-            # זמנית - תן גישה לכולם לצורך דיבאג
-            print("⚠️ WARNING: Allowing log access for debugging purposes")
-            # return jsonify({'success': False, 'message': 'אין הרשאה לצפות בלוגים'}), 403
-        
-        # קבלת פרמטרים
-        log_type = request.args.get('type', 'all')  # all, proxy_request, parktrans, etc.
-        limit = int(request.args.get('limit', 100))
-        
-        logs = []
-        
-        # קריאת קבצי לוג
-        if os.path.exists(LOG_DIR):
-            # קריאת קובץ הלוג הראשי
-            log_file = os.path.join(LOG_DIR, f'parking_reports_{dt.now().strftime("%Y%m%d")}.log')
-            if os.path.exists(log_file):
-                with open(log_file, 'r', encoding='utf-8') as f:
-                    lines = f.readlines()[-limit:]  # רק N שורות אחרונות
-                    logs.extend(lines)
-            
-            # קריאת קבצי JSON
-            json_files = []
-            for filename in os.listdir(LOG_DIR):
-                if filename.endswith('.json'):
-                    if log_type == 'all' or log_type in filename:
-                        json_files.append(filename)
-            
-            # מיון לפי תאריך יצירה
-            json_files.sort(key=lambda x: os.path.getctime(os.path.join(LOG_DIR, x)), reverse=True)
-            
-            # קריאת קבצי JSON
-            json_logs = []
-            for filename in json_files[:limit]:
-                filepath = os.path.join(LOG_DIR, filename)
-                try:
-                    with open(filepath, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                        json_logs.append({
-                            'filename': filename,
-                            'data': data
-                        })
-                except Exception as e:
-                    json_logs.append({
-                        'filename': filename,
-                        'error': str(e)
-                    })
-        
-        return jsonify({
-            'success': True,
-            'log_directory': LOG_DIR,
-            'text_logs': logs,
-            'json_logs': json_logs,
-            'total_files': len(json_logs)
-        })
-        
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/api/download-log', methods=['GET'])
-def download_log():
-    """הורדת קובץ לוג ספציפי"""
-    try:
-        if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
-        
-        # בדיקה שהמשתמש הוא מאסטר או מנהל
-        access_level = session.get('user_access_level', 'master')
-        if access_level not in ['master', 'admin']:
-            return jsonify({'success': False, 'message': 'אין הרשאה להוריד לוגים'}), 403
-        
-        filename = request.args.get('filename')
-        if not filename:
-            return jsonify({'success': False, 'message': 'לא צוין שם קובץ'}), 400
-        
-        # בדיקת אבטחה - לא לאפשר גישה לקבצים מחוץ לתיקיית הלוגים
-        if '..' in filename or '/' in filename or '\\' in filename:
-            return jsonify({'success': False, 'message': 'שם קובץ לא חוקי'}), 400
-        
-        filepath = os.path.join(LOG_DIR, filename)
-        if not os.path.exists(filepath):
-            return jsonify({'success': False, 'message': 'קובץ לא נמצא'}), 404
-        
-        # שליחת הקובץ להורדה
-        from flask import send_file
-        return send_file(filepath, as_attachment=True, download_name=filename)
-        
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/api/parktrans-logs', methods=['GET'])
-def get_parktrans_logs():
-    """קבלת לוגים של דוחות תנועות בלבד - פשוט וקל"""
-    try:
-        # לא בודק הרשאות לצורך דיבאג
-        print(f"\n📋 PARKTRANS LOGS REQUEST - User: {session.get('user_email', 'Anonymous')}")
-        
-        logs = {
-            'message': '🚗 Parking Transactions Logs',
-            'log_directory': LOG_DIR,
-            'files': [],
-            'recent_logs': []
-        }
-        
-        # בדוק אם תיקיית הלוגים קיימת
-        if os.path.exists(LOG_DIR):
-            # קרא את כל קבצי PARKTRANS
-            for filename in sorted(os.listdir(LOG_DIR), reverse=True):
-                if 'PARKTRANS' in filename:
-                    filepath = os.path.join(LOG_DIR, filename)
-                    file_info = {
-                        'filename': filename,
-                        'size': os.path.getsize(filepath),
-                        'created': datetime.fromtimestamp(os.path.getctime(filepath)).isoformat()
-                    }
-                    
-                    # קרא תוכן של קבצים קטנים
-                    if file_info['size'] < 50000:  # פחות מ-50KB
-                        try:
-                            with open(filepath, 'r', encoding='utf-8') as f:
-                                file_info['content'] = f.read()
-                        except:
-                            file_info['content'] = 'Error reading file'
-                    else:
-                        file_info['content'] = 'File too large - download it instead'
-                    
-                    logs['files'].append(file_info)
-                    
-                    # הגבל ל-10 קבצים אחרונים
-                    if len(logs['files']) >= 10:
-                        break
-        else:
-            logs['message'] += ' - Log directory not found!'
-            logs['info'] = 'Logs are saved on the server. Run a parking transaction report to generate logs.'
-        
-        # הוסף הוראות
-        logs['instructions'] = {
-            'hebrew': 'כדי ליצור לוגים: בחר מנוי ולחץ על כפתור הדוחות (📊)',
-            'english': 'To generate logs: Select a subscriber and click the reports button (📊)',
-            'api_info': 'Logs are saved in: ' + LOG_DIR
-        }
-        
-        return jsonify(logs)
-        
-    except Exception as e:
-        return jsonify({
-            'error': str(e),
-            'message': 'Error reading logs',
-            'tip': 'Check Render logs for printed output'
-        })
 
 # הפעלה אוטומטית כשהאפליקציה מתחילה
 if __name__ == '__main__':
