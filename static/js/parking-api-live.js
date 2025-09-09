@@ -574,6 +574,10 @@ class ParkingAPIXML {
     // Get parking transactions for a consumer
     async getParkingTransactions(contractId, consumerId, minDate = null, maxDate = null) {
         try {
+            console.log('🚗 getParkingTransactions CALLED!');
+            console.log('📋 Parameters:', { contractId, consumerId, minDate, maxDate });
+            console.log('🏢 Current Parking ID:', this.config.currentParkingId);
+            
             // Getting parking transactions
             
             // Build query parameters
@@ -591,14 +595,19 @@ class ParkingAPIXML {
             const queryString = queryParams.length > 0 ? '?' + queryParams.join('&') : '';
             const endpoint = `consumers/${contractId},${consumerId}/parktrans${queryString}`;
             
+            console.log('📍 Endpoint:', endpoint);
+            
             // Use the proxy for parking transactions
             const proxyUrl = this.config.baseUrl || '/api/company-manager/proxy';
+            console.log('🌐 Proxy URL:', proxyUrl);
             
             const requestData = {
                 parking_id: this.config.currentParkingId,
                 endpoint: endpoint,
                 method: 'GET'
             };
+            
+            console.log('📦 Request Data:', requestData);
             
             const response = await fetch(proxyUrl, {
                 method: 'POST',
