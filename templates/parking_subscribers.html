@@ -1076,9 +1076,11 @@
                     <button class="btn btn-warning action-btn" onclick="addGuestSubscriber()">
                         <span data-translate="addGuest">+ הוסף אורח</span>
                     </button>
+                    <!-- כפתור דוחות - מוסתר זמנית
                     <button class="btn btn-info action-btn" onclick="openReportsModal()">
                         <span data-translate="reports">📊 דוחות</span>
                     </button>
+                    -->
                     <button class="btn btn-primary action-btn" onclick="exportToExcel()">
                         <span data-translate="export">📥 ייצוא לאקסל</span>
                     </button>
@@ -2281,13 +2283,9 @@
             document.getElementById('reportMaxDate').valueAsDate = today;
             
             // Load report data
-            console.log('🚀 REPORT BUTTON CLICKED!');
-            console.log('👤 Subscriber Number:', subscriberNum);
             
             try {
                 const ui = window.parkingUIXML || window.parkingUI;
-                console.log('🔧 UI Object:', ui);
-                console.log('📊 Has getSubscriberReport?', ui && ui.getSubscriberReport);
                 
                 if (!ui || !ui.getSubscriberReport) {
                     console.error('❌ Report function not available!');
