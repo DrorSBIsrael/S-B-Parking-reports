@@ -2831,15 +2831,22 @@ class ParkingUIIntegrationXML {
     
     // Get parking transactions report for a subscriber
     async getSubscriberReport(subscriberNum, minDate = null, maxDate = null) {
+        console.log('📊 getSubscriberReport CALLED!');
+        console.log('👤 Subscriber:', subscriberNum);
+        console.log('📅 Date Range:', { minDate, maxDate });
+        console.log('🏢 Current Contract:', this.currentContract);
+        
         try {
             // Starting report for subscriber
             
             if (!this.currentContract || !this.currentContract.id) {
+                console.error('❌ No current contract!');
                 // No current contract set
                 throw new Error('לא נבחרה חברה');
             }
             
             const contractId = this.currentContract.id;
+            console.log('📋 Contract ID:', contractId);
             
             // Getting report for subscriber
             
@@ -2847,11 +2854,15 @@ class ParkingUIIntegrationXML {
             const result = await this.api.getParkingTransactions(contractId, subscriberNum, minDate, maxDate);
             // API response received
             
+            console.log('📥 API Result:', result);
+            
             if (!result.success) {
+                console.error('❌ API Failed:', result.error);
                 throw new Error(result.error || 'Failed to get parking transactions');
             }
             
             const transactions = result.data || [];
+            console.log('📋 Transactions received:', transactions.length);
             // Found transactions
             
             // Filter transactions by type (1, 2, 11, 12)
