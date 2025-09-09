@@ -1886,12 +1886,8 @@ class ParkingUIIntegrationXML {
      * Get profiles used in current company
      */
     async getCompanyProfiles() {
-        console.log('[getCompanyProfiles] Starting profile detection');
-        console.log('[getCompanyProfiles] Current contract:', this.currentContract);
-        console.log('[getCompanyProfiles] Subscribers count:', this.subscribers?.length || 0);
         
         if (!this.currentContract) {
-            console.log('[getCompanyProfiles] No current contract - returning empty');
             return [];
         }
         
@@ -1904,7 +1900,6 @@ class ParkingUIIntegrationXML {
             
             // First check if we already have profiles in current subscribers
             if (this.subscribers && this.subscribers.length > 0) {
-                console.log('[getCompanyProfiles] Checking existing subscribers for profiles');
                 this.subscribers.forEach((subscriber, idx) => {
                     
                     // Check multiple places for profile info
@@ -1931,27 +1926,21 @@ class ParkingUIIntegrationXML {
                         needToLoadDetails = false;
                     }
                 });
-                console.log('[getCompanyProfiles] Profiles found in existing data:', profilesInUse.size);
             }
             
             // If we don't have profiles, load details for a few subscribers
             if (needToLoadDetails && this.subscribers && this.subscribers.length > 0) {
-                console.log('[getCompanyProfiles] Need to load details to find profiles');
                 // Load details for up to 5 subscribers to find profiles
                 const subscribersToCheck = this.subscribers.slice(0, Math.min(5, this.subscribers.length));
-                console.log('[getCompanyProfiles] Will check details for', subscribersToCheck.length, 'subscribers');
                 
                 for (const subscriber of subscribersToCheck) {
                     try {
-                        console.log('[getCompanyProfiles] Loading details for subscriber:', subscriber.subscriberNum || subscriber.id);
                         const details = await this.api.getConsumerDetailOnDemand(
                             this.currentContract.id,
                             subscriber.subscriberNum || subscriber.id
                         );
                         
                         if (details.success && details.data) {
-                            console.log('[getCompanyProfiles] Got details - full response:', details);
-                            console.log('[getCompanyProfiles] Got details.data:', details.data);
                             
                             // Try different ways to get profile ID
                             let profileId = null;
@@ -1959,9 +1948,7 @@ class ParkingUIIntegrationXML {
                             
                             // Check if data has identification
                             if (details.data.identification) {
-                                console.log('[getCompanyProfiles] Has identification:', details.data.identification);
                                 if (details.data.identification.usageProfile) {
-                                    console.log('[getCompanyProfiles] Has usageProfile:', details.data.identification.usageProfile);
                                     profileId = details.data.identification.usageProfile.id;
                                     profileName = details.data.identification.usageProfile.name;
                                 }
@@ -1978,12 +1965,10 @@ class ParkingUIIntegrationXML {
                                          `פרופיל ${profileId}`);
                             
                             if (profileId && profileName) {
-                                console.log('[getCompanyProfiles] Found profile:', profileId, profileName);
                                 profilesInUse.set(profileId, profileName);
                             }
                         }
                     } catch (err) {
-                        console.log('[getCompanyProfiles] Error loading details:', err);
                         // Continue to next subscriber
                     }
                 }
@@ -1995,15 +1980,11 @@ class ParkingUIIntegrationXML {
                 profilesInUse.forEach((name, id) => {
                     profiles.push({ id, name });
                 });
-                console.log('[getCompanyProfiles] Returning profiles from company:', profiles);
                 return profiles;
             }
             
             // If no profiles in use, return a default based on company
             // Company 2 typically uses profile 1 (חניון ראשי)
-            console.log('[getCompanyProfiles] No profiles found after all attempts');
-            console.log('[getCompanyProfiles] Contract ID:', this.currentContract?.id);
-            console.log('[getCompanyProfiles] Returning default profile 1');
             return [{ id: '1', name: 'חניון ראשי' }];
             
         } catch (error) {
@@ -2017,18 +1998,14 @@ class ParkingUIIntegrationXML {
      * Load and populate usage profiles in the select element
      */
     async loadUsageProfiles(isNewSubscriber = false) {
-        console.log('[loadUsageProfiles] Starting - isNewSubscriber:', isNewSubscriber);
         try {
             const profileSelect = document.getElementById('editProfile');
             if (!profileSelect) {
-                console.log('[loadUsageProfiles] No profile select element found');
                 return;
             }
             
             // Always get company profiles (for both new and existing subscribers)
-            console.log('[loadUsageProfiles] Loading profiles from company');
             const profiles = await this.getCompanyProfiles();
-            console.log('[loadUsageProfiles] Got profiles:', profiles);
                 
                 // Clear and populate select
                 profileSelect.innerHTML = '';
@@ -2036,20 +2013,17 @@ class ParkingUIIntegrationXML {
             // Check if user has permission to change profile
             const permissions = window.userPermissions || '';
             const canChangeProfile = permissions.includes('P');
-            console.log('[loadUsageProfiles] User permissions:', permissions, 'Can change profile:', canChangeProfile);
                 
                 if (profiles.length > 0) {
                 // If user can't change profile, get the last subscriber's profile
                 let defaultProfileId = null;
                 if (!canChangeProfile && this.subscribers && this.subscribers.length > 0) {
-                    console.log('[loadUsageProfiles] User cannot change profile - looking for last subscriber profile');
                     // Try to find the last subscriber with a profile
                     // First check if any subscriber already has profile info
                     for (let i = this.subscribers.length - 1; i >= 0; i--) {
                         const sub = this.subscribers[i];
                         if (sub.profileId || sub.profile) {
                             defaultProfileId = sub.profileId || sub.profile;
-                            console.log('[loadUsageProfiles] Found profile in subscriber', i, ':', defaultProfileId);
                             break;
                         }
                     }
@@ -2100,14 +2074,12 @@ class ParkingUIIntegrationXML {
                 
                 // Set default value
                 if (!canChangeProfile && defaultProfileId) {
-                    console.log('[loadUsageProfiles] Setting default profile for user without permission:', defaultProfileId);
                     profileSelect.value = defaultProfileId;
                     profileSelect.disabled = true;
                     profileSelect.style.backgroundColor = '#f0f0f0';
                     profileSelect.style.cursor = 'not-allowed';
                     profileSelect.title = 'אין הרשאה לשנות פרופיל';
                 } else {
-                    console.log('[loadUsageProfiles] User can change profile - enabling select');
                     profileSelect.disabled = false;
                     profileSelect.style.backgroundColor = '';
                     profileSelect.style.cursor = '';
@@ -2148,15 +2120,8 @@ class ParkingUIIntegrationXML {
                 profileSelect.disabled = true;
             }
             
-            console.log('[loadUsageProfiles] Profile select configured');
             
             // Log final state
-            console.log('[loadUsageProfiles] Completed - final state:', {
-                profileSelectValue: profileSelect.value,
-                profileSelectDisabled: profileSelect.disabled,
-                optionsCount: profileSelect.options.length,
-                options: Array.from(profileSelect.options).map(o => ({value: o.value, text: o.text}))
-            });
         } catch (error) {
             console.error('[loadUsageProfiles] Error loading profiles:', error);
         }
