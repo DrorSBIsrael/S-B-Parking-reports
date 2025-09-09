@@ -446,7 +446,7 @@ class ParkingUIIntegrationXML {
                 <div class="company-header">
                     <h3>${company.name || company.companyName || this.currentParking?.name || 'חניון'} <span style="color: #666; font-size: 0.9em;">[${company.id}]</span></h3>
                     <div style="display: flex; gap: 5px; align-items: center;">
-                    <span class="company-number">#${company.id}</span>
+                        <span class="company-number">#${company.id}</span>
                         <button class="btn btn-sm" onclick="event.stopPropagation(); window.parkingUIXML.refreshCompanyCard('${company.id}')" 
                                 style="padding: 2px 6px; font-size: 12px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;"
                                 title="רענן נתוני חברה">
@@ -1746,10 +1746,6 @@ class ParkingUIIntegrationXML {
                 <td style="color: #888;" title="פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}">${subscriber.profileName || `פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}`}</td>
                 <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                 <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
-                ${canEdit ? `<td style="text-align: center;">
-                    <button class="btn btn-sm btn-info" onclick="event.stopPropagation();" style="padding: 2px 8px; margin: 0 2px;" title="ערוך">✏️</button>
-                    <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); if(window.parkingUIXML) window.parkingUIXML.deleteSubscriber('${subscriber.subscriberNum}');" style="padding: 2px 8px; margin: 0 2px;" title="מחק">🗑️</button>
-                </td>` : ''}
             `;
             // Add to fragment for better performance
             if (isVeryLarge) {
@@ -1875,10 +1871,6 @@ class ParkingUIIntegrationXML {
                     <td style="color: #888;" title="פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}">${subscriber.profileName || `פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}`}</td>
                     <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                     <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
-                    ${canEdit ? `<td style="text-align: center;">
-                        <button class="btn btn-sm btn-info" onclick="event.stopPropagation();" style="padding: 2px 8px; margin: 0 2px;" title="ערוך">✏️</button>
-                        <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); if(window.parkingUIXML) window.parkingUIXML.deleteSubscriber('${subscriber.subscriberNum}');" style="padding: 2px 8px; margin: 0 2px;" title="מחק">🗑️</button>
-                    </td>` : ''}
             `;
             tbody.appendChild(row);
         });
@@ -1894,92 +1886,21 @@ class ParkingUIIntegrationXML {
      * Get profiles used in current company
      */
     async getCompanyProfiles() {
-        
-        if (!this.currentContract) {
-            return [];
-        }
+        if (!this.currentContract) return [];
         
         try {
             // Getting profiles for company
             
             // Get all subscribers to see what profiles are in use
             const profilesInUse = new Map();
-            let needToLoadDetails = true;
             
-            // First check if we already have profiles in current subscribers
             if (this.subscribers && this.subscribers.length > 0) {
-                this.subscribers.forEach((subscriber, idx) => {
-                    
-                    // Check multiple places for profile info
-                    const profileId = subscriber.profileId || subscriber.profile || subscriber.extCardProfile || 
-                                     subscriber.identification?.usageProfile?.id;
-                    // Profile name might be the profile field itself if it contains name
-                    let profileName = subscriber.profileName || subscriber.identification?.usageProfile?.name;
-                    
-                    // If no profile name but we have profile field with text, use it
-                    if (!profileName && subscriber.profile && isNaN(subscriber.profile)) {
-                        profileName = subscriber.profile;
-                    }
-                    
-                    // If still no name, create default based on ID
-                    if (!profileName && profileId) {
-                        profileName = profileId === '1' ? 'כול החניונים' : 
-                                    profileId === '0' ? 'רגיל' : 
-                                    profileId === '2' ? 'חניון ראשי' :
-                                    `פרופיל ${profileId}`;
-                    }
-                    
-                    if (profileId && profileName) {
-                        profilesInUse.set(profileId, profileName);
-                        needToLoadDetails = false;
+                this.subscribers.forEach(subscriber => {
+                    if (subscriber.profileId && subscriber.profile) {
+                        profilesInUse.set(subscriber.profileId, subscriber.profile);
+                        console.log('[getCompanyProfiles] Found profile in use:', subscriber.profileId, subscriber.profile);
                     }
                 });
-            }
-            
-            // If we don't have profiles, load details for a few subscribers
-            if (needToLoadDetails && this.subscribers && this.subscribers.length > 0) {
-                // Load details for up to 5 subscribers to find profiles
-                const subscribersToCheck = this.subscribers.slice(0, Math.min(5, this.subscribers.length));
-                
-                for (const subscriber of subscribersToCheck) {
-                    try {
-                        const details = await this.api.getConsumerDetailOnDemand(
-                            this.currentContract.id,
-                            subscriber.subscriberNum || subscriber.id
-                        );
-                        
-                        if (details.success && details.data) {
-                            
-                            // Try different ways to get profile ID
-                            let profileId = null;
-                            let profileName = null;
-                            
-                            // Check if data has identification
-                            if (details.data.identification) {
-                                if (details.data.identification.usageProfile) {
-                                    profileId = details.data.identification.usageProfile.id;
-                                    profileName = details.data.identification.usageProfile.name;
-                                }
-                                // Also check direct properties
-                                profileId = profileId || details.data.identification.extCardProfile;
-                            }
-                            
-                            // Check direct properties on data
-                            profileId = profileId || details.data.profileId || details.data.profile || details.data.extCardProfile;
-                            profileName = profileName || details.data.profileName ||
-                                        (profileId === '1' ? 'כול החניונים' : 
-                                         profileId === '0' ? 'רגיל' : 
-                                         profileId === '2' ? 'חניון ראשי' :
-                                         `פרופיל ${profileId}`);
-                            
-                            if (profileId && profileName) {
-                                profilesInUse.set(profileId, profileName);
-                            }
-                        }
-                    } catch (err) {
-                        // Continue to next subscriber
-                    }
-                }
             }
             
             // If we found profiles in use, return them
@@ -1988,11 +1909,13 @@ class ParkingUIIntegrationXML {
                 profilesInUse.forEach((name, id) => {
                     profiles.push({ id, name });
                 });
+                console.log('[getCompanyProfiles] Returning profiles in use:', profiles);
                 return profiles;
             }
             
             // If no profiles in use, return a default based on company
             // Company 2 typically uses profile 1 (חניון ראשי)
+            console.log('[getCompanyProfiles] No profiles found in use, returning default');
             return [{ id: '1', name: 'חניון ראשי' }];
             
         } catch (error) {
@@ -2008,128 +1931,112 @@ class ParkingUIIntegrationXML {
     async loadUsageProfiles(isNewSubscriber = false) {
         try {
             const profileSelect = document.getElementById('editProfile');
-            if (!profileSelect) {
-                return;
-            }
+            if (!profileSelect) return;
             
-            // Always get company profiles (for both new and existing subscribers)
-            const profiles = await this.getCompanyProfiles();
+            let profiles = [];
+            
+            // For new subscriber - get company profiles
+            if (isNewSubscriber) {
+                profiles = await this.getCompanyProfiles();
+                
+                // Got company profiles
                 
                 // Clear and populate select
                 profileSelect.innerHTML = '';
-            
-            // Check if user has permission to change profile
-            const permissions = window.userPermissions || '';
-            const canChangeProfile = permissions.includes('P');
+                
+                // Check if user has permission to change profile
+                const permissions = window.userPermissions || '';
+                const canChangeProfile = permissions.includes('P');
                 
                 if (profiles.length > 0) {
-                // If user can't change profile, get the last subscriber's profile
-                let defaultProfileId = null;
-                if (!canChangeProfile && this.subscribers && this.subscribers.length > 0) {
-                    // Try to find the last subscriber with a profile
-                    // First check if any subscriber already has profile info
-                    for (let i = this.subscribers.length - 1; i >= 0; i--) {
-                        const sub = this.subscribers[i];
-                        if (sub.profileId || sub.profile) {
-                            defaultProfileId = sub.profileId || sub.profile;
-                            break;
+                    // If user can't change profile, get the last subscriber's profile
+                    let defaultProfileId = null;
+                    if (!canChangeProfile && this.subscribers && this.subscribers.length > 0) {
+                        // Find the last subscriber (highest ID or last in array)
+                        const lastSubscriber = this.subscribers[this.subscribers.length - 1];
+                        defaultProfileId = lastSubscriber.profileId || lastSubscriber.profile || '1';
+                        
+                        // Find if this profile exists in our profiles list
+                        const profileExists = profiles.some(p => p.id === defaultProfileId);
+                        if (!profileExists && lastSubscriber.profile) {
+                            // Add the last subscriber's profile to the list
+                            profiles.push({
+                                id: defaultProfileId,
+                                name: lastSubscriber.profile || `פרופיל ${defaultProfileId}`
+                            });
                         }
                     }
                     
-                    // If still no profile found, load details of the last subscriber
-                    if (!defaultProfileId) {
-                        try {
-                            const lastSubscriber = this.subscribers[this.subscribers.length - 1];
-                            const details = await this.api.getConsumerDetailOnDemand(
-                                this.currentContract.id,
-                                lastSubscriber.subscriberNum || lastSubscriber.id
-                            );
-                            
-                            if (details.success && details.data) {
-                                defaultProfileId = details.data.profileId || 
-                                                 details.data.profile || 
-                                                 details.data.extCardProfile ||
-                                                 details.data.identification?.usageProfile?.id || '1';
-                            }
-                        } catch (err) {
-                            defaultProfileId = '1'; // Default fallback
+                    profiles.forEach(profile => {
+                        const option = document.createElement('option');
+                        option.value = profile.id;
+                        option.setAttribute('data-profile-name', profile.name);
+                        option.textContent = profile.name;
+                        profileSelect.appendChild(option);
+                    });
+                    
+                    // Set default value
+                    if (!canChangeProfile && defaultProfileId) {
+                        profileSelect.value = defaultProfileId;
+                        profileSelect.disabled = true;
+                        profileSelect.style.backgroundColor = '#f0f0f0';
+                        profileSelect.style.cursor = 'not-allowed';
+                        profileSelect.title = 'אין הרשאה לשנות פרופיל';
+                    } else {
+                        profileSelect.disabled = false;
+                        profileSelect.style.backgroundColor = '';
+                        profileSelect.style.cursor = '';
+                        profileSelect.title = '';
+                    }
+                    
+                    // If only one profile, disable the select
+                    if (profiles.length === 1) {
+                        profileSelect.disabled = true;
+                        profileSelect.style.backgroundColor = '#f0f0f0';
+                        profileSelect.style.color = '#888';
+                        profileSelect.style.cursor = 'not-allowed';
+                        
+                        const profileHelpText = document.getElementById('profileHelpText');
+                        if (profileHelpText) {
+                            profileHelpText.textContent = '* פרופיל יחיד בחברה';
+                            profileHelpText.style.color = '#666';
+                        }
+                    } else {
+                        // Multiple profiles - enable selection
+                        profileSelect.disabled = false;
+                        profileSelect.style.backgroundColor = '';
+                        profileSelect.style.color = '';
+                        profileSelect.style.cursor = '';
+                        
+                        const profileHelpText = document.getElementById('profileHelpText');
+                        if (profileHelpText) {
+                            profileHelpText.textContent = '* בחר פרופיל מהרשימה';
+                            profileHelpText.style.color = '#666';
                         }
                     }
-                        
-                    // Find if this profile exists in our profiles list
-                    const profileExists = profiles.some(p => p.id === defaultProfileId);
-                    if (!profileExists) {
-                        // Add the profile to the list
-                        let profileName = `פרופיל ${defaultProfileId}`;
-                        if (defaultProfileId === '1') profileName = 'כול החניונים';
-                        else if (defaultProfileId === '0') profileName = 'רגיל';
-                        else if (defaultProfileId === '2') profileName = 'חניון ראשי';
-                        
-                        profiles.push({
-                            id: defaultProfileId,
-                            name: profileName
-                        });
-                    }
-                }
-                    
-                profiles.forEach(profile => {
+                } else {
+                    // No profiles - shouldn't happen but add fallback
                     const option = document.createElement('option');
-                    option.value = profile.id;
-                    option.setAttribute('data-profile-name', profile.name);
-                    option.textContent = profile.name;
+                    option.value = '1';
+                    option.textContent = 'חניון ראשי';
                     profileSelect.appendChild(option);
-                });
-                
-                // Set default value
-                if (!canChangeProfile && defaultProfileId) {
-                    profileSelect.value = defaultProfileId;
                     profileSelect.disabled = true;
-                    profileSelect.style.backgroundColor = '#f0f0f0';
-                    profileSelect.style.cursor = 'not-allowed';
-                    profileSelect.title = 'אין הרשאה לשנות פרופיל';
-                } else {
-                    profileSelect.disabled = false;
-                    profileSelect.style.backgroundColor = '';
-                    profileSelect.style.cursor = '';
-                    profileSelect.title = '';
                 }
                 
-                // If only one profile, disable the select
-                if (profiles.length === 1) {
-                    profileSelect.disabled = true;
-                    profileSelect.style.backgroundColor = '#f0f0f0';
-                    profileSelect.style.color = '#888';
-                    profileSelect.style.cursor = 'not-allowed';
-                        
-                    const profileHelpText = document.getElementById('profileHelpText');
-                    if (profileHelpText) {
-                        profileHelpText.textContent = '* פרופיל יחיד בחברה';
-                        profileHelpText.style.color = '#666';
-                    }
-                } else {
-                    // Multiple profiles - enable selection
-                    profileSelect.disabled = false;
-                    profileSelect.style.backgroundColor = '';
-                    profileSelect.style.color = '';
-                    profileSelect.style.cursor = '';
-                    
-                    const profileHelpText = document.getElementById('profileHelpText');
-                    if (profileHelpText) {
-                        profileHelpText.textContent = '* בחר פרופיל מהרשימה';
-                        profileHelpText.style.color = '#666';
-                    }
-                }
+                console.log('[loadUsageProfiles] Profile select configured for new subscriber');
             } else {
-                // No profiles - shouldn't happen but add fallback
-                const option = document.createElement('option');
-                option.value = '1';
-                option.textContent = 'חניון ראשי';
-                profileSelect.appendChild(option);
+                // For existing subscriber - keep disabled
                 profileSelect.disabled = true;
+                profileSelect.style.backgroundColor = '#f0f0f0';
+                profileSelect.style.color = '#888';
+                profileSelect.style.cursor = 'not-allowed';
+                
+                const profileHelpText = document.getElementById('profileHelpText');
+                if (profileHelpText) {
+                    profileHelpText.textContent = '* לא ניתן לשינוי למנויים קיימים';
+                    profileHelpText.style.color = '#888';
+                }
             }
-            
-            
-            // Log final state
         } catch (error) {
             console.error('[loadUsageProfiles] Error loading profiles:', error);
         }
@@ -2139,6 +2046,7 @@ class ParkingUIIntegrationXML {
      * Edit subscriber - prepare data for modal
      */
     async editSubscriber(subscriber) {
+        console.log(`[editSubscriber] Called with subscriber ${subscriber.subscriberNum}, hasFullDetails: ${subscriber.hasFullDetails}`);
         
         // Always allow viewing subscriber details
         // Permission check will be done when saving changes
@@ -2165,6 +2073,14 @@ class ParkingUIIntegrationXML {
                 if (result.success) {
                     const detail = result.data;
                     
+                    console.log(`[editSubscriber] Loaded detail from server:`, JSON.stringify({
+                        validFrom: detail.identification?.validFrom,
+                        validUntil: detail.identification?.validUntil,
+                        xValidFrom: detail.consumer?.xValidFrom,
+                        xValidUntil: detail.consumer?.xValidUntil,
+
+                        present: detail.identification?.present
+                    }, null, 2));
                     
                     // Preserve important fields and map correctly
                     const preservedFields = {
@@ -2227,6 +2143,7 @@ class ParkingUIIntegrationXML {
             subscriber.vehicle2 = subscriber.vehicle2 || subscriber.lpn2 || '';
             subscriber.vehicle3 = subscriber.vehicle3 || subscriber.lpn3 || '';
             
+            console.log('[editSubscriber from UI] Full subscriber data:', JSON.stringify(subscriber, null, 2));
             window.editSubscriber(subscriber);
         } else {
             console.error('[editSubscriber] window.editSubscriber function not found!');
@@ -2689,9 +2606,6 @@ class ParkingUIIntegrationXML {
                         const validUntil = new Date(newSubscriber.validUntil || '2030-12-31');
                         const isExpired = validUntil < new Date();
                         
-                        const permissions = window.userPermissions || '';
-                        const canEditNew = permissions !== 'B' && permissions !== '';
-                        
                         newRow.innerHTML = `
                             <td>${newSubscriber.companyNum || ''}</td>
                             <td>${newSubscriber.companyName || ''}</td>
@@ -2706,10 +2620,6 @@ class ParkingUIIntegrationXML {
                             <td style="color: #888;" title="פרופיל ${newSubscriber.profile || ''}">${newSubscriber.profileName || `פרופיל ${newSubscriber.profile || ''}`}</td>
                             <td>${this.formatDate(newSubscriber.validFrom) || ''}</td>
                             <td style="text-align: center; font-size: 18px;">${newSubscriber.presence ? '✅' : '❌'}</td>
-                            ${canEditNew ? `<td style="text-align: center;">
-                                <button class="btn btn-sm btn-info" onclick="event.stopPropagation();" style="padding: 2px 8px; margin: 0 2px;" title="ערוך">✏️</button>
-                                <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); if(window.parkingUIXML) window.parkingUIXML.deleteSubscriber('${newSubscriber.subscriberNum}');" style="padding: 2px 8px; margin: 0 2px;" title="מחק">🗑️</button>
-                            </td>` : ''}
                         `;
                         
                         tbody.appendChild(newRow);
@@ -2807,13 +2717,6 @@ class ParkingUIIntegrationXML {
     async deleteSubscriber(subscriberId) {
         if (!this.currentContract) return;
         
-        // Check permissions
-        const permissions = window.userPermissions || '';
-        if (permissions === 'B' || permissions === '') {
-            this.showNotification('אין לך הרשאה למחוק מנויים', 'error');
-            return;
-        }
-        
         if (!confirm('האם אתה בטוח שברצונך למחוק מנוי זה?')) {
             return;
         }
@@ -2843,19 +2746,15 @@ class ParkingUIIntegrationXML {
     
     // Get parking transactions report for a subscriber
     async getSubscriberReport(subscriberNum, minDate = null, maxDate = null) {
-        console.log('🏢 Current Contract:', this.currentContract);
-        
         try {
             // Starting report for subscriber
             
             if (!this.currentContract || !this.currentContract.id) {
-                console.error('❌ No current contract!');
                 // No current contract set
                 throw new Error('לא נבחרה חברה');
             }
             
             const contractId = this.currentContract.id;
-            console.log('📋 Contract ID:', contractId);
             
             // Getting report for subscriber
             
@@ -2863,15 +2762,11 @@ class ParkingUIIntegrationXML {
             const result = await this.api.getParkingTransactions(contractId, subscriberNum, minDate, maxDate);
             // API response received
             
-            console.log('📥 API Result:', result);
-            
             if (!result.success) {
-                console.error('❌ API Failed:', result.error);
                 throw new Error(result.error || 'Failed to get parking transactions');
             }
             
             const transactions = result.data || [];
-            console.log('📋 Transactions received:', transactions.length);
             // Found transactions
             
             // Filter transactions by type (1, 2, 11, 12)
@@ -2884,20 +2779,14 @@ class ParkingUIIntegrationXML {
             // Filtered transactions
             
             // Format transactions for display
-            console.log('🔍 First transaction raw data:', filteredTransactions[0]);
-            const formattedTransactions = filteredTransactions.map(trans => {
-                console.log('📝 Processing transaction:', trans);
-                const formatted = {
-                    date: this.formatDateTime(trans.transactionTime),
-                    type: this.getTransactionTypeName(trans.transactionType),
-                    entrance: trans.facilityin || '-',
-                    exit: trans.facilityout || '-',
-                    device: trans.device || '-',
-                    amount: trans.amount ? `₪${trans.amount}` : '-'
-                };
-                console.log('✅ Formatted transaction:', formatted);
-                return formatted;
-            });
+            const formattedTransactions = filteredTransactions.map(trans => ({
+                date: this.formatDateTime(trans.transactionTime),
+                type: this.getTransactionTypeName(trans.transactionType),
+                entrance: trans.facilityin || '-',
+                exit: trans.facilityout || '-',
+                device: trans.device || '-',
+                amount: trans.amount ? `₪${trans.amount}` : '-'
+            }));
             
             return {
                 success: true,
