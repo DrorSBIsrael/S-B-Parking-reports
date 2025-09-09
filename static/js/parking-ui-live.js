@@ -1906,9 +1906,25 @@ class ParkingUIIntegrationXML {
             if (this.subscribers && this.subscribers.length > 0) {
                 console.log('[getCompanyProfiles] Checking existing subscribers for profiles');
                 this.subscribers.forEach((subscriber, idx) => {
-                    if (subscriber.profileId && subscriber.profile) {
-                        console.log(`[getCompanyProfiles] Found profile in subscriber ${idx}:`, subscriber.profileId, subscriber.profile);
-                        profilesInUse.set(subscriber.profileId, subscriber.profile);
+                    // Log what we have for each subscriber
+                    if (idx < 5) { // Log first 5 subscribers
+                        console.log(`[getCompanyProfiles] Subscriber ${idx}:`, {
+                            profileId: subscriber.profileId,
+                            profile: subscriber.profile,
+                            extCardProfile: subscriber.extCardProfile,
+                            identification: subscriber.identification
+                        });
+                    }
+                    
+                    // Check multiple places for profile info
+                    const profileId = subscriber.profileId || subscriber.profile || subscriber.extCardProfile || 
+                                     subscriber.identification?.usageProfile?.id;
+                    const profileName = subscriber.profileName || subscriber.identification?.usageProfile?.name || 
+                                       (subscriber.profile ? subscriber.profile : null);
+                    
+                    if (profileId && profileName) {
+                        console.log(`[getCompanyProfiles] Found profile in subscriber ${idx}:`, profileId, profileName);
+                        profilesInUse.set(profileId, profileName);
                         needToLoadDetails = false;
                     }
                 });
@@ -1925,24 +1941,38 @@ class ParkingUIIntegrationXML {
                 for (const subscriber of subscribersToCheck) {
                     try {
                         console.log('[getCompanyProfiles] Loading details for subscriber:', subscriber.subscriberNum || subscriber.id);
-                        const details = await this.api.getConsumerDetails(
+                        const details = await this.api.getConsumerDetailOnDemand(
                             this.currentContract.id,
                             subscriber.subscriberNum || subscriber.id
                         );
                         
                         if (details.success && details.data) {
-                            console.log('[getCompanyProfiles] Got details:', details.data);
-                            const profileId = details.data.profileId || 
-                                           details.data.profile || 
-                                           details.data.extCardProfile ||
-                                           details.data.identification?.usageProfile?.id;
+                            console.log('[getCompanyProfiles] Got details - full response:', details);
+                            console.log('[getCompanyProfiles] Got details.data:', details.data);
                             
-                            const profileName = details.data.profileName || 
-                                              details.data.identification?.usageProfile?.name ||
-                                              (profileId === '1' ? 'כול החניונים' : 
-                                               profileId === '0' ? 'רגיל' : 
-                                               profileId === '2' ? 'חניון ראשי' :
-                                               `פרופיל ${profileId}`);
+                            // Try different ways to get profile ID
+                            let profileId = null;
+                            let profileName = null;
+                            
+                            // Check if data has identification
+                            if (details.data.identification) {
+                                console.log('[getCompanyProfiles] Has identification:', details.data.identification);
+                                if (details.data.identification.usageProfile) {
+                                    console.log('[getCompanyProfiles] Has usageProfile:', details.data.identification.usageProfile);
+                                    profileId = details.data.identification.usageProfile.id;
+                                    profileName = details.data.identification.usageProfile.name;
+                                }
+                                // Also check direct properties
+                                profileId = profileId || details.data.identification.extCardProfile;
+                            }
+                            
+                            // Check direct properties on data
+                            profileId = profileId || details.data.profileId || details.data.profile || details.data.extCardProfile;
+                            profileName = profileName || details.data.profileName ||
+                                        (profileId === '1' ? 'כול החניונים' : 
+                                         profileId === '0' ? 'רגיל' : 
+                                         profileId === '2' ? 'חניון ראשי' :
+                                         `פרופיל ${profileId}`);
                             
                             if (profileId && profileName) {
                                 console.log('[getCompanyProfiles] Found profile:', profileId, profileName);
@@ -1968,7 +1998,9 @@ class ParkingUIIntegrationXML {
             
             // If no profiles in use, return a default based on company
             // Company 2 typically uses profile 1 (חניון ראשי)
-            console.log('[getCompanyProfiles] No profiles found - returning default profile 1');
+            console.log('[getCompanyProfiles] No profiles found after all attempts');
+            console.log('[getCompanyProfiles] Contract ID:', this.currentContract?.id);
+            console.log('[getCompanyProfiles] Returning default profile 1');
             return [{ id: '1', name: 'חניון ראשי' }];
             
         } catch (error) {
@@ -2026,7 +2058,7 @@ class ParkingUIIntegrationXML {
                         if (!defaultProfileId) {
                             try {
                                 const lastSubscriber = this.subscribers[this.subscribers.length - 1];
-                                const details = await this.api.getConsumerDetails(
+                                const details = await this.api.getConsumerDetailOnDemand(
                                     this.currentContract.id,
                                     lastSubscriber.subscriberNum || lastSubscriber.id
                                 );
