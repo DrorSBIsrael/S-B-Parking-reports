@@ -3317,6 +3317,60 @@ def test_proxy():
 def test_parktrans():
     """Test endpoint specifically for parktrans debugging"""
     print("\n🎯 TEST PARKTRANS ENDPOINT CALLED!")
+    
+    # נסה לשלוח בקשה ישירה לשרת החניון
+    try:
+        # השתמש בחניון הראשון לבדיקה
+        parking_result = supabase.table('parkings').select('*').limit(1).execute()
+        if parking_result.data:
+            parking = parking_result.data[0]
+            ip = parking.get('ip_address', '192.117.0.122')
+            port = parking.get('port', 8240)
+            
+            # בנה כמה URLs אפשריים
+            test_urls = [
+                # עם CustomerMediaWebService
+                f"https://{ip}:{port}/CustomerMediaWebService/consumers/2,1/parktrans",
+                f"https://{ip}:{port}/CustomerMediaWebService/consumers/2,1/parktrans?minDate=2025-01-01&maxDate=2025-12-31",
+                # בלי CustomerMediaWebService
+                f"https://{ip}:{port}/consumers/2,1/parktrans",
+                f"https://{ip}:{port}/consumers/2,1/parktrans?minDate=2025-01-01&maxDate=2025-12-31",
+                # אפשרויות אחרות
+                f"https://{ip}:{port}/api/consumers/2,1/parktrans",
+                f"https://{ip}:{port}/parktrans/2/1",
+                f"https://{ip}:{port}/parkingTransactions/2/1"
+            ]
+            
+            results = []
+            for test_url in test_urls:
+                try:
+                    headers = {
+                        'Authorization': f'Basic {base64.b64encode(b"2022:2022").decode("ascii")}'
+                    }
+                    r = requests.get(test_url, headers=headers, verify=False, timeout=5)
+                    results.append({
+                        'url': test_url,
+                        'status': r.status_code,
+                        'content_type': r.headers.get('content-type', ''),
+                        'response_preview': r.text[:200]
+                    })
+                except Exception as e:
+                    results.append({
+                        'url': test_url,
+                        'error': str(e)
+                    })
+            
+            return jsonify({
+                'success': True,
+                'message': 'Tested various parktrans endpoints',
+                'results': results
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+    
     return jsonify({
         'success': True,
         'message': 'Parktrans test endpoint is working!',
@@ -3512,6 +3566,11 @@ def company_manager_proxy():
             # Handle parking transactions endpoint
             # Format: consumers/{contractId},{consumerId}/parktrans
             
+            # בדיקה מיוחדת לשרת החיצוני
+            if ip_address == '192.117.0.122':
+                print(f"🎯 EXTERNAL SERVER DETECTED - checking special handling...")
+                # אולי השרת החיצוני צריך מבנה אחר?
+            
             # לוגינג גם לקונסול וגם לקובץ
             print(f"\n{'='*60}")
             print(f"🚗 PARKING TRANSACTIONS REQUEST")
@@ -3519,6 +3578,14 @@ def company_manager_proxy():
             print(f"🏢 Parking: {parking_name}")
             print(f"📍 Endpoint: {endpoint}")
             print(f"🌐 Server: {ip_address}:{port}")
+            
+            # תיקון: וודא שה-URL נבנה נכון
+            # הסר query parameters מה-endpoint לבניית ה-URL
+            clean_endpoint = endpoint.split('?')[0]
+            query_params = '?' + endpoint.split('?')[1] if '?' in endpoint else ''
+            
+            print(f"📝 Clean endpoint: {clean_endpoint}")
+            print(f"❓ Query params: {query_params}")
             print(f"{'='*60}\n")
             
             # לוגינג ספציפי לדוחות תנועות
@@ -3532,7 +3599,24 @@ def company_manager_proxy():
                 'timestamp': datetime.now().isoformat()
             })
             
-            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
+            # בניית URL עם טיפול נכון ב-query parameters
+            if '?' in endpoint:
+                base_endpoint = endpoint.split('?')[0]
+                query_string = '?' + endpoint.split('?')[1]
+            else:
+                base_endpoint = endpoint
+                query_string = ''
+            
+            # בדיקה: האם כבר יש CustomerMediaWebService ב-endpoint?
+            if 'CustomerMediaWebService' in base_endpoint:
+                # אם כן, אל תוסיף שוב
+                url = f"{protocol}://{ip_address}:{port}/{base_endpoint}{query_string}"
+            else:
+                # אם לא, הוסף
+                url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{base_endpoint}{query_string}"
+            
+            print(f"🔗 Full URL: {url}")
+            print(f"🔍 Debug: base_endpoint={base_endpoint}, query_string={query_string}")
             method = 'GET'  # Parking transactions are always GET
         elif 'CustomerMediaWebService' in endpoint:
             # אם כבר יש CustomerMediaWebService ב-endpoint
@@ -3724,8 +3808,26 @@ def company_manager_proxy():
                 print(f"✅ Status: {response.status_code}")
                 print(f"📄 Content Type: {response.headers.get('content-type', '')}")
                 print(f"📏 Response Length: {len(response.text) if response.text else 0} bytes")
+                print(f"🔗 Request URL was: {url}")
                 print(f"📋 First 500 chars of response:")
                 print(response.text[:500] if response.text else "Empty response")
+                
+                # בדיקה מיוחדת - האם קיבלנו consumers במקום transactions?
+                if '<consumers' in response.text[:500]:
+                    print(f"\n⚠️ WARNING: Response contains CONSUMERS data!")
+                    print(f"🤔 Expected: parking transactions XML")
+                    print(f"❌ Got: consumers list XML")
+                    print(f"💡 Possible issue: Wrong endpoint or server misconfiguration")
+                    
+                    # נסיון אחרון - אולי השרת מחזיר consumers רק כשאין תנועות?
+                    # בוא נבדוק אם יש אלמנטים של transactions בהמשך
+                    if 'transaction' in response.text.lower() or 'parktrans' in response.text.lower():
+                        print(f"🔍 Found 'transaction' keyword in response - checking full content...")
+                        # חפש היכן מופיעה המילה
+                        idx = response.text.lower().find('transaction')
+                        if idx > 0:
+                            print(f"📍 Found at position {idx}: {response.text[max(0,idx-50):idx+50]}")
+                
                 print(f"{'='*60}\n")
                 
                 log_report_data('parktrans_response', {
@@ -4070,6 +4172,24 @@ def company_manager_proxy():
                             print(f"\n🚗 PARSING PARKING TRANSACTIONS XML")
                             print(f"📄 First 500 chars of XML:")
                             print(response.text[:500])
+                            
+                            # בדיקה: האם קיבלנו consumers במקום transactions?
+                            if '<consumers' in response.text or 'consumer href' in response.text:
+                                print(f"\n❌ ERROR: Got CONSUMERS instead of TRANSACTIONS!")
+                                print(f"🔍 This means the server returned the wrong data")
+                                print(f"📍 Requested endpoint was: {endpoint}")
+                                print(f"🔗 Full URL was: {url if 'url' in locals() else 'Unknown'}")
+                                
+                                # נסה להחזיר הודעת שגיאה ברורה
+                                return jsonify({
+                                    'success': False,
+                                    'error': 'השרת החזיר רשימת מנויים במקום תנועות חניה',
+                                    'debug': {
+                                        'endpoint': endpoint,
+                                        'response_type': 'consumers',
+                                        'expected_type': 'transactions'
+                                    }
+                                })
                             
                             transactions = []
                             # Try to find transaction elements in different XML structures
