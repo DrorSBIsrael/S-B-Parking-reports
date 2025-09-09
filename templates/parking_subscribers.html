@@ -2281,17 +2281,27 @@
             document.getElementById('reportMaxDate').valueAsDate = today;
             
             // Load report data
+            console.log('🚀 REPORT BUTTON CLICKED!');
+            console.log('👤 Subscriber Number:', subscriberNum);
+            
             try {
                 const ui = window.parkingUIXML || window.parkingUI;
+                console.log('🔧 UI Object:', ui);
+                console.log('📊 Has getSubscriberReport?', ui && ui.getSubscriberReport);
+                
                 if (!ui || !ui.getSubscriberReport) {
+                    console.error('❌ Report function not available!');
                     throw new Error('Report function not available');
                 }
                 
                 // Format dates for API
                 const minDate = lastMonth.toISOString().split('T')[0];
                 const maxDate = today.toISOString().split('T')[0];
+                console.log('📅 Date Range:', { minDate, maxDate });
                 
+                console.log('📞 Calling ui.getSubscriberReport...');
                 const result = await ui.getSubscriberReport(subscriberNum, minDate, maxDate);
+                console.log('✅ Report result:', result);
                 
                 if (result.success) {
                     displayTransactionsReport(result.data, result.summary);
