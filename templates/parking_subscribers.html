@@ -171,11 +171,39 @@
             transform: scale(1.1);
         }
         
+        .btn-danger {
+            background: #dc3545 !important;
+            color: white !important;
+            border: none !important;
+            padding: 5px 10px !important;
+            border-radius: 4px !important;
+            cursor: pointer !important;
+            font-size: 16px !important;
+            min-width: 35px !important;
+            height: 30px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333 !important;
+            transform: scale(1.1);
+        }
+        
         /* Force button visibility in table */
-        td .btn-success {
+        td .btn-success, td .btn-info, td .btn-danger {
             display: inline-flex !important;
             visibility: visible !important;
             opacity: 1 !important;
+        }
+        
+        /* Small buttons in table cells */
+        .btn-sm {
+            padding: 2px 8px !important;
+            font-size: 14px !important;
+            height: 24px !important;
+            min-width: 30px !important;
         }
         
 
@@ -1136,6 +1164,7 @@
                             <th data-translate="profile">פרופיל</th>
                             <th data-translate="validFrom" data-sort="validFrom" class="sortable">תחילת תוקף <span class="sort-icon">⇅</span></th>
                             <th data-translate="presence" data-sort="presence" class="sortable">נוכחות <span class="sort-icon">⇅</span></th>
+                            <th data-translate="actions" id="actions-header">פעולות</th>
                         </tr>
                     </thead>
                     <tbody id="subscribersTableBody">
@@ -1880,8 +1909,12 @@
         async function editSubscriber(subscriber) {
             // Editing subscriber
             
-            // Always allow viewing/editing subscriber details
-            // Permission check will be done when saving (for profile updates)
+            // Check permissions
+            const permissions = getUserPermissions();
+            if (permissions === 'B' || permissions === '') {
+                showToast('❌ אין לך הרשאה לערוך מנויים', 'error');
+                return;
+            }
             
             // IMPORTANT: Store the subscriber globally for saveSubscriber to check
             // Make sure we have a valid subscriber object
@@ -1965,7 +1998,7 @@
             }
             
             // Check if user has permission to update profile
-            const permissions = getUserPermissions();
+            // Already declared permissions above, no need to redeclare
             const canUpdateProfile = permissions.includes('P');
             
             profileSelect.disabled = !canUpdateProfile;
@@ -3043,6 +3076,13 @@
 
         // Save subscriber
         async function saveSubscriber() {
+            // Check permissions first
+            const permissions = getUserPermissions();
+            if (permissions === 'B' || permissions === '') {
+                showToast('❌ אין לך הרשאה לשמור שינויים', 'error');
+                return;
+            }
+            
             // Check if we have the UI integration
             if (window.parkingUIXML || window.parkingUI) {
                 const uiIntegration = window.parkingUIXML || window.parkingUI;
@@ -3425,7 +3465,12 @@
 
         // Export to Excel
         function exportToExcel() {
-            // Export is always allowed - no permission check needed
+            // Check export permission
+            const permissions = getUserPermissions();
+            if (!permissions.includes('R')) {
+                showToast('❌ אין לך הרשאה לייצא נתונים (דרושה הרשאת R)', 'error');
+                return;
+            }
             
             // Check if we have the UI integration
             if (window.parkingUIXML || window.parkingUI) {
@@ -3819,7 +3864,6 @@
         // Update UI buttons based on permissions
         function updateUIPermissions() {
             const permissions = getUserPermissions();
-            console.log('[updateUIPermissions] User permissions:', permissions);
             
             // Add New Subscriber button
             const addNewBtn = document.querySelector('button[onclick="addNewSubscriber()"]');
@@ -3858,6 +3902,16 @@
                     exportBtn.disabled = true;
                     exportBtn.title = 'אין הרשאה לייצא נתונים (דרושה הרשאת R)';
                     exportBtn.style.opacity = '0.5';
+                }
+            }
+            
+            // Hide/show actions column based on permissions
+            const actionsHeader = document.getElementById('actions-header');
+            if (actionsHeader) {
+                if (permissions === 'B' || permissions === '') {
+                    actionsHeader.style.display = 'none';
+                } else {
+                    actionsHeader.style.display = '';
                 }
             }
         }
