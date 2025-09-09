@@ -2876,15 +2876,28 @@ class ParkingUIIntegrationXML {
             
             // Format transactions for display
             console.log('🔍 First transaction raw data:', filteredTransactions[0]);
+            
+            // בדיקה: אולי שדות התנועה נקראים אחרת?
+            if (filteredTransactions.length > 0) {
+                const firstTrans = filteredTransactions[0];
+                console.log('🔑 Transaction keys:', Object.keys(firstTrans));
+                console.log('📊 Full first transaction:', JSON.stringify(firstTrans, null, 2));
+            }
+            
             const formattedTransactions = filteredTransactions.map(trans => {
                 console.log('📝 Processing transaction:', trans);
+                
+                // נסה למצוא את השדות בשמות שונים
+                const transTime = trans.transactionTime || trans.transTime || trans.time || trans.timestamp || trans.dateTime;
+                const transType = trans.transactionType || trans.type || trans.transType;
+                
                 const formatted = {
-                    date: this.formatDateTime(trans.transactionTime),
-                    type: this.getTransactionTypeName(trans.transactionType),
-                    entrance: trans.facilityin || '-',
-                    exit: trans.facilityout || '-',
-                    device: trans.device || '-',
-                    amount: trans.amount ? `₪${trans.amount}` : '-'
+                    date: this.formatDateTime(transTime),
+                    type: this.getTransactionTypeName(transType),
+                    entrance: trans.facilityin || trans.facilityIn || trans.entrance || '-',
+                    exit: trans.facilityout || trans.facilityOut || trans.exit || '-',
+                    device: trans.device || trans.deviceId || '-',
+                    amount: trans.amount || trans.sum || (trans.price ? `₪${trans.price}` : '-')
                 };
                 console.log('✅ Formatted transaction:', formatted);
                 return formatted;
