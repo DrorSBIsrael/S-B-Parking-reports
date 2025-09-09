@@ -573,14 +573,6 @@ class ParkingAPIXML {
 
     // Get parking transactions for a consumer
     async getParkingTransactions(contractId, consumerId, minDate = null, maxDate = null) {
-        console.log('[getParkingTransactions] Starting with params:', {
-            contractId,
-            consumerId,
-            minDate,
-            maxDate,
-            config: this.config
-        });
-        
         try {
             // Getting parking transactions
             
@@ -599,19 +591,14 @@ class ParkingAPIXML {
             const queryString = queryParams.length > 0 ? '?' + queryParams.join('&') : '';
             const endpoint = `consumers/${contractId},${consumerId}/parktrans${queryString}`;
             
-            console.log('[getParkingTransactions] Built endpoint:', endpoint);
-            
             // Use the proxy for parking transactions
             const proxyUrl = this.config.baseUrl || '/api/company-manager/proxy';
-            console.log('[getParkingTransactions] Using proxy URL:', proxyUrl);
-            console.log('[getParkingTransactions] Current parking ID:', this.config.currentParkingId);
             
             const requestData = {
                 parking_id: this.config.currentParkingId,
                 endpoint: endpoint,
                 method: 'GET'
             };
-            console.log('[getParkingTransactions] Request data:', requestData);
             
             const response = await fetch(proxyUrl, {
                 method: 'POST',
@@ -622,8 +609,6 @@ class ParkingAPIXML {
                 body: JSON.stringify(requestData)
             });
             
-            console.log('[getParkingTransactions] Response status:', response.status);
-            
             if (!response.ok) {
                 if (response.status === 204) {
                     // No parking transactions found
@@ -633,10 +618,8 @@ class ParkingAPIXML {
             }
             
             const proxyResponse = await response.json();
-            console.log('[getParkingTransactions] Proxy response:', proxyResponse);
             
             if (!proxyResponse.success) {
-                console.log('[getParkingTransactions] Proxy error:', proxyResponse.error);
                 return { success: false, error: proxyResponse.error || 'Failed to get transactions' };
             }
             
@@ -645,8 +628,12 @@ class ParkingAPIXML {
             
             // Check if data is already parsed (JSON) or needs XML parsing
             if (typeof data === 'object' && data !== null) {
+                // Check if data is already an array of transactions
+                if (Array.isArray(data)) {
+                    return { success: true, data: data };
+                }
                 // Data is already parsed - handle the transaction data
-                if (data.parkTransactions && data.parkTransactions.parkTransaction) {
+                else if (data.parkTransactions && data.parkTransactions.parkTransaction) {
                     const transData = data.parkTransactions.parkTransaction;
                     const transactions = Array.isArray(transData) ? transData : [transData];
                     return { success: true, data: transactions };
@@ -717,11 +704,6 @@ class ParkingAPIXML {
             
         } catch (error) {
             console.error('[ParkingAPIXML] Error getting parking transactions:', error);
-            console.error('[ParkingAPIXML] Error details:', {
-                message: error.message,
-                stack: error.stack,
-                config: this.config
-            });
             return { 
                 success: false, 
                 error: error.message || 'Failed to get parking transactions' 
