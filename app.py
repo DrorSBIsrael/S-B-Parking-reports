@@ -3367,8 +3367,10 @@ def company_manager_proxy():
         elif '/parktrans' in endpoint:
             # Handle parking transactions endpoint
             # Format: consumers/{contractId},{consumerId}/parktrans
+            print(f"🔍 [PROXY] Handling parking transactions endpoint: {endpoint}")
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
             method = 'GET'  # Parking transactions are always GET
+            print(f"🔍 [PROXY] Full URL for transactions: {url}")
         elif 'CustomerMediaWebService' in endpoint:
             # אם כבר יש CustomerMediaWebService ב-endpoint
             url = f"{protocol}://{ip_address}:{port}/{endpoint}"
@@ -3550,9 +3552,17 @@ def company_manager_proxy():
                 return jsonify({'success': False, 'message': 'שיטה לא נתמכת'}), 400
             
             # Response received
+            print(f"📡 [PROXY] Response status: {response.status_code}")
+            print(f"📡 [PROXY] Response headers: {dict(response.headers)}")
+            if '/parktrans' in endpoint:
+                print(f"🔍 [PROXY] ParkTrans response preview: {response.text[:500]}")
             
             # החזרת התוצאה
-            if response.status_code in [200, 201]:
+            if response.status_code == 204:
+                # No content - empty response
+                print(f"📡 [PROXY] No content (204) - returning empty data")
+                return jsonify({'success': True, 'data': []})
+            elif response.status_code in [200, 201]:
                 # בדוק אם התגובה היא XML או JSON
                 content_type = response.headers.get('content-type', '')
                 # Checking content type
