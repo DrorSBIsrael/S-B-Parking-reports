@@ -609,6 +609,7 @@ class ParkingAPIXML {
             
             console.log('📦 Request Data:', requestData);
             
+            console.log('🚀 Sending request to:', proxyUrl);
             const response = await fetch(proxyUrl, {
                 method: 'POST',
                 headers: {
@@ -618,27 +619,75 @@ class ParkingAPIXML {
                 body: JSON.stringify(requestData)
             });
             
+            console.log('📨 Response Status:', response.status);
+            console.log('📨 Response OK?', response.ok);
+            
             if (!response.ok) {
                 if (response.status === 204) {
+                    console.log('ℹ️ No content (204) - returning empty array');
                     // No parking transactions found
                     return { success: true, data: [] };
                 }
+                console.error('❌ HTTP Error:', response.status);
+                const errorText = await response.text();
+                console.error('❌ Error Response:', errorText);
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             
             const proxyResponse = await response.json();
+            console.log('🔔 Proxy Response:', proxyResponse);
             
             if (!proxyResponse.success) {
+                console.error('❌ Proxy Failed:', proxyResponse.error);
                 return { success: false, error: proxyResponse.error || 'Failed to get transactions' };
             }
             
             // Handle both XML and JSON responses from proxy
             const data = proxyResponse.data;
+            console.log('📦 Response Data:', data);
+            console.log('📝 Data Type:', typeof data);
+            console.log('📊 Is Array?', Array.isArray(data));
+            
+            // Check if we got raw XML in the response
+            if (proxyResponse.raw && typeof proxyResponse.raw === 'string') {
+                console.log('🔍 Got raw XML response, parsing...');
+                console.log('📄 First 500 chars:', proxyResponse.raw.substring(0, 500));
+                // Parse the raw XML
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(proxyResponse.raw, 'text/xml');
+                
+                // Extract transactions from XML
+                const transactions = [];
+                const transNodes = xmlDoc.getElementsByTagName('transaction') || 
+                                 xmlDoc.getElementsByTagName('parkingTransaction') ||
+                                 xmlDoc.getElementsByTagName('ParkingTransaction');
+                
+                console.log('🔢 Found transaction nodes:', transNodes.length);
+                
+                for (let i = 0; i < transNodes.length; i++) {
+                    const node = transNodes[i];
+                    const trans = {};
+                    // Extract all child elements
+                    for (let j = 0; j < node.childNodes.length; j++) {
+                        const child = node.childNodes[j];
+                        if (child.nodeType === 1) { // Element node
+                            trans[child.nodeName] = child.textContent;
+                        }
+                    }
+                    if (Object.keys(trans).length > 0) {
+                        transactions.push(trans);
+                    }
+                }
+                
+                console.log('✅ Parsed transactions:', transactions);
+                return { success: true, data: transactions };
+            }
             
             // Check if data is already parsed (JSON) or needs XML parsing
             if (typeof data === 'object' && data !== null) {
                 // Check if data is already an array of transactions
                 if (Array.isArray(data)) {
+                    console.log('✅ Data is already an array of', data.length, 'transactions');
                     return { success: true, data: data };
                 }
                 // Data is already parsed - handle the transaction data
