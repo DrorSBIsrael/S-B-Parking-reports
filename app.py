@@ -39,6 +39,59 @@ except ImportError as e:
     # Email monitoring not available
 
 ERROR_EMAILS_DISABLED = True
+
+# === מערכת לוגינג זמנית לדוחות ===
+import logging
+from logging.handlers import RotatingFileHandler
+from datetime import datetime as dt
+
+# יצירת תיקיית לוגים אם לא קיימת
+LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp_logs')
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
+
+# הגדרת לוגר לדוחות
+report_logger = logging.getLogger('parking_reports')
+report_logger.setLevel(logging.DEBUG)
+
+# יצירת handler עם רוטציה (עד 10MB, 5 קבצים)
+log_file = os.path.join(LOG_DIR, f'parking_reports_{dt.now().strftime("%Y%m%d")}.log')
+handler = RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=5)
+handler.setLevel(logging.DEBUG)
+
+# פורמט הלוג
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+report_logger.addHandler(handler)
+
+# פונקציה לכתיבת נתוני דוחות ללוג
+def log_report_data(context, data, extra_info=None):
+    """
+    כותב נתוני דוחות ללוג זמני
+    :param context: הקשר הלוג (למשל: 'proxy_request', 'parking_data', 'transaction')
+    :param data: הנתונים לשמירה
+    :param extra_info: מידע נוסף אופציונלי
+    """
+    try:
+        log_entry = {
+            'timestamp': dt.now().isoformat(),
+            'context': context,
+            'data': data,
+            'extra_info': extra_info
+        }
+        
+        # כתיבה ללוג
+        report_logger.debug(f"[{context}] {json.dumps(log_entry, ensure_ascii=False, indent=2)}")
+        
+        # גם כתיבה ל-JSON נפרד לניתוח קל יותר
+        json_file = os.path.join(LOG_DIR, f'{context}_{dt.now().strftime("%Y%m%d_%H%M%S_%f")}.json')
+        with open(json_file, 'w', encoding='utf-8') as f:
+            json.dump(log_entry, f, ensure_ascii=False, indent=2)
+            
+    except Exception as e:
+        print(f"❌ Error logging data: {str(e)}")
+
+# === סוף מערכת לוגינג זמנית ===
 # הגדרות מיילים אוטומטיים - להוסיף אחרי ההגדרות הקיימות:
 if EMAIL_MONITORING_AVAILABLE:
     EMAIL_CHECK_INTERVAL = 5  # בדיקה כל 5 דקות
@@ -3267,6 +3320,7 @@ def company_manager_proxy():
         parking_data = parking_result.data[0]
         ip_address = parking_data.get('ip_address')
         port = parking_data.get('port', 443)
+        parking_name = parking_data.get('description', f'Parking {parking_id}')
         
         # בדיקה אם אנחנו בסביבת פיתוח או production
         is_local_dev = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
@@ -3367,6 +3421,18 @@ def company_manager_proxy():
         elif '/parktrans' in endpoint:
             # Handle parking transactions endpoint
             # Format: consumers/{contractId},{consumerId}/parktrans
+            
+            # לוגינג ספציפי לדוחות תנועות
+            log_report_data('parktrans_request', {
+                'endpoint': endpoint,
+                'parking_name': parking_name,
+                'parking_connection': {
+                    'ip': ip_address,
+                    'port': port
+                },
+                'timestamp': datetime.now().isoformat()
+            })
+            
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
             method = 'GET'  # Parking transactions are always GET
         elif 'CustomerMediaWebService' in endpoint:
@@ -3395,6 +3461,21 @@ def company_manager_proxy():
             
             # ביצוע הקריאה - פשוט כמו שהיה
             # Executing request
+            
+            # לוגינג לפני הקריאה
+            log_report_data('proxy_request_before', {
+                'method': method,
+                'url': url,
+                'endpoint': endpoint,
+                'headers': headers,
+                'payload': payload if method in ['POST', 'PUT'] else None,
+                'parking_connection': {
+                    'ip': ip_address,
+                    'port': port,
+                    'name': parking_name
+                }
+            })
+            
             if method == 'GET':
                 response = requests.get(url, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'POST':
@@ -3550,6 +3631,17 @@ def company_manager_proxy():
                 return jsonify({'success': False, 'message': 'שיטה לא נתמכת'}), 400
             
             # Response received
+            
+            # לוגינג אחרי קבלת התגובה
+            log_report_data('proxy_response_raw', {
+                'status_code': response.status_code,
+                'headers': dict(response.headers),
+                'content_type': response.headers.get('content-type', ''),
+                'content_length': len(response.text) if response.text else 0,
+                'raw_text': response.text[:5000] if response.text else None,  # רק 5000 תווים ראשונים
+                'endpoint': endpoint,
+                'url': url
+            })
             
             # החזרת התוצאה
             if response.status_code == 204:
@@ -3709,6 +3801,14 @@ def company_manager_proxy():
                             # MAX_CONSUMERS_PER_REQUEST = 100  # REMOVED - no limit
                             # Returning all consumers
                             pass
+                            
+                            # לוגינג לפני החזרת נתוני מנויים
+                            log_report_data('consumers_data', {
+                                'endpoint': endpoint,
+                                'total_consumers': len(consumers),
+                                'sample_consumer': consumers[0] if consumers else None,
+                                'contract_id': contract_id if 'contract_id' in locals() else None
+                            })
                             
                             # Returning consumers from XML
                             return jsonify({'success': True, 'data': consumers})
@@ -3944,6 +4044,16 @@ def company_manager_proxy():
                                             data['contract'] = filtered
                                     else:
                                         data = filtered
+                        
+                        # לוגינג לפני החזרת נתונים בפורמט JSON
+                        log_report_data('json_response_data', {
+                            'endpoint': endpoint,
+                            'method': method,
+                            'data_type': type(data).__name__,
+                            'data_keys': list(data.keys()) if isinstance(data, dict) else None,
+                            'data_length': len(data) if isinstance(data, list) else None,
+                            'sample_data': data[:3] if isinstance(data, list) else data
+                        })
                         
                         # Add success message for PUT/POST requests
                         result = {
@@ -5188,6 +5298,102 @@ def test_manager_paths():
             'results': results,
             'working_paths': [r for r in results if r.get('success', False)]
         })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/view-temp-logs', methods=['GET'])
+def view_temp_logs():
+    """צפייה בלוגים הזמניים של דוחות"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        # בדיקה שהמשתמש הוא מאסטר או מנהל
+        access_level = session.get('user_access_level', 'user')
+        if access_level not in ['master', 'admin']:
+            return jsonify({'success': False, 'message': 'אין הרשאה לצפות בלוגים'}), 403
+        
+        # קבלת פרמטרים
+        log_type = request.args.get('type', 'all')  # all, proxy_request, parktrans, etc.
+        limit = int(request.args.get('limit', 100))
+        
+        logs = []
+        
+        # קריאת קבצי לוג
+        if os.path.exists(LOG_DIR):
+            # קריאת קובץ הלוג הראשי
+            log_file = os.path.join(LOG_DIR, f'parking_reports_{dt.now().strftime("%Y%m%d")}.log')
+            if os.path.exists(log_file):
+                with open(log_file, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()[-limit:]  # רק N שורות אחרונות
+                    logs.extend(lines)
+            
+            # קריאת קבצי JSON
+            json_files = []
+            for filename in os.listdir(LOG_DIR):
+                if filename.endswith('.json'):
+                    if log_type == 'all' or log_type in filename:
+                        json_files.append(filename)
+            
+            # מיון לפי תאריך יצירה
+            json_files.sort(key=lambda x: os.path.getctime(os.path.join(LOG_DIR, x)), reverse=True)
+            
+            # קריאת קבצי JSON
+            json_logs = []
+            for filename in json_files[:limit]:
+                filepath = os.path.join(LOG_DIR, filename)
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        json_logs.append({
+                            'filename': filename,
+                            'data': data
+                        })
+                except Exception as e:
+                    json_logs.append({
+                        'filename': filename,
+                        'error': str(e)
+                    })
+        
+        return jsonify({
+            'success': True,
+            'log_directory': LOG_DIR,
+            'text_logs': logs,
+            'json_logs': json_logs,
+            'total_files': len(json_logs)
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/download-log', methods=['GET'])
+def download_log():
+    """הורדת קובץ לוג ספציפי"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        # בדיקה שהמשתמש הוא מאסטר או מנהל
+        access_level = session.get('user_access_level', 'master')
+        if access_level not in ['master', 'admin']:
+            return jsonify({'success': False, 'message': 'אין הרשאה להוריד לוגים'}), 403
+        
+        filename = request.args.get('filename')
+        if not filename:
+            return jsonify({'success': False, 'message': 'לא צוין שם קובץ'}), 400
+        
+        # בדיקת אבטחה - לא לאפשר גישה לקבצים מחוץ לתיקיית הלוגים
+        if '..' in filename or '/' in filename or '\\' in filename:
+            return jsonify({'success': False, 'message': 'שם קובץ לא חוקי'}), 400
+        
+        filepath = os.path.join(LOG_DIR, filename)
+        if not os.path.exists(filepath):
+            return jsonify({'success': False, 'message': 'קובץ לא נמצא'}), 404
+        
+        # שליחת הקובץ להורדה
+        from flask import send_file
+        return send_file(filepath, as_attachment=True, download_name=filename)
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
