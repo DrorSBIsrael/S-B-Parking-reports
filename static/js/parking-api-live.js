@@ -593,9 +593,20 @@ class ParkingAPIXML {
             }
             
             const queryString = queryParams.length > 0 ? '?' + queryParams.join('&') : '';
-            const endpoint = `consumers/${contractId},${consumerId}/parktrans${queryString}`;
+            
+            // נסה כמה אפשרויות של endpoints
+            const possibleEndpoints = [
+                `consumers/${contractId},${consumerId}/parktrans${queryString}`,
+                `CustomerMediaWebService/consumers/${contractId},${consumerId}/parktrans${queryString}`,
+                `parktrans/${contractId}/${consumerId}${queryString}`,
+                `transactions/consumer/${contractId},${consumerId}${queryString}`
+            ];
+            
+            // השתמש באפשרות הראשונה כברירת מחדל
+            const endpoint = possibleEndpoints[0];
             
             console.log('📍 Endpoint:', endpoint);
+            console.log('🔄 Alternative endpoints:', possibleEndpoints);
             
             // Use the proxy for parking transactions
             const proxyUrl = this.config.baseUrl || '/api/company-manager/proxy';
@@ -652,6 +663,17 @@ class ParkingAPIXML {
             if (proxyResponse.raw && typeof proxyResponse.raw === 'string') {
                 console.log('🔍 Got raw XML response, parsing...');
                 console.log('📄 First 500 chars:', proxyResponse.raw.substring(0, 500));
+                
+                // בדיקה: האם קיבלנו consumers במקום transactions?
+                if (proxyResponse.raw.includes('<consumers') || proxyResponse.raw.includes('consumer href')) {
+                    console.error('❌ ERROR: Server returned CONSUMERS instead of TRANSACTIONS!');
+                    console.error('🔍 This is a server-side issue');
+                    return { 
+                        success: false, 
+                        error: 'השרת החזיר רשימת מנויים במקום תנועות חניה. נא לפנות לתמיכה.' 
+                    };
+                }
+                
                 // Parse the raw XML
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(proxyResponse.raw, 'text/xml');
@@ -687,7 +709,32 @@ class ParkingAPIXML {
             if (typeof data === 'object' && data !== null) {
                 // Check if data is already an array of transactions
                 if (Array.isArray(data)) {
-                    console.log('✅ Data is already an array of', data.length, 'transactions');
+                    console.log('✅ Data is already an array of', data.length, 'items');
+                    
+                    // בדיקה: מה המבנה של הנתונים?
+                    if (data.length > 0) {
+                        console.log('🔍 First item structure:');
+                        console.log('🔑 Keys:', Object.keys(data[0]));
+                        console.log('📋 First item:', data[0]);
+                        console.log('📋 Second item:', data[1]);
+                        
+                        // בדיקה: האם אלה מנויים או תנועות?
+                        const firstItem = data[0];
+                        if (firstItem.hasOwnProperty('name') || firstItem.hasOwnProperty('contractid')) {
+                            console.warn('⚠️ This looks like CONSUMERS data, not transactions!');
+                            console.log('🔄 Need to find the correct endpoint for transactions');
+                            return { 
+                                success: false, 
+                                error: 'קיבלנו רשימת מנויים במקום תנועות חניה',
+                                debug: { 
+                                    itemCount: data.length,
+                                    sampleKeys: Object.keys(firstItem),
+                                    sampleData: data.slice(0, 3)
+                                }
+                            };
+                        }
+                    }
+                    
                     return { success: true, data: data };
                 }
                 // Data is already parsed - handle the transaction data
