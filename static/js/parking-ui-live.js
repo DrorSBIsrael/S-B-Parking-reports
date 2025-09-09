@@ -2875,14 +2875,20 @@ class ParkingUIIntegrationXML {
             // Filtered transactions
             
             // Format transactions for display
-            const formattedTransactions = filteredTransactions.map(trans => ({
-                date: this.formatDateTime(trans.transactionTime),
-                type: this.getTransactionTypeName(trans.transactionType),
-                entrance: trans.facilityin || '-',
-                exit: trans.facilityout || '-',
-                device: trans.device || '-',
-                amount: trans.amount ? `₪${trans.amount}` : '-'
-            }));
+            console.log('🔍 First transaction raw data:', filteredTransactions[0]);
+            const formattedTransactions = filteredTransactions.map(trans => {
+                console.log('📝 Processing transaction:', trans);
+                const formatted = {
+                    date: this.formatDateTime(trans.transactionTime),
+                    type: this.getTransactionTypeName(trans.transactionType),
+                    entrance: trans.facilityin || '-',
+                    exit: trans.facilityout || '-',
+                    device: trans.device || '-',
+                    amount: trans.amount ? `₪${trans.amount}` : '-'
+                };
+                console.log('✅ Formatted transaction:', formatted);
+                return formatted;
+            });
             
             return {
                 success: true,
