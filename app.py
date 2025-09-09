@@ -3422,8 +3422,8 @@ def company_manager_proxy():
                             # Skip href
                             if key == 'href':
                                 continue
-                            # Add all non-empty values
-                            if value is not None and value != '':
+                            # Add all values (including empty ones for clearing)
+                            if value is not None:
                                 elem = ET.SubElement(consumer_elem, key)
                                 elem.text = str(value)
                     
@@ -3431,7 +3431,7 @@ def company_manager_proxy():
                     if 'person' in payload:
                         person_elem = ET.SubElement(root, 'person')
                         for key, value in payload['person'].items():
-                            if value is not None and value != '':
+                            if value is not None:
                                 elem = ET.SubElement(person_elem, key)
                                 elem.text = str(value)
                     
@@ -3439,14 +3439,14 @@ def company_manager_proxy():
                     if 'identification' in payload:
                         ident_elem = ET.SubElement(root, 'identification')
                         for key, value in payload['identification'].items():
-                            if value is not None and value != '':
+                            if value is not None:
                                 if key == 'usageProfile' and isinstance(value, dict):
                                     # Handle nested usageProfile
                                     usage_elem = ET.SubElement(ident_elem, 'usageProfile')
                                     if 'id' in value and value['id']:
                                         usage_elem.set('href', f"/usageProfile/{value['id']}")
                                     for uk, uv in value.items():
-                                        if uk != 'href' and uv is not None and uv != '':
+                                        if uk != 'href' and uv is not None:
                                             uelem = ET.SubElement(usage_elem, uk)
                                             uelem.text = str(uv)
                                 else:
@@ -3455,7 +3455,7 @@ def company_manager_proxy():
                     
                     # Add other root level elements
                     for key in ['displayText', 'limit', 'status', 'delete', 'lpn1', 'lpn2', 'lpn3']:
-                        if key in payload and payload[key] is not None and payload[key] != '':
+                        if key in payload and payload[key] is not None:
                             elem = ET.SubElement(root, key)
                             elem.text = str(payload[key])
                     
@@ -3485,50 +3485,47 @@ def company_manager_proxy():
                     if 'consumer' in payload:
                         consumer_elem = ET.SubElement(root, 'consumer', href=f"/consumers/{payload['consumer'].get('contractid', '')},{payload['consumer'].get('id', '')}")
                         for key, value in payload['consumer'].items():
-                            if value and key != 'href':
+                            if key != 'href':
                                 elem = ET.SubElement(consumer_elem, key)
-                                elem.text = str(value)
+                                elem.text = str(value) if value else ''
                     
                     # Add person element if exists
                     if 'person' in payload:
                         person_elem = ET.SubElement(root, 'person')
                         for key, value in payload['person'].items():
-                            if value:
-                                elem = ET.SubElement(person_elem, key)
-                                elem.text = str(value)
+                            elem = ET.SubElement(person_elem, key)
+                            elem.text = str(value) if value else ''
                     
                     # Add identification element if exists
                     if 'identification' in payload:
                         ident_elem = ET.SubElement(root, 'identification')
                         for key, value in payload['identification'].items():
-                            if value:
-                                if key == 'usageProfile' and isinstance(value, dict):
-                                    # Handle nested usageProfile
-                                    usage_elem = ET.SubElement(ident_elem, 'usageProfile')
-                                    for uk, uv in value.items():
-                                        if uv:
-                                            uelem = ET.SubElement(usage_elem, uk)
-                                            uelem.text = str(uv)
-                                else:
-                                    elem = ET.SubElement(ident_elem, key)
-                                    # Handle ignorePresence specially - should be '0' or '1'
-                                    if key == 'ignorePresence':
-                                        # Convert to '0' or '1' string
-                                        if value == '1' or value == 1 or value == True or value == 'true':
-                                            elem.text = '1'
-                                        else:
-                                            elem.text = '0'
-                                    # Handle other boolean values for XML
-                                    elif isinstance(value, bool):
-                                        elem.text = 'true' if value else 'false'
+                            if key == 'usageProfile' and isinstance(value, dict):
+                                # Handle nested usageProfile
+                                usage_elem = ET.SubElement(ident_elem, 'usageProfile')
+                                for uk, uv in value.items():
+                                    uelem = ET.SubElement(usage_elem, uk)
+                                    uelem.text = str(uv) if uv else ''
+                            else:
+                                elem = ET.SubElement(ident_elem, key)
+                                # Handle ignorePresence specially - should be '0' or '1'
+                                if key == 'ignorePresence':
+                                    # Convert to '0' or '1' string
+                                    if value == '1' or value == 1 or value == True or value == 'true':
+                                        elem.text = '1'
                                     else:
-                                        elem.text = str(value)
+                                        elem.text = '0'
+                                # Handle other boolean values for XML
+                                elif isinstance(value, bool):
+                                    elem.text = 'true' if value else 'false'
+                                else:
+                                    elem.text = str(value) if value else ''
                     
                     # Add vehicle data at root level
                     for key in ['lpn1', 'lpn2', 'lpn3']:
-                        if key in payload and payload[key]:
+                        if key in payload:
                             elem = ET.SubElement(root, key)
-                            elem.text = str(payload[key])
+                            elem.text = str(payload[key]) if payload[key] else ''
                     
                     # Convert to XML string
                     xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
