@@ -171,39 +171,11 @@
             transform: scale(1.1);
         }
         
-        .btn-danger {
-            background: #dc3545 !important;
-            color: white !important;
-            border: none !important;
-            padding: 5px 10px !important;
-            border-radius: 4px !important;
-            cursor: pointer !important;
-            font-size: 16px !important;
-            min-width: 35px !important;
-            height: 30px !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-        }
-        
-        .btn-danger:hover {
-            background: #c82333 !important;
-            transform: scale(1.1);
-        }
-        
         /* Force button visibility in table */
-        td .btn-success, td .btn-info, td .btn-danger {
+        td .btn-success {
             display: inline-flex !important;
             visibility: visible !important;
             opacity: 1 !important;
-        }
-        
-        /* Small buttons in table cells */
-        .btn-sm {
-            padding: 2px 8px !important;
-            font-size: 14px !important;
-            height: 24px !important;
-            min-width: 30px !important;
         }
         
 
@@ -1104,11 +1076,9 @@
                     <button class="btn btn-warning action-btn" onclick="addGuestSubscriber()">
                         <span data-translate="addGuest">+ הוסף אורח</span>
                     </button>
-                    <!-- כפתור דוחות - מוסתר זמנית
                     <button class="btn btn-info action-btn" onclick="openReportsModal()">
                         <span data-translate="reports">📊 דוחות</span>
                     </button>
-                    -->
                     <button class="btn btn-primary action-btn" onclick="exportToExcel()">
                         <span data-translate="export">📥 ייצוא לאקסל</span>
                     </button>
@@ -1164,7 +1134,6 @@
                             <th data-translate="profile">פרופיל</th>
                             <th data-translate="validFrom" data-sort="validFrom" class="sortable">תחילת תוקף <span class="sort-icon">⇅</span></th>
                             <th data-translate="presence" data-sort="presence" class="sortable">נוכחות <span class="sort-icon">⇅</span></th>
-                            <th data-translate="actions" id="actions-header">פעולות</th>
                         </tr>
                     </thead>
                     <tbody id="subscribersTableBody">
@@ -1909,12 +1878,8 @@
         async function editSubscriber(subscriber) {
             // Editing subscriber
             
-            // Check permissions
-            const permissions = getUserPermissions();
-            if (permissions === 'B' || permissions === '') {
-                showToast('❌ אין לך הרשאה לערוך מנויים', 'error');
-                return;
-            }
+            // Always allow viewing/editing subscriber details
+            // Permission check will be done when saving (for profile updates)
             
             // IMPORTANT: Store the subscriber globally for saveSubscriber to check
             // Make sure we have a valid subscriber object
@@ -1939,10 +1904,8 @@
             // Force show buttons
             forceShowModalButtons();
             
-            // Load profiles from company for existing subscriber too
-            if (window.parkingUIXML && window.parkingUIXML.loadUsageProfiles) {
-                await window.parkingUIXML.loadUsageProfiles(false); // false = existing subscriber
-            }
+            // Don't load profiles for existing subscriber - just use what they have
+            // The profile will be set from the subscriber data below
             
             // Populate form - handle company name properly
             document.getElementById('editCompanyNum').value = subscriber.companyNum;
@@ -1971,22 +1934,19 @@
             // Remove guest mode class for regular edit
             document.getElementById('editModal').classList.remove('guest-mode');
             
-            // Set profile for existing subscriber - profiles already loaded from company
+            // Set profile for existing subscriber - show ONLY their profile
             const profileSelect = document.getElementById('editProfile');
             
-            // Get the subscriber's current profile
-            const profileId = subscriber.profileId || subscriber.profile || subscriber.extCardProfile || subscriber.identification?.usageProfile?.id || '1';
+            // Clear all options first
+            profileSelect.innerHTML = '';
             
-            // Set the current profile as selected (if it exists in the options)
-            if (profileSelect.querySelector(`option[value="${profileId}"]`)) {
-                profileSelect.value = profileId;
-            } else {
-                // If the current profile is not in the company profiles, we may need to add it
+            // Add only the subscriber's profile - check various fields including identification
+            const profileId = subscriber.profileId || subscriber.profile || subscriber.extCardProfile || subscriber.identification?.usageProfile?.id || '1';
             const profileName = subscriber.profileName || 
-                                   subscriber.identification?.usageProfile?.name ||
+                               subscriber.identification?.usageProfile?.name ||
                                (profileId === '1' ? 'כול החניונים' : 
                                 profileId === '0' ? 'רגיל' : 
-                                    profileId === '2' ? 'חניון ראשי' :
+                                profileId === '2' ? 'חניון ראשי' :
                                 `פרופיל ${profileId}`);
             
             const option = document.createElement('option');
@@ -1995,10 +1955,11 @@
             option.textContent = profileName;
             profileSelect.appendChild(option);
             profileSelect.value = profileId;
-            }
+            
+            // No additional fallback needed - we already handle it above
             
             // Check if user has permission to update profile
-            // Already declared permissions above, no need to redeclare
+            const permissions = getUserPermissions();
             const canUpdateProfile = permissions.includes('P');
             
             profileSelect.disabled = !canUpdateProfile;
@@ -2316,23 +2277,17 @@
             document.getElementById('reportMaxDate').valueAsDate = today;
             
             // Load report data
-            
             try {
                 const ui = window.parkingUIXML || window.parkingUI;
-                
                 if (!ui || !ui.getSubscriberReport) {
-                    console.error('❌ Report function not available!');
                     throw new Error('Report function not available');
                 }
                 
                 // Format dates for API
                 const minDate = lastMonth.toISOString().split('T')[0];
                 const maxDate = today.toISOString().split('T')[0];
-                console.log('📅 Date Range:', { minDate, maxDate });
                 
-                console.log('📞 Calling ui.getSubscriberReport...');
                 const result = await ui.getSubscriberReport(subscriberNum, minDate, maxDate);
-                console.log('✅ Report result:', result);
                 
                 if (result.success) {
                     displayTransactionsReport(result.data, result.summary);
@@ -3076,13 +3031,6 @@
 
         // Save subscriber
         async function saveSubscriber() {
-            // Check permissions first
-            const permissions = getUserPermissions();
-            if (permissions === 'B' || permissions === '') {
-                showToast('❌ אין לך הרשאה לשמור שינויים', 'error');
-                return;
-            }
-            
             // Check if we have the UI integration
             if (window.parkingUIXML || window.parkingUI) {
                 const uiIntegration = window.parkingUIXML || window.parkingUI;
@@ -3465,12 +3413,7 @@
 
         // Export to Excel
         function exportToExcel() {
-            // Check export permission
-            const permissions = getUserPermissions();
-            if (!permissions.includes('R')) {
-                showToast('❌ אין לך הרשאה לייצא נתונים (דרושה הרשאת R)', 'error');
-                return;
-            }
+            // Export is always allowed - no permission check needed
             
             // Check if we have the UI integration
             if (window.parkingUIXML || window.parkingUI) {
@@ -3864,6 +3807,7 @@
         // Update UI buttons based on permissions
         function updateUIPermissions() {
             const permissions = getUserPermissions();
+            console.log('[updateUIPermissions] User permissions:', permissions);
             
             // Add New Subscriber button
             const addNewBtn = document.querySelector('button[onclick="addNewSubscriber()"]');
@@ -3902,16 +3846,6 @@
                     exportBtn.disabled = true;
                     exportBtn.title = 'אין הרשאה לייצא נתונים (דרושה הרשאת R)';
                     exportBtn.style.opacity = '0.5';
-                }
-            }
-            
-            // Hide/show actions column based on permissions
-            const actionsHeader = document.getElementById('actions-header');
-            if (actionsHeader) {
-                if (permissions === 'B' || permissions === '') {
-                    actionsHeader.style.display = 'none';
-                } else {
-                    actionsHeader.style.display = '';
                 }
             }
         }
