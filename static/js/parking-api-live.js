@@ -622,7 +622,7 @@ class ParkingAPIXML {
                 body: JSON.stringify(requestData)
             });
             
-            // Response received
+            console.log('[getParkingTransactions] Response status:', response.status);
             
             if (!response.ok) {
                 if (response.status === 204) {
@@ -633,9 +633,10 @@ class ParkingAPIXML {
             }
             
             const proxyResponse = await response.json();
-            // Received proxy response
+            console.log('[getParkingTransactions] Proxy response:', proxyResponse);
             
             if (!proxyResponse.success) {
+                console.log('[getParkingTransactions] Proxy error:', proxyResponse.error);
                 return { success: false, error: proxyResponse.error || 'Failed to get transactions' };
             }
             
