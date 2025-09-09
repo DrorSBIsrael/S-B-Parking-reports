@@ -67,12 +67,16 @@ report_logger.addHandler(handler)
 # פונקציה לכתיבת נתוני דוחות ללוג
 def log_report_data(context, data, extra_info=None):
     """
-    כותב נתוני דוחות ללוג זמני
+    כותב נתוני דוחות ללוג זמני - רק לדוחות תנועות (parktrans)
     :param context: הקשר הלוג (למשל: 'proxy_request', 'parking_data', 'transaction')
     :param data: הנתונים לשמירה
     :param extra_info: מידע נוסף אופציונלי
     """
     try:
+        # לוגינג רק לדוחות תנועות
+        if 'parktrans' not in context:
+            return
+            
         log_entry = {
             'timestamp': dt.now().isoformat(),
             'context': context,
@@ -83,10 +87,32 @@ def log_report_data(context, data, extra_info=None):
         # כתיבה ללוג
         report_logger.debug(f"[{context}] {json.dumps(log_entry, ensure_ascii=False, indent=2)}")
         
-        # גם כתיבה ל-JSON נפרד לניתוח קל יותר
+        # כתיבה ל-JSON נפרד לניתוח קל יותר
         json_file = os.path.join(LOG_DIR, f'{context}_{dt.now().strftime("%Y%m%d_%H%M%S_%f")}.json')
         with open(json_file, 'w', encoding='utf-8') as f:
             json.dump(log_entry, f, ensure_ascii=False, indent=2)
+        
+        # גם יצירת קובץ פשוט יותר עם רק הנתונים החשובים
+        if context == 'parktrans_response':
+            simple_file = os.path.join(LOG_DIR, f'PARKTRANS_RAW_{dt.now().strftime("%Y%m%d_%H%M%S")}.txt')
+            with open(simple_file, 'w', encoding='utf-8') as f:
+                f.write(f"=== דוח תנועות מ-{data.get('parking_name', 'Unknown')} ===\n")
+                f.write(f"זמן: {data.get('timestamp', '')}\n")
+                f.write(f"Endpoint: {data.get('endpoint', '')}\n")
+                f.write(f"Status: {data.get('status_code', '')}\n")
+                f.write(f"Content Type: {data.get('content_type', '')}\n")
+                f.write("\n=== תגובה גולמית מהשרת ===\n")
+                f.write(data.get('raw_response', ''))
+                
+        elif context == 'parktrans_json_data':
+            simple_file = os.path.join(LOG_DIR, f'PARKTRANS_DATA_{dt.now().strftime("%Y%m%d_%H%M%S")}.json')
+            with open(simple_file, 'w', encoding='utf-8') as f:
+                json.dump({
+                    'parking_name': data.get('parking_name', 'Unknown'),
+                    'timestamp': data.get('timestamp', ''),
+                    'total_transactions': data.get('total_transactions', 0),
+                    'transactions': data.get('transactions', [])
+                }, f, ensure_ascii=False, indent=2)
             
     except Exception as e:
         print(f"❌ Error logging data: {str(e)}")
@@ -3461,21 +3487,6 @@ def company_manager_proxy():
             
             # ביצוע הקריאה - פשוט כמו שהיה
             # Executing request
-            
-            # לוגינג לפני הקריאה
-            log_report_data('proxy_request_before', {
-                'method': method,
-                'url': url,
-                'endpoint': endpoint,
-                'headers': headers,
-                'payload': payload if method in ['POST', 'PUT'] else None,
-                'parking_connection': {
-                    'ip': ip_address,
-                    'port': port,
-                    'name': parking_name
-                }
-            })
-            
             if method == 'GET':
                 response = requests.get(url, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'POST':
@@ -3632,16 +3643,17 @@ def company_manager_proxy():
             
             # Response received
             
-            # לוגינג אחרי קבלת התגובה
-            log_report_data('proxy_response_raw', {
-                'status_code': response.status_code,
-                'headers': dict(response.headers),
-                'content_type': response.headers.get('content-type', ''),
-                'content_length': len(response.text) if response.text else 0,
-                'raw_text': response.text[:5000] if response.text else None,  # רק 5000 תווים ראשונים
-                'endpoint': endpoint,
-                'url': url
-            })
+            # לוגינג רק לדוחות תנועות (parktrans)
+            if '/parktrans' in endpoint:
+                log_report_data('parktrans_response', {
+                    'status_code': response.status_code,
+                    'content_type': response.headers.get('content-type', ''),
+                    'content_length': len(response.text) if response.text else 0,
+                    'raw_response': response.text,  # כל התגובה לדוחות
+                    'endpoint': endpoint,
+                    'parking_name': parking_name,
+                    'timestamp': datetime.now().isoformat()
+                })
             
             # החזרת התוצאה
             if response.status_code == 204:
@@ -3801,14 +3813,6 @@ def company_manager_proxy():
                             # MAX_CONSUMERS_PER_REQUEST = 100  # REMOVED - no limit
                             # Returning all consumers
                             pass
-                            
-                            # לוגינג לפני החזרת נתוני מנויים
-                            log_report_data('consumers_data', {
-                                'endpoint': endpoint,
-                                'total_consumers': len(consumers),
-                                'sample_consumer': consumers[0] if consumers else None,
-                                'contract_id': contract_id if 'contract_id' in locals() else None
-                            })
                             
                             # Returning consumers from XML
                             return jsonify({'success': True, 'data': consumers})
@@ -4045,15 +4049,16 @@ def company_manager_proxy():
                                     else:
                                         data = filtered
                         
-                        # לוגינג לפני החזרת נתונים בפורמט JSON
-                        log_report_data('json_response_data', {
-                            'endpoint': endpoint,
-                            'method': method,
-                            'data_type': type(data).__name__,
-                            'data_keys': list(data.keys()) if isinstance(data, dict) else None,
-                            'data_length': len(data) if isinstance(data, list) else None,
-                            'sample_data': data[:3] if isinstance(data, list) else data
-                        })
+                        # לוגינג רק לדוחות תנועות בפורמט JSON
+                        if '/parktrans' in endpoint and isinstance(data, (list, dict)):
+                            log_report_data('parktrans_json_data', {
+                                'endpoint': endpoint,
+                                'data_type': type(data).__name__,
+                                'total_transactions': len(data) if isinstance(data, list) else 1,
+                                'transactions': data,  # כל הנתונים
+                                'parking_name': parking_name,
+                                'timestamp': datetime.now().isoformat()
+                            })
                         
                         # Add success message for PUT/POST requests
                         result = {
