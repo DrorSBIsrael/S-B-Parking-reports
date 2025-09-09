@@ -39,7 +39,6 @@ except ImportError as e:
     # Email monitoring not available
 
 ERROR_EMAILS_DISABLED = True
-
 # הגדרות מיילים אוטומטיים - להוסיף אחרי ההגדרות הקיימות:
 if EMAIL_MONITORING_AVAILABLE:
     EMAIL_CHECK_INTERVAL = 5  # בדיקה כל 5 דקות
@@ -3184,7 +3183,7 @@ def api_status():
     """בדיקת סטטוס המערכת"""
     return jsonify({
         'success': True,
-        'version': '2025-01-09-DEBUG-PARKTRANS',  # Debug version
+        'version': '2.0.8',  # Direct proxy in app.py
         'timestamp': datetime.now().isoformat(),
         'message': 'Server is running with proxy fix',
         'endpoints': {
@@ -3207,6 +3206,7 @@ def test_proxy():
 def company_manager_proxy():
     """Proxy לקריאות API לשרתי החניונים"""
     
+    # Debug log removed for production
     
     # Handle CORS preflight
     if request.method == 'OPTIONS':
@@ -3251,7 +3251,6 @@ def company_manager_proxy():
         method = data.get('method', 'GET')
         payload = data.get('payload', {})
         
-        
         # Request details received
         
         if not parking_id or not endpoint:
@@ -3268,7 +3267,6 @@ def company_manager_proxy():
         parking_data = parking_result.data[0]
         ip_address = parking_data.get('ip_address')
         port = parking_data.get('port', 443)
-        parking_name = parking_data.get('description', f'Parking {parking_id}')
         
         # בדיקה אם אנחנו בסביבת פיתוח או production
         is_local_dev = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
@@ -3366,8 +3364,9 @@ def company_manager_proxy():
             # Preserve the original method for detail endpoints (GET for read, PUT for update)
             # method = 'GET'  # Don't override the method!
             # Detail request
-        elif 'parktrans' in endpoint:
+        elif '/parktrans' in endpoint:
             # Handle parking transactions endpoint
+            # Format: consumers/{contractId},{consumerId}/parktrans
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
             method = 'GET'  # Parking transactions are always GET
         elif 'CustomerMediaWebService' in endpoint:
@@ -3422,8 +3421,8 @@ def company_manager_proxy():
                             # Skip href
                             if key == 'href':
                                 continue
-                            # Add all values (including empty ones for clearing)
-                            if value is not None:
+                            # Add all non-empty values
+                            if value is not None and value != '':
                                 elem = ET.SubElement(consumer_elem, key)
                                 elem.text = str(value)
                     
@@ -3431,7 +3430,7 @@ def company_manager_proxy():
                     if 'person' in payload:
                         person_elem = ET.SubElement(root, 'person')
                         for key, value in payload['person'].items():
-                            if value is not None:
+                            if value is not None and value != '':
                                 elem = ET.SubElement(person_elem, key)
                                 elem.text = str(value)
                     
@@ -3439,14 +3438,14 @@ def company_manager_proxy():
                     if 'identification' in payload:
                         ident_elem = ET.SubElement(root, 'identification')
                         for key, value in payload['identification'].items():
-                            if value is not None:
+                            if value is not None and value != '':
                                 if key == 'usageProfile' and isinstance(value, dict):
                                     # Handle nested usageProfile
                                     usage_elem = ET.SubElement(ident_elem, 'usageProfile')
                                     if 'id' in value and value['id']:
                                         usage_elem.set('href', f"/usageProfile/{value['id']}")
                                     for uk, uv in value.items():
-                                        if uk != 'href' and uv is not None:
+                                        if uk != 'href' and uv is not None and uv != '':
                                             uelem = ET.SubElement(usage_elem, uk)
                                             uelem.text = str(uv)
                                 else:
@@ -3455,7 +3454,7 @@ def company_manager_proxy():
                     
                     # Add other root level elements
                     for key in ['displayText', 'limit', 'status', 'delete', 'lpn1', 'lpn2', 'lpn3']:
-                        if key in payload and payload[key] is not None:
+                        if key in payload and payload[key] is not None and payload[key] != '':
                             elem = ET.SubElement(root, key)
                             elem.text = str(payload[key])
                     
@@ -3485,47 +3484,50 @@ def company_manager_proxy():
                     if 'consumer' in payload:
                         consumer_elem = ET.SubElement(root, 'consumer', href=f"/consumers/{payload['consumer'].get('contractid', '')},{payload['consumer'].get('id', '')}")
                         for key, value in payload['consumer'].items():
-                            if key != 'href':
+                            if value and key != 'href':
                                 elem = ET.SubElement(consumer_elem, key)
-                                elem.text = str(value) if value else ''
+                                elem.text = str(value)
                     
                     # Add person element if exists
                     if 'person' in payload:
                         person_elem = ET.SubElement(root, 'person')
                         for key, value in payload['person'].items():
-                            elem = ET.SubElement(person_elem, key)
-                            elem.text = str(value) if value else ''
+                            if value:
+                                elem = ET.SubElement(person_elem, key)
+                                elem.text = str(value)
                     
                     # Add identification element if exists
                     if 'identification' in payload:
                         ident_elem = ET.SubElement(root, 'identification')
                         for key, value in payload['identification'].items():
-                            if key == 'usageProfile' and isinstance(value, dict):
-                                # Handle nested usageProfile
-                                usage_elem = ET.SubElement(ident_elem, 'usageProfile')
-                                for uk, uv in value.items():
-                                    uelem = ET.SubElement(usage_elem, uk)
-                                    uelem.text = str(uv) if uv else ''
-                            else:
-                                elem = ET.SubElement(ident_elem, key)
-                                # Handle ignorePresence specially - should be '0' or '1'
-                                if key == 'ignorePresence':
-                                    # Convert to '0' or '1' string
-                                    if value == '1' or value == 1 or value == True or value == 'true':
-                                        elem.text = '1'
-                                    else:
-                                        elem.text = '0'
-                                # Handle other boolean values for XML
-                                elif isinstance(value, bool):
-                                    elem.text = 'true' if value else 'false'
+                            if value:
+                                if key == 'usageProfile' and isinstance(value, dict):
+                                    # Handle nested usageProfile
+                                    usage_elem = ET.SubElement(ident_elem, 'usageProfile')
+                                    for uk, uv in value.items():
+                                        if uv:
+                                            uelem = ET.SubElement(usage_elem, uk)
+                                            uelem.text = str(uv)
                                 else:
-                                    elem.text = str(value) if value else ''
+                                    elem = ET.SubElement(ident_elem, key)
+                                    # Handle ignorePresence specially - should be '0' or '1'
+                                    if key == 'ignorePresence':
+                                        # Convert to '0' or '1' string
+                                        if value == '1' or value == 1 or value == True or value == 'true':
+                                            elem.text = '1'
+                                        else:
+                                            elem.text = '0'
+                                    # Handle other boolean values for XML
+                                    elif isinstance(value, bool):
+                                        elem.text = 'true' if value else 'false'
+                                    else:
+                                        elem.text = str(value)
                     
                     # Add vehicle data at root level
                     for key in ['lpn1', 'lpn2', 'lpn3']:
-                        if key in payload:
+                        if key in payload and payload[key]:
                             elem = ET.SubElement(root, key)
-                            elem.text = str(payload[key]) if payload[key] else ''
+                            elem.text = str(payload[key])
                     
                     # Convert to XML string
                     xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
@@ -3549,12 +3551,8 @@ def company_manager_proxy():
             
             # Response received
             
-            
             # החזרת התוצאה
-            if response.status_code == 204:
-                # No content - empty response
-                return jsonify({'success': True, 'data': []})
-            elif response.status_code in [200, 201]:
+            if response.status_code in [200, 201]:
                 # בדוק אם התגובה היא XML או JSON
                 content_type = response.headers.get('content-type', '')
                 # Checking content type
@@ -3877,58 +3875,6 @@ def company_manager_proxy():
                                     'has_pooling': 'pooling' in contract_detail if isinstance(contract_detail, dict) else False
                                 }
                             })
-                        elif 'parktrans' in endpoint:
-                            # Parse parking transactions from XML
-                            
-                            transactions = []
-                            # Try to find transaction elements in different XML structures
-                            # First try with namespace
-                            trans_elements = root.findall('.//{http://gsph.sub.com/cust/types}transaction')
-                            
-                            # If not found, try without namespace
-                            if not trans_elements:
-                                trans_elements = root.findall('.//transaction')
-                            
-                            # If still not found, try other possible element names
-                            if not trans_elements:
-                                trans_elements = root.findall('.//parkingTransaction')
-                            if not trans_elements:
-                                trans_elements = root.findall('.//ParkingTransaction')
-                            
-                            
-                            for trans in trans_elements:
-                                transaction_data = {}
-                                # Extract all fields from transaction
-                                for child in trans:
-                                    tag = child.tag.replace('{http://gsph.sub.com/cust/types}', '')
-                                    transaction_data[tag] = child.text
-                                
-                                # Also check attributes
-                                for key, value in trans.attrib.items():
-                                    transaction_data[key] = value
-                                
-                                if transaction_data:
-                                    transactions.append(transaction_data)
-                            
-                            # If no transaction elements found, maybe the whole response is transaction data
-                            if not transactions:
-                                print("⚠️ No transaction elements found, parsing root as transaction")
-                                transaction_data = {}
-                                for child in root:
-                                    tag = child.tag.replace('{http://gsph.sub.com/cust/types}', '')
-                                    if child.text:
-                                        transaction_data[tag] = child.text
-                                    # Check for nested elements
-                                    for subchild in child:
-                                        subtag = subchild.tag.replace('{http://gsph.sub.com/cust/types}', '')
-                                        if subchild.text:
-                                            transaction_data[subtag] = subchild.text
-                                
-                                if transaction_data:
-                                    transactions = [transaction_data]
-                            
-                            
-                            return jsonify({'success': True, 'data': transactions})
                         else:
                             # החזר כ-raw XML אם לא מזהים את הסוג
                             # Unknown XML type, returning raw
@@ -4009,6 +3955,9 @@ def company_manager_proxy():
                             result['message'] = 'הנתונים נשמרו בהצלחה בשרת החניון'
                             # For consumer creation, check if we got a created ID
                             if 'contracts' in endpoint and 'consumers' in endpoint:
+                                print(f"   🆕 Consumer creation response status: {response.status_code}")
+                                print(f"   🆕 Consumer creation response: {response.text[:1000]}")
+                                print(f"   🆕 Response content-type: {response.headers.get('content-type', 'unknown')}")
                                 # Try to extract ID from response if exists
                                 try:
                                     import xml.etree.ElementTree as ET
@@ -4433,6 +4382,7 @@ def debug_why_no_access():
             'error': str(e)
         })
 
+print("🔧 DEBUG ENDPOINT ADDED!")
 
 @app.route('/api/company-manager/send-guest-email', methods=['POST'])
 def send_guest_email():
@@ -5238,7 +5188,6 @@ def test_manager_paths():
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
-
 
 # הפעלה אוטומטית כשהאפליקציה מתחילה
 if __name__ == '__main__':
