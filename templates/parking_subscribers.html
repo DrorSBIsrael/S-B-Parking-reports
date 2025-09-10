@@ -1959,27 +1959,37 @@
             // Remove guest mode class for regular edit
             document.getElementById('editModal').classList.remove('guest-mode');
             
-            // Set profile for existing subscriber - show ONLY their profile
+            // Set profile for existing subscriber - profiles already loaded from company
             const profileSelect = document.getElementById('editProfile');
             
-            // Clear all options first
-            profileSelect.innerHTML = '';
-            
-            // Add only the subscriber's profile - check various fields including identification
+            // Get the subscriber's current profile
             const profileId = subscriber.profileId || subscriber.profile || subscriber.extCardProfile || subscriber.identification?.usageProfile?.id || '1';
-            const profileName = subscriber.profileName || 
-                               subscriber.identification?.usageProfile?.name ||
-                               (profileId === '1' ? 'כול החניונים' : 
-                                profileId === '0' ? 'רגיל' : 
-                                profileId === '2' ? 'חניון ראשי' :
-                                `פרופיל ${profileId}`);
             
-            const option = document.createElement('option');
-            option.value = profileId;
-            option.setAttribute('data-profile-name', profileName);
-            option.textContent = profileName;
-            profileSelect.appendChild(option);
-            profileSelect.value = profileId;
+            // Wait for profiles to be loaded
+            setTimeout(() => {
+                // Set the current profile as selected (if it exists in the options)
+                if (profileSelect.querySelector(`option[value="${profileId}"]`)) {
+                    profileSelect.value = profileId;
+                } else {
+                    // If the current profile is not in the company profiles, we need to add it
+                    const profileName = subscriber.profileName || 
+                                       subscriber.identification?.usageProfile?.name ||
+                                       (profileId === '1' ? 'כול החניונים' : 
+                                        profileId === '0' ? 'רגיל' : 
+                                        profileId === '2' ? 'חניון מנויים' :
+                                        profileId === '3' ? 'VIP' :
+                                        profileId === '4' ? 'נכה' :
+                                        profileId === '5' ? '-2 חניון' :
+                                        `פרופיל ${profileId}`);
+                    
+                    const option = document.createElement('option');
+                    option.value = profileId;
+                    option.setAttribute('data-profile-name', profileName);
+                    option.textContent = profileName;
+                    profileSelect.appendChild(option);
+                    profileSelect.value = profileId;
+                }
+            }, 100);
             
             // No additional fallback needed - we already handle it above
             
