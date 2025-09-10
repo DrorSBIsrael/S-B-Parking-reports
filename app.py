@@ -3369,6 +3369,10 @@ def company_manager_proxy():
             # Format: consumers/{contractId},{consumerId}/parktrans
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
             method = 'GET'  # Parking transactions are always GET
+        elif 'usageprofiles' in endpoint.lower():
+            # Handle usage profiles endpoint
+            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/usageprofiles"
+            method = 'GET'  # Usage profiles are always GET
         elif 'CustomerMediaWebService' in endpoint:
             # אם כבר יש CustomerMediaWebService ב-endpoint
             url = f"{protocol}://{ip_address}:{port}/{endpoint}"
@@ -3382,7 +3386,7 @@ def company_manager_proxy():
         headers = {'Content-Type': 'application/json'}
         
         # Basic Auth - תמיד לשרת החניון
-        if 'CustomerMediaWebService' in endpoint or 'contracts' in endpoint or 'consumer' in endpoint:
+        if 'CustomerMediaWebService' in endpoint or 'contracts' in endpoint or 'consumer' in endpoint or 'usageprofiles' in endpoint:
             # TODO: החלף עם ה-credentials הנכונים!
             auth_string = base64.b64encode(b'2022:2022').decode('ascii')
             headers['Authorization'] = f'Basic {auth_string}'
@@ -3875,6 +3879,56 @@ def company_manager_proxy():
                                     'has_pooling': 'pooling' in contract_detail if isinstance(contract_detail, dict) else False
                                 }
                             })
+                        elif 'usageprofile' in endpoint.lower():
+                            # Parse usage profiles from XML
+                            profiles = []
+                            # Try to find usageProfile elements in different XML structures
+                            # First try with namespace
+                            profile_elements = root.findall('.//{http://gsph.sub.com/cust/types}usageProfile')
+                            
+                            # If not found, try without namespace
+                            if not profile_elements:
+                                profile_elements = root.findall('.//usageProfile')
+                            
+                            for profile in profile_elements:
+                                profile_data = {}
+                                # Get attributes (like href)
+                                for key, value in profile.attrib.items():
+                                    clean_key = key.replace('{http://gsph.sub.com/cust/types}', '')
+                                    profile_data[clean_key] = value
+                                
+                                # Get child elements
+                                for child in profile:
+                                    tag = child.tag.replace('{http://gsph.sub.com/cust/types}', '')
+                                    if child.text:
+                                        profile_data[tag] = child.text.strip()
+                                
+                                # Make sure we have at least id and name
+                                if 'id' in profile_data:
+                                    profiles.append(profile_data)
+                            
+                            # If we have a single usageProfiles element containing multiple profiles
+                            if not profiles:
+                                profiles_container = root.find('.//{http://gsph.sub.com/cust/types}usageProfiles')
+                                if profiles_container is None:
+                                    profiles_container = root.find('.//usageProfiles')
+                                
+                                if profiles_container is not None:
+                                    for profile in profiles_container:
+                                        profile_data = {}
+                                        for key, value in profile.attrib.items():
+                                            clean_key = key.replace('{http://gsph.sub.com/cust/types}', '')
+                                            profile_data[clean_key] = value
+                                        
+                                        for child in profile:
+                                            tag = child.tag.replace('{http://gsph.sub.com/cust/types}', '')
+                                            if child.text:
+                                                profile_data[tag] = child.text.strip()
+                                        
+                                        if 'id' in profile_data:
+                                            profiles.append(profile_data)
+                            
+                            return jsonify({'success': True, 'data': profiles})
                         else:
                             # החזר כ-raw XML אם לא מזהים את הסוג
                             # Unknown XML type, returning raw
