@@ -1883,13 +1883,42 @@ class ParkingUIIntegrationXML {
     }
     
     /**
-     * Get profiles used in current company
+     * Get profiles available in the system
      */
     async getCompanyProfiles() {
         if (!this.currentContract) return [];
         
         try {
-            // Getting profiles for company
+            console.log('🔍 [getCompanyProfiles] Getting usage profiles from system');
+            
+            // Get usage profiles from the API
+            const profilesResult = await this.api.getUsageProfiles();
+            
+            if (profilesResult.success && profilesResult.data) {
+                console.log('✅ [getCompanyProfiles] Got profiles from API:', profilesResult.data);
+                
+                // Convert API response to our format
+                const profiles = [];
+                const profilesData = Array.isArray(profilesResult.data) ? profilesResult.data : [profilesResult.data];
+                
+                profilesData.forEach(profile => {
+                    if (profile.id) {
+                        profiles.push({
+                            id: profile.id,
+                            name: profile.name || profile.description || `פרופיל ${profile.id}`
+                        });
+                    }
+                });
+                
+                // If we got profiles, return them
+                if (profiles.length > 0) {
+                    console.log('📋 [getCompanyProfiles] Returning profiles:', profiles);
+                    return profiles;
+                }
+            }
+            
+            // Fallback: If API fails or returns no profiles, check current subscribers
+            console.log('⚠️ [getCompanyProfiles] API failed or no profiles, checking subscribers');
             
             // Get all subscribers to see what profiles are in use
             const profilesInUse = new Map();
