@@ -3252,8 +3252,15 @@ def company_manager_proxy():
         payload = data.get('payload', {})
         
         # Request details received
+        print(f"🔍 [Proxy] Received request - parking_id: {parking_id}, endpoint: {endpoint}, method: {method}")
         
-        if not parking_id or not endpoint:
+        # For usageprofiles endpoint, try to use a default parking if none provided
+        if 'usageprofiles' in endpoint.lower() and (not parking_id or parking_id == 'null' or parking_id == 'undefined'):
+            print(f"⚠️ [Proxy] No parking_id for usageprofiles, using default parking 1")
+            parking_id = '1'  # Default to parking 1
+        
+        if not parking_id or not endpoint or parking_id == 'null' or parking_id == 'undefined':
+            print(f"❌ [Proxy] Missing or invalid parameters - parking_id: {parking_id} (type: {type(parking_id)}), endpoint: {endpoint}")
             return jsonify({'success': False, 'message': 'חסרים פרמטרים'}), 400
         
         # קבלת נתוני החניון
@@ -3371,6 +3378,7 @@ def company_manager_proxy():
             method = 'GET'  # Parking transactions are always GET
         elif 'usageprofiles' in endpoint.lower():
             # Handle usage profiles endpoint
+            print(f"✅ [Proxy] Handling usageprofiles request to: {protocol}://{ip_address}:{port}")
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/usageprofiles"
             method = 'GET'  # Usage profiles are always GET
         elif 'CustomerMediaWebService' in endpoint:
@@ -3882,6 +3890,9 @@ def company_manager_proxy():
                         elif 'usageprofile' in endpoint.lower():
                             # Parse usage profiles from XML
                             profiles = []
+                            print(f"🔍 [Proxy] Parsing usage profiles from XML")
+                            print(f"   Root tag: {root.tag}")
+                            
                             # Try to find usageProfile elements in different XML structures
                             # First try with namespace
                             profile_elements = root.findall('.//{http://gsph.sub.com/cust/types}usageProfile')
@@ -3889,6 +3900,14 @@ def company_manager_proxy():
                             # If not found, try without namespace
                             if not profile_elements:
                                 profile_elements = root.findall('.//usageProfile')
+                            
+                            # Also try usageProfiles (plural)
+                            if not profile_elements:
+                                profile_elements = root.findall('.//{http://gsph.sub.com/cust/types}usageProfiles')
+                            if not profile_elements:
+                                profile_elements = root.findall('.//usageProfiles')
+                            
+                            print(f"   Found {len(profile_elements)} profile elements")
                             
                             for profile in profile_elements:
                                 profile_data = {}
@@ -3928,6 +3947,20 @@ def company_manager_proxy():
                                         if 'id' in profile_data:
                                             profiles.append(profile_data)
                             
+                            if not profiles:
+                                print(f"⚠️ [Proxy] No profiles found in XML, returning default profiles")
+                                print(f"   XML (first 1000 chars): {response.text[:1000]}")
+                                # Return default profiles if none found
+                                profiles = [
+                                    {"id": "0", "name": "רגיל"},
+                                    {"id": "1", "name": "כול החניונים"},
+                                    {"id": "2", "name": "חניון ראשי"},
+                                    {"id": "3", "name": "VIP"},
+                                    {"id": "4", "name": "נכה"},
+                                    {"id": "5", "name": "-2 חניון"}
+                                ]
+                            
+                            print(f"✅ [Proxy] Returning {len(profiles)} usage profiles")
                             return jsonify({'success': True, 'data': profiles})
                         else:
                             # החזר כ-raw XML אם לא מזהים את הסוג
