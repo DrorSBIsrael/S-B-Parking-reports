@@ -5,14 +5,26 @@
 class ParkingAPIXML {
     constructor() {
         // ALWAYS use proxy for consistency and security
+        // Determine base URL based on current location
+        let baseUrl = '/api/company-manager/proxy';
+        
+        // If running on localhost, use relative path
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            baseUrl = '/api/company-manager/proxy';
+        } else {
+            // If running on production, use absolute URL to correct server
+            baseUrl = window.location.origin + '/api/company-manager/proxy';
+        }
+        
         this.config = {
-            baseUrl: '/api/company-manager/proxy',
+            baseUrl: baseUrl,
             username: '2022',
             password: '2022',
             timeout: 30000,
             useProxy: true,  // Always use proxy
             currentParkingId: null
         };
+        console.log('[ParkingAPIXML] Initialized with baseUrl:', this.config.baseUrl);
         // Initialization complete - using secure proxy
     }
     
@@ -102,10 +114,14 @@ class ParkingAPIXML {
                     method: method,
                     payload: data
                 };
-                console.log('[makeRequest] Proxy request:', {
-                    url: this.config.baseUrl,
-                    body: requestBody
-                });
+                // Only log profile requests for debugging
+                if (endpoint.includes('profile')) {
+                    console.log('[makeRequest] Profile request:', {
+                        url: this.config.baseUrl,
+                        endpoint: endpoint,
+                        parking_id: this.config.currentParkingId
+                    });
+                }
                 response = await fetch(this.config.baseUrl, {
                     method: 'POST',
                     headers: {
@@ -150,7 +166,10 @@ class ParkingAPIXML {
                 }
             }
             
-            console.log('[makeRequest] Response status:', response.status, 'for endpoint:', endpoint);
+            // Only log errors and profile-related responses
+            if (!response.ok || endpoint.includes('profile')) {
+                console.log('[makeRequest] Response status:', response.status, 'for endpoint:', endpoint);
+            }
             
             if (!response.ok) {
                 console.error('[makeRequest] Response not OK:', response.status, response.statusText);
