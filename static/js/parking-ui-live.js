@@ -1967,19 +1967,8 @@ class ParkingUIIntegrationXML {
                 }
             }
             
-            // If we found profiles in use, return them
-            if (profilesInUse.size > 0) {
-                const profiles = [];
-                profilesInUse.forEach((name, id) => {
-                    profiles.push({ id, name });
-                });
-                console.log('📋 [getCompanyProfiles] Returning profiles from subscribers:', profiles);
-                return profiles;
-            }
-            
-            // If no profiles found in subscribers, return common profiles based on company type
-            console.log('⚠️ [getCompanyProfiles] No profiles found in subscribers, returning default profiles');
-            return [
+            // Always return all default profiles
+            const defaultProfiles = [
                 { id: '0', name: 'רגיל' },
                 { id: '1', name: 'כול החניונים' },
                 { id: '2', name: 'חניון מנויים' },
@@ -1987,6 +1976,21 @@ class ParkingUIIntegrationXML {
                 { id: '4', name: 'נכה' },
                 { id: '5', name: '-2 חניון' }
             ];
+            
+            // If we found profiles in use, make sure they're all included
+            if (profilesInUse.size > 0) {
+                console.log(`📋 [getCompanyProfiles] Found ${profilesInUse.size} profiles in use`);
+                
+                // Add any profiles from subscribers that aren't in the default list
+                profilesInUse.forEach((name, id) => {
+                    if (!defaultProfiles.find(p => p.id === id)) {
+                        defaultProfiles.push({ id, name });
+                    }
+                });
+            }
+            
+            console.log('📋 [getCompanyProfiles] Returning all available profiles:', defaultProfiles);
+            return defaultProfiles;
             
         } catch (error) {
             console.error('[getCompanyProfiles] Error:', error);
