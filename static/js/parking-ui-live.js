@@ -1889,54 +1889,82 @@ class ParkingUIIntegrationXML {
         if (!this.currentContract) return [];
         
         try {
-            console.log('🔍 [getCompanyProfiles] Getting usage profiles from system');
-            console.log('[getCompanyProfiles] Current parking:', this.currentParking);
-            console.log('[getCompanyProfiles] Current contract:', this.currentContract);
-            
-            // Make sure parking is set in API
-            if (this.currentParking && this.currentParking.id) {
-                this.api.setCurrentParking(this.currentParking.id);
-            }
-            
-            // Get usage profiles from the API
-            const profilesResult = await this.api.getUsageProfiles();
-            
-            if (profilesResult.success && profilesResult.data) {
-                console.log('✅ [getCompanyProfiles] Got profiles from API:', profilesResult.data);
-                
-                // Convert API response to our format
-                const profiles = [];
-                const profilesData = Array.isArray(profilesResult.data) ? profilesResult.data : [profilesResult.data];
-                
-                profilesData.forEach(profile => {
-                    if (profile.id) {
-                        profiles.push({
-                            id: profile.id,
-                            name: profile.name || profile.description || `פרופיל ${profile.id}`
-                        });
-                    }
-                });
-                
-                // If we got profiles, return them
-                if (profiles.length > 0) {
-                    console.log('📋 [getCompanyProfiles] Returning profiles:', profiles);
-                    return profiles;
-                }
-            }
-            
-            // Fallback: If API fails or returns no profiles, check current subscribers
-            console.log('⚠️ [getCompanyProfiles] API failed or no profiles, checking subscribers');
+            console.log('🔍 [getCompanyProfiles] Getting profiles from subscribers');
             
             // Get all subscribers to see what profiles are in use
             const profilesInUse = new Map();
+            let needToLoadDetails = true;
             
+            // First check if we already have profiles in current subscribers
             if (this.subscribers && this.subscribers.length > 0) {
-                this.subscribers.forEach(subscriber => {
-                    if (subscriber.profileId && subscriber.profile) {
-                        profilesInUse.set(subscriber.profileId, subscriber.profile);
-                        console.log('[getCompanyProfiles] Found profile in use:', subscriber.profileId, subscriber.profile);
+                console.log(`📊 [getCompanyProfiles] Checking ${this.subscribers.length} subscribers for profiles`);
+                
+                this.subscribers.forEach((subscriber, idx) => {
+                    // Check multiple places for profile info
+                    const profileId = subscriber.profileId || subscriber.profile || subscriber.extCardProfile || 
+                                     subscriber.identification?.usageProfile?.id;
+                    // Profile name might be the profile field itself if it contains name
+                    let profileName = subscriber.profileName || subscriber.identification?.usageProfile?.name;
+                    
+                    // If no profile name but we have profile field with text, use it
+                    if (!profileName && subscriber.profile && isNaN(subscriber.profile)) {
+                        profileName = subscriber.profile;
+                    }
+                    
+                    // If still no name, create default based on ID
+                    if (!profileName && profileId) {
+                        profileName = profileId === '1' ? 'כול החניונים' : 
+                                    profileId === '0' ? 'רגיל' : 
+                                    profileId === '2' ? 'חניון מנויים' :
+                                    profileId === '3' ? 'VIP' :
+                                    profileId === '4' ? 'נכה' :
+                                    profileId === '5' ? '-2 חניון' :
+                                    `פרופיל ${profileId}`;
+                    }
+                    
+                    if (profileId && profileName) {
+                        profilesInUse.set(profileId, profileName);
+                        needToLoadDetails = false;
+                        console.log(`✅ [getCompanyProfiles] Found profile: ${profileId} - ${profileName}`);
                     }
                 });
+            }
+            
+            // If we need more details and have few subscribers, load their details
+            if (needToLoadDetails && this.subscribers && this.subscribers.length > 0 && this.subscribers.length <= 10) {
+                console.log('🔄 [getCompanyProfiles] Loading subscriber details to get profiles');
+                
+                for (let i = 0; i < Math.min(5, this.subscribers.length); i++) {
+                    const subscriber = this.subscribers[i];
+                    try {
+                        const details = await this.api.getConsumerDetail(
+                            this.currentContract.id,
+                            subscriber.subscriberNum || subscriber.id
+                        );
+                        
+                        if (details.success && details.data) {
+                            const profileId = details.data.identification?.usageProfile?.id || 
+                                            details.data.profile || 
+                                            details.data.extCardProfile;
+                            
+                            const profileName = details.data.identification?.usageProfile?.name ||
+                                              details.data.profileName ||
+                                              (profileId === '1' ? 'כול החניונים' : 
+                                               profileId === '0' ? 'רגיל' : 
+                                               profileId === '2' ? 'חניון מנויים' :
+                                               profileId === '3' ? 'VIP' :
+                                               profileId === '4' ? 'נכה' :
+                                               profileId === '5' ? '-2 חניון' :
+                                               `פרופיל ${profileId}`);
+                            
+                            if (profileId && profileName) {
+                                profilesInUse.set(profileId, profileName);
+                            }
+                        }
+                    } catch (err) {
+                        // Continue to next subscriber
+                    }
+                }
             }
             
             // If we found profiles in use, return them
@@ -1945,19 +1973,32 @@ class ParkingUIIntegrationXML {
                 profilesInUse.forEach((name, id) => {
                     profiles.push({ id, name });
                 });
-                console.log('[getCompanyProfiles] Returning profiles in use:', profiles);
+                console.log('📋 [getCompanyProfiles] Returning profiles from subscribers:', profiles);
                 return profiles;
             }
             
-            // If no profiles in use, return a default based on company
-            // Company 2 typically uses profile 1 (חניון ראשי)
-            console.log('[getCompanyProfiles] No profiles found in use, returning default');
-            return [{ id: '1', name: 'חניון ראשי' }];
+            // If no profiles found in subscribers, return common profiles based on company type
+            console.log('⚠️ [getCompanyProfiles] No profiles found in subscribers, returning default profiles');
+            return [
+                { id: '0', name: 'רגיל' },
+                { id: '1', name: 'כול החניונים' },
+                { id: '2', name: 'חניון מנויים' },
+                { id: '3', name: 'VIP' },
+                { id: '4', name: 'נכה' },
+                { id: '5', name: '-2 חניון' }
+            ];
             
         } catch (error) {
             console.error('[getCompanyProfiles] Error:', error);
-            // Return default profile on error
-            return [{ id: '1', name: 'חניון ראשי' }];
+            // Return default profiles on error
+            return [
+                { id: '0', name: 'רגיל' },
+                { id: '1', name: 'כול החניונים' },
+                { id: '2', name: 'חניון מנויים' },
+                { id: '3', name: 'VIP' },
+                { id: '4', name: 'נכה' },
+                { id: '5', name: '-2 חניון' }
+            ];
         }
     }
     
