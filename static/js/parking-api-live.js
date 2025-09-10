@@ -96,18 +96,23 @@ class ParkingAPIXML {
                     endpoint = `CustomerMediaWebService/${endpoint}`;
                 }
                 
-                response = await fetch(this.config.baseUrl, {
-            method: 'POST',
-            headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
+                const requestBody = {
                     parking_id: this.config.currentParkingId,
                     endpoint: endpoint,
                     method: method,
                     payload: data
-                })
-            });
+                };
+                console.log('[makeRequest] Proxy request:', {
+                    url: this.config.baseUrl,
+                    body: requestBody
+                });
+                response = await fetch(this.config.baseUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
             } else {
                 // LOCAL: Direct connection
                 const url = `${this.config.baseUrl}/${endpoint}`;
@@ -145,12 +150,19 @@ class ParkingAPIXML {
                 }
             }
             
+            console.log('[makeRequest] Response status:', response.status, 'for endpoint:', endpoint);
+            
+            if (!response.ok) {
+                console.error('[makeRequest] Response not OK:', response.status, response.statusText);
+                return { success: false, error: `HTTP ${response.status}: ${response.statusText}` };
+            }
+            
             if (result.success && result.data) {
                 return { success: true, data: result.data, message: result.message };
             } else {
                 return { success: false, error: result.message || result.error || 'Unknown error' };
-                    }
-                } catch (error) {
+            }
+        } catch (error) {
             console.error('API Error:', error);
             return { success: false, error: error.message };
         }
@@ -221,6 +233,7 @@ class ParkingAPIXML {
     }
     
     async getUsageProfiles() {
+        console.log('[getUsageProfiles] Current parking ID:', this.config.currentParkingId);
         return this.makeRequest('usageprofiles');
     }
     
