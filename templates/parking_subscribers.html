@@ -1927,8 +1927,10 @@
             // Force show buttons
             forceShowModalButtons();
             
-            // Don't load profiles for existing subscriber - just use what they have
-            // The profile will be set from the subscriber data below
+            // Load profiles from company for existing subscriber too
+            if (window.parkingUIXML && window.parkingUIXML.loadUsageProfiles) {
+                await window.parkingUIXML.loadUsageProfiles(false); // false = existing subscriber
+            }
             
             // Populate form - handle company name properly
             document.getElementById('editCompanyNum').value = subscriber.companyNum;
