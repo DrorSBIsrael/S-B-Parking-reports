@@ -1890,6 +1890,13 @@ class ParkingUIIntegrationXML {
         
         try {
             console.log('🔍 [getCompanyProfiles] Getting usage profiles from system');
+            console.log('[getCompanyProfiles] Current parking:', this.currentParking);
+            console.log('[getCompanyProfiles] Current contract:', this.currentContract);
+            
+            // Make sure parking is set in API
+            if (this.currentParking && this.currentParking.id) {
+                this.api.setCurrentParking(this.currentParking.id);
+            }
             
             // Get usage profiles from the API
             const profilesResult = await this.api.getUsageProfiles();
