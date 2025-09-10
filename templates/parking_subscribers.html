@@ -1167,6 +1167,29 @@
                     <div style="color: #666; margin-bottom: 15px; font-size: 0.9em;">
                         * שדות חובה: שם משפחה, תחילת תוקף, בתוקף עד
                     </div>
+                    
+                    <!-- בחירת סוג מנוי בעדכון -->
+                    <div class="form-group" id="subscriberTypeGroup" style="display: none; background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <label style="font-weight: bold; color: #495057; margin-bottom: 10px; display: block;">סוג המנוי לעדכון:</label>
+                        <div style="display: flex; gap: 20px;">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="radio" name="updateSubscriberType" value="regular" checked style="margin-left: 5px;">
+                                <span style="font-size: 16px;">🚗 מנוי רגיל (שמור מספר מנוי קיים)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="radio" name="updateSubscriberType" value="new" style="margin-left: 5px;">
+                                <span style="font-size: 16px;">🆕 מנוי חדש (קבל מספר מנוי חדש)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="radio" name="updateSubscriberType" value="guest" style="margin-left: 5px;">
+                                <span style="font-size: 16px;">👤 מנוי אורח (מספר מנוי זמני)</span>
+                            </label>
+                        </div>
+                        <small style="color: #6c757d; margin-top: 10px; display: block;">
+                            * בחירת "מנוי חדש" או "אורח" תיצור רשומה חדשה במערכת
+                        </small>
+                    </div>
+                    
                     <div class="form-group">
                         <label for="editCompanyNum" data-translate="companyNum">מספר חברה</label>
                         <input type="text" id="editCompanyNum" readonly style="background-color: #f0f0f0; cursor: not-allowed;">
@@ -1985,6 +2008,14 @@
             // Show modal
             document.getElementById('editModal').classList.add('show');
             
+            // Show subscriber type selection for updates
+            const subscriberTypeGroup = document.getElementById('subscriberTypeGroup');
+            if (subscriberTypeGroup) {
+                subscriberTypeGroup.style.display = 'block';
+                // Reset to regular update by default
+                document.querySelector('input[name="updateSubscriberType"][value="regular"]').checked = true;
+            }
+            
             // Ensure buttons are visible
             setTimeout(() => {
                 const topButtons = document.querySelectorAll('.modal-actions-top .btn');
@@ -2636,6 +2667,12 @@
             // Force show buttons
             forceShowModalButtons();
             
+            // Hide subscriber type selection for new subscribers
+            const subscriberTypeGroup = document.getElementById('subscriberTypeGroup');
+            if (subscriberTypeGroup) {
+                subscriberTypeGroup.style.display = 'none';
+            }
+            
             // Clear form
             document.getElementById('editCompanyNum').value = companyInfo.id || '';
             document.getElementById('editCompanyName').value = companyInfo.name || companyInfo.companyName || '';
@@ -2756,6 +2793,12 @@
                 // Clear modal data attributes
                 modal.removeAttribute('data-edit-mode');
                 modal.removeAttribute('data-subscriber-num');
+                
+                // Hide subscriber type selection
+                const subscriberTypeGroup = document.getElementById('subscriberTypeGroup');
+                if (subscriberTypeGroup) {
+                    subscriberTypeGroup.style.display = 'none';
+                }
                 
                 // Cleared editing subscriber
                 // Cleared modal data attributes
@@ -3056,31 +3099,36 @@
                 const modalSubscriberNum = modal ? modal.getAttribute('data-subscriber-num') : null;
                 // Modal edit mode
                 
+                // Check subscriber type selection for updates
+                const selectedType = document.querySelector('input[name="updateSubscriberType"]:checked')?.value || 'regular';
+                
                 // Determine if new based on multiple factors
                 let isNew = false;
+                let isGuest = false;
                 
-                // PRIMARY CHECK: If we have a subscriber number, it's ALWAYS an update
-                if (isDefinitelyUpdate) {
-                    isNew = false;
-                    // Has subscriber number - DEFINITELY UPDATE
-                } else if (modalEditMode === 'UPDATE' || modalEditMode === 'update') {
-                    isNew = false;
-                    // Modal says UPDATE
-                } else if (currentlyEditing) {
-                    isNew = false;
-                    // Has editing context - UPDATE
-                } else if (modalEditMode === 'NEW' || modalEditMode === 'new') {
-                    isNew = true;
-                    // Modal says NEW
-                } else {
-                    // If no clear indication but we have a subscriber num, it's update
-                    if (subscriberNumFromForm && subscriberNumFromForm !== '' && subscriberNumFromForm !== '0') {
-                        isNew = false;
-                        // No mode but has subscriber number - UPDATE
-                    } else {
+                // If editing existing subscriber
+                if (modalEditMode === 'UPDATE' || currentlyEditing || isDefinitelyUpdate) {
+                    // Check what type of update the user selected
+                    if (selectedType === 'new') {
                         isNew = true;
-                        // No clear indication - assuming NEW
+                        isGuest = false;
+                        console.log('User selected to create NEW subscriber from existing');
+                    } else if (selectedType === 'guest') {
+                        isNew = true;
+                        isGuest = true;
+                        console.log('User selected to create GUEST from existing');
+                    } else {
+                        // Regular update - keep existing subscriber number
+                        isNew = false;
+                        isGuest = false;
+                        console.log('Regular UPDATE - keeping existing subscriber');
                     }
+                } else {
+                    // This is a new subscriber being created
+                    isNew = true;
+                    // Check if it's a guest from modal class or first name
+                    isGuest = document.getElementById('editModal')?.classList.contains('guest-mode') ||
+                              document.getElementById('editFirstName').value.trim() === 'אורח';
                 }
                 
                 // Final isNew decision
@@ -3103,9 +3151,7 @@
                     profileId: document.getElementById('editProfile').value || '1',
                     email: document.getElementById('editEmail').value || '',
                     isNew: isNew,  // Use the calculated value that considers both editing state and form data
-                    // Check if creating a guest (first name is "אורח" or modal has guest indicator)
-                    isGuest: document.getElementById('editFirstName').value.trim() === 'אורח' || 
-                            document.getElementById('editModal')?.classList.contains('guest-mode')
+                    isGuest: isGuest  // Use the calculated value from above
                 };
                 
                 // Form data prepared
