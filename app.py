@@ -2685,9 +2685,11 @@ def parking_manager_create_user():
        manager_data = manager_result.data[0]
        
        data = request.get_json()
-       username = data.get('username', '').strip()
-       email = data.get('email', '').strip()
-       permissions = data.get('permissions', 'B2').strip()  # Default to 'B' if not provided
+       username = data.get('username', '').strip() if data.get('username') else ''
+       email = data.get('email', '').strip() if data.get('email') else ''
+       permissions = data.get('permissions', 'B2').strip() if data.get('permissions') else 'B2'
+       company_list = data.get('company_list', '').strip() if data.get('company_list') else ''
+       access_level = data.get('access_level', 'single_parking').strip() if data.get('access_level') else 'single_parking'
        
        print(f"🅿️ Parking manager creating COMPANY MANAGER for parking: {manager_data['project_number']} ({manager_data['parking_name']})")
        
@@ -2756,7 +2758,7 @@ def parking_manager_create_user():
            'verification_code': None,
            'code_expires_at': None,
            'password_expires_at': None,
-           'company_list': None,
+           'company_list': company_list if company_list else None,
            'permissions': permissions  # Store user permissions
        }
        
@@ -4229,7 +4231,7 @@ def parking_manager_get_info():
         
         # קבלת משתמשי החניון
         parking_users = supabase.table('user_parkings').select(
-            'user_id, username, email, role, access_level, permissions, created_at, password_changed_at, is_temp_password'
+            'user_id, username, email, company_list, role, access_level, permissions, created_at, password_changed_at, is_temp_password'
         ).eq('project_number', user_data['project_number']).order('created_at', desc=True).execute()
         
         return jsonify({
