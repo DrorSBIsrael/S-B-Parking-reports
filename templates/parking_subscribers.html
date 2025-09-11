@@ -1002,7 +1002,7 @@
             </h1>
             <div class="header-controls">
                 <div class="user-info" style="padding: 5px 10px; background: var(--light-bg); border-radius: 6px; margin-right: 10px;">
-                    <span>👤 משתמש: <span id="currentUsername">טוען...</span></span>
+                    <span>👤 <span id="currentUsername">טוען...</span></span>
                     <span style="margin: 0 10px;">|</span>
                     <span id="userRole">מנהל חברה</span>
                     <span style="margin: 0 10px;">|</span>
@@ -1745,7 +1745,7 @@
                 'company_manager': 'מנהל חברה',
                 'user': 'משתמש רגיל'
             };
-            document.getElementById('userRole').textContent = roleText[userPermissions.role] || 'משתמש';
+            document.getElementById('userRole').textContent = roleText[userPermissions.role] || '@';
             
             // Hide/show buttons based on permissions
             const addButton = document.querySelector('[onclick="addNewSubscriber()"]');
