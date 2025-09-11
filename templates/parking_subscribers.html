@@ -1181,27 +1181,27 @@
                     </div>
                     <div class="form-group">
                         <label for="editFirstName" data-translate="firstName">שם פרטי</label>
-                        <input type="text" id="editFirstName" placeholder="הכנס שם פרטי (לדוגמה: דוד)">
+                        <input type="text" id="editFirstName" placeholder="הכנס שם פרטי">
                     </div>
                     <div class="form-group">
                         <label for="editLastName" data-translate="lastName">שם משפחה *</label>
-                        <input type="text" id="editLastName" placeholder="הכנס שם משפחה (לדוגמה: כהן) שדה חובה" required>
+                        <input type="text" id="editLastName" placeholder="הכנס שם משפחה - שדה חובה" required>
                     </div>
                     <div class="form-group">
                         <label for="editTagNum" data-translate="tagNum">מספר תג</label>
-                        <input type="text" id="editTagNum" placeholder="מספר תג">
+                        <input type="text" id="editTagNum" placeholder="מספר תג קרבה">
                     </div>
                     <div class="form-group">
                         <label for="editVehicle1" data-translate="vehicle1">רכב 1</label>
-                        <input type="text" id="editVehicle1" placeholder="מספר רכב (לדוגמה: 12345001)">
+                        <input type="text" id="editVehicle1" placeholder="מספר רכב (לדוגמה: 22333001)">
                     </div>
                     <div class="form-group">
                         <label for="editVehicle2" data-translate="vehicle2">רכב 2</label>
-                        <input type="text" id="editVehicle2" placeholder="מספר רכב (לדוגמה: 98765002)">
+                        <input type="text" id="editVehicle2" placeholder="מספר רכב (לדוגמה: 54200200)">
                     </div>
                     <div class="form-group">
                         <label for="editVehicle3" data-translate="vehicle3">רכב 3</label>
-                        <input type="text" id="editVehicle3" placeholder="מספר רכב (לדוגמה: 55666003)">
+                        <input type="text" id="editVehicle3" placeholder="מספר רכב (לדוגמה: 8020010)">
                     </div>
                     <div class="form-group">
                         <label for="editValidFrom" data-translate="validFrom">תחילת תוקף *</label>
@@ -1297,7 +1297,7 @@
         <div class="footer">
             <div class="company">שיידט את בכמן ישראל</div>
             <div class="credit">
-                נוצר ע"י <span class="developer">דרור פרינץ</span>
+                נוצר ע"י <span class="developer">דרור פרינץ @ AI</span>
             </div>
             <div style="margin-top: 10px; font-size: 12px; color: #999;">
                 © 2025 כל הזכויות שמורות
@@ -1745,7 +1745,7 @@
                 'company_manager': 'מנהל חברה',
                 'user': 'משתמש רגיל'
             };
-            document.getElementById('userRole').textContent = roleText[userPermissions.role] || '@';
+            document.getElementById('userRole').textContent = roleText[userPermissions.role] || 'משתמש';
             
             // Hide/show buttons based on permissions
             const addButton = document.querySelector('[onclick="addNewSubscriber()"]');
@@ -2612,18 +2612,25 @@
                 await window.parkingUIXML.loadUsageProfiles(true); // true = new subscriber
             }
             
-            // Get tomorrow's date
+            // Get today's date for start
+            const today = new Date();
+            const todayStr = formatDateForDisplay(today.toISOString().split('T')[0]);
+            
+            // Get tomorrow's date for end
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             const tomorrowStr = formatDateForDisplay(tomorrow.toISOString().split('T')[0]);
             
             // Default dates
+            let defaultStartDateStr;
             let defaultEndDateStr;
             if (isGuest) {
-                // Guest - Same day as start date (for same week limitation)
+                // Guest - start today, end tomorrow
+                defaultStartDateStr = todayStr;
                 defaultEndDateStr = tomorrowStr;
             } else {
-                // Regular subscriber - until end of current year
+                // Regular subscriber - start today, until end of current year
+                defaultStartDateStr = todayStr;
                 const currentYear = new Date().getFullYear();
                 defaultEndDateStr = `31/12/${currentYear}`;
             }
@@ -2661,7 +2668,7 @@
             document.getElementById('editVehicle1').value = '';
             document.getElementById('editVehicle2').value = '';
             document.getElementById('editVehicle3').value = '';
-            document.getElementById('editValidFrom').value = tomorrowStr;
+            document.getElementById('editValidFrom').value = defaultStartDateStr;
             document.getElementById('editValidUntil').value = defaultEndDateStr;
             // Profile will be set by loadUsageProfiles based on company profiles
             // document.getElementById('editProfile').value = '1'; // Will be set automatically
