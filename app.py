@@ -1233,7 +1233,6 @@ def start_background_email_monitoring():
         return
         
     try:
-        print("📧 Initializing background email monitoring...")
         
         def delayed_start():
             time.sleep(5)
@@ -1243,7 +1242,6 @@ def start_background_email_monitoring():
         startup_thread = threading.Thread(target=delayed_start, daemon=True)
         startup_thread.start()
         
-        print("📧 Background email monitoring initialization started")
         
     except Exception as e:
         print(f"❌ Background email monitoring initialization failed: {str(e)}")
@@ -1850,7 +1848,6 @@ def forgot_password():
             'username': user['username']
         }
         
-        print(f"🔐 Generated reset code for {validated_email}: {reset_code}")
         
         # שליחת מייל
         email_sent = send_password_reset_verification_email(validated_email, reset_code, user['username'])
@@ -2006,18 +2003,14 @@ def validate_date_format(date_string):
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    print("🔍 === LOGIN FUNCTION STARTED ===")
     try:
-        print("🔍 Step 1: Checking supabase...")
         if not supabase:
             return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
             
-        print("🔍 Step 2: Getting JSON data...")
         data = request.get_json()
         username = data.get('username', '').strip()
         password = data.get('password', '').strip()
         
-        print("🔍 Step 3: Validating input...")
         # אימות קלט
         is_valid_username, validated_username = validate_input(username, "username")
         is_valid_password, validated_password = validate_input(password, "password")
@@ -2030,8 +2023,6 @@ def login():
             print(f"🚨 Invalid password attempt from user: {validated_username}")
             return jsonify({'success': False, 'message': 'סיסמה לא תקינה'})
         
-        print(f"🔑 Login attempt: {validated_username}")
-        print("🔍 About to call RPC function...")
         
 # קריאה לפונקציה עם טיפול פשוט  
         try:
@@ -2040,31 +2031,24 @@ def login():
                 'p_password': validated_password
             }).execute()
             auth_result = result.data
-            print(f"🔐 Normal result: {auth_result}")
             
         except Exception as rpc_error:
-            print(f"🔍 RPC Exception: {rpc_error}")
             # ניקח את התוצאה מהשגיאה
             if hasattr(rpc_error, 'args') and rpc_error.args:
                 auth_result = rpc_error.args[0]
-                print(f"🔐 From exception: {auth_result}")
-                print(f"🔐 Type: {type(auth_result)}")
                 
                 # בדיקת סוג הנתונים
                 if isinstance(auth_result, dict):
-                    print(f"🔐 It's already a dict!")
+                    pass
                 elif isinstance(auth_result, str):
-                    print(f"🔍 Raw string: {repr(auth_result)}")
                     # זה כנראה string שנראה כמו dict - ננסה eval
                     try:
                         import ast
                         auth_result = ast.literal_eval(auth_result)
-                        print(f"🔐 Converted with literal_eval: {auth_result}")
                     except:
                         try:
                             import json
                             auth_result = json.loads(auth_result)
-                            print(f"🔐 Converted with json: {auth_result}")
                         except:
                             print("🔍 Could not parse - treating as error message")
                             return jsonify({'success': False, 'message': auth_result})
@@ -2074,7 +2058,6 @@ def login():
             else:
                 raise rpc_error
         
-        print(f"🔍 Final result: {auth_result}")
         
         # עיבוד התוצאה
         if auth_result and auth_result.get('success'):
@@ -2094,22 +2077,17 @@ def login():
             
             if user_result.data and len(user_result.data) > 0:
                 email = user_result.data[0]['email']
-                print(f"✅ Email found: {email}")
                 
                 # יצירת קוד אימות חדש
                 verification_code = generate_verification_code()
-                print(f"🎯 Generated code: {verification_code}")
                 
                 # שמירה במסד נתונים
                 if store_verification_code(email, verification_code):
                     # שליחת מייל
-                    print(f"🚀 Attempting to send email to {email}...")
                     email_sent = send_verification_email(email, verification_code)
-                    print(f"📧 Email send result: {email_sent}")
                     
                     # שמירה ב-session
                     session['pending_email'] = email
-                    print(f"📧 Code ready for {email}: {verification_code}")
                     return jsonify({'success': True, 'redirect': '/verify'})
                 else:
                     return jsonify({'success': False, 'message': 'שגיאה בשמירת הקוד'})
@@ -2145,7 +2123,6 @@ def verify_code():
             print(f"🚨 No pending email in session")
             return jsonify({'success': False, 'message': 'אין בקשה לאימות'})
         
-        print(f"🔍 Verify attempt: code={validated_code}, email={email}")
         
         # בדיקת הקוד מהמסד נתונים
         if verify_code_from_database(email, validated_code):
@@ -2175,13 +2152,11 @@ def verify_code():
                         print(f"🅿️ Redirecting PARKING MANAGER to: {redirect_url}")
                     elif code_type == 'company_manager':
                         redirect_url = '/company-manager'
-                        print(f"🏢 Redirecting COMPANY MANAGER to: {redirect_url}")
                     else:
                         # בדיקת access_level למשתמשים רגילים
                         access_level = user_data.get('access_level', 'single_parking')
                         if access_level == 'company_manager':
                             redirect_url = '/company-manager'
-                            print(f"🏢 Redirecting COMPANY MANAGER to: {redirect_url}")
                         else:
                             redirect_url = '/dashboard'
                             print(f"📊 Redirecting REGULAR USER to: {redirect_url}")
@@ -2442,7 +2417,6 @@ def send_new_user_email(email, username, temp_password, login_url):
         return False
     
     try:
-        print(f"🚀 Sending new user email to {email}...")
         
         msg = Message(
             subject='חשבון חדש - S&B Parking',
@@ -3252,15 +3226,12 @@ def company_manager_proxy():
         payload = data.get('payload', {})
         
         # Request details received
-        print(f"🔍 [Proxy] Received request - parking_id: {parking_id}, endpoint: {endpoint}, method: {method}")
         
         # For usageprofiles endpoint, try to use a default parking if none provided
         if 'usageprofiles' in endpoint.lower() and (not parking_id or parking_id == 'null' or parking_id == 'undefined'):
-            print(f"⚠️ [Proxy] No parking_id for usageprofiles, using default parking 1")
             parking_id = '1'  # Default to parking 1
         
         if not parking_id or not endpoint or parking_id == 'null' or parking_id == 'undefined':
-            print(f"❌ [Proxy] Missing or invalid parameters - parking_id: {parking_id} (type: {type(parking_id)}), endpoint: {endpoint}")
             return jsonify({'success': False, 'message': 'חסרים פרמטרים'}), 400
         
         # קבלת נתוני החניון
@@ -3378,7 +3349,6 @@ def company_manager_proxy():
             method = 'GET'  # Parking transactions are always GET
         elif 'usageprofiles' in endpoint.lower():
             # Handle usage profiles endpoint
-            print(f"✅ [Proxy] Handling usageprofiles request to: {protocol}://{ip_address}:{port}")
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/usageprofiles"
             method = 'GET'  # Usage profiles are always GET
         elif 'CustomerMediaWebService' in endpoint:
@@ -3545,10 +3515,6 @@ def company_manager_proxy():
                     xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
                     print(f"   📝 Sending XML for update (PUT to {url}):")
                     print(f"   📅 Dates in consumer: xValidFrom={payload.get('consumer', {}).get('xValidFrom')}, xValidUntil={payload.get('consumer', {}).get('xValidUntil')}")
-                    print(f"   📅 Dates in identification: validFrom={payload.get('identification', {}).get('validFrom')}, validUntil={payload.get('identification', {}).get('validUntil')}")
-                    print(f"   🔐 ignorePresence={payload.get('identification', {}).get('ignorePresence')} (type: {type(payload.get('identification', {}).get('ignorePresence'))})")
-                    print(f"   🏷️ Profile ID={payload.get('identification', {}).get('usageProfile', {}).get('id')}")
-                    print(f"   Full XML:\n{xml_str}")  # Show full XML for debug
                     
                     # Send as XML
                     headers['Content-Type'] = 'application/xml'
@@ -3890,7 +3856,6 @@ def company_manager_proxy():
                         elif 'usageprofile' in endpoint.lower():
                             # Parse usage profiles from XML
                             profiles = []
-                            print(f"🔍 [Proxy] Parsing usage profiles from XML")
                             print(f"   Root tag: {root.tag}")
                             
                             # Try to find usageProfile elements in different XML structures
@@ -3907,7 +3872,6 @@ def company_manager_proxy():
                             if not profile_elements:
                                 profile_elements = root.findall('.//usageProfiles')
                             
-                            print(f"   Found {len(profile_elements)} profile elements")
                             
                             for profile in profile_elements:
                                 profile_data = {}
@@ -3948,7 +3912,6 @@ def company_manager_proxy():
                                             profiles.append(profile_data)
                             
                             if not profiles:
-                                print(f"⚠️ [Proxy] No profiles found in XML, returning default profiles")
                                 print(f"   XML (first 1000 chars): {response.text[:1000]}")
                                 # Return default profiles if none found
                                 profiles = [
@@ -3960,7 +3923,6 @@ def company_manager_proxy():
                                     {"id": "5", "name": "-2 חניון"}
                                 ]
                             
-                            print(f"✅ [Proxy] Returning {len(profiles)} usage profiles")
                             return jsonify({'success': True, 'data': profiles})
                         else:
                             # החזר כ-raw XML אם לא מזהים את הסוג
@@ -4087,9 +4049,6 @@ def company_manager_proxy():
                 }), response.status_code
                 
         except requests.exceptions.Timeout:
-            print(f"   ⏱️ TIMEOUT after {timeout_seconds}s")
-            print(f"   ⏱️ Failed URL: {url}")
-            print(f"   ⏱️ Server: {ip_address}:{port}")
             return jsonify({
                 'success': False, 
                 'error': 'זמן ההמתנה לשרת החניון פג',
@@ -4098,13 +4057,9 @@ def company_manager_proxy():
             }), 504
         except requests.exceptions.ConnectionError as e:
             error_msg = str(e)
-            print(f"   🔌 CONNECTION ERROR: {error_msg[:500]}")
-            print(f"   🔌 Failed URL: {url}")
-            print(f"   🔌 Server: {ip_address}:{port}")
             
             # בדוק אם זה בעיית SSL
             if 'SSL' in error_msg or 'certificate' in error_msg.lower():
-                print(f"   🔐 Possible SSL issue, retrying without verification...")
                 try:
                     # נסה שוב עם SSL מושבת לגמרי
                     import ssl
@@ -4126,9 +4081,6 @@ def company_manager_proxy():
                 'server': f"{ip_address}:{port}"
             }), 503
         except Exception as e:
-            print(f"   ❌ UNEXPECTED ERROR: {str(e)[:500]}")
-            print(f"   ❌ Failed URL: {url}")
-            print(f"   ❌ Server: {ip_address}:{port}")
             return jsonify({
                 'success': False, 
                 'error': str(e)[:200],
@@ -4190,7 +4142,6 @@ def send_new_user_welcome_email(email, username, password, login_url):
         return False
     
     try:
-        print(f"🚀 Sending welcome email to {email}...")
         
         msg = Message(
             subject='ברוכים הבאים למערכת S&B Parking',
@@ -4250,7 +4201,6 @@ def send_password_reset_email(email, username, new_password):
         return False
     
     try:
-        print(f"🚀 Sending password reset email to {email}...")
         
         msg = Message(
             subject='איפוס סיסמה - S&B Parking',
@@ -4318,7 +4268,6 @@ def send_password_reset_verification_email(email, code, username):
         return False
     
     try:
-        print(f"🚀 Sending password reset email to {email}...")
         
         msg = Message(
             subject='איפוס סיסמה - S&B Parking',
@@ -4469,7 +4418,6 @@ def debug_why_no_access():
             'error': str(e)
         })
 
-print("🔧 DEBUG ENDPOINT ADDED!")
 
 @app.route('/api/company-manager/send-guest-email', methods=['POST'])
 def send_guest_email():
@@ -4705,7 +4653,6 @@ def test_render_connection():
                 'success': False
             })
         except requests.exceptions.ConnectionError as e:
-            print(f"   🔌 CONNECTION ERROR: {str(e)[:100]}")
             results.append({
                 'endpoint': endpoint,
                 'error': 'connection_error',
