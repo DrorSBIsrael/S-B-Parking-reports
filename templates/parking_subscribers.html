@@ -998,7 +998,7 @@
                 <span>🅿️</span>
                 <span data-translate="title">מערכת ניהול מנויי חניון</span>
                 <br>
-                <span style="font-size: 0.5em; font-weight: normal; ">מבית שיידט את בכמן ישראל</span>
+                <span style="font-size: 0.7em; font-weight: normal; ">מבית שיידט את בכמן ישראל</span>
             </h1>
             <div class="header-controls">
                 <div class="user-info" style="padding: 5px 10px; background: var(--light-bg); border-radius: 6px; margin-right: 10px;">
@@ -1077,16 +1077,13 @@
                         <span data-translate="addGuest">+ הוסף אורח</span>
                     </button>
                     <button class="btn btn-info action-btn" onclick="openReportsModal()">
-                        <span data-translate="reports">📊 דוחות</span>
+                        <span data-translate="reports">עתידי</span>
                     </button>
                     <button class="btn btn-primary action-btn" onclick="exportToExcel()">
                         <span data-translate="export">📥 ייצוא לאקסל</span>
                     </button>
                     <button class="btn btn-secondary action-btn" onclick="refreshSubscribers()" title="רענן רשימת מנויים">
                         <span>🔄 רענון</span>
-                    </button>
-                    <button class="btn btn-secondary action-btn" id="reloadFullButton" onclick="reloadFullData()" style="display: none;">
-                        <span data-translate="reloadFull">🔄 טעינה מלאה</span>
                     </button>
                 </div>
             </div>
@@ -1316,8 +1313,6 @@
         const mockCompanies = [
             { id: '1000', name: 'חברה 1000', subscribersCount: 45 },
             { id: '2', name: 'חברה 2', subscribersCount: 120 },
-            { id: '3', name: 'חברה 3', subscribersCount: 25 },
-            { id: '4', name: 'חברה 4', subscribersCount: 30 },
         ];
 
         const mockSubscribers = [
@@ -3077,7 +3072,6 @@
                     // Always regular update - keep existing subscriber number
                     isNew = false;
                     isGuest = false;
-                    console.log('Regular UPDATE - keeping existing subscriber');
                 } else {
                     // This is a new subscriber being created
                     isNew = true;
@@ -3808,7 +3802,6 @@
         // Update UI buttons based on permissions
         function updateUIPermissions() {
             const permissions = getUserPermissions();
-            console.log('[updateUIPermissions] User permissions:', permissions);
             
             // Add New Subscriber button
             const addNewBtn = document.querySelector('button[onclick="addNewSubscriber()"]');
