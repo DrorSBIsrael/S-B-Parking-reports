@@ -801,6 +801,8 @@
         document.getElementById('editUserForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
+            console.log('🔄 Starting user update...');
+            
             const editBtn = document.getElementById('editBtn');
             const originalText = editBtn.textContent;
             editBtn.textContent = '📄 מעדכן משתמש...';
@@ -821,13 +823,15 @@
             }
             
             const userData = {
-                user_id: formData.get('userId'),
-                username: formData.get('username'),
-                email: formData.get('email'),
-                access_level: formData.get('accessLevel'),
-                company_list: formData.get('companyList'), // ✅ תיקון שליחת company_list
-                permissions: permissions.join('')
+                user_id: formData.get('userId') || '',
+                username: formData.get('username') || '',
+                email: formData.get('email') || '',
+                access_level: formData.get('accessLevel') || 'single_parking',
+                company_list: formData.get('companyList') || '',
+                permissions: permissions.join('') || 'B2'
             };
+            
+            console.log('📤 Sending update data:', userData);
                 
             try {
                 const response = await fetch('/api/parking-manager/update-user', {
@@ -839,6 +843,7 @@
                 });
                 
                 const data = await response.json();
+                console.log('📥 Update response:', data);
                 
                 if (data.success) {
                     showAlert('editAlert', 'success', data.message);
@@ -850,7 +855,8 @@
                     showAlert('editAlert', 'error', data.message);
                 }
             } catch (error) {
-                showAlert('editAlert', 'error', 'שגיאה בעדכון משתמש');
+                console.error('❌ Update error:', error);
+                showAlert('editAlert', 'error', 'שגיאה בעדכון משתמש: ' + error.message);
             }
             
             editBtn.textContent = originalText;
