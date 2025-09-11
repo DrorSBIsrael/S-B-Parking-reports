@@ -650,9 +650,13 @@
                 const permissions = user.permissions || 'B';
                 const permissionDisplay = formatPermissions(permissions);
                 
+                // הצגת מספרי חברות
+                const companyList = user.company_list || '-';
+                
                 row.innerHTML = `
                     <td><strong>${user.username}</strong></td>
                     <td>${user.email}</td>
+                    <td>${companyList}</td>
                     <td>${user.role || 'משתמש'}</td>
                     <td>${user.access_level || 'גישה בסיסית'}</td>
                     <td>${permissionDisplay}</td>
