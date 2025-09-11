@@ -144,6 +144,19 @@
             background: #5a6fd8;
         }
         
+        .btn-edit {
+            background: #ffc107;
+            color: #212529;
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+            margin-left: 5px;
+        }
+        
+        .btn-edit:hover {
+            background: #e0a800;
+        }
+        
         .users-table {
             width: 100%;
             border-collapse: collapse;
@@ -254,8 +267,55 @@
         }
         
         .permission-basic {
-            background: #d4edda;
+            background: #d4edda !important;
             border: 1px solid #c3e6cb;
+        }
+        
+        .edit-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        
+        .edit-modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .edit-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+        
+        .close-modal {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .close-modal:hover {
+            background: #5a6268;
         }
         
         @media (max-width: 768px) {
@@ -349,6 +409,10 @@
                                 <input type="checkbox" name="permissions" value="B" checked>
                                 <span>B - בסיס (צפייה ועריכה בסיסית)</span>
                             </label>
+                            <label class="permission-item permission-basic">
+                                <input type="checkbox" name="permissions" value="2" checked>
+                                <span>2 - עריכת רכבים 1-2</span>
+                            </label>
                             <label class="permission-item">
                                 <input type="checkbox" name="permissions" value="G">
                                 <span>G - יצירת אורחים</span>
@@ -374,16 +438,12 @@
                                 <span>1 - עריכת רכב 1 בלבד</span>
                             </label>
                             <label class="permission-item">
-                                <input type="checkbox" name="permissions" value="2" checked>
-                                <span>2 - עריכת רכבים 1-2</span>
-                            </label>
-                            <label class="permission-item">
                                 <input type="checkbox" name="permissions" value="3">
                                 <span>3 - עריכת כל הרכבים</span>
                             </label>
                         </div>
                         <small style="color: #6c757d; font-size: 12px; margin-top: 10px; display: block;">
-                            ברירת המחדל היא B (בסיס) - צפייה ועריכה בסיסית. ניתן לבחור הרשאות נוספות.
+                            ברירת המחדל: B (בסיס) + 2 (עריכת רכבים 1-2). ניתן לבחור הרשאות נוספות.
                         </small>
                     </div>
                         
@@ -411,12 +471,103 @@
                                 <th>הרשאות</th>
                                 <th>תאריך יצירה</th>
                                 <th>סטטוס</th>
+                                <th>פעולות</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+        
+        <!-- Modal עריכת משתמש -->
+        <div id="editModal" class="edit-modal">
+            <div class="edit-modal-content">
+                <div class="edit-modal-header">
+                    <h2>✏️ עריכת משתמש</h2>
+                    <button class="close-modal" onclick="closeEditModal()">✖️</button>
+                </div>
+                
+                <div id="editAlert" style="display: none;"></div>
+                
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId" name="userId">
+                    
+                    <div class="form-group">
+                        <label for="editUsername">שם משתמש *</label>
+                        <input type="text" id="editUsername" name="username" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editEmail">כתובת אימייל *</label>
+                        <input type="email" id="editEmail" name="email" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editCompanyList">רשימת מספרי חברות</label>
+                        <input type="text" id="editCompanyList" name="companyList" 
+                               placeholder="לדוגמא: 100-2-55">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editAccessLevel">רמת גישה</label>
+                        <select id="editAccessLevel" name="accessLevel">
+                            <option value="single_parking">גישה לחניון בלבד</option>
+                       </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>הרשאות משתמש</label>
+                        <div class="permissions-grid" id="editPermissionsGrid">
+                            <label class="permission-item permission-basic">
+                                <input type="checkbox" name="editPermissions" value="B">
+                                <span>B - בסיס (צפייה ועריכה בסיסית)</span>
+                            </label>
+                            <label class="permission-item permission-basic">
+                                <input type="checkbox" name="editPermissions" value="2">
+                                <span>2 - עריכת רכבים 1-2</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="editPermissions" value="G">
+                                <span>G - יצירת אורחים</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="editPermissions" value="N">
+                                <span>N - יצירת מנויים חדשים</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="editPermissions" value="P">
+                                <span>P - עדכון פרופילים</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="editPermissions" value="R">
+                                <span>R - צפייה בדוחות</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="editPermissions" value="T">
+                                <span>T - עריכת מספר תג</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="editPermissions" value="1">
+                                <span>1 - עריכת רכב 1 בלבד</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="editPermissions" value="3">
+                                <span>3 - עריכת כל הרכבים</span>
+                            </label>
+                        </div>
+                    </div>
+                        
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" class="btn btn-primary" id="editBtn" style="flex: 1;">
+                            ✅ עדכן משתמש
+                        </button>
+                        <button type="button" class="btn close-modal" onclick="closeEditModal()" style="flex: 0 0 auto;">
+                            ביטול
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -448,7 +599,7 @@
             return formatted;
         }
         
-        // טעינת נתוני החניון ורשימת המשתמשים
+        // טעינת נתוני החניון ורשימת המשתמשים - חזרה לקוד המקורי שעובד
         async function loadParkingInfo() {
             try {
                 const response = await fetch('/api/parking-manager/get-parking-info');
@@ -483,7 +634,7 @@
             tbody.innerHTML = '';
             
             if (users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #6c757d;">אין משתמשים עדיין בחניון זה</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #6c757d;">אין משתמשים עדיין בחניון זה</td></tr>';
                 return;
             }
             
@@ -502,11 +653,16 @@
                 row.innerHTML = `
                     <td><strong>${user.username}</strong></td>
                     <td>${user.email}</td>
-                    <td>${user.role}</td>
-                    <td>${user.access_level}</td>
+                    <td>${user.role || 'משתמש'}</td>
+                    <td>${user.access_level || 'גישה בסיסית'}</td>
                     <td>${permissionDisplay}</td>
                     <td>${createdDate}</td>
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    <td>
+                        <button class="btn btn-edit" onclick="editUser('${user.id || user.user_id || user.ID}')">
+                            ✏️ עריכה
+                        </button>
+                    </td>
                 `;
                 
                 tbody.appendChild(row);
@@ -523,20 +679,58 @@
             displayUsers(filteredUsers);
         });
         
-        // וידוא שתמיד B מסומן
+        // וידוא שתמיד B ו-2 מסומנים כברירת מחדל
         document.addEventListener('change', function(e) {
-            if (e.target.name === 'permissions') {
-                const bCheckbox = document.querySelector('input[value="B"]');
-                const checkedBoxes = document.querySelectorAll('input[name="permissions"]:checked');
+            if (e.target.name === 'permissions' || e.target.name === 'editPermissions') {
+                const bCheckbox = document.querySelector(`input[name="${e.target.name}"][value="B"]`);
+                const twoCheckbox = document.querySelector(`input[name="${e.target.name}"][value="2"]`);
+                const checkedBoxes = document.querySelectorAll(`input[name="${e.target.name}"]:checked`);
                 
-                // אם אין שום הרשאה מסומנת, סמן B
+                // אם אין שום הרשאה מסומנת, סמן B ו-2
                 if (checkedBoxes.length === 0) {
-                    bCheckbox.checked = true;
+                    if (bCheckbox) bCheckbox.checked = true;
+                    if (twoCheckbox) twoCheckbox.checked = true;
                 }
             }
         });
         
-        // יצירת משתמש חדש
+        // פונקציית עריכת משתמש
+        function editUser(userId) {
+            const user = allUsers.find(u => {
+                const userIdToCheck = u.id || u.user_id || u.ID;
+                return userIdToCheck == userId;
+            });
+            
+            if (!user) {
+                alert('משתמש לא נמצא');
+                return;
+            }
+            
+            // מילוי הטופס
+            document.getElementById('editUserId').value = userId;
+            document.getElementById('editUsername').value = user.username || '';
+            document.getElementById('editEmail').value = user.email || '';
+            document.getElementById('editCompanyList').value = user.company_list || '';
+            document.getElementById('editAccessLevel').value = user.access_level || 'single_parking';
+            
+            // סימון ההרשאות הנוכחיות
+            const permissions = user.permissions || 'B2';
+            const editPermissionBoxes = document.querySelectorAll('input[name="editPermissions"]');
+            editPermissionBoxes.forEach(box => {
+                box.checked = permissions.includes(box.value);
+            });
+            
+            // הצגת המודל
+            document.getElementById('editModal').style.display = 'block';
+        }
+        
+        // סגירת מודל העריכה
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            document.getElementById('editAlert').style.display = 'none';
+        }
+        
+        // יצירת משתמש חדש - חזרה לקוד המקורי עם תיקון company_list
         document.getElementById('createUserForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -554,14 +748,19 @@
                 permissions.push(checkbox.value);
             });
             
-            // If no permissions selected, default to 'B'
-            const permissionsString = permissions.length > 0 ? permissions.join('') : 'B';
+            // If no permissions selected, default to 'B2'
+            let permissionsString = permissions.length > 0 ? permissions.join('') : 'B2';
+            
+            // וידוא שB תמיד כלול
+            if (!permissionsString.includes('B')) {
+                permissionsString = 'B' + permissionsString;
+            }
             
             const userData = {
                 username: formData.get('username'),
                 email: formData.get('email'),
                 access_level: formData.get('accessLevel'),
-                company_list: formData.get('companyList'),
+                company_list: formData.get('companyList'), // ✅ תיקון שליחת company_list
                 permissions: permissionsString
             };
                 
@@ -579,8 +778,9 @@
                 if (data.success) {
                     showAlert('createAlert', 'success', data.message);
                     e.target.reset();
-                    // החזר B להיות מסומן
+                    // החזר B ו-2 להיות מסומנים
                     document.querySelector('input[value="B"]').checked = true;
+                    document.querySelector('input[value="2"]').checked = true;
                     loadParkingInfo(); // רענון רשימת המשתמשים
                 } else {
                     showAlert('createAlert', 'error', data.message);
@@ -591,6 +791,66 @@
             
             createBtn.textContent = originalText;
             createBtn.disabled = false;
+        });
+        
+        // עדכון משתמש
+        document.getElementById('editUserForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const editBtn = document.getElementById('editBtn');
+            const originalText = editBtn.textContent;
+            editBtn.textContent = '📄 מעדכן משתמש...';
+            editBtn.disabled = true;
+            
+            const formData = new FormData(e.target);
+        
+            // Collect selected permissions
+            const permissions = [];
+            const permissionCheckboxes = document.querySelectorAll('input[name="editPermissions"]:checked');
+            permissionCheckboxes.forEach(checkbox => {
+                permissions.push(checkbox.value);
+            });
+            
+            // וידוא שB תמיד כלול
+            if (!permissions.includes('B')) {
+                permissions.unshift('B');
+            }
+            
+            const userData = {
+                user_id: formData.get('userId'),
+                username: formData.get('username'),
+                email: formData.get('email'),
+                access_level: formData.get('accessLevel'),
+                company_list: formData.get('companyList'), // ✅ תיקון שליחת company_list
+                permissions: permissions.join('')
+            };
+                
+            try {
+                const response = await fetch('/api/parking-manager/update-user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('editAlert', 'success', data.message);
+                    setTimeout(() => {
+                        closeEditModal();
+                        loadParkingInfo(); // רענון רשימת המשתמשים
+                    }, 1500);
+                } else {
+                    showAlert('editAlert', 'error', data.message);
+                }
+            } catch (error) {
+                showAlert('editAlert', 'error', 'שגיאה בעדכון משתמש');
+            }
+            
+            editBtn.textContent = originalText;
+            editBtn.disabled = false;
         });
         
         // הצגת התראות
