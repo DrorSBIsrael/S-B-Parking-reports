@@ -19,7 +19,7 @@
         }
         
         .container {
-            max-width: 1200px;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -30,29 +30,12 @@
             border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             margin-bottom: 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            text-align: center;
         }
         
         .header h1 {
             color: #2c3e50;
             font-size: 28px;
-        }
-        
-        .back-btn {
-            background: #6c757d;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-        }
-        
-        .back-btn:hover {
-            background: #5a6268;
         }
         
         .parking-info {
@@ -93,19 +76,12 @@
         }
         
         .main-content {
-            display: grid;
-            grid-template-columns: 1fr 2fr;
+            display: flex;
+            flex-direction: column;
             gap: 30px;
         }
         
-        .create-user-section {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            height: fit-content;
-        }
-        
+        .create-user-section,
         .users-list-section {
             background: white;
             padding: 25px;
@@ -161,6 +137,7 @@
         .btn-primary {
             background: #667eea;
             color: white;
+            width: 100%;
         }
         
         .btn-primary:hover {
@@ -233,7 +210,7 @@
         }
         
         .search-box {
-            width: 300px;
+            width: 100%;
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 6px;
@@ -249,11 +226,39 @@
             color: #004085;
         }
         
+        .permissions-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .permission-item {
+            display: flex;
+            align-items: center;
+            font-weight: normal;
+            padding: 8px;
+            border-radius: 4px;
+            background: #f8f9fa;
+            transition: background 0.2s;
+        }
+        
+        .permission-item:hover {
+            background: #e9ecef;
+        }
+        
+        .permission-item input[type="checkbox"] {
+            width: auto;
+            margin-left: 8px;
+            margin-right: 0;
+        }
+        
+        .permission-basic {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        
         @media (max-width: 768px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-            
             .parking-details {
                 flex-direction: column;
                 gap: 15px;
@@ -267,6 +272,10 @@
             .users-table td {
                 padding: 8px;
             }
+            
+            .permissions-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -274,12 +283,11 @@
     <div class="container">
         <div class="header">
             <h1>🅿️ ניהול משתמשים - מנהל חניון</h1>
-            <a href="/dashboard" class="back-btn">חזרה לדשבורד</a>
         </div>
         
         <!-- מידע על החניון -->
         <div class="parking-info">
-            <h2 id="parkingTitle">🔄 טוען נתוני חניון...</h2>
+            <h2 id="parkingTitle">📄 טוען נתוני חניון...</h2>
             <div class="parking-details" id="parkingDetails" style="display: none;">
                 <div class="parking-detail">
                     <div class="label">מספר פרויקט</div>
@@ -318,63 +326,67 @@
                         <input type="email" id="email" name="email" required>
                     </div>
                     
-	<div class="form-group">
-	    <label for="companyList">רשימת מספרי חברות</label>
-	    <input type="text" id="companyList" name="companyList" 
-	           placeholder="לדוגמה: 100-2-55">
-	    <small style="color: #6c757d; font-size: 12px;">
- 	       הזינו מספרי חברות מופרדים במקף (-) בלבד. השאירו ריק אם לא רלוונטי.
- 	   </small>
-	</div>
+                    <div class="form-group">
+                        <label for="companyList">רשימת מספרי חברות</label>
+                        <input type="text" id="companyList" name="companyList" 
+                               placeholder="לדוגמא: 100-2-55">
+                        <small style="color: #6c757d; font-size: 12px;">
+                           הזינו מספרי חברות מופרדים במקף (-) בלבד. השאירו ריק אם לא רלוונטי.
+                       </small>
+                    </div>
 
-	<div class="form-group">
-	    <label for="accessLevel">רמת גישה</label>
-	    <select id="accessLevel" name="accessLevel">
-	        <option value="single_parking">גישה לחניון בלבד</option>
- 	   </select>
-	</div>
-	
-	<div class="form-group">
-	    <label>הרשאות משתמש</label>
-	    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
-	        <label style="display: flex; align-items: center; font-weight: normal;">
-	            <input type="checkbox" name="permissions" value="G" style="width: auto; margin-left: 5px;">
-	            <span>G - יצירת אורחים</span>
-	        </label>
-	        <label style="display: flex; align-items: center; font-weight: normal;">
-	            <input type="checkbox" name="permissions" value="N" style="width: auto; margin-left: 5px;">
-	            <span>N - יצירת מנויים חדשים</span>
-	        </label>
-	        <label style="display: flex; align-items: center; font-weight: normal;">
-	            <input type="checkbox" name="permissions" value="P" style="width: auto; margin-left: 5px;">
-	            <span>P - עדכון פרופילים</span>
-	        </label>
-	        <label style="display: flex; align-items: center; font-weight: normal;">
-	            <input type="checkbox" name="permissions" value="R" style="width: auto; margin-left: 5px;">
-	            <span>R - צפייה בדוחות</span>
-	        </label>
-	        <label style="display: flex; align-items: center; font-weight: normal;">
-	            <input type="checkbox" name="permissions" value="T" style="width: auto; margin-left: 5px;">
-	            <span>T - עריכת מספר תג</span>
-	        </label>
-	        <label style="display: flex; align-items: center; font-weight: normal;">
-	            <input type="checkbox" name="permissions" value="1" style="width: auto; margin-left: 5px;">
-	            <span>1 - עריכת רכב 1 בלבד</span>
-	        </label>
-	        <label style="display: flex; align-items: center; font-weight: normal;">
-	            <input type="checkbox" name="permissions" value="2" style="width: auto; margin-left: 5px;">
-	            <span>2 - עריכת רכבים 1-2</span>
-	        </label>
-	        <label style="display: flex; align-items: center; font-weight: normal;">
-	            <input type="checkbox" name="permissions" value="3" style="width: auto; margin-left: 5px;">
-	            <span>3 - עריכת כל הרכבים</span>
-	        </label>
-	    </div>
-	    <small style="color: #6c757d; font-size: 12px; margin-top: 10px; display: block;">
-	        ללא בחירה, המשתמש יקבל הרשאת B (בסיס) - צפייה ועריכה בסיסית בלבד
-	    </small>
-	</div>
+                    <div class="form-group">
+                        <label for="accessLevel">רמת גישה</label>
+                        <select id="accessLevel" name="accessLevel">
+                            <option value="single_parking">גישה לחניון בלבד</option>
+                       </select>
+                    </div>
                     
+                    <div class="form-group">
+                        <label>הרשאות משתמש</label>
+                        <div class="permissions-grid">
+                            <label class="permission-item permission-basic">
+                                <input type="checkbox" name="permissions" value="B" checked>
+                                <span>B - בסיס (צפייה ועריכה בסיסית)</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="permissions" value="G">
+                                <span>G - יצירת אורחים</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="permissions" value="N">
+                                <span>N - יצירת מנויים חדשים</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="permissions" value="P">
+                                <span>P - עדכון פרופילים</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="permissions" value="R">
+                                <span>R - צפייה בדוחות</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="permissions" value="T">
+                                <span>T - עריכת מספר תג</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="permissions" value="1">
+                                <span>1 - עריכת רכב 1 בלבד</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="permissions" value="2">
+                                <span>2 - עריכת רכבים 1-2</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="permissions" value="3">
+                                <span>3 - עריכת כל הרכבים</span>
+                            </label>
+                        </div>
+                        <small style="color: #6c757d; font-size: 12px; margin-top: 10px; display: block;">
+                            ברירת המחדל היא B (בסיס) - צפייה ועריכה בסיסית. ניתן לבחור הרשאות נוספות.
+                        </small>
+                    </div>
+                        
                     <button type="submit" class="btn btn-primary" id="createBtn">
                         ✅ הוסף משתמש לחניון
                     </button>
@@ -387,7 +399,7 @@
                 
                 <input type="text" class="search-box" id="searchBox" placeholder="🔍 חפש לפי שם משתמש או אימייל...">
                 
-                <div id="usersLoading" class="loading">🔄 טוען רשימת משתמשים...</div>
+                <div id="usersLoading" class="loading">📄 טוען רשימת משתמשים...</div>
                 <div id="usersContent" style="display: none;">
                     <table class="users-table">
                         <thead>
@@ -511,35 +523,48 @@
             displayUsers(filteredUsers);
         });
         
+        // וידוא שתמיד B מסומן
+        document.addEventListener('change', function(e) {
+            if (e.target.name === 'permissions') {
+                const bCheckbox = document.querySelector('input[value="B"]');
+                const checkedBoxes = document.querySelectorAll('input[name="permissions"]:checked');
+                
+                // אם אין שום הרשאה מסומנת, סמן B
+                if (checkedBoxes.length === 0) {
+                    bCheckbox.checked = true;
+                }
+            }
+        });
+        
         // יצירת משתמש חדש
         document.getElementById('createUserForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const createBtn = document.getElementById('createBtn');
             const originalText = createBtn.textContent;
-            createBtn.textContent = '🔄 מוסיף משתמש...';
+            createBtn.textContent = '📄 מוסיף משתמש...';
             createBtn.disabled = true;
             
             const formData = new FormData(e.target);
-	
-	// Collect selected permissions
-	const permissions = [];
-	const permissionCheckboxes = document.querySelectorAll('input[name="permissions"]:checked');
-	permissionCheckboxes.forEach(checkbox => {
-	    permissions.push(checkbox.value);
-	});
-	
-	// If no permissions selected, default to 'B'
-	const permissionsString = permissions.length > 0 ? permissions.join('') : 'B';
-	
-	const userData = {
-	    username: formData.get('username'),
-	    email: formData.get('email'),
-	    access_level: formData.get('accessLevel'),
-	    company_list: formData.get('companyList'),
-	    permissions: permissionsString
-	};
+        
+            // Collect selected permissions
+            const permissions = [];
+            const permissionCheckboxes = document.querySelectorAll('input[name="permissions"]:checked');
+            permissionCheckboxes.forEach(checkbox => {
+                permissions.push(checkbox.value);
+            });
             
+            // If no permissions selected, default to 'B'
+            const permissionsString = permissions.length > 0 ? permissions.join('') : 'B';
+            
+            const userData = {
+                username: formData.get('username'),
+                email: formData.get('email'),
+                access_level: formData.get('accessLevel'),
+                company_list: formData.get('companyList'),
+                permissions: permissionsString
+            };
+                
             try {
                 const response = await fetch('/api/parking-manager/create-user', {
                     method: 'POST',
@@ -554,6 +579,8 @@
                 if (data.success) {
                     showAlert('createAlert', 'success', data.message);
                     e.target.reset();
+                    // החזר B להיות מסומן
+                    document.querySelector('input[value="B"]').checked = true;
                     loadParkingInfo(); // רענון רשימת המשתמשים
                 } else {
                     showAlert('createAlert', 'error', data.message);
@@ -577,6 +604,10 @@
                 alertDiv.style.display = 'none';
             }, 5000);
         }
+        
+        // הוספת פונקציות לסקופ הגלובלי
+        window.editUser = editUser;
+        window.closeEditModal = closeEditModal;
         
         // טעינה ראשונית
         window.addEventListener('load', loadParkingInfo);
