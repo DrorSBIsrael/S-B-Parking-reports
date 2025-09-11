@@ -2687,7 +2687,7 @@ def parking_manager_create_user():
        data = request.get_json()
        username = data.get('username', '').strip()
        email = data.get('email', '').strip()
-       permissions = data.get('permissions', 'B').strip()  # Default to 'B' if not provided
+       permissions = data.get('permissions', 'B2').strip()  # Default to 'B' if not provided
        
        print(f"🅿️ Parking manager creating COMPANY MANAGER for parking: {manager_data['project_number']} ({manager_data['parking_name']})")
        
@@ -2801,6 +2801,123 @@ def parking_manager_create_user():
    except Exception as e:
        print(f"❌ Parking manager create company manager error: {str(e)}")
        return jsonify({'success': False, 'message': f'שגיאה במערכת: {str(e)}'})
+
+@app.route('/api/parking-manager/update-user', methods=['POST'])
+def parking_manager_update_user():
+    """עדכון קוד מנהל חברה - למנהל חניון בלבד - רק לחניון שלו"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        # בדיקת הרשאות מנהל חניון
+        manager_result = supabase.table('user_parkings').select(
+            'code_type, project_number, parking_name, company_type'
+        ).eq('email', session['user_email']).execute()
+        
+        if not manager_result.data or manager_result.data[0].get('code_type') != 'parking_manager':
+            return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
+        
+        manager_data = manager_result.data[0]
+        
+        data = request.get_json()
+        user_id = data.get('user_id')
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip()
+        permissions = data.get('permissions', 'B2').strip()  # Default to 'B2' if not provided
+        company_list = data.get('company_list', '').strip()
+        access_level = data.get('access_level', 'single_parking').strip()
+        
+        print(f"🅿️ Parking manager updating user ID {user_id} for parking: {manager_data['project_number']} ({manager_data['parking_name']})")
+        
+        # אימות קלט בסיסי
+        if not user_id:
+            return jsonify({'success': False, 'message': 'חסר מזהה משתמש'})
+            
+        if not username or not email:
+            return jsonify({'success': False, 'message': 'יש למלא שם משתמש ואימייל'})
+
+        # וידוא שהמשתמש שמעדכנים שייך לחניון של המנהל
+        user_check = supabase.table('user_parkings').select(
+            'user_id, username, email, project_number, code_type'
+        ).eq('user_id', user_id).eq('project_number', manager_data['project_number']).execute()
+        
+        if not user_check.data:
+            return jsonify({'success': False, 'message': 'משתמש לא נמצא או אין הרשאה לעדכן אותו'})
+        
+        current_user = user_check.data[0]
+        
+        # וידוא שמעדכנים רק company_manager (לא parking_manager)
+        if current_user.get('code_type') == 'parking_manager':
+            return jsonify({'success': False, 'message': 'לא ניתן לערוך מנהל חניון'})
+
+        # תיקוף שם משתמש (רק אם השתנה)
+        if username != current_user['username']:
+            is_valid_username, username_or_error = validate_username(username)
+            if not is_valid_username:
+                return jsonify({'success': False, 'message': username_or_error})
+            
+            # בדיקה אם שם המשתמש החדש כבר קיים
+            existing_username = supabase.table('user_parkings').select('username').eq('username', username).neq('user_id', user_id).execute()
+            if existing_username.data:
+                return jsonify({'success': False, 'message': f'שם משתמש "{username}" כבר קיים במערכת'})
+        
+        # אימות אימייל (רק אם השתנה)
+        if email != current_user['email']:
+            is_valid_email, validated_email = validate_input(email, "email")
+            if not is_valid_email:
+                return jsonify({'success': False, 'message': 'כתובת אימייל לא תקינה'})
+            
+            # בדיקה אם האימייל החדש כבר קיים
+            existing_email = supabase.table('user_parkings').select('email').eq('email', validated_email).neq('user_id', user_id).execute()
+            if existing_email.data:
+                return jsonify({'success': False, 'message': f'כתובת אימייל "{validated_email}" כבר קיימת במערכת'})
+        else:
+            validated_email = email
+
+        # וידוא שB תמיד כלול בהרשאות
+        if 'B' not in permissions:
+            permissions = 'B' + permissions
+        
+        # הכנת הנתונים לעדכון
+        current_time = datetime.now(timezone.utc).isoformat()
+        
+        update_data = {
+            'username': username,
+            'email': validated_email,
+            'permissions': permissions,
+            'company_list': company_list if company_list else None,
+            'access_level': access_level,
+            'updated_at': current_time
+        }
+        
+        print(f"💾 Updating user {user_id} in parking: {manager_data['project_number']} ({manager_data['parking_name']})")
+        print(f"📝 Update data: {update_data}")
+        
+        # עדכון המשתמש במסד הנתונים
+        result = supabase.table('user_parkings').update(update_data).eq('user_id', user_id).eq('project_number', manager_data['project_number']).execute()
+        
+        if result.data:
+            print(f"✅ User updated successfully: {username} (ID: {user_id}) - FOR PARKING: {manager_data['project_number']} ({manager_data['parking_name']})")
+            
+            return jsonify({
+                'success': True,
+                'message': f'המשתמש {username} עודכן בהצלחה עבור חניון {manager_data["parking_name"]}!',
+                'user_data': {
+                    'user_id': user_id,
+                    'username': username,
+                    'email': validated_email,
+                    'permissions': permissions,
+                    'parking_name': manager_data['parking_name'],
+                    'project_number': manager_data['project_number']
+                }
+            })
+        else:
+            print(f"❌ Failed to update user in database")
+            return jsonify({'success': False, 'message': 'שגיאה בעדכון המשתמש במסד הנתונים'})
+        
+    except Exception as e:
+        print(f"❌ Parking manager update user error: {str(e)}")
+        return jsonify({'success': False, 'message': f'שגיאה במערכת: {str(e)}'})
 
 @app.route('/api/master/reset-password', methods=['POST'])
 def master_reset_password():
