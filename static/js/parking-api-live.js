@@ -24,7 +24,6 @@ class ParkingAPIXML {
             useProxy: true,  // Always use proxy
             currentParkingId: null
         };
-        console.log('[ParkingAPIXML] Initialized with baseUrl:', this.config.baseUrl);
         // Initialization complete - using secure proxy
     }
     
@@ -115,13 +114,6 @@ class ParkingAPIXML {
                     payload: data
                 };
                 // Only log profile requests for debugging
-                if (endpoint.includes('profile')) {
-                    console.log('[makeRequest] Profile request:', {
-                        url: this.config.baseUrl,
-                        endpoint: endpoint,
-                        parking_id: this.config.currentParkingId
-                    });
-                }
                 response = await fetch(this.config.baseUrl, {
                     method: 'POST',
                     headers: {
@@ -168,7 +160,6 @@ class ParkingAPIXML {
             
             // Only log errors and profile-related responses
             if (!response.ok || endpoint.includes('profile')) {
-                console.log('[makeRequest] Response status:', response.status, 'for endpoint:', endpoint);
             }
             
             if (!response.ok) {
@@ -252,7 +243,6 @@ class ParkingAPIXML {
     }
     
     async getUsageProfiles() {
-        console.log('[getUsageProfiles] Current parking ID:', this.config.currentParkingId);
         return this.makeRequest('usageprofiles');
     }
     
