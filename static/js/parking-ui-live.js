@@ -166,7 +166,6 @@ class ParkingUIIntegrationXML {
                 const parkings = result.parkings;
                 
                 if (!parkings || parkings.length === 0) {
-                    console.warn('[loadCompanies] No parkings found, using fallback');
                     this.loadMockParkings();
                     return;
                 }
@@ -713,7 +712,6 @@ class ParkingUIIntegrationXML {
                 // Using enhanced API data
             }
         } catch (error) {
-            console.warn(`Could not load detailed data for company ${company.id}:`, error);
             // Use default values
             const vehiclesEl = document.getElementById(`vehicles-${company.id}`);
             const presentEl = document.getElementById(`present-${company.id}`);
@@ -1110,7 +1108,6 @@ class ParkingUIIntegrationXML {
                 }
             }
         } catch (error) {
-            console.warn('Could not update company info:', error);
         }
     }
     
@@ -1531,7 +1528,6 @@ class ParkingUIIntegrationXML {
                 }
                 
                 try {
-                    console.log(`[Hover Loading] Loading details for subscriber ${subscriber.subscriberNum}`);
                     
                     // Get full details
                     const result = await this.api.getConsumerDetailOnDemand(
@@ -1594,7 +1590,6 @@ class ParkingUIIntegrationXML {
                             firstCell.innerHTML = originalFirstCellContent;
                         }
                         
-                        console.log(`[Hover Loading] Details loaded successfully for subscriber ${subscriber.subscriberNum}`);
                     } else {
                         // Restore original styles on error
                         row.style.opacity = originalOpacity;
@@ -1665,7 +1660,6 @@ class ParkingUIIntegrationXML {
         const isVeryLarge = subscribers.length > 500;
         
         if (isVeryLarge) {
-            console.log(`[displaySubscribers] Rendering ${subscribers.length} subscribers using batch rendering for performance`);
             
             // Show loading message for very large companies
             const loadingRow = document.createElement('tr');
@@ -1777,7 +1771,6 @@ class ParkingUIIntegrationXML {
                     tbody.innerHTML = '';
                 }
                 tbody.appendChild(fragment);
-                console.log(`[displaySubscribers] Finished rendering ${subscribers.length} subscribers in ${currentBatch + 1} batches`);
                 
                 // Clear loading state after all batches are done
                 this.setLoading(false, 'loadingState');
@@ -1889,7 +1882,6 @@ class ParkingUIIntegrationXML {
         if (!this.currentContract) return [];
         
         try {
-            console.log('🔍 [getCompanyProfiles] Getting profiles from subscribers');
             
             // Get all subscribers to see what profiles are in use
             const profilesInUse = new Map();
@@ -1897,7 +1889,6 @@ class ParkingUIIntegrationXML {
             
             // First check if we already have profiles in current subscribers
             if (this.subscribers && this.subscribers.length > 0) {
-                console.log(`📊 [getCompanyProfiles] Checking ${this.subscribers.length} subscribers for profiles`);
                 
                 this.subscribers.forEach((subscriber, idx) => {
                     // Check multiple places for profile info
@@ -1927,13 +1918,11 @@ class ParkingUIIntegrationXML {
                     
                     profilesInUse.set(profileId, profileName);
                     needToLoadDetails = false;
-                    console.log(`✅ [getCompanyProfiles] Found profile: ${profileId} - ${profileName}`);
                 });
             }
             
             // If we need more details and have few subscribers, load their details
             if (needToLoadDetails && this.subscribers && this.subscribers.length > 0 && this.subscribers.length <= 10) {
-                console.log('🔄 [getCompanyProfiles] Loading subscriber details to get profiles');
                 
                 for (let i = 0; i < Math.min(5, this.subscribers.length); i++) {
                     const subscriber = this.subscribers[i];
@@ -1974,12 +1963,10 @@ class ParkingUIIntegrationXML {
                 profilesInUse.forEach((name, id) => {
                     profiles.push({ id, name });
                 });
-                console.log('📋 [getCompanyProfiles] Returning profiles from subscribers:', profiles);
                 return profiles;
             }
             
             // If no profiles found in subscribers, return empty array
-            console.log('⚠️ [getCompanyProfiles] No profiles found in subscribers');
             return [];
             
         } catch (error) {
@@ -2105,7 +2092,6 @@ class ParkingUIIntegrationXML {
                 }
             }
                 
-            console.log('[loadUsageProfiles] Profile select configured');
         } catch (error) {
             console.error('[loadUsageProfiles] Error loading profiles:', error);
         }
@@ -2115,14 +2101,12 @@ class ParkingUIIntegrationXML {
      * Edit subscriber - prepare data for modal
      */
     async editSubscriber(subscriber) {
-        console.log(`[editSubscriber] Called with subscriber ${subscriber.subscriberNum}, hasFullDetails: ${subscriber.hasFullDetails}`);
         
         // Always allow viewing subscriber details
         // Permission check will be done when saving changes
         
         // Check if we have full details
         if (!subscriber.hasFullDetails) {
-            console.log(`[UI] Loading full details for subscriber ${subscriber.subscriberNum}`);
             
             // Show loading indicator
             this.showProgressMessage('טוען פרטי מנוי...');
@@ -2142,14 +2126,6 @@ class ParkingUIIntegrationXML {
                 if (result.success) {
                     const detail = result.data;
                     
-                    console.log(`[editSubscriber] Loaded detail from server:`, JSON.stringify({
-                        validFrom: detail.identification?.validFrom,
-                        validUntil: detail.identification?.validUntil,
-                        xValidFrom: detail.consumer?.xValidFrom,
-                        xValidUntil: detail.consumer?.xValidUntil,
-
-                        present: detail.identification?.present
-                    }, null, 2));
                     
                     // Preserve important fields and map correctly
                     const preservedFields = {
@@ -2212,7 +2188,6 @@ class ParkingUIIntegrationXML {
             subscriber.vehicle2 = subscriber.vehicle2 || subscriber.lpn2 || '';
             subscriber.vehicle3 = subscriber.vehicle3 || subscriber.lpn3 || '';
             
-            console.log('[editSubscriber from UI] Full subscriber data:', JSON.stringify(subscriber, null, 2));
             window.editSubscriber(subscriber);
         } else {
             console.error('[editSubscriber] window.editSubscriber function not found!');
@@ -2439,7 +2414,6 @@ class ParkingUIIntegrationXML {
                 // Server response received
                 
                 if (result.success) {
-                    console.log('New consumer created successfully');
                     
                     // Check if we got the created consumer ID from server
                     if (result.data && result.data.id) {
@@ -2448,7 +2422,6 @@ class ParkingUIIntegrationXML {
                     }
                     // Send email notification if email provided
                     if (subscriberData.email) {
-                        console.log(`Sending email notification to: ${subscriberData.email}`);
                         try {
                             const emailResponse = await fetch('/api/company-manager/send-guest-email', {
                                 method: 'POST',
@@ -2467,7 +2440,6 @@ class ParkingUIIntegrationXML {
                             });
                             const emailResult = await emailResponse.json();
                             if (emailResult.success) {
-                                console.log('Email sent successfully');
                                 showToast('מייל אישור נשלח לאורח', 'success');
                             } else {
                                 console.error('Failed to send email:', emailResult.message);
@@ -2700,7 +2672,6 @@ class ParkingUIIntegrationXML {
                 
                 // Send email notification if email provided (for updates too)
                 if (!isReallyNew && subscriberData.email && result.success) {
-                    console.log(`Sending email notification for updated subscriber to: ${subscriberData.email}`);
                     try {
                         const emailResponse = await fetch('/api/company-manager/send-guest-email', {
                             method: 'POST',
@@ -2719,7 +2690,6 @@ class ParkingUIIntegrationXML {
                         });
                         const emailResult = await emailResponse.json();
                         if (emailResult.success) {
-                            console.log('Email sent successfully');
                             showToast('מייל אישור נשלח למנוי', 'success');
                         } else {
                             console.error('Failed to send email:', emailResult.message);
@@ -2915,13 +2885,10 @@ class ParkingUIIntegrationXML {
             return;
         }
         
-        console.log('[exportToCSV] Exporting data for', this.subscribers.length, 'subscribers');
-        console.log('[exportToCSV] Sample subscriber data:', this.subscribers[0]);
         
         // Check if all subscribers have full details
         const subscribersWithoutDetails = this.subscribers.filter(s => !s.hasFullDetails);
         if (subscribersWithoutDetails.length > 0) {
-            console.log(`[exportToCSV] Warning: ${subscribersWithoutDetails.length} subscribers without full details`);
             
             // For large companies, offer to load all details first
             if (subscribersWithoutDetails.length > 10) {
@@ -2953,17 +2920,6 @@ class ParkingUIIntegrationXML {
         
         // Create CSV rows
         const rows = this.subscribers.map(subscriber => {
-            // Debug log for first few subscribers
-            if (this.subscribers.indexOf(subscriber) < 3) {
-                console.log(`[exportToCSV] Subscriber ${subscriber.subscriberNum}:`, {
-                    firstName: subscriber.firstName,
-                    lastName: subscriber.lastName,
-                    surname: subscriber.surname,
-                    vehicle1: subscriber.vehicle1,
-                    lpn1: subscriber.lpn1,
-                    hasFullDetails: subscriber.hasFullDetails
-                });
-            }
             
             return [
             subscriber.companyNum || '',
@@ -3086,7 +3042,6 @@ class ParkingUIIntegrationXML {
 
     
     async initialize() {
-        console.log('Initializing Parking XML UI Integration...');
         
         // Load initial data
         await this.loadCompanies();
@@ -3097,7 +3052,6 @@ class ParkingUIIntegrationXML {
         // Set up event listeners
         this.setupEventListeners();
         
-        console.log('Parking XML UI Integration initialized');
     }
     
     setupEventListeners() {
