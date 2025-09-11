@@ -4231,7 +4231,7 @@ def parking_manager_get_info():
         
         # קבלת משתמשי החניון
         parking_users = supabase.table('user_parkings').select(
-            'user_id, username, email, company_list, role, access_level, permissions, created_at, password_changed_at, is_temp_password'
+             'user_id, username, email, company_list, permissions, role, access_level, created_at, is_temp_password'
         ).eq('project_number', user_data['project_number']).order('created_at', desc=True).execute()
         
         return jsonify({
