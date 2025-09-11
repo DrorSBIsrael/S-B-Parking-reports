@@ -165,9 +165,10 @@
         
         .users-table th,
         .users-table td {
-            padding: 12px;
+            padding: 8px;
             text-align: right;
             border-bottom: 1px solid #dee2e6;
+            font-size: 13px;
         }
         
         .users-table th {
@@ -715,7 +716,7 @@
             document.getElementById('editUsername').value = user.username || '';
             document.getElementById('editEmail').value = user.email || '';
             document.getElementById('editCompanyList').value = user.company_list || '';
-            document.getElementById('editAccessLevel').value = user.access_level || 'single_parking';
+            document.getElementById('editAccessLevel').value = 'single_parking'; // תמיד גישה לחניון בלבד
             
             // סימון ההרשאות הנוכחיות
             const permissions = user.permissions || 'B2';
