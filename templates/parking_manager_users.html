@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ניהול משתמשים - מנהל חניון</title>
+    <title>ניהול משתמשים מערכת שיידט את בכמן - מנהל חניון</title>
     <style>
         * {
             margin: 0;
@@ -390,9 +390,9 @@
                     <div class="form-group">
                         <label for="companyList">רשימת מספרי חברות</label>
                         <input type="text" id="companyList" name="companyList" 
-                               placeholder="לדוגמא: 100-2-55">
+                               placeholder="לדוגמא: 100,2-5">
                         <small style="color: #6c757d; font-size: 12px;">
-                           הזינו מספרי חברות מופרדים במקף (-) בלבד. השאירו ריק אם לא רלוונטי.
+                           הזינו מספרי חברות מופרדים במקף (-) או (,) בלבד. השאירו ריק אם לא רלוונטי.
                        </small>
                     </div>
 
@@ -467,12 +467,13 @@
                             <tr>
                                 <th>שם משתמש</th>
                                 <th>אימייל</th>
+                                <th>חברה</th>
                                 <th>תפקיד</th>
                                 <th>רמת גישה</th>
                                 <th>הרשאות</th>
                                 <th>תאריך יצירה</th>
                                 <th>סטטוס</th>
-                                <th>פעולות</th>
+                                <th>עריכה</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
@@ -508,7 +509,7 @@
                     <div class="form-group">
                         <label for="editCompanyList">רשימת מספרי חברות</label>
                         <input type="text" id="editCompanyList" name="companyList" 
-                               placeholder="לדוגמא: 100-2-55">
+                               placeholder="לדוגמא: 100,2-55">
                     </div>
 
                     <div class="form-group">
