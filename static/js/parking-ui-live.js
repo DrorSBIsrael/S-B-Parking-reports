@@ -1047,7 +1047,7 @@ class ParkingUIIntegrationXML {
         if (permissions) {
             let permissionText = 'הרשאות: ';
             if (permissions === 'B' || permissions === '') {
-                permissionText += 'בסיס (צפייה בלבד)';
+                permissionText += 'בסיס (עריכה בלבד)';
             } else {
                 const permMap = {
                     'G': 'אורח',
@@ -1056,8 +1056,8 @@ class ParkingUIIntegrationXML {
                     'R': 'דוחות',
                     'T': 'מספר תג',
                     '1': 'רכב 1',
-                    '2': 'רכבים 1-2',
-                    '3': 'רכבים 1-3'
+                    '2': 'רכבים 2',
+                    '3': 'כל הרכבים'
                 };
                 const permList = permissions.split('').map(p => permMap[p] || p).join(', ');
                 permissionText += permList;
