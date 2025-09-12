@@ -3372,8 +3372,8 @@ def company_manager_proxy():
         if is_local_dev:
             # בסביבת פיתוח - השתמש בשרת המקומי
             # LOCAL DEV MODE - Using local parking server
-            ip_address = '10.35.240.100'
-            port = 8443
+            ip_address = '100.100.100.100'
+            port = 9999
         else:
             # ב-Production (Render) - השתמש בשרת החיצוני
             # PRODUCTION MODE (Render)
@@ -3382,7 +3382,7 @@ def company_manager_proxy():
             if not ip_address or ip_address == 'None':
                 # אם אין בdatabase, השתמש בברירת מחדל
                 ip_address = '192.117.0.122'
-                port = 8240
+                port = 9999
                 # No IP in database, using default
             else:
                 # השתמש בכתובת מה-database
@@ -3391,7 +3391,7 @@ def company_manager_proxy():
             
             # וודא שהפורט נכון
             if not port or port == 0:
-                port = 8240
+                port = 9999
                 # Fixed port
         
         if not ip_address:
