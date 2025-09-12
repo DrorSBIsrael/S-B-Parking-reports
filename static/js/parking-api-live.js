@@ -480,7 +480,7 @@ class ParkingAPIXML {
                         if (callbacks.onProgress) {
                             callbacks.onProgress({ 
                                 percent: 0,
-                                message: `מתחיל לטעון פרטי ${basicSubscribers.length} מנויים...`
+                                message: `מתחיל לטעון פרטי ${basicSubscribers.length} מנויים המתן לסיום...`
                             });
                         }
                         
