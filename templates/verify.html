@@ -1,1 +1,245 @@
-<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>אימות קוד - S&B Parking</title><style> * { margin: 0; padding: 0; box-sizing: border-box; } body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; } .container { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); width: 100%; max-width: 400px; text-align: center; position: relative; } .logo { font-size: 2.5rem; color: #667eea; margin-bottom: 10px; font-weight: bold; } .subtitle { color: #666; margin-bottom: 30px; font-size: 1.1rem; } .form-group { margin-bottom: 20px; text-align: right; } label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; } input[type="text"] { width: 100%; padding: 12px 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; transition: border-color 0.3s; text-align: center; font-weight: bold; letter-spacing: 2px; } input[type="text"]:focus { outline: none; border-color: #667eea; } .verify-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: transform 0.2s; margin-bottom: 15px; } .verify-btn:hover { transform: translateY(-2px); } .verify-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; } .back-link { color: #667eea; text-decoration: none; font-size: 14px; } .back-link:hover { text-decoration: underline; } .error-message { color: #e74c3c; margin-top: 10px; font-size: 14px; } .instructions { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; color: #666; font-size: 14px; } .loading { display: none; margin-top: 10px; } .loading::after { content: ''; display: inline-block; width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; } .credit { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #999; font-style: italic; } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } </style></head><body><div class="container"><div class="logo">שיידט את בכמן ישראל</div><div class="subtitle">אימות קוד</div><div class="instructions"> נשלח קוד אימות לכתובת האימייל שלך<br> אנא הכנס את הקוד בן 6 הספרות </div><form id="verifyForm"><div class="form-group"><label for="code">קוד אימות:</label><input type="text" id="code" name="code" maxlength="6" placeholder="000000" required></div><button type="submit" class="verify-btn" id="verifyBtn">אימות</button><div class="loading" id="loading"></div><div class="error-message" id="errorMessage"></div></form><a href="/login" class="back-link">חזרה להתחברות</a><div class="credit">נוצר ע"י דרור פרינץ</div></div><script> document.getElementById('verifyForm').addEventListener('submit', async function(e) { e.preventDefault(); const code = document.getElementById('code').value; const errorDiv = document.getElementById('errorMessage'); const loadingDiv = document.getElementById('loading'); const verifyBtn = document.getElementById('verifyBtn'); // Clear previous errors errorDiv.textContent = ''; // Validate code if (!code || code.length !== 6) { errorDiv.textContent = 'נא להכניס קוד בן 6 ספרות'; return; } // Show loading verifyBtn.disabled = true; verifyBtn.textContent = 'מאמת...'; loadingDiv.style.display = 'block'; try { const response = await fetch('/api/verify-code', { method: 'POST', headers: { 'Content-Type': 'application/json', }, body: JSON.stringify({ code: code }) }); const data = await response.json(); if (data.success) { // Success - redirect to dashboard window.location.href = data.redirect || '/dashboard'; } else { // Show error message errorDiv.textContent = data.message || 'שגיאה באימות הקוד'; } } catch (error) { console.error('Verification error:', error); errorDiv.textContent = 'שגיאה בחיבור לשרת'; } finally { // Hide loading verifyBtn.disabled = false; verifyBtn.textContent = 'אימות'; loadingDiv.style.display = 'none'; } }); // Auto-focus on code input document.getElementById('code').focus(); // Allow only numbers document.getElementById('code').addEventListener('input', function(e) { this.value = this.value.replace(/[^0-9]/g, ''); }); </script><script>(function(){'use strict';document.addEventListener('keydown',function(e){if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&e.key==='I')||(e.ctrlKey&&e.shiftKey&&e.key==='J')||(e.ctrlKey&&e.key==='u')){e.preventDefault();e.stopPropagation();alert('פעולה לא מותרת במערכת זו');return false;}});document.addEventListener('contextmenu',function(e){e.preventDefault();alert('עכבר ימני חסום במערכת זו');return false;});document.addEventListener('selectstart',function(e){e.preventDefault();return false;});document.addEventListener('dragstart',function(e){e.preventDefault();return false;});let devtools={open:false,orientation:null};setInterval(function(){if(window.outerHeight-window.innerHeight>200||window.outerWidth-window.innerWidth>200){if(!devtools.open){devtools.open=true;alert('סגירת כלי פיתוח נדרשת');window.location.href='about:blank';}}else{devtools.open=false;}},500);setInterval(function(){console.clear();},1000);})();</script></body></html>
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>אימות קוד - S&B Parking</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            position: relative;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: right;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            text-align: center;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .verify-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-bottom: 15px;
+        }
+
+        .verify-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .verify-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .back-link {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .instructions {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .credit {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #999;
+            font-style: italic;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">שיידט את בכמן ישראל</div>
+        <div class="subtitle">אימות קוד</div>
+        
+        <div class="instructions">
+            נשלח קוד אימות לכתובת האימייל שלך<br>
+            אנא הכנס את הקוד בן 6 הספרות
+        </div>
+
+        <form id="verifyForm">
+            <div class="form-group">
+                <label for="code">קוד אימות:</label>
+                <input type="text" id="code" name="code" maxlength="6" placeholder="000000" required>
+            </div>
+
+            <button type="submit" class="verify-btn" id="verifyBtn">אימות</button>
+            <div class="loading" id="loading"></div>
+            <div class="error-message" id="errorMessage"></div>
+        </form>
+
+        <a href="/login" class="back-link">חזרה להתחברות</a>
+        
+        <div class="credit">נוצר ע"י דרור פרינץ</div>
+    </div>
+
+    <script>
+        document.getElementById('verifyForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const code = document.getElementById('code').value;
+            const errorDiv = document.getElementById('errorMessage');
+            const loadingDiv = document.getElementById('loading');
+            const verifyBtn = document.getElementById('verifyBtn');
+            
+            // Clear previous errors
+            errorDiv.textContent = '';
+            
+            // Validate code
+            if (!code || code.length !== 6) {
+                errorDiv.textContent = 'נא להכניס קוד בן 6 ספרות';
+                return;
+            }
+            
+            // Show loading
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = 'מאמת...';
+            loadingDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/verify-code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ code: code })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Success - redirect to dashboard
+                    window.location.href = data.redirect || '/dashboard';
+                } else {
+                    // Show error message
+                    errorDiv.textContent = data.message || 'שגיאה באימות הקוד';
+                }
+                
+            } catch (error) {
+                console.error('Verification error:', error);
+                errorDiv.textContent = 'שגיאה בחיבור לשרת';
+            } finally {
+                // Hide loading
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = 'אימות';
+                loadingDiv.style.display = 'none';
+            }
+        });
+
+        // Auto-focus on code input
+        document.getElementById('code').focus();
+        
+        // Allow only numbers
+        document.getElementById('code').addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    </script>
+<script>(function(){'use strict';document.addEventListener('keydown',function(e){if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&e.key==='I')||(e.ctrlKey&&e.shiftKey&&e.key==='J')||(e.ctrlKey&&e.key==='u')){e.preventDefault();e.stopPropagation();alert('פעולה לא מותרת במערכת זו');return false;}});document.addEventListener('contextmenu',function(e){e.preventDefault();alert('עכבר ימני חסום במערכת זו');return false;});document.addEventListener('selectstart',function(e){e.preventDefault();return false;});document.addEventListener('dragstart',function(e){e.preventDefault();return false;});let devtools={open:false,orientation:null};setInterval(function(){if(window.outerHeight-window.innerHeight>200||window.outerWidth-window.innerWidth>200){if(!devtools.open){devtools.open=true;alert('סגירת כלי פיתוח נדרשת');window.location.href='about:blank';}}else{devtools.open=false;}},500);setInterval(function(){console.clear();},1000);})();</script></body>
+</html>
