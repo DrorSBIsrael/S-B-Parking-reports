@@ -2717,7 +2717,18 @@
                 
                 // Add guest mode indicator to modal
                 document.getElementById('editModal').classList.add('guest-mode');
-                
+                // Show guest message field for guests
+    document.getElementById('guestMessageGroup').style.display = 'block';
+    document.getElementById('editGuestMessage').value = '';
+
+    // Setup message counter
+    const messageTextarea = document.getElementById('editGuestMessage');
+    const counter = document.getElementById('messageCounter');
+    if (messageTextarea && counter) {
+        messageTextarea.addEventListener('input', function() {
+            counter.textContent = this.value.length;
+        });
+    }
                 // For guest - profile can be selected but default to 2
                 const profileSelect = document.getElementById('editProfile');
                 // If profile 2 exists, select it
@@ -2744,12 +2755,6 @@
                 document.getElementById('guestMessageGroup').style.display = 'block';
                 document.getElementById('editGuestMessage').value = '';
 
-                // Setup message counter
-                const messageTextarea = document.getElementById('editGuestMessage');
-                const counter = document.getElementById('messageCounter');
-                messageTextarea.addEventListener('input', function() {
-                counter.textContent = this.value.length;
-                });
             } else {
                 document.getElementById('editVehicle2').disabled = false;
                 document.getElementById('editVehicle3').disabled = false;
@@ -2758,11 +2763,10 @@
                 
                 // Remove guest mode indicator
                 document.getElementById('editModal').classList.remove('guest-mode');
-                
-                // Remove guest date handlers
-                removeGuestDateHandlers();
                 // Hide guest message field for regular subscribers
                 document.getElementById('guestMessageGroup').style.display = 'none';
+                // Remove guest date handlers
+                removeGuestDateHandlers();
                 // New subscriber can always choose profile
                 const profileSelect = document.getElementById('editProfile');
                 profileSelect.disabled = false;
