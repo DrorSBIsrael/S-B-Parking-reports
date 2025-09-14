@@ -4555,6 +4555,7 @@ def send_guest_email():
             return jsonify({'success': False, 'message': 'לא מחובר'}), 401
         
         data = request.get_json()
+        print(f"📧 Received data: {data}")  # Debug
         guest_email = data.get('email')
         guest_name = data.get('name', 'אורח')
         valid_from = data.get('validFrom')
@@ -4563,6 +4564,7 @@ def send_guest_email():
         company_name = data.get('companyName', '')
         vehicle_number = data.get('vehicleNumber', '')
         guest_message = data.get('guestMessage', '')
+        print(f"📧 Guest message value: '{guest_message}'")
         
         # Validate email
         is_valid, validated_email = validate_input(guest_email, "email")
@@ -4585,10 +4587,11 @@ def send_guest_email():
                 msg['To'] = validated_email
                 msg['Subject'] = f'הזמנה לחניה - {parking_name}'
                 
-                # Prepare guest message HTML if exists
-                guest_message_html = ""
+                # Debug guest message
                 if guest_message and guest_message.strip():
-                    guest_message_html = f'<li style="margin: 10px 0;"><strong>הודעה:</strong> {guest_message}</li>'
+                    print(f"📧 Guest message found: {guest_message}")
+                else:
+                    print(f"📧 No guest message provided")
                 
                 # Create HTML content
                 html_body = f"""
@@ -4607,7 +4610,7 @@ def send_guest_email():
                             <li style="margin: 10px 0;"><strong>מספר רכב:</strong> {vehicle_number if vehicle_number else "לא צוין"}</li>
                             <li style="margin: 10px 0;"><strong>תאריך תחילה:</strong> {valid_from}</li>
                             <li style="margin: 10px 0;"><strong>תאריך סיום:</strong> {valid_until}</li>
-                            {guest_message_html}
+                            {"<li style='margin: 10px 0;'><strong>הודעה:</strong> " + guest_message + "</li>" if guest_message and guest_message.strip() else ""}
                         </ul>
                     </div>
                     
