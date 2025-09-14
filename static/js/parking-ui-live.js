@@ -2628,6 +2628,9 @@ class ParkingUIIntegrationXML {
                     // Add to subscribers array
                     this.subscribers.push(newSubscriber);
                     
+                    // Update the table to show the new subscriber
+                    this.displaySubscribers();
+                    
                     // Add only the new row instead of re-displaying the entire table
                     const tbody = document.querySelector('#subscribersTable tbody');
                     if (tbody) {
