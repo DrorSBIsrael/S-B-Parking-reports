@@ -13,6 +13,7 @@ import base64
 import urllib3
 import json
 from datetime import datetime, timedelta, timezone
+import logging
 
 # ביטול אזהרות SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -60,6 +61,13 @@ app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 app.config['JSON_AS_ASCII'] = False  # תמיכה בעברית ב-JSON
 app.config['JSONIFY_MIMETYPE'] = 'application/json; charset=utf-8'  # קידוד UTF-8
+
+# צמצום לוגים ב-Render
+if os.environ.get('RENDER'):
+    # Reduce logging in production
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
+    app.logger.setLevel(logging.WARNING)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable caching for development
 
 # Supabase configuration
@@ -4594,7 +4602,7 @@ def send_guest_email():
                             <li style="margin: 10px 0;"><strong>מספר רכב:</strong> {vehicle_number if vehicle_number else "לא צוין"}</li>
                             <li style="margin: 10px 0;"><strong>תאריך תחילה:</strong> {valid_from}</li>
                             <li style="margin: 10px 0;"><strong>תאריך סיום:</strong> {valid_until}</li>
-                            <li style="margin: 10px 0;"><strong>הודעה:</strong> {guest_message if guest_message else "לא צוין"}</li>
+                            {"<li style='margin: 10px 0;'><strong>הודעה:</strong> " + guest_message + "</li>" if guest_message and guest_message.strip() else ""}
                         </ul>
                     </div>
                     
@@ -4624,7 +4632,7 @@ def send_guest_email():
                 - מספר רכב: {vehicle_number if vehicle_number else "לא צוין"}
                 - תאריך תחילה: {valid_from}
                 - תאריך סיום: {valid_until}
-                - הודעה: {guest_message if guest_message else "לא צוין"}
+                {"- הודעה: " + guest_message if guest_message and guest_message.strip() else ""}
                 נא להציג הרשאה זו בכניסה לחניון במידת הצורך.
 
                 ---
