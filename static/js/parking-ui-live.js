@@ -2435,7 +2435,8 @@ class ParkingUIIntegrationXML {
                                     validUntil: subscriberData.validUntil,
                                     parkingName: this.currentParking?.name || this.currentContract.parkingName || this.currentContract.name || 'החניון',
                                     companyName: this.currentContract.name || '',
-                                    vehicleNumber: subscriberData.vehicle1 || ''
+                                    vehicleNumber: subscriberData.vehicle1 || '',
+                                    guestMessage: subscriberData.guestMessage || ''
                                 })
                             });
                             const emailResult = await emailResponse.json();
