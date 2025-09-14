@@ -1248,6 +1248,18 @@
                         <label for="editEmail" data-translate="email">אימייל</label>
                         <input type="email" id="editEmail" placeholder="כתובת אימייל (אופציונלי)">
                     </div>
+                    <div class="form-group" id="guestMessageGroup" style="display: none;">
+                        <label for="editGuestMessage" data-translate="guestMessage">הודעה לאורח</label>
+                        <textarea id="editGuestMessage" 
+                                  placeholder="הודעה אישית לאורח (עד 200 תווים)" 
+                                  maxlength="200" 
+                                  rows="4"
+                                  style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; resize: vertical;">
+                        </textarea>
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            <span id="messageCounter">0</span>/200 תווים
+                        </small>
+                    </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" onclick="closeModal()">
                             <span>❌</span>
@@ -1261,18 +1273,7 @@
                 </form>
             </div>
         </div>
-        <div class="form-group" id="guestMessageGroup" style="display: none;">
-            <label for="editGuestMessage" data-translate="guestMessage">הודעה לאורח</label>
-            <textarea id="editGuestMessage" 
-                      placeholder="הודעה אישית לאורח (עד 200 תווים)" 
-                      maxlength="200" 
-                      rows="4"
-                      style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; resize: vertical;">
-            </textarea>
-            <small style="color: #666; display: block; margin-top: 5px;">
-                <span id="messageCounter">0</span>/200 תווים
-            </small>
-        </div>
+
         <!-- Transactions Modal -->
         <div class="modal" id="transactionsModal" style="display: none;">
             <div class="modal-content" style="max-width: 1200px; width: 90%;">
@@ -2748,12 +2749,6 @@
                     profileHelpText.textContent = '* אורח - ברירת מחדל פרופיל 2';
                     profileHelpText.style.color = '#666';
                 }
-                
-                // Setup guest date handlers for week limitation
-                setupGuestDateHandlers();
-                // Show guest message field for guests
-                document.getElementById('guestMessageGroup').style.display = 'block';
-                document.getElementById('editGuestMessage').value = '';
 
             } else {
                 document.getElementById('editVehicle2').disabled = false;
