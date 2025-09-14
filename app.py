@@ -2152,6 +2152,9 @@ def verify_code():
                         print(f"🅿️ Redirecting PARKING MANAGER to: {redirect_url}")
                     elif code_type == 'company_manager':
                         redirect_url = '/company-manager'
+                    elif code_type == 'Parking_tour':
+                        redirect_url = '/parking-tour'
+                        print(f"🎫 Redirecting PARKING TOUR to: {redirect_url}")
                     else:
                         # בדיקת access_level למשתמשים רגילים
                         access_level = user_data.get('access_level', 'single_parking')
@@ -2200,6 +2203,8 @@ def get_user_redirect_url(email):
                 return '/master-users'
             elif code_type == 'parking_manager':
                 return '/parking-manager-users'
+            elif code_type == 'Parking_tour':
+                return '/parking-tour'
             else:
                 return '/dashboard'
         else:
@@ -2498,6 +2503,206 @@ def parking_manager_users_page():
         return redirect(url_for('dashboard'))
     
     return render_template('parking_manager_users.html')
+
+@app.route('/parking-tour')
+def parking_tour_page():
+    """דף חיפוש מנויים למשתמשי Parking_tour"""
+    if 'user_email' not in session:
+        return redirect(url_for('login_page'))
+    
+    # בדיקת הרשאות Parking_tour
+    try:
+        user_result = supabase.table('user_parkings').select('code_type, project_number, parking_name, access_level').eq('email', session['user_email']).execute()
+        if not user_result.data or user_result.data[0].get('code_type') != 'Parking_tour':
+            print(f"⚠️ Unauthorized access attempt to parking-tour by {session['user_email']}")
+            return redirect(url_for('dashboard'))
+    except Exception as e:
+        print(f"Error checking parking tour permissions: {str(e)}")
+        return redirect(url_for('dashboard'))
+    
+    return render_template('parking_tour.html')
+
+# ========== API לחיפוש מנויים - Parking Tour ==========
+
+@app.route('/api/parking-tour/search', methods=['POST'])
+def parking_tour_search():
+    """חיפוש מנוי לפי לוחית רישוי"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        # בדיקת הרשאות
+        user_result = supabase.table('user_parkings').select(
+            'code_type, project_number, parking_name'
+        ).eq('email', session['user_email']).execute()
+        
+        if not user_result.data or user_result.data[0].get('code_type') != 'Parking_tour':
+            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+        
+        user_data = user_result.data[0]
+        user_parking_id = user_data.get('project_number')
+        
+        # קבלת נתונים מהבקשה
+        data = request.get_json()
+        license_plate = data.get('license_plate', '').strip()
+        parking_id = data.get('parking_id') or user_parking_id
+        
+        if not license_plate:
+            return jsonify({'success': False, 'message': 'יש להזין לוחית רישוי'})
+        
+        # ניקוי לוחית רישוי - הסרת רווחים ומקפים
+        clean_plate = license_plate.replace(' ', '').replace('-', '')
+        
+        print(f"🔍 Searching for license plate: {clean_plate} in parking: {parking_id}")
+        
+        # חיפוש בכל החברות בחניון
+        # קודם נקבל את כל החברות דרך ה-proxy
+        contracts_proxy_data = {
+            'parking_id': parking_id,
+            'endpoint': 'contracts',
+            'method': 'GET'
+        }
+        
+        try:
+            contracts_response = requests.post(
+                f"{request.host_url}api/company-manager/proxy",
+                json=contracts_proxy_data,
+                headers={'Cookie': request.headers.get('Cookie', '')},
+                timeout=30
+            )
+            
+            if contracts_response.status_code != 200:
+                return jsonify({
+                    'success': False,
+                    'message': 'שגיאה בקבלת רשימת חברות'
+                })
+            
+            contracts_result = contracts_response.json()
+            
+            if not contracts_result.get('success') or not contracts_result.get('data'):
+                return jsonify({
+                    'success': True,
+                    'data': [],
+                    'message': 'לא נמצאו חברות בחניון זה'
+                })
+            
+            # עיבוד תוצאות החברות
+            contracts_data = contracts_result.get('data', {})
+            contracts = []
+            
+            # טיפול בפורמטים שונים של תשובה
+            if isinstance(contracts_data, list):
+                contracts = contracts_data
+            elif isinstance(contracts_data, dict):
+                if 'contracts' in contracts_data and 'contract' in contracts_data['contracts']:
+                    contract_list = contracts_data['contracts']['contract']
+                    contracts = contract_list if isinstance(contract_list, list) else [contract_list]
+                elif 'contract' in contracts_data:
+                    contract_list = contracts_data['contract']
+                    contracts = contract_list if isinstance(contract_list, list) else [contract_list]
+            
+            if not contracts:
+                return jsonify({
+                    'success': True,
+                    'data': [],
+                    'message': 'לא נמצאו חברות בחניון זה'
+                })
+            
+        except Exception as e:
+            print(f"Error getting contracts: {str(e)}")
+            return jsonify({
+                'success': False,
+                'message': 'שגיאה בקבלת רשימת חברות'
+            })
+        
+        # חיפוש מנויים בכל החברות
+        all_subscribers = []
+        
+        for contract in contracts:
+            # חילוץ מזהה ושם החברה
+            company_id = contract.get('id') or contract.get('contractId') or contract.get('contractNum')
+            company_name = contract.get('name') or contract.get('companyName') or contract.get('description', 'לא ידוע')
+            
+            # קריאה ל-proxy עם נתוני החברה
+            proxy_data = {
+                'parking_id': parking_id,
+                'endpoint': f'consumers?contractId={company_id}',
+                'method': 'GET'
+            }
+            
+            try:
+                proxy_response = requests.post(
+                    f"{request.host_url}api/company-manager/proxy",
+                    json=proxy_data,
+                    headers={'Cookie': request.headers.get('Cookie', '')},
+                    timeout=30
+                )
+                
+                if proxy_response.status_code == 200:
+                    result = proxy_response.json()
+                    
+                    if result.get('success') and result.get('data'):
+                        consumers = result.get('data', [])
+                        if not isinstance(consumers, list):
+                            consumers = [consumers]
+                        
+                        # סינון לפי לוחית רישוי
+                        for consumer in consumers:
+                            # בדיקת כל שדות הרכב
+                            vehicles = []
+                            if consumer.get('lpn1'): vehicles.append(consumer.get('lpn1'))
+                            if consumer.get('lpn2'): vehicles.append(consumer.get('lpn2'))
+                            if consumer.get('lpn3'): vehicles.append(consumer.get('lpn3'))
+                            if consumer.get('vehicleNum'): vehicles.append(consumer.get('vehicleNum'))
+                            if consumer.get('vehicle1'): vehicles.append(consumer.get('vehicle1'))
+                            if consumer.get('vehicle2'): vehicles.append(consumer.get('vehicle2'))
+                            if consumer.get('vehicle3'): vehicles.append(consumer.get('vehicle3'))
+                            
+                            # ניקוי והשוואה
+                            for vehicle in vehicles:
+                                clean_vehicle = str(vehicle).replace(' ', '').replace('-', '')
+                                if clean_vehicle == clean_plate:
+                                    # מצאנו התאמה - נוסיף את פרטי המנוי
+                                    subscriber_data = {
+                                        'id': consumer.get('id') or consumer.get('subscriberNum'),
+                                        'subscriberNum': consumer.get('subscriberNum') or consumer.get('id'),
+                                        'firstName': consumer.get('firstName', ''),
+                                        'lastName': consumer.get('lastName') or consumer.get('name', ''),
+                                        'name': consumer.get('name', ''),
+                                        'companyId': company_id,
+                                        'companyName': company_name,
+                                        'vehicle1': consumer.get('lpn1') or consumer.get('vehicleNum', ''),
+                                        'vehicle2': consumer.get('lpn2', ''),
+                                        'vehicle3': consumer.get('lpn3', ''),
+                                        'lpn1': consumer.get('lpn1') or consumer.get('vehicleNum', ''),
+                                        'lpn2': consumer.get('lpn2', ''),
+                                        'lpn3': consumer.get('lpn3', ''),
+                                        'tagNum': consumer.get('tagNum') or consumer.get('cardNum', ''),
+                                        'validFrom': consumer.get('xValidFrom') or consumer.get('validFrom', ''),
+                                        'validUntil': consumer.get('xValidUntil') or consumer.get('validUntil', ''),
+                                        'xValidFrom': consumer.get('xValidFrom') or consumer.get('validFrom', ''),
+                                        'xValidUntil': consumer.get('xValidUntil') or consumer.get('validUntil', ''),
+                                        'profile': consumer.get('profile') or consumer.get('extCardProfile', '0'),
+                                        'presence': consumer.get('presence', False)
+                                    }
+                                    all_subscribers.append(subscriber_data)
+                                    break  # מצאנו התאמה, לא צריך לבדוק רכבים נוספים
+                                    
+            except Exception as e:
+                print(f"Error searching in company {company_id}: {str(e)}")
+                continue
+        
+        print(f"✅ Found {len(all_subscribers)} subscribers with license plate {clean_plate}")
+        
+        return jsonify({
+            'success': True,
+            'data': all_subscribers,
+            'total': len(all_subscribers)
+        })
+        
+    except Exception as e:
+        print(f"❌ Error in parking tour search: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה בחיפוש'}), 500
 
 # ========== API למאסטר ==========
 
