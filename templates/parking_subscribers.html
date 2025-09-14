@@ -3289,9 +3289,8 @@
                     // Update only the specific subscriber instead of reloading all
                     if (window.parkingUIXML) {
                         if (formData.isNew) {
-                            // For new subscriber, refresh only if necessary
-                            // The saveSubscriber function should have already updated the UI
-                            window.parkingUIXML.refreshSingleSubscriber(formData.subscriberNum);
+                            // For new subscriber, the saveSubscriber function already updated the UI
+                            // No need to refresh again
                         } else {
                             // For existing subscriber, update the specific row
                             const subscriberToRefresh = currentlyEditing || editingSubscriber;
