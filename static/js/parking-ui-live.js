@@ -2435,8 +2435,7 @@ class ParkingUIIntegrationXML {
                                     validUntil: subscriberData.validUntil,
                                     parkingName: this.currentParking?.name || this.currentContract.parkingName || this.currentContract.name || 'החניון',
                                     companyName: this.currentContract.name || '',
-                                    vehicleNumber: subscriberData.vehicle1 || '',
-                                    guestMessage: subscriberData.guestMessage || ''
+                                    vehicleNumber: subscriberData.vehicle1 || ''
                                 })
                             });
                             const emailResult = await emailResponse.json();
@@ -2671,8 +2670,8 @@ class ParkingUIIntegrationXML {
                     this.updatePresentCount();
                 }
                 
-                // Send email notification if email provided (for new subscribers)
-                if (isReallyNew && subscriberData.email && result.success) {
+                // Send email notification if email provided (for updates too)
+                if (!isReallyNew && subscriberData.email && result.success) {
                     try {
                         const emailResponse = await fetch('/api/company-manager/send-guest-email', {
                             method: 'POST',
@@ -2686,8 +2685,7 @@ class ParkingUIIntegrationXML {
                                 validUntil: subscriberData.validUntil,
                                 parkingName: this.currentParking?.name || this.currentContract.parkingName || this.currentContract.name || 'החניון',
                                 companyName: this.currentContract.name || '',
-                                vehicleNumber: subscriberData.vehicle1 || '',
-                                guestMessage: subscriberData.guestMessage || ''
+                                vehicleNumber: subscriberData.vehicle1 || ''
                             })
                         });
                         const emailResult = await emailResponse.json();
