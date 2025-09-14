@@ -2140,6 +2140,7 @@ def verify_code():
                     code_type = user_data.get('code_type', 'dashboard')
                     
                     # User authenticated successfully
+                    print(f"🔍 User {email} has code_type: '{code_type}'")
                     
 # קביעת הפניה לפי סוג המשתמש
                     redirect_url = '/dashboard'  # ברירת מחדל
@@ -2152,7 +2153,7 @@ def verify_code():
                         print(f"🅿️ Redirecting PARKING MANAGER to: {redirect_url}")
                     elif code_type == 'company_manager':
                         redirect_url = '/company-manager'
-                    elif code_type == 'Parking_tour':
+                    elif code_type == 'Parking_tour' or code_type == 'parking_tour':
                         redirect_url = '/parking-tour'
                         print(f"🎫 Redirecting PARKING TOUR to: {redirect_url}")
                     else:
@@ -2203,7 +2204,7 @@ def get_user_redirect_url(email):
                 return '/master-users'
             elif code_type == 'parking_manager':
                 return '/parking-manager-users'
-            elif code_type == 'Parking_tour':
+            elif code_type == 'Parking_tour' or code_type == 'parking_tour':
                 return '/parking-tour'
             else:
                 return '/dashboard'
@@ -2513,8 +2514,13 @@ def parking_tour_page():
     # בדיקת הרשאות Parking_tour
     try:
         user_result = supabase.table('user_parkings').select('code_type, project_number, parking_name, access_level').eq('email', session['user_email']).execute()
-        if not user_result.data or user_result.data[0].get('code_type') != 'Parking_tour':
-            print(f"⚠️ Unauthorized access attempt to parking-tour by {session['user_email']}")
+        if not user_result.data:
+            print(f"⚠️ No user data found for {session['user_email']}")
+            return redirect(url_for('dashboard'))
+        
+        code_type = user_result.data[0].get('code_type', '')
+        if code_type != 'Parking_tour' and code_type != 'parking_tour':
+            print(f"⚠️ Unauthorized access attempt to parking-tour by {session['user_email']} (code_type: {code_type})")
             return redirect(url_for('dashboard'))
     except Exception as e:
         print(f"Error checking parking tour permissions: {str(e)}")
@@ -2536,7 +2542,11 @@ def parking_tour_search():
             'code_type, project_number, parking_name'
         ).eq('email', session['user_email']).execute()
         
-        if not user_result.data or user_result.data[0].get('code_type') != 'Parking_tour':
+        if not user_result.data:
+            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+            
+        code_type = user_result.data[0].get('code_type', '')
+        if code_type != 'Parking_tour' and code_type != 'parking_tour':
             return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
         
         user_data = user_result.data[0]
