@@ -853,30 +853,7 @@
             visibility: visible !important;
             opacity: 1 !important;
         }
-        /* Guest message field styles */
-#guestMessageGroup textarea {
-    font-size: inherit;
-    line-height: 1.4;
-}
 
-#guestMessageGroup textarea:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.guest-mode #guestMessageGroup {
-    border: 2px solid #17a2b8;
-    padding: 15px;
-    border-radius: 8px;
-    background: #f0f9ff;
-    margin: 10px 0;
-}
-
-.guest-mode #guestMessageGroup label {
-    color: #0c5460;
-    font-weight: bold;
-}
         /* Print Styles */
         @media print {
             body {
@@ -1248,18 +1225,6 @@
                         <label for="editEmail" data-translate="email">אימייל</label>
                         <input type="email" id="editEmail" placeholder="כתובת אימייל (אופציונלי)">
                     </div>
-                    <div class="form-group" id="guestMessageGroup" style="display: none;">
-                        <label for="editGuestMessage" data-translate="guestMessage">הודעה לאורח</label>
-                        <textarea id="editGuestMessage" 
-                                  placeholder="הודעה אישית לאורח (עד 200 תווים)" 
-                                  maxlength="200" 
-                                  rows="4"
-                                  style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; resize: vertical;">
-                        </textarea>
-                        <small style="color: #666; display: block; margin-top: 5px;">
-                            <span id="messageCounter">0</span>/200 תווים
-                        </small>
-                    </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" onclick="closeModal()">
                             <span>❌</span>
@@ -1273,7 +1238,7 @@
                 </form>
             </div>
         </div>
-
+        
         <!-- Transactions Modal -->
         <div class="modal" id="transactionsModal" style="display: none;">
             <div class="modal-content" style="max-width: 1200px; width: 90%;">
@@ -1453,8 +1418,7 @@
                 save: 'שמור',
                 present: 'נוכח',
                 absent: 'לא נוכח',
-                subscribersText: 'מנויים',
-                guestMessage: 'הודעה לאורח'
+                subscribersText: 'מנויים'
             },
             en: {
                 title: 'Parking Subscribers Management System',
@@ -1505,8 +1469,7 @@
                 save: 'Save',
                 present: 'Present',
                 absent: 'Absent',
-                subscribersText: 'subscribers',
-                guestMessage: 'Guest Message'
+                subscribersText: 'subscribers'
             }
         };
 
@@ -2718,18 +2681,7 @@
                 
                 // Add guest mode indicator to modal
                 document.getElementById('editModal').classList.add('guest-mode');
-                // Show guest message field for guests
-    document.getElementById('guestMessageGroup').style.display = 'block';
-    document.getElementById('editGuestMessage').value = '';
-
-    // Setup message counter
-    const messageTextarea = document.getElementById('editGuestMessage');
-    const counter = document.getElementById('messageCounter');
-    if (messageTextarea && counter) {
-        messageTextarea.addEventListener('input', function() {
-            counter.textContent = this.value.length;
-        });
-    }
+                
                 // For guest - profile can be selected but default to 2
                 const profileSelect = document.getElementById('editProfile');
                 // If profile 2 exists, select it
@@ -2749,7 +2701,9 @@
                     profileHelpText.textContent = '* אורח - ברירת מחדל פרופיל 2';
                     profileHelpText.style.color = '#666';
                 }
-
+                
+                // Setup guest date handlers for week limitation
+                setupGuestDateHandlers();
             } else {
                 document.getElementById('editVehicle2').disabled = false;
                 document.getElementById('editVehicle3').disabled = false;
@@ -2758,10 +2712,10 @@
                 
                 // Remove guest mode indicator
                 document.getElementById('editModal').classList.remove('guest-mode');
-                // Hide guest message field for regular subscribers
-                document.getElementById('guestMessageGroup').style.display = 'none';
+                
                 // Remove guest date handlers
                 removeGuestDateHandlers();
+                
                 // New subscriber can always choose profile
                 const profileSelect = document.getElementById('editProfile');
                 profileSelect.disabled = false;
@@ -2812,9 +2766,6 @@
                 // Clear modal data attributes
                 modal.removeAttribute('data-edit-mode');
                 modal.removeAttribute('data-subscriber-num');
-                // Clear guest message
-                document.getElementById('editGuestMessage').value = '';
-                document.getElementById('guestMessageGroup').style.display = 'none';
                 
                 // Cleared editing subscriber
                 // Cleared modal data attributes
@@ -3151,7 +3102,6 @@
                     profile: document.getElementById('editProfile').selectedOptions[0]?.getAttribute('data-profile-name') || 'regular',
                     profileId: document.getElementById('editProfile').value || '1',
                     email: document.getElementById('editEmail').value || '',
-                    guestMessage: document.getElementById('editGuestMessage').value || '',
                     isNew: isNew,  // Use the calculated value that considers both editing state and form data
                     isGuest: isGuest  // Use the calculated value from above
                 };
@@ -3289,8 +3239,9 @@
                     // Update only the specific subscriber instead of reloading all
                     if (window.parkingUIXML) {
                         if (formData.isNew) {
-                            // For new subscriber, the saveSubscriber function already updated the UI
-                            // No need to refresh again
+                            // For new subscriber, refresh only if necessary
+                            // The saveSubscriber function should have already updated the UI
+                            window.parkingUIXML.refreshSingleSubscriber(formData.subscriberNum);
                         } else {
                             // For existing subscriber, update the specific row
                             const subscriberToRefresh = currentlyEditing || editingSubscriber;
@@ -3914,5 +3865,5 @@
             setTimeout(updateUIPermissions, 100); // Small delay to ensure DOM is ready
         });
     </script>
-<script>(function(){'use strict';document.addEventListener('keydown',function(e){if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&e.key==='I')||(e.ctrlKey&&e.shiftKey&&e.key==='J')||(e.ctrlKey&&e.key==='u')){e.preventDefault();e.stopPropagation();alert('פעולה לא מותרת במערכת זו');return false;}});document.addEventListener('contextmenu',function(e){e.preventDefault();alert('עכבר ימני חסום במערכת זו');return false;});document.addEventListener('selectstart',function(e){e.preventDefault();return false;});document.addEventListener('dragstart',function(e){e.preventDefault();return false;});let devtools={open:false,orientation:null};setInterval(function(){if(window.outerHeight-window.innerHeight>200||window.outerWidth-window.innerWidth>200){if(!devtools.open){devtools.open=true;alert('סגירת כלי פיתוח נדרשת');window.location.href='about:blank';}}else{devtools.open=false;}},500);setInterval(function(){console.clear();},1000);})();</script></body>
+</body>
 </html>
