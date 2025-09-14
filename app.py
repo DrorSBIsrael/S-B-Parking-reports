@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response, send_from_directory
 from flask_mail import Mail, Message
 from supabase.client import create_client, Client
 from dotenv import load_dotenv
@@ -1502,6 +1502,14 @@ def serve_static(filename):
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '-1'
     return response
+
+@app.route('/<filename>.js')
+def serve_js_files(filename):
+    """Serve JavaScript files from root directory"""
+    try:
+        return send_from_directory('.', f'{filename}.js', mimetype='application/javascript')
+    except FileNotFoundError:
+        return "File not found", 404
 
 @app.route('/')
 def index():
