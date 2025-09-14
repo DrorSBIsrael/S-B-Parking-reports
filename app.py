@@ -4585,6 +4585,11 @@ def send_guest_email():
                 msg['To'] = validated_email
                 msg['Subject'] = f'הזמנה לחניה - {parking_name}'
                 
+                # Prepare guest message HTML if exists
+                guest_message_html = ""
+                if guest_message and guest_message.strip():
+                    guest_message_html = f'<li style="margin: 10px 0;"><strong>הודעה:</strong> {guest_message}</li>'
+                
                 # Create HTML content
                 html_body = f"""
                 <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto;">
@@ -4602,7 +4607,7 @@ def send_guest_email():
                             <li style="margin: 10px 0;"><strong>מספר רכב:</strong> {vehicle_number if vehicle_number else "לא צוין"}</li>
                             <li style="margin: 10px 0;"><strong>תאריך תחילה:</strong> {valid_from}</li>
                             <li style="margin: 10px 0;"><strong>תאריך סיום:</strong> {valid_until}</li>
-                            {"<li style='margin: 10px 0;'><strong>הודעה:</strong> " + guest_message + "</li>" if guest_message and guest_message.strip() else ""}
+                            {guest_message_html}
                         </ul>
                     </div>
                     
@@ -4620,6 +4625,11 @@ def send_guest_email():
                 </div>
                 """
                 
+                # Prepare guest message text if exists
+                guest_message_text = ""
+                if guest_message and guest_message.strip():
+                    guest_message_text = f"\n                - הודעה: {guest_message}"
+                
                 # Create plain text version
                 text_body = f"""
                 שלום {guest_name},
@@ -4631,8 +4641,7 @@ def send_guest_email():
                 - לחברה: {company_name}
                 - מספר רכב: {vehicle_number if vehicle_number else "לא צוין"}
                 - תאריך תחילה: {valid_from}
-                - תאריך סיום: {valid_until}
-                {"- הודעה: " + guest_message if guest_message and guest_message.strip() else ""}
+                - תאריך סיום: {valid_until}{guest_message_text}
                 נא להציג הרשאה זו בכניסה לחניון במידת הצורך.
 
                 ---
