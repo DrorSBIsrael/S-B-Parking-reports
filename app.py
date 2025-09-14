@@ -4554,6 +4554,7 @@ def send_guest_email():
         parking_name = data.get('parkingName', 'החניון')
         company_name = data.get('companyName', '')
         vehicle_number = data.get('vehicleNumber', '')
+        guest_message = data.get('guestMessage', '')
         
         # Validate email
         is_valid, validated_email = validate_input(guest_email, "email")
@@ -4593,6 +4594,7 @@ def send_guest_email():
                             <li style="margin: 10px 0;"><strong>מספר רכב:</strong> {vehicle_number if vehicle_number else "לא צוין"}</li>
                             <li style="margin: 10px 0;"><strong>תאריך תחילה:</strong> {valid_from}</li>
                             <li style="margin: 10px 0;"><strong>תאריך סיום:</strong> {valid_until}</li>
+                            <li style="margin: 10px 0;"><strong>הודעה:</strong> {guest_message if guest_message else "לא צוין"}</li>
                         </ul>
                     </div>
                     
@@ -4622,7 +4624,7 @@ def send_guest_email():
                 - מספר רכב: {vehicle_number if vehicle_number else "לא צוין"}
                 - תאריך תחילה: {valid_from}
                 - תאריך סיום: {valid_until}
-
+                - הודעה: {guest_message if guest_message else "לא צוין"}
                 נא להציג הרשאה זו בכניסה לחניון במידת הצורך.
 
                 ---
