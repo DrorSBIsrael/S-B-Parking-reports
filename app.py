@@ -13,7 +13,6 @@ import base64
 import urllib3
 import json
 from datetime import datetime, timedelta, timezone
-import logging
 
 # ביטול אזהרות SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -61,13 +60,6 @@ app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 app.config['JSON_AS_ASCII'] = False  # תמיכה בעברית ב-JSON
 app.config['JSONIFY_MIMETYPE'] = 'application/json; charset=utf-8'  # קידוד UTF-8
-
-# צמצום לוגים ב-Render
-if os.environ.get('RENDER'):
-    # Reduce logging in production
-    log = logging.getLogger('werkzeug')
-    log.setLevel(logging.ERROR)
-    app.logger.setLevel(logging.WARNING)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable caching for development
 
 # Supabase configuration
@@ -4555,7 +4547,6 @@ def send_guest_email():
             return jsonify({'success': False, 'message': 'לא מחובר'}), 401
         
         data = request.get_json()
-        print(f"📧 Received data: {data}")  # Debug
         guest_email = data.get('email')
         guest_name = data.get('name', 'אורח')
         valid_from = data.get('validFrom')
@@ -4563,8 +4554,6 @@ def send_guest_email():
         parking_name = data.get('parkingName', 'החניון')
         company_name = data.get('companyName', '')
         vehicle_number = data.get('vehicleNumber', '')
-        guest_message = data.get('guestMessage', '')
-        print(f"📧 Guest message value: '{guest_message}'")
         
         # Validate email
         is_valid, validated_email = validate_input(guest_email, "email")
@@ -4587,12 +4576,6 @@ def send_guest_email():
                 msg['To'] = validated_email
                 msg['Subject'] = f'הזמנה לחניה - {parking_name}'
                 
-                # Debug guest message
-                if guest_message and guest_message.strip():
-                    print(f"📧 Guest message found: {guest_message}")
-                else:
-                    print(f"📧 No guest message provided")
-                
                 # Create HTML content
                 html_body = f"""
                 <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto;">
@@ -4610,7 +4593,6 @@ def send_guest_email():
                             <li style="margin: 10px 0;"><strong>מספר רכב:</strong> {vehicle_number if vehicle_number else "לא צוין"}</li>
                             <li style="margin: 10px 0;"><strong>תאריך תחילה:</strong> {valid_from}</li>
                             <li style="margin: 10px 0;"><strong>תאריך סיום:</strong> {valid_until}</li>
-                            {"<li style='margin: 10px 0;'><strong>הודעה:</strong> " + guest_message + "</li>" if guest_message and guest_message.strip() else ""}
                         </ul>
                     </div>
                     
@@ -4628,11 +4610,6 @@ def send_guest_email():
                 </div>
                 """
                 
-                # Prepare guest message text if exists
-                guest_message_text = ""
-                if guest_message and guest_message.strip():
-                    guest_message_text = f"\n                - הודעה: {guest_message}"
-                
                 # Create plain text version
                 text_body = f"""
                 שלום {guest_name},
@@ -4644,7 +4621,8 @@ def send_guest_email():
                 - לחברה: {company_name}
                 - מספר רכב: {vehicle_number if vehicle_number else "לא צוין"}
                 - תאריך תחילה: {valid_from}
-                - תאריך סיום: {valid_until}{guest_message_text}
+                - תאריך סיום: {valid_until}
+
                 נא להציג הרשאה זו בכניסה לחניון במידת הצורך.
 
                 ---
