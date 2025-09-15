@@ -2573,150 +2573,150 @@ def parking_tour_search():
         
         print(f"🔍 Searching for license plate: {clean_plate} in parking: {parking_id}")
         
-        # חיפוש בכל החברות בחניון
-        # קודם נקבל את כל החברות דרך ה-proxy
-        contracts_proxy_data = {
+        # קבלת נתוני החיבור לשרת החניון
+        try:
+            # בדיקה אם יש מיפוי לחניון
+            parking_mapping = supabase.table('project_parking_mapping').select(
+                'parking_id, ip_address, port'
+            ).eq('project_number', str(parking_id)).execute()
+            
+            if not parking_mapping.data:
+                print(f"⚠️ No parking mapping found for parking {parking_id}")
+                return jsonify({
+                    'success': False,
+                    'message': 'לא נמצאו נתוני חיבור לחניון'
+                })
+            
+            parking_data = parking_mapping.data[0]
+            ip_address = parking_data.get('ip_address') or '192.117.0.122'
+            port = parking_data.get('port') or 8240
+            
+        except Exception as e:
+            print(f"Error getting parking data: {str(e)}")
+            ip_address = '192.117.0.122'
+            port = 8240
+        
+        print(f"🔌 Connecting to parking server: {ip_address}:{port}")
+        
+        # חיפוש מנוי לפי לוחית רישוי דרך ה-proxy
+        search_proxy_data = {
             'parking_id': parking_id,
-            'endpoint': 'contracts',
+            'endpoint': f'consumers?lpn={clean_plate}',  # שימוש ב-lpn לפי הפרוטוקול
             'method': 'GET'
         }
         
         try:
-            contracts_response = requests.post(
-                f"{request.host_url}api/company-manager/proxy",
-                json=contracts_proxy_data,
-                headers={'Cookie': request.headers.get('Cookie', '')},
+            # קריאה ל-proxy שלנו
+            proxy_response = requests.post(
+                f"{request.url_root}api/company-manager/proxy",
+                json=search_proxy_data,
+                cookies=request.cookies,  # העברת ה-cookies של המשתמש
                 timeout=30
             )
             
-            if contracts_response.status_code != 200:
+            print(f"📡 Proxy response status: {proxy_response.status_code}")
+            
+            if proxy_response.status_code != 200:
+                print(f"❌ Proxy error: {proxy_response.text}")
                 return jsonify({
                     'success': False,
-                    'message': 'שגיאה בקבלת רשימת חברות'
+                    'message': 'שגיאה בחיפוש במערכת החניון'
                 })
             
-            contracts_result = contracts_response.json()
+            result = proxy_response.json()
             
-            if not contracts_result.get('success') or not contracts_result.get('data'):
+            if not result.get('success'):
+                print(f"❌ Search failed: {result.get('message', 'Unknown error')}")
                 return jsonify({
-                    'success': True,
-                    'data': [],
-                    'message': 'לא נמצאו חברות בחניון זה'
+                    'success': False,
+                    'message': result.get('message', 'שגיאה בחיפוש')
                 })
             
-            # עיבוד תוצאות החברות
-            contracts_data = contracts_result.get('data', {})
-            contracts = []
+            # עיבוד התוצאות
+            consumers_data = result.get('data', {})
+            found_subscribers = []
             
             # טיפול בפורמטים שונים של תשובה
-            if isinstance(contracts_data, list):
-                contracts = contracts_data
-            elif isinstance(contracts_data, dict):
-                if 'contracts' in contracts_data and 'contract' in contracts_data['contracts']:
-                    contract_list = contracts_data['contracts']['contract']
-                    contracts = contract_list if isinstance(contract_list, list) else [contract_list]
-                elif 'contract' in contracts_data:
-                    contract_list = contracts_data['contract']
-                    contracts = contract_list if isinstance(contract_list, list) else [contract_list]
+            consumers = []
+            if isinstance(consumers_data, list):
+                consumers = consumers_data
+            elif isinstance(consumers_data, dict):
+                if 'consumers' in consumers_data and 'consumer' in consumers_data['consumers']:
+                    consumer_list = consumers_data['consumers']['consumer']
+                    consumers = consumer_list if isinstance(consumer_list, list) else [consumer_list]
+                elif 'consumer' in consumers_data:
+                    consumer_list = consumers_data['consumer']
+                    consumers = consumer_list if isinstance(consumer_list, list) else [consumer_list]
             
-            if not contracts:
-                return jsonify({
-                    'success': True,
-                    'data': [],
-                    'message': 'לא נמצאו חברות בחניון זה'
-                })
+            print(f"📊 Found {len(consumers)} consumers with lpn={clean_plate}")
+            
+            # עיבוד כל מנוי שנמצא
+            for consumer in consumers:
+                # קבלת פרטי החברה של המנוי
+                contract_id = consumer.get('contractId') or consumer.get('contractid')
+                company_name = 'לא ידוע'
+                
+                # ניסיון לקבל את שם החברה
+                if contract_id:
+                    try:
+                        contract_proxy_data = {
+                            'parking_id': parking_id,
+                            'endpoint': f'contracts/{contract_id}',
+                            'method': 'GET'
+                        }
+                        
+                        contract_response = requests.post(
+                            f"{request.url_root}api/company-manager/proxy",
+                            json=contract_proxy_data,
+                            cookies=request.cookies,
+                            timeout=10
+                        )
+                        
+                        if contract_response.status_code == 200:
+                            contract_result = contract_response.json()
+                            if contract_result.get('success') and contract_result.get('data'):
+                                contract_data = contract_result.get('data', {})
+                                company_name = contract_data.get('name') or contract_data.get('description', 'לא ידוע')
+                    except:
+                        pass
+                
+                # בניית אובייקט המנוי
+                subscriber_data = {
+                    'id': consumer.get('id') or consumer.get('subscriberNum'),
+                    'subscriberNum': consumer.get('subscriberNum') or consumer.get('id'),
+                    'firstName': consumer.get('firstName', ''),
+                    'lastName': consumer.get('lastName') or consumer.get('name', ''),
+                    'name': consumer.get('name', ''),
+                    'companyId': contract_id,
+                    'companyName': company_name,
+                    'vehicle1': consumer.get('lpn1') or consumer.get('vehicleNum', ''),
+                    'vehicle2': consumer.get('lpn2', ''),
+                    'vehicle3': consumer.get('lpn3', ''),
+                    'lpn1': consumer.get('lpn1') or consumer.get('vehicleNum', ''),
+                    'lpn2': consumer.get('lpn2', ''),
+                    'lpn3': consumer.get('lpn3', ''),
+                    'tagNum': consumer.get('tagNum') or consumer.get('cardNum', ''),
+                    'validFrom': consumer.get('xValidFrom') or consumer.get('validFrom', ''),
+                    'validUntil': consumer.get('xValidUntil') or consumer.get('validUntil', ''),
+                    'profile': consumer.get('profile') or consumer.get('extCardProfile', '0'),
+                    'presence': consumer.get('presence', False)
+                }
+                found_subscribers.append(subscriber_data)
+            
+            print(f"✅ Returning {len(found_subscribers)} subscribers")
+            
+            return jsonify({
+                'success': True,
+                'data': found_subscribers,
+                'total': len(found_subscribers)
+            })
             
         except Exception as e:
-            print(f"Error getting contracts: {str(e)}")
+            print(f"❌ Error searching by lpn: {str(e)}")
             return jsonify({
                 'success': False,
-                'message': 'שגיאה בקבלת רשימת חברות'
+                'message': 'שגיאה בחיפוש מנוי'
             })
-        
-        # חיפוש מנויים בכל החברות
-        all_subscribers = []
-        
-        for contract in contracts:
-            # חילוץ מזהה ושם החברה
-            company_id = contract.get('id') or contract.get('contractId') or contract.get('contractNum')
-            company_name = contract.get('name') or contract.get('companyName') or contract.get('description', 'לא ידוע')
-            
-            # קריאה ל-proxy עם נתוני החברה
-            proxy_data = {
-                'parking_id': parking_id,
-                'endpoint': f'consumers?contractId={company_id}',
-                'method': 'GET'
-            }
-            
-            try:
-                proxy_response = requests.post(
-                    f"{request.host_url}api/company-manager/proxy",
-                    json=proxy_data,
-                    headers={'Cookie': request.headers.get('Cookie', '')},
-                    timeout=30
-                )
-                
-                if proxy_response.status_code == 200:
-                    result = proxy_response.json()
-                    
-                    if result.get('success') and result.get('data'):
-                        consumers = result.get('data', [])
-                        if not isinstance(consumers, list):
-                            consumers = [consumers]
-                        
-                        # סינון לפי לוחית רישוי
-                        for consumer in consumers:
-                            # בדיקת כל שדות הרכב
-                            vehicles = []
-                            if consumer.get('lpn1'): vehicles.append(consumer.get('lpn1'))
-                            if consumer.get('lpn2'): vehicles.append(consumer.get('lpn2'))
-                            if consumer.get('lpn3'): vehicles.append(consumer.get('lpn3'))
-                            if consumer.get('vehicleNum'): vehicles.append(consumer.get('vehicleNum'))
-                            if consumer.get('vehicle1'): vehicles.append(consumer.get('vehicle1'))
-                            if consumer.get('vehicle2'): vehicles.append(consumer.get('vehicle2'))
-                            if consumer.get('vehicle3'): vehicles.append(consumer.get('vehicle3'))
-                            
-                            # ניקוי והשוואה
-                            for vehicle in vehicles:
-                                clean_vehicle = str(vehicle).replace(' ', '').replace('-', '')
-                                if clean_vehicle == clean_plate:
-                                    # מצאנו התאמה - נוסיף את פרטי המנוי
-                                    subscriber_data = {
-                                        'id': consumer.get('id') or consumer.get('subscriberNum'),
-                                        'subscriberNum': consumer.get('subscriberNum') or consumer.get('id'),
-                                        'firstName': consumer.get('firstName', ''),
-                                        'lastName': consumer.get('lastName') or consumer.get('name', ''),
-                                        'name': consumer.get('name', ''),
-                                        'companyId': company_id,
-                                        'companyName': company_name,
-                                        'vehicle1': consumer.get('lpn1') or consumer.get('vehicleNum', ''),
-                                        'vehicle2': consumer.get('lpn2', ''),
-                                        'vehicle3': consumer.get('lpn3', ''),
-                                        'lpn1': consumer.get('lpn1') or consumer.get('vehicleNum', ''),
-                                        'lpn2': consumer.get('lpn2', ''),
-                                        'lpn3': consumer.get('lpn3', ''),
-                                        'tagNum': consumer.get('tagNum') or consumer.get('cardNum', ''),
-                                        'validFrom': consumer.get('xValidFrom') or consumer.get('validFrom', ''),
-                                        'validUntil': consumer.get('xValidUntil') or consumer.get('validUntil', ''),
-                                        'xValidFrom': consumer.get('xValidFrom') or consumer.get('validFrom', ''),
-                                        'xValidUntil': consumer.get('xValidUntil') or consumer.get('validUntil', ''),
-                                        'profile': consumer.get('profile') or consumer.get('extCardProfile', '0'),
-                                        'presence': consumer.get('presence', False)
-                                    }
-                                    all_subscribers.append(subscriber_data)
-                                    break  # מצאנו התאמה, לא צריך לבדוק רכבים נוספים
-                                    
-            except Exception as e:
-                print(f"Error searching in company {company_id}: {str(e)}")
-                continue
-        
-        print(f"✅ Found {len(all_subscribers)} subscribers with license plate {clean_plate}")
-        
-        return jsonify({
-            'success': True,
-            'data': all_subscribers,
-            'total': len(all_subscribers)
-        })
         
     except Exception as e:
         print(f"❌ Error in parking tour search: {str(e)}")
