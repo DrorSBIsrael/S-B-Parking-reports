@@ -2607,6 +2607,14 @@ def parking_tour_search():
                 'message': 'מצב הדגמה'
             })
         
+        # נבדוק אם יש חניון
+        if not parking_id:
+            print(f"❌ No parking_id provided")
+            return jsonify({
+                'success': False,
+                'message': 'לא נבחר חניון'
+            })
+        
         # קבלת נתוני החיבור לשרת החניון
         ip_address = '192.117.0.122'  # ברירת מחדל
         port = 8240  # ברירת מחדל
@@ -2627,109 +2635,83 @@ def parking_tour_search():
         except Exception as e:
             print(f"Error getting parking data: {str(e)}, using defaults")
         
-        print(f"🔌 Using direct server connection...")
+        print(f"🔌 Using proxy for search...")
         
-        # קריאה ישירה לשרת החניון - כמו שה-proxy עושה
-        print(f"🚀 Direct search for lpn...")
-        
-        # קבלת נתוני החיבור
-        if not ip_address or not port:
-            print(f"❌ Missing connection details")
-            return jsonify({
-                'success': False,
-                'message': 'חסרים נתוני חיבור לחניון'
-            })
-        
-        # בניית ה-URL
-        protocol = "https"
-        endpoint = f'consumers?lpn={clean_plate}'
-        url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
-        
-        print(f"📤 Direct URL: {url}")
-        
-        # הכנת headers עם Basic Auth
-        auth_string = base64.b64encode(b'2022:2022').decode('ascii')
-        headers = {
-            'Authorization': f'Basic {auth_string}',
-            'Content-Type': 'application/json',
-            'Accept': 'application/xml,application/json'
-        }
-        
+        # קריאה דרך ה-proxy הקיים
         try:
-            # קריאה ישירה לשרת
-            print(f"🌐 Making direct request to parking server...")
-            response = requests.get(url, headers=headers, verify=False, timeout=30)
+            # הכנת הנתונים לקריאה ל-proxy
+            proxy_data = {
+                'parking_id': parking_id,
+                'endpoint': f'consumers?lpn={clean_plate}',
+                'method': 'GET'
+            }
             
-            print(f"📡 Direct response status: {response.status_code}")
-            print(f"📄 Response headers: {dict(response.headers)}")
-            print(f"📄 Response text (first 500 chars): {response.text[:500] if response.text else 'Empty response'}")
+            print(f"📤 Calling proxy with data: {proxy_data}")
+            
+            # קריאה ל-proxy עם requests
+            proxy_url = request.url_root.rstrip('/') + '/api/company-manager/proxy'
+            print(f"📤 Proxy URL: {proxy_url}")
+            
+            # העתק את כל ה-headers החשובים
+            headers = {
+                'Content-Type': 'application/json',
+                'Cookie': request.headers.get('Cookie', ''),
+                'X-Forwarded-For': request.headers.get('X-Forwarded-For', request.remote_addr),
+                'User-Agent': request.headers.get('User-Agent', '')
+            }
+            
+            print(f"📤 Headers being sent: {headers}")
+            
+            # שליחת בקשה ל-proxy
+            response = requests.post(
+                proxy_url,
+                json=proxy_data,
+                headers=headers,
+                timeout=30
+            )
+            
+            print(f"📡 Proxy response status: {response.status_code}")
+            print(f"📄 Proxy response text: {response.text[:1000] if response.text else 'Empty'}")
             
             if response.status_code != 200:
-                print(f"❌ Server error: {response.text}")
+                print(f"❌ Proxy returned non-200 status")
+                try:
+                    error_data = response.json()
+                    error_msg = error_data.get('message', 'שגיאה בחיפוש במערכת החניון')
+                except:
+                    error_msg = 'שגיאה בחיפוש במערכת החניון'
+                
                 return jsonify({
                     'success': False,
-                    'message': 'שגיאה בחיפוש במערכת החניון'
+                    'message': error_msg
                 })
             
-            # עיבוד התשובה
-            content_type = response.headers.get('content-type', '')
-            result = None
+            # נסה לפענח את התשובה
+            try:
+                result = response.json()
+                print(f"📊 Parsed proxy response: {result}")
+            except:
+                print(f"❌ Failed to parse proxy response as JSON")
+                return jsonify({
+                    'success': False,
+                    'message': 'שגיאה בפענוח התשובה מהשרת'
+                })
             
-            if 'xml' in content_type or response.text.startswith('<?xml'):
-                # Parse XML response
-                print(f"📋 Parsing XML response...")
-                import xml.etree.ElementTree as ET
-                root = ET.fromstring(response.text)
+            # בדוק אם הקריאה הצליחה
+            if not result.get('success'):
+                print(f"❌ Proxy returned success=false: {result}")
+                return jsonify({
+                    'success': False,
+                    'message': result.get('message', 'שגיאה בחיפוש במערכת החניון')
+                })
+            
+            print(f"✅ Proxy returned success! Processing results...")
                 
-                # עיבוד XML - נחפש consumers
-                consumers_data = []
-                
-                # חיפוש בכל המבנים האפשריים
-                # Option 1: consumers/consumer
-                consumers_elem = root.find('.//consumers')
-                if consumers_elem is not None:
-                    for consumer_elem in consumers_elem.findall('consumer'):
-                        consumer_data = {}
-                        for child in consumer_elem:
-                            consumer_data[child.tag] = child.text
-                        consumers_data.append(consumer_data)
-                
-                # Option 2: Direct consumer elements
-                if not consumers_data:
-                    for consumer_elem in root.findall('.//consumer'):
-                        consumer_data = {}
-                        for child in consumer_elem:
-                            consumer_data[child.tag] = child.text
-                        consumers_data.append(consumer_data)
-                
-                # Option 3: Root is consumer
-                if not consumers_data and root.tag == 'consumer':
-                    consumer_data = {}
-                    for child in root:
-                        consumer_data[child.tag] = child.text
-                    consumers_data = [consumer_data]
-                
-                result = {'success': True, 'data': consumers_data}
-                print(f"📊 Found {len(consumers_data)} consumers in XML")
-            else:
-                # Try JSON
-                print(f"📋 Parsing JSON response...")
-                try:
-                    json_data = response.json()
-                    result = {'success': True, 'data': json_data}
-                    print(f"📊 Parsed JSON successfully")
-                except:
-                    print(f"❌ Failed to parse response as JSON")
-                    return jsonify({
-                        'success': False,
-                        'message': 'שגיאה בפענוח התשובה מהשרת'
-                    })
-        
         except requests.exceptions.RequestException as e:
             print(f"❌ Request error: {str(e)}")
             return jsonify({
                 'success': False,
-                'message': f'שגיאה בחיבור לשרת: {str(e)}'
+                'message': f'שגיאה בחיבור: {str(e)}'
             })
         except Exception as e:
             print(f"❌ Unexpected error: {str(e)}")
@@ -2737,7 +2719,7 @@ def parking_tour_search():
             print(traceback.format_exc())
             return jsonify({
                 'success': False,
-                'message': f'שגיאה: {str(e)}'
+                'message': 'שגיאה בחיפוש במערכת החניון'
             })
         
         # עיבוד התוצאות מה-proxy
