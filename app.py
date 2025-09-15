@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response, send_from_directory
+import flask
 from flask_mail import Mail, Message
 from supabase.client import create_client, Client
 from dotenv import load_dotenv
@@ -2607,164 +2608,132 @@ def parking_tour_search():
             })
         
         # קבלת נתוני החיבור לשרת החניון
+        ip_address = '192.117.0.122'  # ברירת מחדל
+        port = 8240  # ברירת מחדל
+        
         try:
             # בדיקה אם יש מיפוי לחניון
-            parking_mapping = supabase.table('project_parking_mapping').select(
-                'parking_id, ip_address, port'
-            ).eq('project_number', str(parking_id)).execute()
-            
-            if not parking_mapping.data:
-                print(f"⚠️ No parking mapping found for parking {parking_id}")
-                return jsonify({
-                    'success': False,
-                    'message': 'לא נמצאו נתוני חיבור לחניון'
-                })
-            
-            parking_data = parking_mapping.data[0]
-            ip_address = parking_data.get('ip_address') or '192.117.0.122'
-            port = parking_data.get('port') or 8240
-            
+            if parking_id:
+                parking_mapping = supabase.table('project_parking_mapping').select(
+                    'parking_id, ip_address, port'
+                ).eq('project_number', str(parking_id)).execute()
+                
+                if parking_mapping.data:
+                    parking_data = parking_mapping.data[0]
+                    ip_address = parking_data.get('ip_address') or ip_address
+                    port = parking_data.get('port') or port
+                else:
+                    print(f"⚠️ No parking mapping found for parking {parking_id}, using defaults")
         except Exception as e:
-            print(f"Error getting parking data: {str(e)}")
-            ip_address = '192.117.0.122'
-            port = 8240
+            print(f"Error getting parking data: {str(e)}, using defaults")
         
         print(f"🔌 Connecting to parking server: {ip_address}:{port}")
         
-        # קריאה ישירה לשרת החניון
-        try:
-            print(f"🚀 Starting direct server call...")
-            # בניית URL לחיפוש
-            protocol = "https"
-            endpoint = f'consumers?lpn={clean_plate}'
-            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
-            
-            print(f"🔗 Direct URL: {url}")
-            
-            # הכנת headers עם Basic Auth
-            auth_string = base64.b64encode(b'2022:2022').decode('ascii')
-            headers = {
-                'Authorization': f'Basic {auth_string}',
-                'Content-Type': 'application/json',
-                'Accept': 'application/xml,application/json'
-            }
-            
-            # קריאה ישירה לשרת
-            response = requests.get(url, headers=headers, verify=False, timeout=30)
-            
-            print(f"📡 Direct response status: {response.status_code}")
-            print(f"📄 Response text (first 500 chars): {response.text[:500]}")
-            
-            if response.status_code != 200:
-                print(f"❌ Server error: {response.text}")
-                return jsonify({
-                    'success': False,
-                    'message': 'שגיאה בחיפוש במערכת החניון'
-                })
-            
-            # עיבוד התשובה - יכולה להיות XML או JSON
-            content_type = response.headers.get('content-type', '')
-            
-            if 'xml' in content_type or response.text.startswith('<?xml'):
-                # Parse XML response
-                import xml.etree.ElementTree as ET
-                root = ET.fromstring(response.text)
-                
-                # המרה ל-JSON structure
-                consumers = []
-                
-                # חיפוש אלמנטים של consumers
-                for consumer_elem in root.findall('.//consumer'):
-                    consumer_data = {}
-                    for child in consumer_elem:
-                        consumer_data[child.tag] = child.text
-                    if consumer_data:
-                        consumers.append(consumer_data)
-                
-                # אם לא מצאנו consumers, נסה formats אחרים
-                if not consumers:
-                    # נסה למצוא ישירות
-                    if root.tag == 'consumer':
-                        consumer_data = {}
-                        for child in root:
-                            consumer_data[child.tag] = child.text
-                        consumers = [consumer_data]
-                
-                result_data = consumers
-            else:
-                # נסה לפרש כ-JSON
-                try:
-                    json_data = response.json()
-                    if isinstance(json_data, dict):
-                        if 'consumers' in json_data:
-                            result_data = json_data['consumers']
-                        elif 'consumer' in json_data:
-                            result_data = [json_data['consumer']]
-                        else:
-                            result_data = [json_data]
-                    else:
-                        result_data = json_data
-                except:
-                    print(f"❌ Failed to parse response")
-                    return jsonify({
-                        'success': False,
-                        'message': 'שגיאה בפענוח התשובה מהשרת'
-                    })
-            
-            # עיבוד התוצאות
-            found_subscribers = []
-            consumers = result_data if isinstance(result_data, list) else [result_data] if result_data else []
-            
-            print(f"📊 Found {len(consumers)} consumers with lpn={clean_plate}")
-            
-            # עיבוד כל מנוי שנמצא
-            for consumer in consumers:
-                if not consumer:
-                    continue
-                # קבלת פרטי המנוי
-                contract_id = consumer.get('contractId') or consumer.get('contractid') or consumer.get('contract')
-                company_name = consumer.get('companyName') or consumer.get('contractName') or 'לא ידוע'
-                
-                # בניית אובייקט המנוי
-                subscriber_data = {
-                    'id': consumer.get('id') or consumer.get('subscriberNum'),
-                    'subscriberNum': consumer.get('subscriberNum') or consumer.get('id'),
-                    'firstName': consumer.get('firstName', ''),
-                    'lastName': consumer.get('lastName') or consumer.get('name', ''),
-                    'name': consumer.get('name', ''),
-                    'companyId': contract_id,
-                    'companyName': company_name,
-                    'vehicle1': consumer.get('lpn1') or consumer.get('vehicleNum', ''),
-                    'vehicle2': consumer.get('lpn2', ''),
-                    'vehicle3': consumer.get('lpn3', ''),
-                    'lpn1': consumer.get('lpn1') or consumer.get('vehicleNum', ''),
-                    'lpn2': consumer.get('lpn2', ''),
-                    'lpn3': consumer.get('lpn3', ''),
-                    'tagNum': consumer.get('tagNum') or consumer.get('cardNum', ''),
-                    'validFrom': consumer.get('xValidFrom') or consumer.get('validFrom', ''),
-                    'validUntil': consumer.get('xValidUntil') or consumer.get('validUntil', ''),
-                    'profile': consumer.get('profile') or consumer.get('extCardProfile', '0'),
-                    'presence': consumer.get('presence', False)
-                }
-                found_subscribers.append(subscriber_data)
-            
-            print(f"✅ Returning {len(found_subscribers)} subscribers")
-            
-            return jsonify({
-                'success': True,
-                'data': found_subscribers,
-                'total': len(found_subscribers)
-            })
-            
-        except Exception as e:
-            print(f"❌ Error searching by lpn: {str(e)}")
-            import traceback
-            print(traceback.format_exc())
-            error_msg = f'שגיאה בחיפוש: {str(e)}'
+        # קריאה דרך ה-proxy
+        print(f"🚀 Starting proxy call...")
+        
+        # הכנת נתונים לקריאה ל-proxy
+        proxy_data = {
+            'parking_id': parking_id,
+            'endpoint': f'consumers?lpn={clean_plate}',
+            'method': 'GET'
+        }
+        
+        print(f"📤 Calling internal proxy with: {proxy_data}")
+        
+        # קריאה ל-proxy עם requests והעברת כל ה-headers
+        proxy_url = request.url_root + 'api/company-manager/proxy'
+        
+        # העתקת כל ה-headers החשובים
+        headers = {
+            'Content-Type': 'application/json',
+            'Cookie': request.headers.get('Cookie', ''),
+            'X-Forwarded-For': request.headers.get('X-Forwarded-For', request.remote_addr)
+        }
+        
+        # שליחת בקשה ל-proxy
+        proxy_response = requests.post(
+            proxy_url,
+            json=proxy_data,
+            headers=headers,
+            timeout=30
+        )
+        
+        status_code = proxy_response.status_code
+        result = proxy_response.json() if proxy_response.text else {}
+        
+        print(f"📡 Proxy response status: {status_code}")
+        print(f"📄 Proxy response: {result}")
+        
+        if status_code != 200 or not result.get('success'):
+            error_msg = result.get('message', 'שגיאה בחיפוש במערכת החניון')
+            print(f"❌ Proxy error: {error_msg}")
             return jsonify({
                 'success': False,
                 'message': error_msg
             })
+        
+        # עיבוד התוצאות מה-proxy
+        consumers_data = result.get('data', {})
+        consumers = []
+        
+        # ה-proxy כבר עשה את הפענוח של XML/JSON
+        if isinstance(consumers_data, list):
+            consumers = consumers_data
+        elif isinstance(consumers_data, dict):
+            if 'consumers' in consumers_data and 'consumer' in consumers_data['consumers']:
+                consumer_list = consumers_data['consumers']['consumer']
+                consumers = consumer_list if isinstance(consumer_list, list) else [consumer_list]
+            elif 'consumer' in consumers_data:
+                consumer_list = consumers_data['consumer']
+                consumers = consumer_list if isinstance(consumer_list, list) else [consumer_list]
+            else:
+                # אולי זה consumer בודד
+                consumers = [consumers_data]
+        
+        # עיבוד התוצאות
+        found_subscribers = []
+        
+        print(f"📊 Found {len(consumers)} consumers with lpn={clean_plate}")
+        
+        # עיבוד כל מנוי שנמצא
+        for consumer in consumers:
+            if not consumer:
+                continue
+            # קבלת פרטי המנוי
+            contract_id = consumer.get('contractId') or consumer.get('contractid') or consumer.get('contract')
+            company_name = consumer.get('companyName') or consumer.get('contractName') or 'לא ידוע'
+            
+            # בניית אובייקט המנוי
+            subscriber_data = {
+                'id': consumer.get('id') or consumer.get('subscriberNum'),
+                'subscriberNum': consumer.get('subscriberNum') or consumer.get('id'),
+                'firstName': consumer.get('firstName', ''),
+                'lastName': consumer.get('lastName') or consumer.get('name', ''),
+                'name': consumer.get('name', ''),
+                'companyId': contract_id,
+                'companyName': company_name,
+                'vehicle1': consumer.get('lpn1') or consumer.get('vehicleNum', ''),
+                'vehicle2': consumer.get('lpn2', ''),
+                'vehicle3': consumer.get('lpn3', ''),
+                'lpn1': consumer.get('lpn1') or consumer.get('vehicleNum', ''),
+                'lpn2': consumer.get('lpn2', ''),
+                'lpn3': consumer.get('lpn3', ''),
+                'tagNum': consumer.get('tagNum') or consumer.get('cardNum', ''),
+                'validFrom': consumer.get('xValidFrom') or consumer.get('validFrom', ''),
+                'validUntil': consumer.get('xValidUntil') or consumer.get('validUntil', ''),
+                'profile': consumer.get('profile') or consumer.get('extCardProfile', '0'),
+                'presence': consumer.get('presence', False)
+            }
+            found_subscribers.append(subscriber_data)
+        
+        print(f"✅ Returning {len(found_subscribers)} subscribers")
+        
+        return jsonify({
+            'success': True,
+            'data': found_subscribers,
+            'total': len(found_subscribers)
+        })
         
     except Exception as e:
         error_details = f"Error in parking tour search: {str(e)}"
@@ -3699,17 +3668,23 @@ def company_manager_proxy():
             # Don't override method for POST requests!
             # method = 'GET'
         elif 'consumers' in endpoint.lower() and '/detail' not in endpoint:
-            # Check if we have a contractId in payload to filter by
-            contract_id = payload.get('contractId') if payload else None
-            
-            if contract_id:
-                # Get consumers for SPECIFIC CONTRACT ONLY - Critical for performance!
-                url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts/{contract_id}/consumers"
-                # Getting consumers for specific contract
+            # בדיקה אם יש query parameters ב-endpoint
+            if '?' in endpoint:
+                # יש query parameters - להשתמש ב-endpoint כמו שהוא
+                url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
+                print(f"🔍 Using consumers endpoint with query params: {endpoint}")
             else:
-                # Fallback to getting all consumers (should not happen)
-                url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
-                # Getting all consumers - performance warning
+                # Check if we have a contractId in payload to filter by
+                contract_id = payload.get('contractId') if payload else None
+                
+                if contract_id:
+                    # Get consumers for SPECIFIC CONTRACT ONLY - Critical for performance!
+                    url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts/{contract_id}/consumers"
+                    # Getting consumers for specific contract
+                else:
+                    # Fallback to getting all consumers (should not happen)
+                    url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers"
+                    # Getting all consumers - performance warning
             
             # Consumers endpoint - filtered by contract
             method = 'GET'  # תמיד GET למנויים
