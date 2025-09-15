@@ -2598,87 +2598,98 @@ def parking_tour_search():
         
         print(f"🔌 Connecting to parking server: {ip_address}:{port}")
         
-        # חיפוש מנוי לפי לוחית רישוי דרך ה-proxy
-        search_proxy_data = {
-            'parking_id': parking_id,
-            'endpoint': f'consumers?lpn={clean_plate}',  # שימוש ב-lpn לפי הפרוטוקול
-            'method': 'GET'
-        }
-        
+        # קריאה ישירה לשרת החניון
         try:
-            # קריאה ל-proxy שלנו
-            proxy_response = requests.post(
-                f"{request.url_root}api/company-manager/proxy",
-                json=search_proxy_data,
-                cookies=request.cookies,  # העברת ה-cookies של המשתמש
-                timeout=30
-            )
+            # בניית URL לחיפוש
+            protocol = "https"
+            endpoint = f'consumers?lpn={clean_plate}'
+            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
             
-            print(f"📡 Proxy response status: {proxy_response.status_code}")
+            print(f"🔗 Direct URL: {url}")
             
-            if proxy_response.status_code != 200:
-                print(f"❌ Proxy error: {proxy_response.text}")
+            # הכנת headers עם Basic Auth
+            auth_string = base64.b64encode(b'2022:2022').decode('ascii')
+            headers = {
+                'Authorization': f'Basic {auth_string}',
+                'Content-Type': 'application/json',
+                'Accept': 'application/xml,application/json'
+            }
+            
+            # קריאה ישירה לשרת
+            response = requests.get(url, headers=headers, verify=False, timeout=30)
+            
+            print(f"📡 Direct response status: {response.status_code}")
+            print(f"📄 Response text (first 500 chars): {response.text[:500]}")
+            
+            if response.status_code != 200:
+                print(f"❌ Server error: {response.text}")
                 return jsonify({
                     'success': False,
                     'message': 'שגיאה בחיפוש במערכת החניון'
                 })
             
-            result = proxy_response.json()
+            # עיבוד התשובה - יכולה להיות XML או JSON
+            content_type = response.headers.get('content-type', '')
             
-            if not result.get('success'):
-                print(f"❌ Search failed: {result.get('message', 'Unknown error')}")
-                return jsonify({
-                    'success': False,
-                    'message': result.get('message', 'שגיאה בחיפוש')
-                })
+            if 'xml' in content_type or response.text.startswith('<?xml'):
+                # Parse XML response
+                import xml.etree.ElementTree as ET
+                root = ET.fromstring(response.text)
+                
+                # המרה ל-JSON structure
+                consumers = []
+                
+                # חיפוש אלמנטים של consumers
+                for consumer_elem in root.findall('.//consumer'):
+                    consumer_data = {}
+                    for child in consumer_elem:
+                        consumer_data[child.tag] = child.text
+                    if consumer_data:
+                        consumers.append(consumer_data)
+                
+                # אם לא מצאנו consumers, נסה formats אחרים
+                if not consumers:
+                    # נסה למצוא ישירות
+                    if root.tag == 'consumer':
+                        consumer_data = {}
+                        for child in root:
+                            consumer_data[child.tag] = child.text
+                        consumers = [consumer_data]
+                
+                result_data = consumers
+            else:
+                # נסה לפרש כ-JSON
+                try:
+                    json_data = response.json()
+                    if isinstance(json_data, dict):
+                        if 'consumers' in json_data:
+                            result_data = json_data['consumers']
+                        elif 'consumer' in json_data:
+                            result_data = [json_data['consumer']]
+                        else:
+                            result_data = [json_data]
+                    else:
+                        result_data = json_data
+                except:
+                    print(f"❌ Failed to parse response")
+                    return jsonify({
+                        'success': False,
+                        'message': 'שגיאה בפענוח התשובה מהשרת'
+                    })
             
             # עיבוד התוצאות
-            consumers_data = result.get('data', {})
             found_subscribers = []
-            
-            # טיפול בפורמטים שונים של תשובה
-            consumers = []
-            if isinstance(consumers_data, list):
-                consumers = consumers_data
-            elif isinstance(consumers_data, dict):
-                if 'consumers' in consumers_data and 'consumer' in consumers_data['consumers']:
-                    consumer_list = consumers_data['consumers']['consumer']
-                    consumers = consumer_list if isinstance(consumer_list, list) else [consumer_list]
-                elif 'consumer' in consumers_data:
-                    consumer_list = consumers_data['consumer']
-                    consumers = consumer_list if isinstance(consumer_list, list) else [consumer_list]
+            consumers = result_data if isinstance(result_data, list) else [result_data] if result_data else []
             
             print(f"📊 Found {len(consumers)} consumers with lpn={clean_plate}")
             
             # עיבוד כל מנוי שנמצא
             for consumer in consumers:
-                # קבלת פרטי החברה של המנוי
-                contract_id = consumer.get('contractId') or consumer.get('contractid')
-                company_name = 'לא ידוע'
-                
-                # ניסיון לקבל את שם החברה
-                if contract_id:
-                    try:
-                        contract_proxy_data = {
-                            'parking_id': parking_id,
-                            'endpoint': f'contracts/{contract_id}',
-                            'method': 'GET'
-                        }
-                        
-                        contract_response = requests.post(
-                            f"{request.url_root}api/company-manager/proxy",
-                            json=contract_proxy_data,
-                            cookies=request.cookies,
-                            timeout=10
-                        )
-                        
-                        if contract_response.status_code == 200:
-                            contract_result = contract_response.json()
-                            if contract_result.get('success') and contract_result.get('data'):
-                                contract_data = contract_result.get('data', {})
-                                company_name = contract_data.get('name') or contract_data.get('description', 'לא ידוע')
-                    except:
-                        pass
+                if not consumer:
+                    continue
+                # קבלת פרטי המנוי
+                contract_id = consumer.get('contractId') or consumer.get('contractid') or consumer.get('contract')
+                company_name = consumer.get('companyName') or consumer.get('contractName') or 'לא ידוע'
                 
                 # בניית אובייקט המנוי
                 subscriber_data = {
@@ -2713,6 +2724,8 @@ def parking_tour_search():
             
         except Exception as e:
             print(f"❌ Error searching by lpn: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
             return jsonify({
                 'success': False,
                 'message': 'שגיאה בחיפוש מנוי'
