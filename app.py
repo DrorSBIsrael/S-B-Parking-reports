@@ -2635,83 +2635,122 @@ def parking_tour_search():
         except Exception as e:
             print(f"Error getting parking data: {str(e)}, using defaults")
         
-        print(f"🔌 Using proxy for search...")
+        print(f"🔌 Using direct server connection...")
         
-        # קריאה דרך ה-proxy הקיים
+        # בניית URL ישירות לשרת החניון
+        protocol = "https"
+        url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers?lpn={clean_plate}"
+        
+        print(f"📤 Direct URL: {url}")
+        
+        # הכנת headers עם Basic Auth
+        auth_string = base64.b64encode(b'2022:2022').decode('ascii')
+        headers = {
+            'Authorization': f'Basic {auth_string}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/xml,application/json'
+        }
+        
         try:
-            # הכנת הנתונים לקריאה ל-proxy
-            proxy_data = {
-                'parking_id': parking_id,
-                'endpoint': f'consumers?lpn={clean_plate}',
-                'method': 'GET'
-            }
+            # קריאה ישירה לשרת
+            print(f"🌐 Making direct request to parking server...")
             
-            print(f"📤 Calling proxy with data: {proxy_data}")
+            # ביטול אזהרות SSL
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
             
-            # קריאה ל-proxy עם requests
-            proxy_url = request.url_root.rstrip('/') + '/api/company-manager/proxy'
-            print(f"📤 Proxy URL: {proxy_url}")
+            response = requests.get(url, headers=headers, verify=False, timeout=30)
             
-            # העתק את כל ה-headers החשובים
-            headers = {
-                'Content-Type': 'application/json',
-                'Cookie': request.headers.get('Cookie', ''),
-                'X-Forwarded-For': request.headers.get('X-Forwarded-For', request.remote_addr),
-                'User-Agent': request.headers.get('User-Agent', '')
-            }
-            
-            print(f"📤 Headers being sent: {headers}")
-            
-            # שליחת בקשה ל-proxy
-            response = requests.post(
-                proxy_url,
-                json=proxy_data,
-                headers=headers,
-                timeout=30
-            )
-            
-            print(f"📡 Proxy response status: {response.status_code}")
-            print(f"📄 Proxy response text: {response.text[:1000] if response.text else 'Empty'}")
+            print(f"📡 Response status: {response.status_code}")
+            print(f"📄 Response headers: {dict(response.headers)}")
             
             if response.status_code != 200:
-                print(f"❌ Proxy returned non-200 status")
-                try:
-                    error_data = response.json()
-                    error_msg = error_data.get('message', 'שגיאה בחיפוש במערכת החניון')
-                except:
-                    error_msg = 'שגיאה בחיפוש במערכת החניון'
+                print(f"❌ Server returned {response.status_code}")
+                print(f"📄 Error response: {response.text[:500]}")
+                return jsonify({
+                    'success': False,
+                    'message': 'שגיאה בחיפוש במערכת החניון'
+                })
+            
+            # עיבוד התשובה
+            content_type = response.headers.get('content-type', '')
+            print(f"📄 Content-Type: {content_type}")
+            print(f"📄 Response body (first 1000 chars): {response.text[:1000]}")
+            
+            consumers_data = []
+            
+            if 'xml' in content_type or response.text.startswith('<?xml'):
+                print(f"📋 Parsing XML response...")
+                import xml.etree.ElementTree as ET
                 
-                return jsonify({
-                    'success': False,
-                    'message': error_msg
-                })
+                try:
+                    root = ET.fromstring(response.text)
+                    print(f"📋 Root element: {root.tag}")
+                    
+                    # Option 1: consumers/consumer structure
+                    consumers_elem = root.find('.//consumers')
+                    if consumers_elem is not None:
+                        print(f"📋 Found consumers element")
+                        for consumer_elem in consumers_elem.findall('consumer'):
+                            consumer_data = {}
+                            for child in consumer_elem:
+                                consumer_data[child.tag] = child.text
+                            consumers_data.append(consumer_data)
+                            print(f"📋 Consumer found: {consumer_data}")
+                    
+                    # Option 2: Direct consumer elements
+                    if not consumers_data:
+                        for consumer_elem in root.findall('.//consumer'):
+                            consumer_data = {}
+                            for child in consumer_elem:
+                                consumer_data[child.tag] = child.text
+                            consumers_data.append(consumer_data)
+                            print(f"📋 Consumer found (direct): {consumer_data}")
+                    
+                    # Option 3: Root is consumer
+                    if not consumers_data and root.tag == 'consumer':
+                        consumer_data = {}
+                        for child in root:
+                            consumer_data[child.tag] = child.text
+                        consumers_data = [consumer_data]
+                        print(f"📋 Consumer found (root): {consumer_data}")
+                
+                except ET.ParseError as e:
+                    print(f"❌ XML Parse error: {str(e)}")
+                    return jsonify({
+                        'success': False,
+                        'message': 'שגיאה בפענוח תשובת השרת'
+                    })
+            else:
+                # Try JSON
+                print(f"📋 Trying to parse as JSON...")
+                try:
+                    json_data = response.json()
+                    if isinstance(json_data, list):
+                        consumers_data = json_data
+                    elif isinstance(json_data, dict):
+                        if 'consumers' in json_data:
+                            consumers_data = json_data['consumers']
+                        elif 'consumer' in json_data:
+                            consumers_data = [json_data['consumer']]
+                        else:
+                            consumers_data = [json_data]
+                    print(f"📋 Parsed JSON successfully: {len(consumers_data)} consumers")
+                except:
+                    print(f"❌ Failed to parse as JSON")
+                    return jsonify({
+                        'success': False,
+                        'message': 'שגיאה בפענוח תשובת השרת'
+                    })
             
-            # נסה לפענח את התשובה
-            try:
-                result = response.json()
-                print(f"📊 Parsed proxy response: {result}")
-            except:
-                print(f"❌ Failed to parse proxy response as JSON")
-                return jsonify({
-                    'success': False,
-                    'message': 'שגיאה בפענוח התשובה מהשרת'
-                })
-            
-            # בדוק אם הקריאה הצליחה
-            if not result.get('success'):
-                print(f"❌ Proxy returned success=false: {result}")
-                return jsonify({
-                    'success': False,
-                    'message': result.get('message', 'שגיאה בחיפוש במערכת החניון')
-                })
-            
-            print(f"✅ Proxy returned success! Processing results...")
+            result = {'success': True, 'data': consumers_data}
+            print(f"✅ Search completed successfully! Found {len(consumers_data)} consumers")
                 
         except requests.exceptions.RequestException as e:
             print(f"❌ Request error: {str(e)}")
             return jsonify({
                 'success': False,
-                'message': f'שגיאה בחיבור: {str(e)}'
+                'message': f'שגיאה בחיבור לשרת החניון'
             })
         except Exception as e:
             print(f"❌ Unexpected error: {str(e)}")
