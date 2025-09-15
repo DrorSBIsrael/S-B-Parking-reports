@@ -399,7 +399,6 @@
         </div>
     </div>
 
-    <script src="parking-api-live.js"></script>
     <script>
         // Initialize
         let currentUserData = null;
@@ -420,7 +419,9 @@
         // Load user and parking data
         async function loadUserData() {
             try {
-                const response = await fetch('/api/user-info');
+                const response = await fetch('/api/user-info', {
+                    credentials: 'same-origin'  // חשוב! לשלוח cookies
+                });
                 const data = await response.json();
                 
                 if (data.success) {
@@ -428,11 +429,8 @@
                     document.getElementById('parkingName').textContent = currentUserData.parking_name || 'חניון';
                     document.getElementById('userInfo').textContent = `משתמש: ${currentUserData.username || currentUserData.email}`;
                     
-                    // Set current parking for API
+                    // Set current parking
                     currentParkingId = currentUserData.project_number;
-                    if (window.parkingAPIXML) {
-                        window.parkingAPIXML.setCurrentParking(currentParkingId);
-                    }
                 }
             } catch (error) {
                 console.error('Error loading user data:', error);
@@ -454,19 +452,25 @@
 
             showLoading();
             
+            console.log('Searching for license plate:', cleanPlate);
+            console.log('Current parking ID:', currentParkingId);
+            
             try {
                 const response = await fetch('/api/parking-tour/search', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
+                    credentials: 'same-origin',  // חשוב! לשלוח cookies
                     body: JSON.stringify({
                         license_plate: cleanPlate,
                         parking_id: currentParkingId
                     })
                 });
 
+                console.log('Response status:', response.status);
                 const result = await response.json();
+                console.log('Response data:', result);
                 
                 if (result.success) {
                     if (result.data && result.data.length > 0) {
@@ -475,6 +479,7 @@
                         displayNoResults();
                     }
                 } else {
+                    console.error('Search failed:', result.message);
                     showMessage(result.message || 'שגיאה בחיפוש', 'error');
                     hideResults();
                 }
