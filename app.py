@@ -2627,95 +2627,69 @@ def parking_tour_search():
         except Exception as e:
             print(f"Error getting parking data: {str(e)}, using defaults")
         
-        print(f"🔌 Connecting to parking server: {ip_address}:{port}")
+        print(f"🔌 Using existing proxy for search...")
         
-        # קריאה ישירה לשרת החניון
-        print(f"🚀 Direct server call for lpn search...")
+        # שימוש ב-proxy הקיים 
+        print(f"🚀 Calling proxy with lpn search...")
         
-        # בניית URL
-        protocol = "https"
+        # הכנת הנתונים לקריאה ל-proxy - נשלח רק endpoint
+        # ה-proxy כבר יודע להוסיף את CustomerMediaWebService
         endpoint = f'consumers?lpn={clean_plate}'
-        url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
         
-        print(f"📤 Direct URL: {url}")
+        print(f"📤 Proxy endpoint: {endpoint}")
         
-        # הכנת headers עם Basic Auth
-        auth_string = base64.b64encode(b'2022:2022').decode('ascii')
-        headers = {
-            'Authorization': f'Basic {auth_string}',
-            'Content-Type': 'application/json',
-            'Accept': 'application/xml,application/json'
+        # קריאה ל-proxy עם הפרטים הנכונים
+        proxy_data = {
+            'parking_id': parking_id,
+            'endpoint': endpoint,
+            'method': 'GET'
         }
         
-        try:
-            # קריאה ישירה לשרת
-            response = requests.get(url, headers=headers, verify=False, timeout=30)
+        print(f"📦 Sending to proxy: {proxy_data}")
+        
+        # קריאה ל-endpoint הפנימי
+        # נבצע קריאה ישירה ל-proxy בתוך Flask
+        with app.test_request_context(
+            '/api/company-manager/proxy',
+            method='POST',
+            json=proxy_data,
+            environ_base={'HTTP_COOKIE': request.environ.get('HTTP_COOKIE', '')}
+        ):
+            # העתק את ה-session
+            from flask import g
+            g.user_email = session.get('user_email')
             
-            print(f"📡 Direct response status: {response.status_code}")
-            print(f"📄 Response text (first 500 chars): {response.text[:500]}")
+            # קרא ישירות לפונקציה
+            result_response = company_manager_proxy()
             
-            if response.status_code != 200:
-                print(f"❌ Server error: {response.text}")
+            # בדוק אם זה Response object או tuple
+            if isinstance(result_response, tuple):
+                response_data, status_code = result_response[0], result_response[1]
+            else:
+                response_data = result_response
+                status_code = 200
+            
+            # אם זה Response object, קבל את ה-JSON
+            if hasattr(response_data, 'get_json'):
+                result = response_data.get_json()
+            else:
+                result = response_data
+            
+            print(f"📡 Proxy response: {result}")
+            
+            if status_code != 200:
+                print(f"❌ Proxy returned status: {status_code}")
                 return jsonify({
                     'success': False,
-                    'message': 'שגיאה בחיפוש במערכת החניון'
+                    'message': result.get('message', 'שגיאה בחיפוש במערכת החניון')
                 })
             
-            # עיבוד התשובה
-            content_type = response.headers.get('content-type', '')
-            
-            if 'xml' in content_type or response.text.startswith('<?xml'):
-                # Parse XML response
-                import xml.etree.ElementTree as ET
-                root = ET.fromstring(response.text)
-                
-                # עיבוד XML - נחפש consumers
-                consumers_data = []
-                
-                # חיפוש בכל המבנים האפשריים
-                # Option 1: consumers/consumer
-                consumers_elem = root.find('.//consumers')
-                if consumers_elem is not None:
-                    for consumer_elem in consumers_elem.findall('consumer'):
-                        consumer_data = {}
-                        for child in consumer_elem:
-                            consumer_data[child.tag] = child.text
-                        consumers_data.append(consumer_data)
-                
-                # Option 2: Direct consumer elements
-                if not consumers_data:
-                    for consumer_elem in root.findall('.//consumer'):
-                        consumer_data = {}
-                        for child in consumer_elem:
-                            consumer_data[child.tag] = child.text
-                        consumers_data.append(consumer_data)
-                
-                # Option 3: Root is consumer
-                if not consumers_data and root.tag == 'consumer':
-                    consumer_data = {}
-                    for child in root:
-                        consumer_data[child.tag] = child.text
-                    consumers_data = [consumer_data]
-                
-                result = {'success': True, 'data': consumers_data}
-            else:
-                # Try JSON
-                try:
-                    json_data = response.json()
-                    result = {'success': True, 'data': json_data}
-                except:
-                    print(f"❌ Failed to parse response")
-                    return jsonify({
-                        'success': False,
-                        'message': 'שגיאה בפענוח התשובה מהשרת'
-                    })
-        
-        except Exception as e:
-            print(f"❌ Direct server error: {str(e)}")
-            return jsonify({
-                'success': False,
-                'message': f'שגיאה בחיבור לשרת: {str(e)}'
-            })
+            if not result or not result.get('success'):
+                print(f"❌ Proxy error: {result}")
+                return jsonify({
+                    'success': False,
+                    'message': result.get('message', 'שגיאה בחיפוש במערכת החניון')
+                })
         
         # עיבוד התוצאות מה-proxy
         consumers_data = result.get('data', {})
