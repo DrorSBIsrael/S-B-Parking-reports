@@ -1562,7 +1562,7 @@ def get_user_info():
         
         # קבלת נתוני המשתמש
         user_result = supabase.table('user_parkings').select(
-            'username, email, role, project_number, parking_name, company_type, access_level'
+            'username, email, role, project_number, parking_name, company_type, access_level, code_type'
         ).eq('email', email).execute()
         
         if not user_result.data:
@@ -2553,31 +2553,34 @@ def parking_tour_search():
         
         print(f"✅ User: {session['user_email']}")
         
-        # בדיקת הרשאות - מבוטלת זמנית לצורך בדיקה
-        # TODO: להחזיר בדיקת הרשאות אחרי הבדיקות
+        # בדיקת הרשאות
+        user_result = supabase.table('user_parkings').select(
+            'code_type, project_number, parking_name'
+        ).eq('email', session['user_email']).execute()
         
-        # user_result = supabase.table('user_parkings').select(
-        #     'code_type, project_number, parking_name'
-        # ).eq('email', session['user_email']).execute()
-        
-        # if not user_result.data:
-        #     return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+        if not user_result.data:
+            print("❌ No user data found")
+            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
             
-        # code_type = user_result.data[0].get('code_type', '')
-        # if code_type != 'Parking_tour' and code_type != 'parking_tour':
-        #     return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+        user_data = user_result.data[0]
+        code_type = user_data.get('code_type', '')
         
-        # לצורך בדיקה - נשתמש ב-parking_id מהבקשה
-        # user_data = user_result.data[0]
-        # user_parking_id = user_data.get('project_number')
-        user_parking_id = None  # ביטלנו זמנית את הבדיקה
+        # בדיקה שהמשתמש הוא parking_tour
+        if code_type.lower() != 'parking_tour':
+            print(f"❌ Wrong code_type: {code_type}")
+            return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד parking_tour'}), 403
+        
+        # קבלת מספר החניון של המשתמש
+        user_parking_id = user_data.get('project_number')
+        print(f"✅ User parking ID: {user_parking_id}")
         
         # קבלת נתונים מהבקשה
         data = request.get_json()
         print(f"📦 Request data: {data}")
         
         license_plate = data.get('license_plate', '').strip()
-        parking_id = data.get('parking_id')  # לצורך בדיקה, נשתמש רק במה שנשלח
+        # השתמש ב-parking_id של המשתמש המחובר
+        parking_id = user_parking_id
         
         if not license_plate:
             return jsonify({'success': False, 'message': 'יש להזין לוחית רישוי'})
@@ -2588,16 +2591,20 @@ def parking_tour_search():
         print(f"🔍 Searching for license plate: {clean_plate} in parking: {parking_id}")
         
         # בדיקת דמו - החזרת תוצאה לדוגמה
-        if clean_plate == "23320601":  # הלוחית שניסית
+        if clean_plate in ["23320601", "12345678", "11111111"]:  # לוחיות לדוגמה
             demo_result = [{
                 'id': '123',
+                'subscriberNum': '1001',
                 'firstName': 'ישראל',
                 'lastName': 'ישראלי',
-                'lpn1': '2-33-20601',
+                'lpn1': clean_plate[:1] + '-' + clean_plate[1:3] + '-' + clean_plate[3:],
+                'vehicle1': clean_plate[:1] + '-' + clean_plate[1:3] + '-' + clean_plate[3:],
                 'contractId': '1001',
                 'companyName': 'חברה לדוגמה',
                 'validFrom': '2024-01-01',
-                'validUntil': '2025-12-31'
+                'validUntil': '2025-12-31',
+                'xValidUntil': '2025-12-31',
+                'tagNum': '12345'
             }]
             print("✅ DEMO MODE - Returning test result")
             return jsonify({
@@ -2622,20 +2629,24 @@ def parking_tour_search():
         try:
             # בדיקה אם יש מיפוי לחניון
             if parking_id:
+                print(f"🔍 Looking for parking mapping for project_number: {parking_id}")
                 parking_mapping = supabase.table('project_parking_mapping').select(
                     'parking_id, ip_address, port'
                 ).eq('project_number', str(parking_id)).execute()
+                
+                print(f"📊 Parking mapping result: {parking_mapping.data}")
                 
                 if parking_mapping.data:
                     parking_data = parking_mapping.data[0]
                     ip_address = parking_data.get('ip_address') or ip_address
                     port = parking_data.get('port') or port
+                    print(f"✅ Found parking mapping - IP: {ip_address}, Port: {port}")
                 else:
                     print(f"⚠️ No parking mapping found for parking {parking_id}, using defaults")
         except Exception as e:
-            print(f"Error getting parking data: {str(e)}, using defaults")
+            print(f"❌ Error getting parking data: {str(e)}, using defaults")
         
-        print(f"🔌 Using direct server connection...")
+        print(f"🔌 Using server connection for parking {parking_id}...")
         
         # בניית URL ישירות לשרת החניון
         protocol = "https"
