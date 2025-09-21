@@ -2897,7 +2897,7 @@ def mobile_controller_devices():
         try:
             proxy_data = {
                 'parking_id': parking_id,
-                'endpoint': 'fielddevices',
+                'endpoint': 'DeviceControlWebService/geometry',
                 'method': 'GET'
             }
             
@@ -2945,19 +2945,13 @@ def mobile_controller_devices():
                 # עיבוד הנתונים למבנה שאנחנו צריכים
                 devices = []
                 for device in devices_data:
-                    device_num = device.get('number') or device.get('id')
+                    # Device data already processed by proxy
+                    device_num = device.get('number')
                     if device_num:
-                        device_type = 'unknown'
-                        if 101 <= int(device_num) <= 199:
-                            device_type = 'entry'
-                        elif 201 <= int(device_num) <= 299:
-                            device_type = 'exit'
-                        elif 301 <= int(device_num) <= 399:
-                            device_type = 'pass'
-                        
                         devices.append({
                             'number': device_num,
-                            'type': device_type,
+                            'name': device.get('name', ''),
+                            'type': device.get('type', 'unknown'),
                             'status': device.get('status', 1),
                             'barrier': device.get('barrier_state', 'unknown'),
                             'lastEvent': device.get('last_event_time', '')
@@ -3010,7 +3004,7 @@ def mobile_controller_events():
         try:
             proxy_data = {
                 'parking_id': parking_id,
-                'endpoint': 'events?limit=100',
+                'endpoint': 'DeviceControlWebService/lastevents/100',
                 'method': 'GET'
             }
             
@@ -4124,33 +4118,19 @@ def company_manager_proxy():
         ip_address = parking_data.get('ip_address')
         port = parking_data.get('port', 443)
         
-        # בדיקה אם אנחנו בסביבת פיתוח או production
-        is_local_dev = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
+        # תמיד השתמש בנתונים מהבסיס נתונים
+        # Always use data from database
         
-        if is_local_dev:
-            # בסביבת פיתוח - השתמש בשרת המקומי
-            # LOCAL DEV MODE - Using local parking server
-            ip_address = '100.100.100.100'
-            port = 9999
-        else:
-            # ב-Production (Render) - השתמש בשרת החיצוני
-            # PRODUCTION MODE (Render)
-            
-            # וודא שיש כתובת נכונה
-            if not ip_address or ip_address == 'None':
-                # אם אין בdatabase, השתמש בברירת מחדל
-                ip_address = '192.117.0.122'
-                port = 9999
-                # No IP in database, using default
-            else:
-                # השתמש בכתובת מה-database
-                # Using database server
-                pass
-            
-            # וודא שהפורט נכון
-            if not port or port == 0:
-                port = 9999
-                # Fixed port
+        # וודא שיש כתובת נכונה
+        if not ip_address or ip_address == 'None':
+            # אם אין בdatabase
+            return jsonify({'success': False, 'message': 'חסרה כתובת IP לחניון'}), 404
+        
+        # וודא שהפורט נכון
+        if not port or port == 0:
+            # אם אין פורט, השתמש בברירת מחדל
+            port = 443  # Default port
+            # Using default port
         
         if not ip_address:
             return jsonify({'success': False, 'message': 'חסרים נתוני חיבור'}), 500
@@ -4235,14 +4215,10 @@ def company_manager_proxy():
             # Handle usage profiles endpoint
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/usageprofiles"
             method = 'GET'  # Usage profiles are always GET
-        elif 'fielddevices' in endpoint.lower():
-            # Handle field devices endpoint for mobile controller
-            url = f"{protocol}://{ip_address}:{port}/DeviceControlWebService/fielddevices"
-            method = 'GET'  # Field devices are always GET
-        elif 'events' in endpoint.lower() and 'CustomerMediaWebService' not in endpoint:
-            # Handle events endpoint for mobile controller
-            url = f"{protocol}://{ip_address}:{port}/DeviceControlWebService/{endpoint}"
-            method = 'GET'  # Events are always GET
+        elif 'DeviceControlWebService' in endpoint:
+            # Handle Device Control Web Service endpoints
+            url = f"{protocol}://{ip_address}:{port}/{endpoint}"
+            method = 'GET'  # Device control queries are GET
         elif 'CustomerMediaWebService' in endpoint:
             # אם כבר יש CustomerMediaWebService ב-endpoint
             url = f"{protocol}://{ip_address}:{port}/{endpoint}"
@@ -4448,7 +4424,72 @@ def company_manager_proxy():
                         # Skip the list endpoints if this is a detail request
                         is_detail_endpoint = '/detail' in endpoint
                         
-                        if not is_detail_endpoint and ('contracts' in endpoint or 'contract' in endpoint.lower()):
+                        # Handle Device Control Web Service responses
+                        if 'DeviceControlWebService' in endpoint:
+                            print(f"   📱 Parsing Device Control response for endpoint: {endpoint}")
+                            
+                            if 'geometry' in endpoint:
+                                # Parse geometry response
+                                devices = []
+                                # Find all field-device elements recursively
+                                for device in root.findall('.//field-device'):
+                                    device_name = device.find('name')
+                                    device_number = device.find('number')
+                                    if device_name is not None and device_number is not None:
+                                        device_num = int(device_number.text)
+                                        # Determine device type based on number range
+                                        device_type = 'unknown'
+                                        if 101 <= device_num <= 199:
+                                            device_type = 'entry'
+                                        elif 201 <= device_num <= 299:
+                                            device_type = 'exit'
+                                        elif 301 <= device_num <= 399:
+                                            device_type = 'pass'
+                                        elif 401 <= device_num <= 499:
+                                            device_type = 'door'
+                                        elif 501 <= device_num <= 599:
+                                            device_type = 'validator'
+                                        elif 601 <= device_num <= 699:
+                                            device_type = 'payment'
+                                        elif 701 <= device_num <= 799:
+                                            device_type = 'cashier'
+                                        elif 801 <= device_num <= 899:
+                                            device_type = 'exit_cashier'
+                                        
+                                        devices.append({
+                                            'name': device_name.text,
+                                            'number': device_num,
+                                            'type': device_type,
+                                            'status': 1  # Default status
+                                        })
+                                
+                                print(f"   ✅ Found {len(devices)} devices in geometry")
+                                return jsonify({'success': True, 'data': devices})
+                            
+                            elif 'events' in endpoint or 'lastevents' in endpoint:
+                                # Parse events response
+                                events = []
+                                for event in root.findall('.//event'):
+                                    event_data = {}
+                                    for child in event:
+                                        tag = child.tag
+                                        event_data[tag] = child.text
+                                    if event_data:
+                                        events.append(event_data)
+                                
+                                print(f"   ✅ Found {len(events)} events")
+                                return jsonify({'success': True, 'data': events})
+                            
+                            elif 'version' in endpoint:
+                                # Parse version response
+                                version_elem = root.find('.//version-no')
+                                if version_elem is not None:
+                                    return jsonify({'success': True, 'data': {'version': version_elem.text}})
+                            
+                            # Default response for other DeviceControlWebService endpoints
+                            return jsonify({'success': True, 'data': response.text})
+                        
+                        elif not is_detail_endpoint and ('contracts' in endpoint or 'contract' in endpoint.lower()):
                             contracts = []
                             # חפש contract elements בכל namespaces
                             for contract in root.findall('.//{http://gsph.sub.com/cust/types}contract'):
