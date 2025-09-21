@@ -2165,6 +2165,9 @@ def verify_code():
                     elif code_type == 'Parking_tour' or code_type == 'parking_tour':
                         redirect_url = '/parking-tour'
                         print(f"🎫 Redirecting PARKING TOUR to: {redirect_url}")
+                    elif code_type == 'mobile_controller':
+                        redirect_url = '/mobile-parking-controller'
+                        print(f"📱 Redirecting MOBILE CONTROLLER to: {redirect_url}")
                     else:
                         # בדיקת access_level למשתמשים רגילים
                         access_level = user_data.get('access_level', 'single_parking')
@@ -2215,6 +2218,8 @@ def get_user_redirect_url(email):
                 return '/parking-manager-users'
             elif code_type == 'Parking_tour' or code_type == 'parking_tour':
                 return '/parking-tour'
+            elif code_type == 'mobile_controller':
+                return '/mobile-parking-controller'
             else:
                 return '/dashboard'
         else:
@@ -2537,6 +2542,36 @@ def parking_tour_page():
     
     return render_template('parking_tour.html')
 
+@app.route('/mobile-parking-controller')
+def mobile_parking_controller_page():
+    """דף בקרת חניון למובייל - Mobile Parking Controller"""
+    if 'user_email' not in session:
+        return redirect(url_for('login_page'))
+    
+    # בדיקת הרשאות - רק למשתמשים עם קוד mobile_controller
+    try:
+        user_result = supabase.table('user_parkings').select(
+            'code_type, project_number, parking_name, access_level, permissions'
+        ).eq('email', session['user_email']).execute()
+        
+        if not user_result.data:
+            print(f"⚠️ No user data found for {session['user_email']}")
+            return redirect(url_for('dashboard'))
+        
+        user_data = user_result.data[0]
+        code_type = user_data.get('code_type', '')
+        
+        # בדיקה שהמשתמש הוא mobile_controller
+        if code_type.lower() != 'mobile_controller':
+            print(f"⚠️ Unauthorized access attempt to mobile-parking-controller by {session['user_email']} (code_type: {code_type})")
+            return redirect(url_for('dashboard'))
+        
+    except Exception as e:
+        print(f"Error checking controller permissions: {str(e)}")
+        return redirect(url_for('dashboard'))
+    
+    return render_template('mobile_parking_controller.html')
+
 # ========== API לחיפוש מנויים - Parking Tour ==========
 
 @app.route('/api/parking-tour/search', methods=['POST'])
@@ -2834,6 +2869,306 @@ def parking_tour_search():
             'error_type': type(e).__name__,
             'details': error_details
         })
+
+# ========== Mobile Parking Controller API ==========
+
+@app.route('/api/mobile-controller/devices', methods=['GET', 'POST'])
+def mobile_controller_devices():
+    """Get list of parking devices"""
+    print(f"📱 Mobile Controller Devices - Method: {request.method}")
+    try:
+        if 'user_email' not in session:
+            print(f"❌ No user in session")
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        # בדיקת הרשאות
+        user_result = supabase.table('user_parkings').select(
+            'code_type, project_number, parking_name'
+        ).eq('email', session['user_email']).execute()
+        
+        if not user_result.data or user_result.data[0].get('code_type', '').lower() != 'mobile_controller':
+            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+        
+        user_data = user_result.data[0]
+        parking_id = user_data.get('project_number')
+        print(f"✅ Mobile Controller - User: {session['user_email']}, Parking ID: {parking_id}")
+        
+        # קבלת רשימת מכשירים מהשרת דרך proxy
+        try:
+            proxy_data = {
+                'parking_id': parking_id,
+                'endpoint': 'fielddevices',
+                'method': 'GET'
+            }
+            
+            # Use the company-manager proxy
+            proxy_url = '/api/company-manager/proxy'
+            if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
+                proxy_url = 'http://localhost:5000/api/company-manager/proxy'
+            else:
+                base_url = request.url_root.rstrip('/')
+                proxy_url = base_url + proxy_url
+            
+            response = requests.post(
+                proxy_url,
+                json=proxy_data,
+                headers={
+                    'Content-Type': 'application/json',
+                    'Cookie': request.headers.get('Cookie', '')
+                },
+                timeout=30
+            )
+            
+            if response.status_code != 200:
+                error_msg = f'שגיאת proxy: {response.status_code}'
+                try:
+                    error_detail = response.json()
+                    error_msg = error_detail.get('message', error_msg)
+                except:
+                    pass
+                return jsonify({
+                    'success': False,
+                    'message': error_msg,
+                    'devices': []
+                })
+            
+            proxy_result = response.json()
+            
+            if proxy_result.get('success', False):
+                devices_data = proxy_result.get('data', [])
+                # עיבוד הנתונים למבנה שאנחנו צריכים
+                devices = []
+                for device in devices_data:
+                    device_num = device.get('number') or device.get('id')
+                    if device_num:
+                        device_type = 'unknown'
+                        if 101 <= int(device_num) <= 199:
+                            device_type = 'entry'
+                        elif 201 <= int(device_num) <= 299:
+                            device_type = 'exit'
+                        elif 301 <= int(device_num) <= 399:
+                            device_type = 'pass'
+                        
+                        devices.append({
+                            'number': device_num,
+                            'type': device_type,
+                            'status': device.get('status', 1),
+                            'barrier': device.get('barrier_state', 'unknown'),
+                            'lastEvent': device.get('last_event_time', '')
+                        })
+                
+                return jsonify({
+                    'success': True,
+                    'devices': devices,
+                    'parking_id': parking_id
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': proxy_result.get('message', 'שגיאה בקבלת מכשירים'),
+                    'devices': []
+                })
+                
+        except Exception as e:
+            print(f"❌ Error getting devices via proxy: {str(e)}")
+            return jsonify({
+                'success': False,
+                'message': 'שגיאה בחיבור לשרת',
+                'devices': []
+            })
+        
+    except Exception as e:
+        print(f"Error in mobile_controller_devices: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה בקבלת מכשירים'}), 500
+
+@app.route('/api/mobile-controller/events', methods=['GET', 'POST'])
+def mobile_controller_events():
+    """Get parking events"""
+    print(f"📱 Mobile Controller Events - Method: {request.method}")
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        # בדיקת הרשאות
+        user_result = supabase.table('user_parkings').select(
+            'code_type, project_number'
+        ).eq('email', session['user_email']).execute()
+        
+        if not user_result.data or user_result.data[0].get('code_type', '').lower() != 'mobile_controller':
+            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+        
+        user_data = user_result.data[0]
+        parking_id = user_data.get('project_number')
+        
+        # קבלת אירועים מהשרת דרך proxy
+        try:
+            proxy_data = {
+                'parking_id': parking_id,
+                'endpoint': 'events?limit=100',
+                'method': 'GET'
+            }
+            
+            # Use the company-manager proxy
+            proxy_url = '/api/company-manager/proxy'
+            if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
+                proxy_url = 'http://localhost:5000/api/company-manager/proxy'
+            else:
+                base_url = request.url_root.rstrip('/')
+                proxy_url = base_url + proxy_url
+            
+            response = requests.post(
+                proxy_url,
+                json=proxy_data,
+                headers={
+                    'Content-Type': 'application/json',
+                    'Cookie': request.headers.get('Cookie', '')
+                },
+                timeout=30
+            )
+            
+            if response.status_code != 200:
+                return jsonify({
+                    'success': False,
+                    'message': 'שגיאה בקבלת אירועים',
+                    'events': []
+                })
+            
+            proxy_result = response.json()
+            
+            if proxy_result.get('success', False):
+                events_data = proxy_result.get('data', [])
+                # עיבוד הנתונים למבנה שאנחנו צריכים
+                events = []
+                for event in events_data:
+                    events.append({
+                        'id': event.get('id'),
+                        'device': event.get('device_number') or event.get('device'),
+                        'type': event.get('event_type') or event.get('type'),
+                        'timestamp': event.get('timestamp') or event.get('date_time'),
+                        'description': event.get('description') or event.get('message'),
+                        'user': event.get('user') or event.get('operator', 'מערכת')
+                    })
+                
+                return jsonify({
+                    'success': True,
+                    'events': events[:100]  # הגבלה ל-100 אירועים אחרונים
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': proxy_result.get('message', 'שגיאה בקבלת אירועים'),
+                    'events': []
+                })
+                
+        except Exception as e:
+            print(f"Error getting events via proxy: {str(e)}")
+            return jsonify({
+                'success': False,
+                'message': 'שגיאה בחיבור לשרת',
+                'events': []
+            })
+        
+    except Exception as e:
+        print(f"Error in mobile_controller_events: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה בקבלת אירועים'}), 500
+
+@app.route('/api/mobile-controller/command', methods=['POST'])
+def mobile_controller_command():
+    """Send command to parking devices"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        # בדיקת הרשאות
+        user_result = supabase.table('user_parkings').select(
+            'code_type, project_number'
+        ).eq('email', session['user_email']).execute()
+        
+        if not user_result.data or user_result.data[0].get('code_type', '').lower() != 'mobile_controller':
+            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+        
+        data = request.get_json()
+        command = data.get('command')
+        devices = data.get('devices', [])
+        parking_id = user_result.data[0].get('project_number')
+        
+        print(f"📱 Mobile Controller Command: {command} for devices: {devices}")
+        
+        # מיפוי פקודות לקודים לפי הפרוטוקול
+        command_mapping = {
+            42250: 'HAND_OPEN',      # פתח מחסום
+            42251: 'HAND_CLOSE',     # סגור מחסום
+            42254: 'BLOCK_CLOSED',   # נעל מחסום
+            42255: 'UNBLOCK_CLOSED'  # בטל נעילה
+        }
+        
+        success_count = 0
+        failed_devices = []
+        
+        # שליחת פקודה לכל מכשיר
+        for device_num in devices:
+            try:
+                proxy_data = {
+                    'parking_id': parking_id,
+                    'endpoint': f'fielddevices/{device_num}/command',
+                    'method': 'POST',
+                    'data': {
+                        'command': command,
+                        'command_name': command_mapping.get(command, 'UNKNOWN')
+                    }
+                }
+                
+                # Use the company-manager proxy
+                proxy_url = '/api/company-manager/proxy'
+                if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
+                    proxy_url = 'http://localhost:5000/api/company-manager/proxy'
+                else:
+                    base_url = request.url_root.rstrip('/')
+                    proxy_url = base_url + proxy_url
+                
+                response = requests.post(
+                    proxy_url,
+                    json=proxy_data,
+                    headers={
+                        'Content-Type': 'application/json',
+                        'Cookie': request.headers.get('Cookie', '')
+                    },
+                    timeout=10
+                )
+                
+                if response.status_code == 200:
+                    proxy_result = response.json()
+                    if proxy_result.get('success', False):
+                        success_count += 1
+                    else:
+                        failed_devices.append(device_num)
+                else:
+                    failed_devices.append(device_num)
+                    
+            except Exception as e:
+                print(f"Error sending command to device {device_num}: {str(e)}")
+                failed_devices.append(device_num)
+        
+        if success_count > 0:
+            message = f'פקודה נשלחה בהצלחה ל-{success_count} מכשירים'
+            if failed_devices:
+                message += f', נכשלה ב-{len(failed_devices)} מכשירים'
+            return jsonify({
+                'success': True,
+                'message': message,
+                'executed_devices': [d for d in devices if d not in failed_devices],
+                'failed_devices': failed_devices
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'הפקודה נכשלה בכל המכשירים',
+                'failed_devices': failed_devices
+            })
+        
+    except Exception as e:
+        print(f"Error in mobile_controller_command: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה בשליחת פקודה'}), 500
 
 # ========== API למאסטר ==========
 
