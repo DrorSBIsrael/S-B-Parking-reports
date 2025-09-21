@@ -4077,12 +4077,19 @@ def company_manager_get_subscribers():
             return jsonify({'success': False, 'message': 'הרשאות לא תקינות'}), 403
         
         # קבלת נתוני החניון כולל IP ופורט
+        # המרה של parking_id למספר כדי למצוא בשדה description
+        try:
+            parking_num = str(parking_id)
+        except:
+            parking_num = parking_id
+            
         parking_result = supabase.table('parkings').select(
             'name, ip_address, port, description'
-        ).eq('id', parking_id).execute()
+        ).eq('description', parking_num).execute()
         
         if not parking_result.data:
-            return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
+            print(f"❌ No parking found with description: {parking_num} (in parking-tour)")
+            return jsonify({'success': False, 'message': f'חניון {parking_num} לא נמצא במערכת'}), 404
         
         parking_data = parking_result.data[0]
         
@@ -4232,12 +4239,24 @@ def company_manager_proxy():
             return jsonify({'success': False, 'message': 'חסרים פרמטרים'}), 400
         
         # קבלת נתוני החניון
+        # המרה של parking_id למספר כדי למצוא בשדה description
+        try:
+            parking_num = str(parking_id)
+        except:
+            parking_num = parking_id
+        
+        print(f"🔍 Looking for parking with description: {parking_num}")
+            
         parking_result = supabase.table('parkings').select(
             'ip_address, port, description'
-        ).eq('id', parking_id).execute()
+        ).eq('description', parking_num).execute()
         
         if not parking_result.data:
-            return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
+            print(f"❌ No parking found with description: {parking_num}")
+            # נסה לחפש לפי שדות אחרים
+            all_parkings = supabase.table('parkings').select('id, description, name').execute()
+            print(f"🔍 All parkings in DB: {[(p.get('id'), p.get('description'), p.get('name')) for p in all_parkings.data[:5]]}")
+            return jsonify({'success': False, 'message': f'חניון {parking_num} לא נמצא במערכת'}), 404
         
         parking_data = parking_result.data[0]
         ip_address = parking_data.get('ip_address')
