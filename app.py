@@ -2612,20 +2612,29 @@ def mobile_parking_controller_page():
 @app.route('/api/mobile-controller/devices', methods=['GET', 'POST'])
 def mobile_controller_devices():
     """Get list of parking devices"""
+    print(f"📱 Mobile Controller Devices - Method: {request.method}")
     try:
         if 'user_email' not in session:
+            print(f"❌ No user in session")
             return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        print(f"📱 User email in session: {session['user_email']}")
         
         # בדיקת הרשאות
         user_result = supabase.table('user_parkings').select(
             'code_type, project_number, parking_name'
         ).eq('email', session['user_email']).execute()
         
+        print(f"📱 User data from DB: {user_result.data}")
+        
         if not user_result.data or user_result.data[0].get('code_type', '').lower() != 'mobile_controller':
+            code_type = user_result.data[0].get('code_type') if user_result.data else 'No data'
+            print(f"❌ Unauthorized - code_type: {code_type}")
             return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
         
         user_data = user_result.data[0]
         parking_id = user_data.get('project_number')
+        print(f"✅ Mobile Controller - User: {session['user_email']}, Parking ID: {parking_id}")
         
         # קבלת רשימת מכשירים מהשרת דרך proxy
         try:
@@ -2635,6 +2644,8 @@ def mobile_controller_devices():
                 'method': 'GET'
             }
             
+            print(f"📱 Proxy data: {proxy_data}")
+            
             # Use the company-manager proxy
             proxy_url = '/api/company-manager/proxy'
             if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
@@ -2642,6 +2653,8 @@ def mobile_controller_devices():
             else:
                 base_url = request.url_root.rstrip('/')
                 proxy_url = base_url + proxy_url
+            
+            print(f"📱 Proxy URL: {proxy_url}")
             
             response = requests.post(
                 proxy_url,
@@ -2653,8 +2666,15 @@ def mobile_controller_devices():
                 timeout=30
             )
             
+            print(f"📱 Proxy response status: {response.status_code}")
+            
             if response.status_code != 200:
                 print(f"❌ Proxy returned {response.status_code}")
+                try:
+                    error_detail = response.json()
+                    print(f"❌ Error details: {error_detail}")
+                except:
+                    print(f"❌ Response text: {response.text[:500]}")
                 return jsonify({
                     'success': False,
                     'message': 'שגיאה בקבלת מכשירים',
@@ -2662,9 +2682,11 @@ def mobile_controller_devices():
                 })
             
             proxy_result = response.json()
+            print(f"📱 Proxy result: success={proxy_result.get('success')}, message={proxy_result.get('message')}")
             
             if proxy_result.get('success', False):
                 devices_data = proxy_result.get('data', [])
+                print(f"📱 Got {len(devices_data)} devices from proxy")
                 # עיבוד הנתונים למבנה שאנחנו צריכים
                 devices = []
                 for device in devices_data:
@@ -2699,7 +2721,9 @@ def mobile_controller_devices():
                 })
                 
         except Exception as e:
-            print(f"Error getting devices via proxy: {str(e)}")
+            print(f"❌ Error getting devices via proxy: {str(e)}")
+            import traceback
+            print(f"❌ Traceback: {traceback.format_exc()}")
             return jsonify({
                 'success': False,
                 'message': 'שגיאה בחיבור לשרת',
@@ -2713,6 +2737,7 @@ def mobile_controller_devices():
 @app.route('/api/mobile-controller/events', methods=['GET', 'POST'])
 def mobile_controller_events():
     """Get parking events"""
+    print(f"📱 Mobile Controller Events - Method: {request.method}")
     try:
         if 'user_email' not in session:
             return jsonify({'success': False, 'message': 'לא מחובר'}), 401
@@ -3215,7 +3240,7 @@ def parking_tour_search():
             return jsonify({
                 'success': False,
                 'message': f'לא ניתן להתחבר ל-proxy'
-                    })
+            })
         except requests.exceptions.RequestException as e:
             print(f"❌ Request error: {type(e).__name__}: {str(e)}")
             return jsonify({
