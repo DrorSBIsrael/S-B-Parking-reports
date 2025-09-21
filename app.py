@@ -1498,11 +1498,27 @@ def test_email_system():
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     """Serve static files with no-cache headers"""
-    response = make_response(app.send_static_file(filename))
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '-1'
-    return response
+    try:
+        response = make_response(app.send_static_file(filename))
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+        
+        # Set proper MIME type for JavaScript files
+        if filename.endswith('.js'):
+            response.headers['Content-Type'] = 'application/javascript; charset=utf-8'
+        
+        print(f"✅ Serving static file: {filename}")
+        return response
+    except Exception as e:
+        print(f"❌ Error serving static file {filename}: {str(e)}")
+        # Try alternative method
+        try:
+            static_dir = os.path.join(app.root_path, 'static')
+            return send_from_directory(static_dir, filename)
+        except Exception as e2:
+            print(f"❌ Alternative method also failed: {str(e2)}")
+            return "File not found", 404
 
 @app.route('/<filename>.js')
 def serve_js_files(filename):
@@ -1510,6 +1526,18 @@ def serve_js_files(filename):
     try:
         return send_from_directory('.', f'{filename}.js', mimetype='application/javascript')
     except FileNotFoundError:
+        return "File not found", 404
+
+# Specific route for mobile-parking-controller.js
+@app.route('/static/js/mobile-parking-controller.js')
+def serve_mobile_controller_js():
+    """Serve the mobile parking controller JavaScript file"""
+    try:
+        static_js_path = os.path.join(app.root_path, 'static', 'js')
+        return send_from_directory(static_js_path, 'mobile-parking-controller.js', 
+                                   mimetype='application/javascript; charset=utf-8')
+    except Exception as e:
+        print(f"❌ Error serving mobile-parking-controller.js: {str(e)}")
         return "File not found", 404
 
 @app.route('/')
@@ -1532,7 +1560,7 @@ def dashboard():
     if 'user_email' not in session:
         return redirect(url_for('login_page'))
     
-    # בדיקה אם המשתמש הוא מנהל חברה
+    # בדיקה אם המשתמש הוא מנהל חברה או בקר חניון
     try:
         user_result = supabase.table('user_parkings').select(
             'access_level, code_type'
@@ -1540,9 +1568,16 @@ def dashboard():
         
         if user_result.data:
             user_data = user_result.data[0]
-            if user_data.get('access_level') == 'company_manager' or user_data.get('code_type') == 'company_manager':
+            code_type = user_data.get('code_type', '')
+            
+            # הפניה לפי סוג המשתמש
+            if user_data.get('access_level') == 'company_manager' or code_type == 'company_manager':
                 # מנהל חברה - מפנים אותו לדף הנכון
                 return redirect(url_for('company_manager_page'))
+            elif code_type.lower() == 'mobile_controller':
+                # בקר חניון - מפנים אותו לדף הבקרה
+                return redirect(url_for('mobile_parking_controller_page'))
+                
     except Exception as e:
         print(f"Error checking user type: {str(e)}")
     
@@ -1562,7 +1597,7 @@ def get_user_info():
         
         # קבלת נתוני המשתמש
         user_result = supabase.table('user_parkings').select(
-            'username, email, role, project_number, parking_name, company_type, access_level'
+            'username, email, role, project_number, parking_name, company_type, access_level, code_type'
         ).eq('email', email).execute()
         
         if not user_result.data:
@@ -2542,304 +2577,6 @@ def parking_tour_page():
     
     return render_template('parking_tour.html')
 
-# ========== API לחיפוש מנויים - Parking Tour ==========
-
-@app.route('/api/parking-tour/search', methods=['POST'])
-def parking_tour_search():
-    """חיפוש מנוי לפי לוחית רישוי"""
-    print("="*50)
-    print("🔍 PARKING TOUR SEARCH CALLED!")
-    print("="*50)
-    
-    try:
-        if 'user_email' not in session:
-            print("❌ NO USER IN SESSION")
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
-        
-        print(f"✅ User: {session['user_email']}")
-        
-        # בדיקת הרשאות - מבוטלת זמנית לצורך בדיקה
-        # TODO: להחזיר בדיקת הרשאות אחרי הבדיקות
-        
-        # user_result = supabase.table('user_parkings').select(
-        #     'code_type, project_number, parking_name'
-        # ).eq('email', session['user_email']).execute()
-        
-        # if not user_result.data:
-        #     return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
-            
-        # code_type = user_result.data[0].get('code_type', '')
-        # if code_type != 'Parking_tour' and code_type != 'parking_tour':
-        #     return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
-        
-        # לצורך בדיקה - נשתמש ב-parking_id מהבקשה
-        # user_data = user_result.data[0]
-        # user_parking_id = user_data.get('project_number')
-        user_parking_id = None  # ביטלנו זמנית את הבדיקה
-        
-        # קבלת נתונים מהבקשה
-        data = request.get_json()
-        print(f"📦 Request data: {data}")
-        
-        license_plate = data.get('license_plate', '').strip()
-        parking_id = data.get('parking_id')  # לצורך בדיקה, נשתמש רק במה שנשלח
-        
-        if not license_plate:
-            return jsonify({'success': False, 'message': 'יש להזין לוחית רישוי'})
-        
-        # ניקוי לוחית רישוי - הסרת רווחים ומקפים
-        clean_plate = license_plate.replace(' ', '').replace('-', '')
-        
-        print(f"🔍 Searching for license plate: {clean_plate} in parking: {parking_id}")
-        
-        # בדיקת דמו - החזרת תוצאה לדוגמה
-        if clean_plate == "23320601":  # הלוחית שניסית
-            demo_result = [{
-                'id': '123',
-                'firstName': 'ישראל',
-                'lastName': 'ישראלי',
-                'lpn1': '2-33-20601',
-                'contractId': '1001',
-                'companyName': 'חברה לדוגמה',
-                'validFrom': '2024-01-01',
-                'validUntil': '2025-12-31'
-            }]
-            print("✅ DEMO MODE - Returning test result")
-            return jsonify({
-                'success': True,
-                'data': demo_result,
-                'total': 1,
-                'message': 'מצב הדגמה'
-            })
-        
-        # נבדוק אם יש חניון
-        if not parking_id:
-            print(f"❌ No parking_id provided")
-            return jsonify({
-                'success': False,
-                'message': 'לא נבחר חניון'
-            })
-        
-        # קבלת נתוני החיבור לשרת החניון
-        ip_address = '192.117.0.122'  # ברירת מחדל
-        port = 8240  # ברירת מחדל
-        
-        try:
-            # בדיקה אם יש מיפוי לחניון
-            if parking_id:
-                parking_mapping = supabase.table('project_parking_mapping').select(
-                    'parking_id, ip_address, port'
-                ).eq('project_number', str(parking_id)).execute()
-                
-                if parking_mapping.data:
-                    parking_data = parking_mapping.data[0]
-                    ip_address = parking_data.get('ip_address') or ip_address
-                    port = parking_data.get('port') or port
-                else:
-                    print(f"⚠️ No parking mapping found for parking {parking_id}, using defaults")
-        except Exception as e:
-            print(f"Error getting parking data: {str(e)}, using defaults")
-        
-        print(f"🔌 Using direct server connection...")
-        
-        # בניית URL ישירות לשרת החניון
-        protocol = "https"
-        url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers?lpn={clean_plate}"
-        
-        print(f"📤 Direct URL: {url}")
-        
-        # הכנת headers עם Basic Auth
-        auth_string = base64.b64encode(b'2022:2022').decode('ascii')
-        headers = {
-            'Authorization': f'Basic {auth_string}',
-            'Content-Type': 'application/json',
-            'Accept': 'application/xml,application/json'
-        }
-        
-        try:
-            # קריאה ישירה לשרת
-            print(f"🌐 Making direct request to parking server...")
-            
-            # ביטול אזהרות SSL
-            import urllib3
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            
-            response = requests.get(url, headers=headers, verify=False, timeout=30)
-            
-            print(f"📡 Response status: {response.status_code}")
-            print(f"📄 Response headers: {dict(response.headers)}")
-            
-            if response.status_code != 200:
-                print(f"❌ Server returned {response.status_code}")
-                print(f"📄 Error response: {response.text[:500]}")
-                return jsonify({
-                    'success': False,
-                    'message': 'שגיאה בחיפוש במערכת החניון'
-                })
-            
-            # עיבוד התשובה
-            content_type = response.headers.get('content-type', '')
-            print(f"📄 Content-Type: {content_type}")
-            print(f"📄 Response body (first 1000 chars): {response.text[:1000]}")
-            
-            consumers_data = []
-            
-            if 'xml' in content_type or response.text.startswith('<?xml'):
-                print(f"📋 Parsing XML response...")
-                import xml.etree.ElementTree as ET
-                
-                try:
-                    root = ET.fromstring(response.text)
-                    print(f"📋 Root element: {root.tag}")
-                    
-                    # Option 1: consumers/consumer structure
-                    consumers_elem = root.find('.//consumers')
-                    if consumers_elem is not None:
-                        print(f"📋 Found consumers element")
-                        for consumer_elem in consumers_elem.findall('consumer'):
-                            consumer_data = {}
-                            for child in consumer_elem:
-                                consumer_data[child.tag] = child.text
-                            consumers_data.append(consumer_data)
-                            print(f"📋 Consumer found: {consumer_data}")
-                    
-                    # Option 2: Direct consumer elements
-                    if not consumers_data:
-                        for consumer_elem in root.findall('.//consumer'):
-                            consumer_data = {}
-                            for child in consumer_elem:
-                                consumer_data[child.tag] = child.text
-                            consumers_data.append(consumer_data)
-                            print(f"📋 Consumer found (direct): {consumer_data}")
-                    
-                    # Option 3: Root is consumer
-                    if not consumers_data and root.tag == 'consumer':
-                        consumer_data = {}
-                        for child in root:
-                            consumer_data[child.tag] = child.text
-                        consumers_data = [consumer_data]
-                        print(f"📋 Consumer found (root): {consumer_data}")
-                
-                except ET.ParseError as e:
-                    print(f"❌ XML Parse error: {str(e)}")
-                    return jsonify({
-                        'success': False,
-                        'message': 'שגיאה בפענוח תשובת השרת'
-                    })
-            else:
-                # Try JSON
-                print(f"📋 Trying to parse as JSON...")
-                try:
-                    json_data = response.json()
-                    if isinstance(json_data, list):
-                        consumers_data = json_data
-                    elif isinstance(json_data, dict):
-                        if 'consumers' in json_data:
-                            consumers_data = json_data['consumers']
-                        elif 'consumer' in json_data:
-                            consumers_data = [json_data['consumer']]
-                        else:
-                            consumers_data = [json_data]
-                    print(f"📋 Parsed JSON successfully: {len(consumers_data)} consumers")
-                except:
-                    print(f"❌ Failed to parse as JSON")
-                    return jsonify({
-                        'success': False,
-                        'message': 'שגיאה בפענוח תשובת השרת'
-                    })
-            
-            result = {'success': True, 'data': consumers_data}
-            print(f"✅ Search completed successfully! Found {len(consumers_data)} consumers")
-                
-        except requests.exceptions.RequestException as e:
-            print(f"❌ Request error: {str(e)}")
-            return jsonify({
-                'success': False,
-                'message': f'שגיאה בחיבור לשרת החניון'
-            })
-        except Exception as e:
-            print(f"❌ Unexpected error: {str(e)}")
-            import traceback
-            print(traceback.format_exc())
-            return jsonify({
-                'success': False,
-                'message': 'שגיאה בחיפוש במערכת החניון'
-            })
-        
-        # עיבוד התוצאות מה-proxy
-        consumers_data = result.get('data', {})
-        consumers = []
-        
-        # ה-proxy כבר עשה את הפענוח של XML/JSON
-        if isinstance(consumers_data, list):
-            consumers = consumers_data
-        elif isinstance(consumers_data, dict):
-            if 'consumers' in consumers_data and 'consumer' in consumers_data['consumers']:
-                consumer_list = consumers_data['consumers']['consumer']
-                consumers = consumer_list if isinstance(consumer_list, list) else [consumer_list]
-            elif 'consumer' in consumers_data:
-                consumer_list = consumers_data['consumer']
-                consumers = consumer_list if isinstance(consumer_list, list) else [consumer_list]
-            else:
-                # אולי זה consumer בודד
-                consumers = [consumers_data]
-        
-        # עיבוד התוצאות
-        found_subscribers = []
-        
-        print(f"📊 Found {len(consumers)} consumers with lpn={clean_plate}")
-        
-        # עיבוד כל מנוי שנמצא
-        for consumer in consumers:
-            if not consumer:
-                continue
-            # קבלת פרטי המנוי
-            contract_id = consumer.get('contractId') or consumer.get('contractid') or consumer.get('contract')
-            company_name = consumer.get('companyName') or consumer.get('contractName') or 'לא ידוע'
-            
-            # בניית אובייקט המנוי
-            subscriber_data = {
-                'id': consumer.get('id') or consumer.get('subscriberNum'),
-                'subscriberNum': consumer.get('subscriberNum') or consumer.get('id'),
-                'firstName': consumer.get('firstName', ''),
-                'lastName': consumer.get('lastName') or consumer.get('name', ''),
-                'name': consumer.get('name', ''),
-                'companyId': contract_id,
-                'companyName': company_name,
-                'vehicle1': consumer.get('lpn1') or consumer.get('vehicleNum', ''),
-                'vehicle2': consumer.get('lpn2', ''),
-                'vehicle3': consumer.get('lpn3', ''),
-                'lpn1': consumer.get('lpn1') or consumer.get('vehicleNum', ''),
-                'lpn2': consumer.get('lpn2', ''),
-                'lpn3': consumer.get('lpn3', ''),
-                'tagNum': consumer.get('tagNum') or consumer.get('cardNum', ''),
-                'validFrom': consumer.get('xValidFrom') or consumer.get('validFrom', ''),
-                'validUntil': consumer.get('xValidUntil') or consumer.get('validUntil', ''),
-                'profile': consumer.get('profile') or consumer.get('extCardProfile', '0'),
-                'presence': consumer.get('presence', False)
-            }
-            found_subscribers.append(subscriber_data)
-        
-        print(f"✅ Returning {len(found_subscribers)} subscribers")
-        
-        return jsonify({
-            'success': True,
-            'data': found_subscribers,
-            'total': len(found_subscribers)
-        })
-        
-    except Exception as e:
-        error_details = f"Error in parking tour search: {str(e)}"
-        print(f"❌ {error_details}")
-        import traceback
-        print(traceback.format_exc())
-        return jsonify({
-            'success': False, 
-            'message': f'שגיאה: {str(e)}',
-            'error_type': type(e).__name__,
-            'details': error_details
-        })
-
 @app.route('/mobile-parking-controller')
 def mobile_parking_controller_page():
     """דף בקרת חניון למובייל - Mobile Parking Controller"""
@@ -2876,10 +2613,11 @@ def mobile_parking_controller_page():
 def mobile_controller_devices():
     """Get list of parking devices"""
     print(f"📱 Mobile Controller Devices - Method: {request.method}")
+    print(f"🔍 Session data: {dict(session)}")
     try:
         if 'user_email' not in session:
             print(f"❌ No user in session")
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            return jsonify({'success': False, 'message': 'לא מחובר', 'debug': 'No session email'}), 401
         
         print(f"📱 User email in session: {session['user_email']}")
         
@@ -2909,13 +2647,24 @@ def mobile_controller_devices():
             
             print(f"📱 Proxy data: {proxy_data}")
             
+            # Add internal session for proxy authentication
+            proxy_data['_internal_session'] = {
+                'user_email': session.get('user_email'),
+                'user_access_level': session.get('user_access_level'),
+                'user_permissions': session.get('user_permissions'),
+                'user_project_number': session.get('user_project_number'),
+                'user_company_list': session.get('user_company_list')
+            }
+            print(f"📱 Adding internal session: user={session.get('user_email')}, access={session.get('user_access_level')}")
+            
             # Use the company-manager proxy
-            proxy_url = '/api/company-manager/proxy'
+            # In Render, use localhost to avoid timeout when calling self
             if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
                 proxy_url = 'http://localhost:5000/api/company-manager/proxy'
             else:
-                base_url = request.url_root.rstrip('/')
-                proxy_url = base_url + proxy_url
+                # In production (Render), also use localhost to avoid timeout
+                proxy_url = 'http://localhost:5000/api/company-manager/proxy'
+                print(f"📱 Using localhost in production to avoid timeout")
             
             print(f"📱 Proxy URL: {proxy_url}")
             
@@ -2943,7 +2692,11 @@ def mobile_controller_devices():
                 return jsonify({
                     'success': False,
                     'message': error_msg,
-                    'devices': []
+                    'devices': [],
+                    'debug': {
+                        'proxy_status': response.status_code,
+                        'parking_id': parking_id
+                    }
                 })
             
             proxy_result = response.json()
@@ -3003,10 +2756,11 @@ def mobile_controller_devices():
 def mobile_controller_events():
     """Get parking events"""
     print(f"📱 Mobile Controller Events - Method: {request.method}")
+    print(f"🔍 Session data: {dict(session)}")
     try:
         if 'user_email' not in session:
             print(f"❌ No user in session for events")
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            return jsonify({'success': False, 'message': 'לא מחובר', 'debug': 'No session email for events'}), 401
         
         # בדיקת הרשאות
         user_result = supabase.table('user_parkings').select(
@@ -3027,13 +2781,21 @@ def mobile_controller_events():
                 'method': 'GET'
             }
             
+            # Add internal session for proxy authentication
+            proxy_data['_internal_session'] = {
+                'user_email': session.get('user_email'),
+                'user_access_level': session.get('user_access_level'),
+                'user_permissions': session.get('user_permissions'),
+                'user_project_number': session.get('user_project_number'),
+                'user_company_list': session.get('user_company_list')
+            }
+            print(f"📱 Adding internal session: user={session.get('user_email')}, access={session.get('user_access_level')}")
+            
             # Use the company-manager proxy
-            proxy_url = '/api/company-manager/proxy'
-            if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
-                proxy_url = 'http://localhost:5000/api/company-manager/proxy'
-            else:
-                base_url = request.url_root.rstrip('/')
-                proxy_url = base_url + proxy_url
+            # Always use localhost to avoid timeout in Render
+            # In Render, Flask runs on the PORT env variable
+            port = os.environ.get('PORT', '5000')
+            proxy_url = f'http://localhost:{port}/api/company-manager/proxy'
             
             response = requests.post(
                 proxy_url,
@@ -3118,13 +2880,21 @@ def mobile_controller_system_status():
                 'method': 'GET'
             }
             
+            # Add internal session for proxy authentication
+            proxy_data['_internal_session'] = {
+                'user_email': session.get('user_email'),
+                'user_access_level': session.get('user_access_level'),
+                'user_permissions': session.get('user_permissions'),
+                'user_project_number': session.get('user_project_number'),
+                'user_company_list': session.get('user_company_list')
+            }
+            print(f"📱 Adding internal session: user={session.get('user_email')}, access={session.get('user_access_level')}")
+            
             # Use the company-manager proxy
-            proxy_url = '/api/company-manager/proxy'
-            if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
-                proxy_url = 'http://localhost:5000/api/company-manager/proxy'
-            else:
-                base_url = request.url_root.rstrip('/')
-                proxy_url = base_url + proxy_url
+            # Always use localhost to avoid timeout in Render
+            # In Render, Flask runs on the PORT env variable
+            port = os.environ.get('PORT', '5000')
+            proxy_url = f'http://localhost:{port}/api/company-manager/proxy'
             
             response = requests.post(
                 proxy_url,
@@ -3140,7 +2910,10 @@ def mobile_controller_system_status():
                 'parking_name': user_data.get('parking_name', 'חניון'),
                 'total_devices': 0,
                 'active_devices': 0,
-                'inactive_devices': 0,
+                'offline_devices': 0,
+                'open_barriers': 0,
+                'locked_barriers': 0,
+                'last_update': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'system_status': 'לא ידוע',
                 'alerts': []
             }
@@ -3149,11 +2922,15 @@ def mobile_controller_system_status():
                 proxy_result = response.json()
                 if proxy_result.get('success', False):
                     system_data = proxy_result.get('data', {})
+                    
+                    # עיבוד הנתונים
                     status.update({
                         'total_devices': system_data.get('total_devices', 0),
                         'active_devices': system_data.get('active_devices', 0),
-                        'inactive_devices': system_data.get('inactive_devices', 0),
-                        'system_status': 'תקין' if system_data.get('status') == 'OK' else 'תקלה',
+                        'offline_devices': system_data.get('offline_devices', 0),
+                        'open_barriers': system_data.get('open_barriers', 0),
+                        'locked_barriers': system_data.get('locked_barriers', 0),
+                        'system_status': system_data.get('status', 'תקין'),
                         'alerts': system_data.get('alerts', [])
                     })
             
@@ -3161,17 +2938,20 @@ def mobile_controller_system_status():
                 'success': True,
                 'status': status
             })
-            
+                
         except Exception as e:
-            print(f"Error getting system status: {str(e)}")
+            print(f"Error getting system status via proxy: {str(e)}")
+            # במקרה של שגיאה, נחזיר סטטוס בסיסי
             return jsonify({
-                'success': False,
-                'message': 'שגיאה בקבלת סטטוס',
+                'success': True,
                 'status': {
                     'parking_name': user_data.get('parking_name', 'חניון'),
                     'total_devices': 0,
                     'active_devices': 0,
-                    'inactive_devices': 0,
+                    'offline_devices': 0,
+                    'open_barriers': 0,
+                    'locked_barriers': 0,
+                    'last_update': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                     'system_status': 'לא זמין',
                     'alerts': []
                 }
@@ -3227,13 +3007,19 @@ def mobile_controller_command():
                     }
                 }
                 
+                # Add internal session for proxy authentication
+                proxy_data['_internal_session'] = {
+                    'user_email': session.get('user_email'),
+                    'user_access_level': session.get('user_access_level'),
+                    'user_permissions': session.get('user_permissions'),
+                    'user_project_number': session.get('user_project_number'),
+                    'user_company_list': session.get('user_company_list')
+                }
+                
                 # Use the company-manager proxy
-                proxy_url = '/api/company-manager/proxy'
-                if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
-                    proxy_url = 'http://localhost:5000/api/company-manager/proxy'
-                else:
-                    base_url = request.url_root.rstrip('/')
-                    proxy_url = base_url + proxy_url
+                # Always use localhost to avoid timeout in Render
+                port = os.environ.get('PORT', '5000')
+                proxy_url = f'http://localhost:{port}/api/company-manager/proxy'
                 
                 response = requests.post(
                     proxy_url,
@@ -3278,6 +3064,284 @@ def mobile_controller_command():
     except Exception as e:
         print(f"Error in mobile_controller_command: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בשליחת פקודה'}), 500
+
+# ========== API לחיפוש מנויים - Parking Tour ==========
+
+@app.route('/api/parking-tour/search', methods=['POST'])
+def parking_tour_search():
+    """חיפוש מנוי לפי לוחית רישוי"""
+    print("="*50)
+    print("🔍 PARKING TOUR SEARCH CALLED!")
+    print("="*50)
+    
+    try:
+        if 'user_email' not in session:
+            print("❌ NO USER IN SESSION")
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        print(f"✅ User: {session['user_email']}")
+        
+        # בדיקת הרשאות
+        user_result = supabase.table('user_parkings').select(
+            'code_type, project_number, parking_name'
+        ).eq('email', session['user_email']).execute()
+        
+        print(f"📊 User query result: {user_result.data}")
+        
+        if not user_result.data:
+            print("❌ No user data found")
+            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+            
+        user_data = user_result.data[0]
+        code_type = user_data.get('code_type', '')
+        print(f"🔑 User code_type: '{code_type}'")
+        
+        # בדיקה שהמשתמש הוא parking_tour
+        if code_type != 'Parking_tour' and code_type != 'parking_tour':
+            print(f"❌ Wrong code_type: {code_type}")
+            return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד parking_tour'}), 403
+        
+        # קבלת מספר החניון של המשתמש
+        user_parking_id = user_data.get('project_number')
+        print(f"✅ User parking ID: {user_parking_id}")
+        
+        # קבלת נתונים מהבקשה
+        data = request.get_json()
+        print(f"📦 Request data: {data}")
+        
+        license_plate = data.get('license_plate', '').strip()
+        # השתמש ב-parking_id של המשתמש המחובר
+        parking_id = user_parking_id
+        
+        if not license_plate:
+            return jsonify({'success': False, 'message': 'יש להזין לוחית רישוי'})
+        
+        # ניקוי לוחית רישוי - הסרת רווחים ומקפים
+        clean_plate = license_plate.replace(' ', '').replace('-', '')
+        
+        print(f"🔍 Searching for license plate: {clean_plate} in parking: {parking_id}")
+        
+        # בדיקת דמו - החזרת תוצאה לדוגמה
+        if clean_plate in ["23320601", "12345678", "11111111"]:  # לוחיות לדוגמה
+            demo_result = [{
+                'id': '123',
+                'subscriberNum': '1001',
+                'firstName': 'ישראל',
+                'lastName': 'ישראלי',
+                'lpn1': clean_plate[:1] + '-' + clean_plate[1:3] + '-' + clean_plate[3:],
+                'vehicle1': clean_plate[:1] + '-' + clean_plate[1:3] + '-' + clean_plate[3:],
+                'contractId': '1001',
+                'companyName': 'חברה לדוגמה',
+                'validFrom': '2024-01-01',
+                'validUntil': '2025-12-31',
+                'xValidUntil': '2025-12-31',
+                'tagNum': '12345'
+            }]
+            print("✅ DEMO MODE - Returning test result")
+            return jsonify({
+                'success': True,
+                'data': demo_result,
+                'total': 1,
+                'message': 'מצב הדגמה'
+            })
+        
+        # נבדוק אם יש חניון
+        if not parking_id:
+            print(f"❌ No parking_id provided")
+            return jsonify({
+                'success': False,
+                'message': 'לא נבחר חניון'
+            })
+        
+        # קבלת נתוני החיבור לשרת החניון
+        ip_address = '192.117.0.122'  # ברירת מחדל
+        port = 8240  # ברירת מחדל
+        
+        try:
+            # בדיקה אם יש מיפוי לחניון
+            if parking_id:
+                print(f"🔍 Looking for parking mapping for project_number: {parking_id}")
+                parking_mapping = supabase.table('project_parking_mapping').select(
+                    'parking_id, ip_address, port'
+                ).eq('project_number', str(parking_id)).execute()
+                
+                print(f"📊 Parking mapping result: {parking_mapping.data}")
+                
+                if parking_mapping.data:
+                    parking_data = parking_mapping.data[0]
+                    ip_address = parking_data.get('ip_address') or ip_address
+                    port = parking_data.get('port') or port
+                    print(f"✅ Found parking mapping - IP: {ip_address}, Port: {port}")
+                else:
+                    print(f"⚠️ No parking mapping found for parking {parking_id}, using defaults")
+        except Exception as e:
+            print(f"❌ Error getting parking data: {str(e)}, using defaults")
+        
+        print(f"🔌 Using proxy connection for parking {parking_id}...")
+        
+        # שימוש ב-proxy של המערכת כמו ב-company-manager
+        try:
+            # בניית בקשה ל-proxy
+            proxy_data = {
+                'parking_id': parking_id,
+                'endpoint': f'consumers?lpn={clean_plate}',
+                'method': 'GET'
+            }
+            
+            print(f"📤 Sending to proxy: {proxy_data}")
+            
+            # כתובת ה-proxy - בסביבת production נשתמש בכתובת המלאה
+            # תמיד השתמש ב-localhost כדי למנוע timeout ב-Render
+            port = os.environ.get('PORT', '5000')
+            proxy_url = f'http://localhost:{port}/api/company-manager/proxy'
+            print(f"🌐 Using proxy URL: {proxy_url}")
+            
+            response = requests.post(
+                proxy_url,
+                json=proxy_data,
+                headers={
+                    'Content-Type': 'application/json',
+                    'Cookie': request.headers.get('Cookie', '')  # העבר את ה-session cookies
+                },
+                timeout=30
+            )
+            
+            # עיבוד התשובה מה-proxy
+            print(f"📡 Response status: {response.status_code}")
+            print(f"📄 Response headers: {dict(response.headers)}")
+            
+            if response.status_code != 200:
+                print(f"❌ Proxy returned {response.status_code}")
+                print(f"📄 Error response: {response.text[:500]}")
+                return jsonify({
+                    'success': False,
+                    'message': 'שגיאה בחיפוש במערכת החניון'
+                })
+            
+            try:
+                proxy_result = response.json()
+            except Exception as e:
+                print(f"❌ Failed to parse proxy response as JSON: {str(e)}")
+                print(f"📄 Response text: {response.text[:500]}")
+                return jsonify({
+                    'success': False,
+                    'message': 'שגיאה בפענוח תשובת השרת'
+                })
+            
+            # עיבוד התשובה מה-proxy
+            print(f"📊 Proxy response: {proxy_result}")
+            
+            # בדיקת התשובה מה-proxy
+            if not proxy_result:
+                print(f"❌ Empty proxy response")
+                return jsonify({
+                    'success': False,
+                    'message': 'תשובה ריקה מהשרת'
+                })
+            
+            if not proxy_result.get('success', False):
+                print(f"❌ Proxy returned error: {proxy_result}")
+                error_msg = proxy_result.get('message') or proxy_result.get('error', 'שגיאה בחיפוש במערכת החניון')
+                return jsonify({
+                    'success': False,
+                    'message': error_msg
+                })
+            
+            # עיבוד הנתונים מה-proxy
+            consumers_data = proxy_result.get('data', [])
+            if isinstance(consumers_data, dict):
+                # אם קיבלנו אובייקט יחיד, הפוך למערך
+                consumers_data = [consumers_data]
+            elif not isinstance(consumers_data, list):
+                consumers_data = []
+            
+            print(f"✅ Got {len(consumers_data)} consumers from proxy")
+            
+            # עיבוד התוצאות - הנתונים כבר נקראו מה-proxy
+            consumers = consumers_data
+                
+        except requests.exceptions.Timeout as e:
+            print(f"❌ Timeout error: {str(e)}")
+            return jsonify({
+                'success': False,
+                'message': 'תם הזמן לחיבור לשרת החניון'
+            })
+        except requests.exceptions.ConnectionError as e:
+            print(f"❌ Connection error: {str(e)}")
+            return jsonify({
+                'success': False,
+                'message': f'לא ניתן להתחבר ל-proxy'
+            })
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Request error: {type(e).__name__}: {str(e)}")
+            return jsonify({
+                'success': False,
+                'message': f'שגיאה בחיבור ל-proxy'
+            })
+        except Exception as e:
+            print(f"❌ Unexpected error: {type(e).__name__}: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
+            return jsonify({
+                'success': False,
+                'message': f'שגיאה בחיפוש במערכת החניון: {type(e).__name__}'
+            })
+        
+        # עיבוד התוצאות
+        found_subscribers = []
+        
+        print(f"📊 Found {len(consumers)} consumers with lpn={clean_plate}")
+        
+        # עיבוד כל מנוי שנמצא
+        for consumer in consumers:
+            if not consumer:
+                continue
+            # קבלת פרטי המנוי
+            contract_id = consumer.get('contractId') or consumer.get('contractid') or consumer.get('contract')
+            company_name = consumer.get('companyName') or consumer.get('contractName') or 'לא ידוע'
+            
+            # בניית אובייקט המנוי
+            subscriber_data = {
+                'id': consumer.get('id') or consumer.get('subscriberNum'),
+                'subscriberNum': consumer.get('subscriberNum') or consumer.get('id'),
+                'firstName': consumer.get('firstName', ''),
+                'lastName': consumer.get('lastName') or consumer.get('name', ''),
+                'name': consumer.get('name', ''),
+                'companyId': contract_id,
+                'companyName': company_name,
+                'vehicle1': consumer.get('lpn1') or consumer.get('vehicleNum', ''),
+                'vehicle2': consumer.get('lpn2', ''),
+                'vehicle3': consumer.get('lpn3', ''),
+                'lpn1': consumer.get('lpn1') or consumer.get('vehicleNum', ''),
+                'lpn2': consumer.get('lpn2', ''),
+                'lpn3': consumer.get('lpn3', ''),
+                'tagNum': consumer.get('tagNum') or consumer.get('cardNum', ''),
+                'validFrom': consumer.get('xValidFrom') or consumer.get('validFrom', ''),
+                'validUntil': consumer.get('xValidUntil') or consumer.get('validUntil', ''),
+                'profile': consumer.get('profile') or consumer.get('extCardProfile', '0'),
+                'presence': consumer.get('presence', False)
+            }
+            found_subscribers.append(subscriber_data)
+        
+        print(f"✅ Returning {len(found_subscribers)} subscribers")
+        
+        return jsonify({
+            'success': True,
+            'data': found_subscribers,
+            'total': len(found_subscribers)
+        })
+        
+    except Exception as e:
+        error_details = f"Error in parking tour search: {str(e)}"
+        print(f"❌ {error_details}")
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({
+            'success': False, 
+            'message': f'שגיאה: {str(e)}',
+            'error_type': type(e).__name__,
+            'details': error_details
+        })
 
 # ========== API למאסטר ==========
 
@@ -3996,12 +4060,19 @@ def company_manager_get_subscribers():
             return jsonify({'success': False, 'message': 'הרשאות לא תקינות'}), 403
         
         # קבלת נתוני החניון כולל IP ופורט
+        # המרה של parking_id למספר כדי למצוא בשדה description
+        try:
+            parking_num = str(parking_id)
+        except:
+            parking_num = parking_id
+            
         parking_result = supabase.table('parkings').select(
             'name, ip_address, port, description'
-        ).eq('id', parking_id).execute()
+        ).eq('description', parking_num).execute()
         
         if not parking_result.data:
-            return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
+            print(f"❌ No parking found with description: {parking_num} (in parking-tour)")
+            return jsonify({'success': False, 'message': f'חניון {parking_num} לא נמצא במערכת'}), 404
         
         parking_data = parking_result.data[0]
         
@@ -4106,7 +4177,17 @@ def company_manager_proxy():
         # בדיקה אם אנחנו במצב פיתוח מקומי
         is_local_dev = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
         
-        if 'user_email' not in session:
+        # Get request data first
+        data = request.get_json()
+        
+        # Check for internal session data (for internal API calls)
+        internal_session = None
+        if data and '_internal_session' in data:
+            internal_session = data.pop('_internal_session')
+            if internal_session:
+                print(f"📱 Internal session received: {internal_session.get('user_email')}")
+        
+        if 'user_email' not in session and not internal_session:
             if is_local_dev:
                 # במצב פיתוח - דלג על בדיקת login
                 # LOCAL DEV MODE - Skipping login check
@@ -4115,7 +4196,13 @@ def company_manager_proxy():
                 # User not logged in
                 return jsonify({'success': False, 'message': 'לא מחובר'}), 401
         
-        data = request.get_json()
+        # Use internal session if provided
+        if internal_session:
+            current_user_email = internal_session.get('user_email')
+            print(f"📱 Using internal session for user: {current_user_email}")
+        else:
+            current_user_email = session.get('user_email')
+        
         if not data:
             # No JSON data in request
             return jsonify({'success': False, 'message': 'חסרים נתונים'}), 400
@@ -4140,33 +4227,46 @@ def company_manager_proxy():
             parking_num = str(parking_id)
         except:
             parking_num = parking_id
+        
+        print(f"🔍 Looking for parking with description: {parking_num}")
             
         parking_result = supabase.table('parkings').select(
             'ip_address, port, description'
         ).eq('description', parking_num).execute()
         
         if not parking_result.data:
-            print(f"❌ No parking found with description: {parking_num}")
-            # נסה לחפש גם בטבלת project_parking_mapping
+            print(f"❌ No parking found with description: {parking_num} in parkings table")
+            # נסה לחפש לפי שדות אחרים
+            all_parkings = supabase.table('parkings').select('id, description, name').execute()
+            print(f"🔍 All parkings in DB: {[(p.get('id'), p.get('description'), p.get('name')) for p in all_parkings.data[:10]]}")
+            
+            # בואו נחפש גם בטבלת project_parking_mapping
             mapping_result = supabase.table('project_parking_mapping').select(
                 'parking_id, ip_address, port'
             ).eq('project_number', parking_num).execute()
             
             if mapping_result.data:
                 print(f"✅ Found in project_parking_mapping")
-                parking_data = mapping_result.data[0]
-                # המרה למבנה שאנחנו מצפים לו
-                parking_result = type('obj', (object,), {
-                    'data': [{
-                        'ip_address': parking_data.get('ip_address'),
-                        'port': parking_data.get('port'),
-                        'description': parking_num
-                    }]
-                })()
+                parking_data = {
+                    'ip_address': mapping_result.data[0].get('ip_address'),
+                    'port': mapping_result.data[0].get('port', 8240),
+                    'description': parking_num
+                }
             else:
-                return jsonify({'success': False, 'message': f'חניון {parking_num} לא נמצא במערכת'}), 404
-        
-        parking_data = parking_result.data[0]
+                # בואו נחפש גם בטבלת parking_servers
+                server_result = supabase.table('parking_servers').select('id, name, ip_address, port').eq('name', parking_num).execute()
+                if server_result.data:
+                    print(f"🔍 Found in parking_servers: {server_result.data[0]}")
+                    # Use data from parking_servers
+                    parking_data = {
+                        'ip_address': server_result.data[0].get('ip_address'),
+                        'port': server_result.data[0].get('port', 8240),
+                        'description': parking_num
+                    }
+                else:
+                    return jsonify({'success': False, 'message': f'חניון {parking_num} לא נמצא במערכת'}), 404
+        else:
+            parking_data = parking_result.data[0]
         ip_address = parking_data.get('ip_address')
         port = parking_data.get('port', 443)
         
