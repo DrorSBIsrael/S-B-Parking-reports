@@ -839,7 +839,7 @@
 
         <!-- Global Control Button -->
         <div class="control-buttons" style="padding: 15px; text-align: center;">
-            <button class="control-btn btn-status" onclick="getSystemStatus()" style="margin: 0 auto; max-width: 200px;">
+            <button class="control-btn btn-status" onclick="getSystemStatus()" style="margin: 0 auto; max-width: 200px; display: flex; align-items: center; justify-content: center;">
                 <span>📊</span>
                 <span>קבל מצב כללי</span>
             </button>
@@ -849,6 +849,11 @@
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
+    </div>
+    
+    <!-- Modal Container -->
+    <div id="modalContainer" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+        <div id="modalContent" style="background: white; border-radius: 8px; max-width: 600px; max-height: 80vh; overflow-y: auto; margin: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); direction: rtl;"></div>
     </div>
 
     <!-- Toast Messages -->
@@ -1118,6 +1123,7 @@
         
         // Execute command for specific device
         async function executeDeviceCommand(deviceNumber, command) {
+            console.log(`🎯 Executing command: ${command} for device: ${deviceNumber}`);
             showLoading();
             
             try {
@@ -1130,7 +1136,7 @@
                 await loadDevices();
                 
             } catch (error) {
-                console.error('Command execution error:', error);
+                console.error('❌ Command execution error:', error);
                 showToast(error.message || 'שגיאה בביצוע הפקודה', 'error');
             } finally {
                 hideLoading();
@@ -1473,6 +1479,25 @@
         function hideLoading() {
             document.getElementById('loadingOverlay').classList.remove('active');
         }
+        
+        function showModal(content) {
+            const modalContainer = document.getElementById('modalContainer');
+            const modalContent = document.getElementById('modalContent');
+            modalContent.innerHTML = content;
+            modalContainer.style.display = 'flex';
+        }
+        
+        function closeModal() {
+            const modalContainer = document.getElementById('modalContainer');
+            modalContainer.style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        document.getElementById('modalContainer').addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeModal();
+            }
+        });
 
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
