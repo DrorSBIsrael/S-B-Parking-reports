@@ -2897,7 +2897,7 @@ def mobile_controller_devices():
         try:
             proxy_data = {
                 'parking_id': parking_id,
-                'endpoint': 'fielddevices',
+                'endpoint': 'DeviceControlWebService/geometry',  # Get all devices geometry
                 'method': 'GET'
             }
             
@@ -3010,7 +3010,7 @@ def mobile_controller_events():
         try:
             proxy_data = {
                 'parking_id': parking_id,
-                'endpoint': 'events?limit=100',
+                'endpoint': 'DeviceControlWebService/lastevents/100',  # Get last 100 events
                 'method': 'GET'
             }
             
@@ -4069,7 +4069,7 @@ def company_manager_proxy():
         if is_uuid:
             # Search by ID (UUID)
             parking_result = supabase.table('parkings').select(
-                'ip_address, port, description'
+            'ip_address, port, description'
             ).eq('id', parking_num).execute()
         else:
             # Search by description (numeric parking ID)
@@ -4124,6 +4124,13 @@ def company_manager_proxy():
         ip_address = parking_data.get('ip_address')
         port = parking_data.get('port', 443)
         
+        # Debug log for mobile controller
+        if 'DeviceControlWebService' in endpoint:
+            print(f"📱 Found parking data for {parking_num}:")
+            print(f"   - IP: {ip_address}")
+            print(f"   - Port: {port}")
+            print(f"   - Description: {parking_data.get('description')}")
+        
         # בדיקה אם אנחנו בסביבת פיתוח או production
         is_local_dev = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
         
@@ -4151,6 +4158,10 @@ def company_manager_proxy():
             if not port or port == 0:
                 port = 9999
                 # Fixed port
+            
+            # Debug log for mobile controller
+            if 'DeviceControlWebService' in endpoint:
+                print(f"📱 Using server: {ip_address}:{port} for parking {parking_num} (device control)")
         
         if not ip_address:
             return jsonify({'success': False, 'message': 'חסרים נתוני חיבור'}), 500
@@ -4235,14 +4246,11 @@ def company_manager_proxy():
             # Handle usage profiles endpoint
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/usageprofiles"
             method = 'GET'  # Usage profiles are always GET
-        elif 'fielddevices' in endpoint.lower():
-            # Handle field devices endpoint for mobile controller
-            url = f"{protocol}://{ip_address}:{port}/DeviceControlWebService/fielddevices"
-            method = 'GET'  # Field devices are always GET
-        elif 'events' in endpoint.lower() and 'CustomerMediaWebService' not in endpoint:
-            # Handle events endpoint for mobile controller
-            url = f"{protocol}://{ip_address}:{port}/DeviceControlWebService/{endpoint}"
-            method = 'GET'  # Events are always GET
+        elif 'DeviceControlWebService' in endpoint:
+            # Handle Device Control Web Service endpoints
+            # Use port from database
+            url = f"{protocol}://{ip_address}:{port}/{endpoint}"
+            method = 'GET'  # Device control queries are GET
         elif 'CustomerMediaWebService' in endpoint:
             # אם כבר יש CustomerMediaWebService ב-endpoint
             url = f"{protocol}://{ip_address}:{port}/{endpoint}"
@@ -4251,12 +4259,21 @@ def company_manager_proxy():
             url = f"{protocol}://{ip_address}:{port}/api/{endpoint}"
         
         # Proxy Request
+        # Debug log for mobile controller
+        if 'DeviceControlWebService' in endpoint:
+            print(f"📱 Mobile Controller Proxy Request:")
+            print(f"   - URL: {url}")
+            print(f"   - IP: {ip_address}:{port}")
+            print(f"   - Endpoint: {endpoint}")
         
         # הכנת headers
-        headers = {'Content-Type': 'application/json'}
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'  # Request JSON response from Device Control
+        }
         
         # Basic Auth - תמיד לשרת החניון
-        if 'CustomerMediaWebService' in endpoint or 'contracts' in endpoint or 'consumer' in endpoint or 'usageprofiles' in endpoint or 'fielddevices' in endpoint or 'events' in endpoint:
+        if 'CustomerMediaWebService' in endpoint or 'contracts' in endpoint or 'consumer' in endpoint or 'usageprofiles' in endpoint or 'DeviceControlWebService' in endpoint:
             # TODO: החלף עם ה-credentials הנכונים!
             auth_string = base64.b64encode(b'2022:2022').decode('ascii')
             headers['Authorization'] = f'Basic {auth_string}'
@@ -4265,7 +4282,7 @@ def company_manager_proxy():
         try:
             # timeout מוגבר ל-30 שניות ב-production
             # For device control endpoints, use even longer timeout
-            if 'fielddevices' in endpoint or 'events' in endpoint:
+            if 'DeviceControlWebService' in endpoint:
                 timeout_seconds = 45 if not is_local_dev else 30
             else:
                 timeout_seconds = 30 if not is_local_dev else 25
@@ -4448,7 +4465,72 @@ def company_manager_proxy():
                         # Skip the list endpoints if this is a detail request
                         is_detail_endpoint = '/detail' in endpoint
                         
-                        if not is_detail_endpoint and ('contracts' in endpoint or 'contract' in endpoint.lower()):
+                        # Handle Device Control Web Service responses
+                        if 'DeviceControlWebService' in endpoint:
+                            print(f"   📱 Parsing Device Control response for endpoint: {endpoint}")
+                            
+                            if 'geometry' in endpoint:
+                                # Parse geometry response
+                                devices = []
+                                # Find all field-device elements recursively
+                                for device in root.findall('.//field-device'):
+                                    device_name = device.find('name')
+                                    device_number = device.find('number')
+                                    if device_name is not None and device_number is not None:
+                                        device_num = int(device_number.text)
+                                        # Determine device type based on number range
+                                        device_type = 'unknown'
+                                        if 101 <= device_num <= 199:
+                                            device_type = 'entry'
+                                        elif 201 <= device_num <= 299:
+                                            device_type = 'exit'
+                                        elif 301 <= device_num <= 399:
+                                            device_type = 'pass'
+                                        elif 401 <= device_num <= 499:
+                                            device_type = 'door'
+                                        elif 501 <= device_num <= 599:
+                                            device_type = 'validator'
+                                        elif 601 <= device_num <= 699:
+                                            device_type = 'payment'
+                                        elif 701 <= device_num <= 799:
+                                            device_type = 'cashier'
+                                        elif 801 <= device_num <= 899:
+                                            device_type = 'exit_cashier'
+                                        
+                                        devices.append({
+                                            'name': device_name.text,
+                                            'number': device_num,
+                                            'type': device_type,
+                                            'status': 1  # Default status
+                                        })
+                                
+                                print(f"   ✅ Found {len(devices)} devices in geometry")
+                                return jsonify({'success': True, 'data': devices})
+                            
+                            elif 'events' in endpoint or 'lastevents' in endpoint:
+                                # Parse events response
+                                events = []
+                                for event in root.findall('.//event'):
+                                    event_data = {}
+                                    for child in event:
+                                        tag = child.tag
+                                        event_data[tag] = child.text
+                                    if event_data:
+                                        events.append(event_data)
+                                
+                                print(f"   ✅ Found {len(events)} events")
+                                return jsonify({'success': True, 'data': events})
+                            
+                            elif 'version' in endpoint:
+                                # Parse version response
+                                version_elem = root.find('.//version-no')
+                                if version_elem is not None:
+                                    return jsonify({'success': True, 'data': {'version': version_elem.text}})
+                            
+                            # Default response for other DeviceControlWebService endpoints
+                            return jsonify({'success': True, 'data': response.text})
+                        
+                        elif not is_detail_endpoint and ('contracts' in endpoint or 'contract' in endpoint.lower()):
                             contracts = []
                             # חפש contract elements בכל namespaces
                             for contract in root.findall('.//{http://gsph.sub.com/cust/types}contract'):
@@ -5809,6 +5891,90 @@ def test_parking_auth():
         return jsonify({
             'success': True,
             'results': results
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/test-device-control/<parking_id>', methods=['GET'])
+def test_device_control(parking_id):
+    """בדיקת endpoints של device control לחניון ספציפי"""
+    try:
+        # Get parking data first
+        parking_num = str(parking_id)
+        
+        # Try to find parking info
+        parking_result = supabase.table('parkings').select(
+            'ip_address, port, description'
+        ).eq('description', parking_num).execute()
+        
+        if not parking_result.data:
+            # Try fallback
+            mapping_result = supabase.table('project_parking_mapping').select(
+                'parking_id, ip_address, port, parking_name'
+            ).eq('project_number', parking_num).execute()
+            
+            if mapping_result.data:
+                mapping_data = mapping_result.data[0]
+                ip_address = mapping_data.get('ip_address')
+                port = mapping_data.get('port', 443)  # Default port from database
+            else:
+                return jsonify({'success': False, 'message': 'Parking not found'})
+        else:
+            parking_data = parking_result.data[0]
+            ip_address = parking_data.get('ip_address')
+            port = parking_data.get('port', 443)  # Default port from database
+        
+        # Device control endpoints to test (based on documentation)
+        device_endpoints = [
+            "DeviceControlWebService/version",
+            "DeviceControlWebService/geometry",
+            "DeviceControlWebService/events/0",
+            "DeviceControlWebService/lastevents/10",
+            "DeviceControlWebService/lastevents/100",
+            "DeviceControlWebService"
+        ]
+        
+        results = []
+        auth_string = base64.b64encode(b'2022:2022').decode('ascii')
+        headers = {
+            'Authorization': f'Basic {auth_string}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'  # Request JSON response
+        }
+        
+        for endpoint in device_endpoints:
+            # Use port from database
+            url = f"https://{ip_address}:{port}/{endpoint}"
+            try:
+                response = requests.get(url, headers=headers, timeout=10, verify=False)
+                results.append({
+                    'endpoint': endpoint,
+                    'url': url,
+                    'status': response.status_code,
+                    'success': response.status_code == 200,
+                    'content_type': response.headers.get('content-type', ''),
+                    'preview': response.text[:200] if response.status_code == 200 else ''
+                })
+            except requests.exceptions.Timeout:
+                results.append({
+                    'endpoint': endpoint,
+                    'url': url,
+                    'error': 'TIMEOUT'
+                })
+            except Exception as e:
+                results.append({
+                    'endpoint': endpoint,
+                    'url': url,
+                    'error': str(e)[:100]
+                })
+        
+        return jsonify({
+            'success': True,
+            'parking_id': parking_id,
+            'server': f"{ip_address}:{port}",
+            'results': results,
+            'working_endpoints': [r for r in results if r.get('success', False)]
         })
         
     except Exception as e:
