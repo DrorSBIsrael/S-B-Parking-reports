@@ -2613,10 +2613,11 @@ def mobile_parking_controller_page():
 def mobile_controller_devices():
     """Get list of parking devices"""
     print(f"📱 Mobile Controller Devices - Method: {request.method}")
+    print(f"🔍 Session data: {dict(session)}")
     try:
         if 'user_email' not in session:
             print(f"❌ No user in session")
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            return jsonify({'success': False, 'message': 'לא מחובר', 'debug': 'No session email'}), 401
         
         print(f"📱 User email in session: {session['user_email']}")
         
@@ -2673,12 +2674,18 @@ def mobile_controller_devices():
                 try:
                     error_detail = response.json()
                     print(f"❌ Error details: {error_detail}")
+                    error_msg = error_detail.get('message', 'שגיאה בקבלת מכשירים')
                 except:
                     print(f"❌ Response text: {response.text[:500]}")
+                    error_msg = f'שגיאת proxy: {response.status_code}'
                 return jsonify({
                     'success': False,
-                    'message': 'שגיאה בקבלת מכשירים',
-                    'devices': []
+                    'message': error_msg,
+                    'devices': [],
+                    'debug': {
+                        'proxy_status': response.status_code,
+                        'parking_id': parking_id
+                    }
                 })
             
             proxy_result = response.json()
@@ -2738,9 +2745,11 @@ def mobile_controller_devices():
 def mobile_controller_events():
     """Get parking events"""
     print(f"📱 Mobile Controller Events - Method: {request.method}")
+    print(f"🔍 Session data: {dict(session)}")
     try:
         if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            print(f"❌ No user in session for events")
+            return jsonify({'success': False, 'message': 'לא מחובר', 'debug': 'No session email for events'}), 401
         
         # בדיקת הרשאות
         user_result = supabase.table('user_parkings').select(
