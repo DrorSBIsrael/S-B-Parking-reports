@@ -2600,15 +2600,18 @@ def parking_tour_search():
             'code_type, project_number, parking_name'
         ).eq('email', session['user_email']).execute()
         
+        print(f"📊 User query result: {user_result.data}")
+        
         if not user_result.data:
             print("❌ No user data found")
             return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
             
         user_data = user_result.data[0]
         code_type = user_data.get('code_type', '')
+        print(f"🔑 User code_type: '{code_type}'")
         
         # בדיקה שהמשתמש הוא parking_tour
-        if code_type.lower() != 'parking_tour':
+        if code_type != 'Parking_tour' and code_type != 'parking_tour':
             print(f"❌ Wrong code_type: {code_type}")
             return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד parking_tour'}), 403
         
