@@ -2953,8 +2953,11 @@ def mobile_controller_devices():
                             'name': device.get('name', ''),
                             'type': device.get('type', 'unknown'),
                             'status': device.get('status', 1),
-                            'barrier': device.get('barrier_state', 'unknown'),
-                            'lastEvent': device.get('last_event_time', '')
+                            'deviceState': device.get('deviceState', 1),
+                            'barrier': device.get('barrier', 'unknown'),
+                            'doorOpen': device.get('doorOpen', False),
+                            'lastEvent': device.get('last_event_time', ''),
+                            'singleState': device.get('singleState', '')
                         })
                 
                 return jsonify({
@@ -3046,13 +3049,32 @@ def mobile_controller_events():
                 # עיבוד הנתונים למבנה שאנחנו צריכים
                 events = []
                 for event in events_data:
+                    # Map event data from Scheidt format
+                    event_no = event.get('event_no', '')
+                    event_text = event.get('event_text', event.get('event_name', ''))
+                    device_number = event.get('device_number', event.get('field_device_number', ''))
+                    
+                    # Determine event type from event number or text
+                    event_type = 'info'
+                    if 'HAND_OPEN' in str(event_text) or event_no == '42250':
+                        event_type = 'open'
+                    elif 'HAND_CLOSE' in str(event_text) or event_no == '42251':
+                        event_type = 'close'
+                    elif 'alarm' in str(event_text).lower() or event.get('alarm') == '1':
+                        event_type = 'alarm'
+                    elif 'error' in str(event_text).lower():
+                        event_type = 'error'
+                    
                     events.append({
-                        'id': event.get('id'),
-                        'device': event.get('device_number') or event.get('device'),
-                        'type': event.get('event_type') or event.get('type'),
-                        'timestamp': event.get('timestamp') or event.get('date_time'),
-                        'description': event.get('description') or event.get('message'),
-                        'user': event.get('user') or event.get('operator', 'מערכת')
+                        'id': event.get('unique_sequence_number', event.get('event_no', '')),
+                        'device': device_number,
+                        'deviceName': event.get('device_name', event.get('field_device_name', '')),
+                        'type': event_type,
+                        'timestamp': event.get('event_date_time', ''),
+                        'description': event_text,
+                        'user': event.get('user', 'מערכת'),
+                        'deviceState': event.get('device_state'),
+                        'alarm': event.get('alarm', '0')
                     })
                 
                 return jsonify({
@@ -3094,12 +3116,12 @@ def mobile_controller_system_status():
             return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
         
         # For now, return basic status
-        return jsonify({
-            'success': True,
+            return jsonify({
+                'success': True,
             'status': 'online',
             'connected': True,
             'parking_id': user_result.data[0].get('project_number')
-        })
+            })
         
     except Exception as e:
         print(f"Error in mobile_controller_system_status: {str(e)}")
@@ -3127,12 +3149,13 @@ def mobile_controller_command():
         
         print(f"📱 Mobile Controller Command: {command} for devices: {devices}")
         
-        # מיפוי פקודות לקודים לפי הפרוטוקול
+        # מיפוי פקודות לקודים לפי הפרוטוקול של Scheidt
         command_mapping = {
-            42250: 'HAND_OPEN',      # פתח מחסום
-            42251: 'HAND_CLOSE',     # סגור מחסום
-            42254: 'BLOCK_CLOSED',   # נעל מחסום
-            42255: 'UNBLOCK_CLOSED'  # בטל נעילה
+            0xA50A: 'HAND_OPEN',      # 42250 - פתח מחסום
+            0xA50B: 'HAND_CLOSE',     # 42251 - סגור מחסום
+            0xA50E: 'BLOCK_CLOSED',   # 42254 - נעל מחסום
+            0xA50F: 'UNBLOCK_CLOSED', # 42255 - בטל נעילה
+            0xA137: 'CHECK_STATUS'    # בדיקת סטטוס בלבד
         }
         
         success_count = 0
@@ -3141,14 +3164,17 @@ def mobile_controller_command():
         # שליחת פקודה לכל מכשיר
         for device_num in devices:
             try:
+                # For Scheidt, we need cell computer number
+                # TODO: This should come from the geometry response or database
+                # For now, trying common values
+                cell_computer_num = 1  # Often 1 for single facility systems
+                # You might need to extract this from the full device path in geometry
+                
                 proxy_data = {
                     'parking_id': parking_id,
-                    'endpoint': f'fielddevices/{device_num}/command',
-                    'method': 'POST',
-                    'data': {
-                        'command': command,
-                        'command_name': command_mapping.get(command, 'UNKNOWN')
-                    }
+                    'endpoint': f'DeviceControlWebService/command/{cell_computer_num}/{device_num}/{command}',
+                    'method': 'PUT',
+                    'data': {}  # Empty body for command
                 }
                 
                 # Add internal session for proxy authentication
@@ -3179,10 +3205,13 @@ def mobile_controller_command():
                     proxy_result = response.json()
                     if proxy_result.get('success', False):
                         success_count += 1
+                        print(f"✅ Command {command} sent successfully to device {device_num}")
                     else:
                         failed_devices.append(device_num)
+                        print(f"❌ Command failed for device {device_num}: {proxy_result.get('message', 'Unknown error')}")
                 else:
                     failed_devices.append(device_num)
+                    print(f"❌ Command failed for device {device_num}: HTTP {response.status_code}")
                     
             except Exception as e:
                 print(f"Error sending command to device {device_num}: {str(e)}")
@@ -4142,6 +4171,7 @@ def company_manager_proxy():
                 return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
         else:
             parking_data = parking_result.data[0]
+            
         ip_address = parking_data.get('ip_address')
         port = parking_data.get('port', 443)
         
@@ -4245,7 +4275,12 @@ def company_manager_proxy():
         elif 'DeviceControlWebService' in endpoint:
             # Handle Device Control Web Service endpoints
             url = f"{protocol}://{ip_address}:{port}/{endpoint}"
-            method = 'GET'  # Device control queries are GET
+            # Commands use PUT, queries use GET
+            if '/command/' in endpoint:
+                method = 'PUT'
+                print(f"📱 Device Control Command: {endpoint}")
+            else:
+                method = 'GET'
         elif 'CustomerMediaWebService' in endpoint:
             # אם כבר יש CustomerMediaWebService ב-endpoint
             url = f"{protocol}://{ip_address}:{port}/{endpoint}"
@@ -4458,10 +4493,22 @@ def company_manager_proxy():
                             if 'geometry' in endpoint:
                                 # Parse geometry response
                                 devices = []
+                                
+                                # Try to find cell computer numbers for future use
+                                cell_computers = []
+                                for cell_comp in root.findall('.//cell-computer'):
+                                    cell_num = cell_comp.find('number')
+                                    if cell_num is not None:
+                                        cell_computers.append(cell_num.text)
+                                        print(f"   📱 Found cell computer: {cell_num.text}")
+                                
                                 # Find all field-device elements recursively
                                 for device in root.findall('.//field-device'):
                                     device_name = device.find('name')
                                     device_number = device.find('number')
+                                    device_state = device.find('device-state')
+                                    device_single_state = device.find('device-single-state')
+                                    
                                     if device_name is not None and device_number is not None:
                                         device_num = int(device_number.text)
                                         # Determine device type based on number range
@@ -4483,11 +4530,46 @@ def company_manager_proxy():
                                         elif 801 <= device_num <= 899:
                                             device_type = 'exit_cashier'
                                         
+                                        # Parse device state
+                                        state = 1  # Default - operational
+                                        if device_state is not None:
+                                            state = int(device_state.text) if device_state.text else 1
+                                        
+                                        # Parse single state for more details
+                                        barrier_state = 'unknown'
+                                        door_open = False
+                                        if device_single_state is not None and device_single_state.text:
+                                            # The single state is a 40-char hex string
+                                            single_state_hex = device_single_state.text
+                                            # Check specific bytes for states (based on documentation)
+                                            if len(single_state_hex) >= 2:
+                                                # Byte 0 contains device states
+                                                byte0 = int(single_state_hex[0:2], 16)
+                                                # Bit 4 (value 8): Device door open
+                                                if byte0 & 0x08:
+                                                    door_open = True
+                                                # Bit 7 (value 128): Device out of operation manual
+                                                if byte0 & 0x80:
+                                                    state = 0  # Override state to "out of order"
+                                            
+                                            # For barrier state, we may need to check other bytes
+                                            # or use the device type to determine default state
+                                            if device_type in ['entry', 'exit', 'pass']:
+                                                # These typically have barriers
+                                                # Without specific documentation, we'll keep as unknown
+                                                # and rely on events to update barrier state
+                                                barrier_state = 'unknown'
+                                        
                                         devices.append({
                                             'name': device_name.text,
                                             'number': device_num,
                                             'type': device_type,
-                                            'status': 1  # Default status
+                                            'status': state,
+                                            'deviceState': state,  # 0=out of order, 1=operational, 2=not fully operational
+                                            'barrier': barrier_state,
+                                            'doorOpen': door_open,
+                                            'singleState': device_single_state.text if device_single_state is not None else None,
+                                            'cellComputers': cell_computers  # Store for command use
                                         })
                                 
                                 print(f"   ✅ Found {len(devices)} devices in geometry")
@@ -4499,10 +4581,25 @@ def company_manager_proxy():
                                 for event in root.findall('.//event'):
                                     event_data = {}
                                     for child in event:
-                                        tag = child.tag
+                                        tag = child.tag.replace('-', '_')  # Convert XML tags to valid keys
                                         event_data[tag] = child.text
+                                    
+                                    # Add device info from event if available
                                     if event_data:
-                                        events.append(event_data)
+                                        # Extract device state information
+                                        event_info = {
+                                            'unique_sequence_number': event_data.get('unique_sequence_number'),
+                                            'event_no': event_data.get('event_no'),
+                                            'event_name': event_data.get('event_name'),
+                                            'event_text': event_data.get('event_text'),
+                                            'event_date_time': event_data.get('event_date_time'),
+                                            'device_number': event_data.get('field_device_number'),
+                                            'device_name': event_data.get('field_device_name'),
+                                            'device_state': event_data.get('device_state'),
+                                            'device_single_state': event_data.get('device_single_state'),
+                                            'alarm': event_data.get('alarm')
+                                        }
+                                        events.append(event_info)
                                 
                                 print(f"   ✅ Found {len(events)} events")
                                 return jsonify({'success': True, 'data': events})
