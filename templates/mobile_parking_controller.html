@@ -429,6 +429,23 @@
         .event-item:hover {
             background: var(--light-bg);
         }
+        
+        .event-item.event-open {
+            background-color: rgba(46, 204, 113, 0.1);
+        }
+        
+        .event-item.event-close {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+        
+        .event-item.event-alarm {
+            background-color: rgba(231, 76, 60, 0.1);
+            border-left: 3px solid #e74c3c;
+        }
+        
+        .event-item.event-error {
+            background-color: rgba(231, 76, 60, 0.05);
+        }
 
         .event-time {
             font-weight: 600;
@@ -854,9 +871,14 @@
             card.className = `device-card device-${device.type}`;
             card.onclick = () => toggleDeviceSelection(device.number);
             
-            const statusClass = device.status === 1 ? 'status-normal' : 
-                               device.status === 4 ? 'status-warning' : 'status-error';
-            const statusText = getStatusText(device.status);
+            // Use deviceState for status (0=out of order, 1=operational, 2=not fully operational)
+            const deviceState = device.deviceState || device.status || 1;
+            const statusClass = deviceState === 0 ? 'status-error' : 
+                               deviceState === 1 ? 'status-normal' : 
+                               deviceState === 2 ? 'status-warning' : 'status-error';
+            const statusText = deviceState === 0 ? 'לא פעיל' :
+                              deviceState === 1 ? 'תקין' :
+                              deviceState === 2 ? 'לא פעיל חלקית' : 'לא ידוע';
             const typeText = getDeviceTypeText(device.type);
             const typeIcon = getDeviceTypeIcon(device.type);
             
@@ -880,11 +902,12 @@
                     <div class="device-info">
                         <div class="info-item">
                             <span class="info-label">מחסום:</span>
-                            <span class="info-value">${device.barrier === 'open' ? 'פתוח' : 'סגור'}</span>
+                            <span class="info-value">${device.barrier === 'open' ? 'פתוח' : device.barrier === 'closed' ? 'סגור' : 'לא ידוע'}</span>
                         </div>
+                        ${device.doorOpen ? '<div class="info-item" style="color: #e74c3c;"><span class="info-label">⚠️ דלת:</span><span class="info-value">פתוחה</span></div>' : ''}
                         <div class="info-item">
                             <span class="info-label">אירוע אחרון:</span>
-                            <span class="info-value">${device.lastEvent}</span>
+                            <span class="info-value">${device.lastEvent || 'אין'}</span>
                         </div>
                     </div>
                 </div>
@@ -1023,14 +1046,39 @@
                 const eventItem = document.createElement('div');
                 eventItem.className = 'event-item';
                 
-                const icon = event.type === 'entry' ? '➡️' :
-                           event.type === 'exit' ? '⬅️' :
-                           event.type === 'pass' ? '↔️' : '⚠️';
+                // Determine icon based on event type and content
+                let icon = '📋';
+                let eventClass = '';
+                if (event.type === 'open' || (event.message && event.message.includes('HAND_OPEN'))) {
+                    icon = '🔓';
+                    eventClass = 'event-open';
+                } else if (event.type === 'close' || (event.message && event.message.includes('HAND_CLOSE'))) {
+                    icon = '🔒';
+                    eventClass = 'event-close';
+                } else if (event.type === 'alarm' || event.alarm === '1') {
+                    icon = '🚨';
+                    eventClass = 'event-alarm';
+                } else if (event.type === 'error') {
+                    icon = '❌';
+                    eventClass = 'event-error';
+                } else if (event.type === 'entry') {
+                    icon = '➡️';
+                } else if (event.type === 'exit') {
+                    icon = '⬅️';
+                } else if (event.type === 'pass') {
+                    icon = '↔️';
+                }
+                
+                if (eventClass) {
+                    eventItem.classList.add(eventClass);
+                }
+                
+                const deviceName = event.deviceName ? ` - ${event.deviceName}` : '';
                 
                 eventItem.innerHTML = `
                     <span class="event-icon">${icon}</span>
                     <span class="event-time">${event.time}</span>
-                    <span class="event-device">מכשיר ${event.device}</span>
+                    <span class="event-device">מכשיר ${event.device}${deviceName}</span>
                     <span class="event-message">${event.message}</span>
                 `;
                 
