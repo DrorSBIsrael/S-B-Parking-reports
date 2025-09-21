@@ -1532,7 +1532,7 @@ def dashboard():
     if 'user_email' not in session:
         return redirect(url_for('login_page'))
     
-    # בדיקה אם המשתמש הוא מנהל חברה
+    # בדיקה אם המשתמש הוא מנהל חברה או בקר חניון
     try:
         user_result = supabase.table('user_parkings').select(
             'access_level, code_type'
@@ -1540,9 +1540,16 @@ def dashboard():
         
         if user_result.data:
             user_data = user_result.data[0]
-            if user_data.get('access_level') == 'company_manager' or user_data.get('code_type') == 'company_manager':
+            code_type = user_data.get('code_type', '')
+            
+            # הפניה לפי סוג המשתמש
+            if user_data.get('access_level') == 'company_manager' or code_type == 'company_manager':
                 # מנהל חברה - מפנים אותו לדף הנכון
                 return redirect(url_for('company_manager_page'))
+            elif code_type.lower() == 'mobile_controller':
+                # בקר חניון - מפנים אותו לדף הבקרה
+                return redirect(url_for('mobile_parking_controller_page'))
+                
     except Exception as e:
         print(f"Error checking user type: {str(e)}")
     
@@ -2165,6 +2172,9 @@ def verify_code():
                     elif code_type == 'Parking_tour' or code_type == 'parking_tour':
                         redirect_url = '/parking-tour'
                         print(f"🎫 Redirecting PARKING TOUR to: {redirect_url}")
+                    elif code_type == 'mobile_controller':
+                        redirect_url = '/mobile-parking-controller'
+                        print(f"📱 Redirecting MOBILE CONTROLLER to: {redirect_url}")
                     else:
                         # בדיקת access_level למשתמשים רגילים
                         access_level = user_data.get('access_level', 'single_parking')
@@ -2215,6 +2225,8 @@ def get_user_redirect_url(email):
                 return '/parking-manager-users'
             elif code_type == 'Parking_tour' or code_type == 'parking_tour':
                 return '/parking-tour'
+            elif code_type == 'mobile_controller':
+                return '/mobile-parking-controller'
             else:
                 return '/dashboard'
         else:
