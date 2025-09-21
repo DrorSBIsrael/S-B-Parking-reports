@@ -745,6 +745,22 @@
     <!-- Include Mobile Parking Controller JS -->
     <script src="/static/js/mobile-parking-controller.js"></script>
     
+    <!-- Fallback if file doesn't load from static -->
+    <script>
+        // Check if script loaded successfully
+        setTimeout(() => {
+            if (typeof MobileParkingController === 'undefined') {
+                console.warn('⚠️ Trying alternative path for mobile-parking-controller.js');
+                const script = document.createElement('script');
+                script.src = '/static/js/mobile-parking-controller.js?v=' + Date.now();
+                script.onerror = () => {
+                    console.error('❌ Failed to load mobile-parking-controller.js from all paths');
+                };
+                document.head.appendChild(script);
+            }
+        }, 100);
+    </script>
+    
     <script>
         // Global variables
         let controller = null;
@@ -752,9 +768,17 @@
 
         // Initialize
         window.addEventListener('DOMContentLoaded', async () => {
-            // Initialize the controller
-            controller = new MobileParkingController();
-            await controller.init();
+            try {
+                // Check if MobileParkingController is defined
+                if (typeof MobileParkingController === 'undefined') {
+                    console.error('❌ MobileParkingController is not defined!');
+                    showToast('שגיאה בטעינת המערכת', 'error');
+                    return;
+                }
+                
+                // Initialize the controller
+                controller = new MobileParkingController();
+                await controller.init();
             
             // Load initial data
             await loadUserData();
@@ -764,6 +788,11 @@
             window.addEventListener('connectionStatusChanged', (event) => {
                 updateConnectionStatus(event.detail.connected);
             });
+            
+            } catch (error) {
+                console.error('❌ Error initializing controller:', error);
+                showToast('שגיאה באתחול המערכת', 'error');
+            }
         });
 
         // Load user data
