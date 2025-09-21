@@ -103,6 +103,7 @@ class MobileParkingController {
             const response = await fetch(`${this.baseUrl}/devices`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
                 body: JSON.stringify({ parking_id: this.parkingId })
             });
             
@@ -138,9 +139,10 @@ class MobileParkingController {
         }
         
         try {
-            const response = await fetch(`${this.baseUrl}/execute-command`, {
+            const response = await fetch(`${this.baseUrl}/command`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     parking_id: this.parkingId,
                     devices: devices,
@@ -172,6 +174,7 @@ class MobileParkingController {
             const response = await fetch(`${this.baseUrl}/device-status`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     parking_id: this.parkingId,
                     device: deviceNumber
@@ -199,6 +202,7 @@ class MobileParkingController {
             const response = await fetch(`${this.baseUrl}/events`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     parking_id: this.parkingId,
                     limit: limit
@@ -227,6 +231,7 @@ class MobileParkingController {
             const response = await fetch(`${this.baseUrl}/send-price`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     parking_id: this.parkingId,
                     device: deviceNumber,
@@ -255,6 +260,7 @@ class MobileParkingController {
             const response = await fetch(`${this.baseUrl}/lost-ticket`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     parking_id: this.parkingId,
                     device: deviceNumber
@@ -282,6 +288,7 @@ class MobileParkingController {
             const response = await fetch(`${this.baseUrl}/system-status`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     parking_id: this.parkingId
                 })
