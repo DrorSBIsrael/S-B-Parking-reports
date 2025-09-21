@@ -2658,12 +2658,13 @@ def mobile_controller_devices():
             print(f"📱 Adding internal session: user={session.get('user_email')}, access={session.get('user_access_level')}")
             
             # Use the company-manager proxy
-            proxy_url = '/api/company-manager/proxy'
+            # In Render, use localhost to avoid timeout when calling self
             if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
                 proxy_url = 'http://localhost:5000/api/company-manager/proxy'
             else:
-                base_url = request.url_root.rstrip('/')
-                proxy_url = base_url + proxy_url
+                # In production (Render), also use localhost to avoid timeout
+                proxy_url = 'http://localhost:5000/api/company-manager/proxy'
+                print(f"📱 Using localhost in production to avoid timeout")
             
             print(f"📱 Proxy URL: {proxy_url}")
             
@@ -2791,12 +2792,10 @@ def mobile_controller_events():
             print(f"📱 Adding internal session: user={session.get('user_email')}, access={session.get('user_access_level')}")
             
             # Use the company-manager proxy
-            proxy_url = '/api/company-manager/proxy'
-            if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
-                proxy_url = 'http://localhost:5000/api/company-manager/proxy'
-            else:
-                base_url = request.url_root.rstrip('/')
-                proxy_url = base_url + proxy_url
+            # Always use localhost to avoid timeout in Render
+            # In Render, Flask runs on the PORT env variable
+            port = os.environ.get('PORT', '5000')
+            proxy_url = f'http://localhost:{port}/api/company-manager/proxy'
             
             response = requests.post(
                 proxy_url,
@@ -2892,12 +2891,10 @@ def mobile_controller_system_status():
             print(f"📱 Adding internal session: user={session.get('user_email')}, access={session.get('user_access_level')}")
             
             # Use the company-manager proxy
-            proxy_url = '/api/company-manager/proxy'
-            if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
-                proxy_url = 'http://localhost:5000/api/company-manager/proxy'
-            else:
-                base_url = request.url_root.rstrip('/')
-                proxy_url = base_url + proxy_url
+            # Always use localhost to avoid timeout in Render
+            # In Render, Flask runs on the PORT env variable
+            port = os.environ.get('PORT', '5000')
+            proxy_url = f'http://localhost:{port}/api/company-manager/proxy'
             
             response = requests.post(
                 proxy_url,
@@ -4252,13 +4249,25 @@ def company_manager_proxy():
         ).eq('description', parking_num).execute()
         
         if not parking_result.data:
-            print(f"❌ No parking found with description: {parking_num}")
+            print(f"❌ No parking found with description: {parking_num} in parkings table")
             # נסה לחפש לפי שדות אחרים
             all_parkings = supabase.table('parkings').select('id, description, name').execute()
-            print(f"🔍 All parkings in DB: {[(p.get('id'), p.get('description'), p.get('name')) for p in all_parkings.data[:5]]}")
-            return jsonify({'success': False, 'message': f'חניון {parking_num} לא נמצא במערכת'}), 404
-        
-        parking_data = parking_result.data[0]
+            print(f"🔍 All parkings in DB: {[(p.get('id'), p.get('description'), p.get('name')) for p in all_parkings.data[:10]]}")
+            
+            # בואו נחפש גם בטבלת parking_servers
+            server_result = supabase.table('parking_servers').select('id, name, ip_address, port').eq('id', parking_num).execute()
+            if server_result.data:
+                print(f"🔍 Found in parking_servers: {server_result.data[0]}")
+                # Use data from parking_servers
+                parking_data = {
+                    'ip_address': server_result.data[0].get('ip_address'),
+                    'port': server_result.data[0].get('port', 8240),
+                    'description': parking_num
+                }
+            else:
+                return jsonify({'success': False, 'message': f'חניון {parking_num} לא נמצא במערכת'}), 404
+        else:
+            parking_data = parking_result.data[0]
         ip_address = parking_data.get('ip_address')
         port = parking_data.get('port', 443)
         
