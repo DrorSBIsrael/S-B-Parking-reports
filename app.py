@@ -4062,10 +4062,20 @@ def company_manager_proxy():
         # Convert parking_id to string to handle numeric IDs
         parking_num = str(parking_id)
         
-        # First try to find by description (numeric parking ID)
-        parking_result = supabase.table('parkings').select(
-            'ip_address, port, description'
-        ).eq('description', parking_num).execute()
+        # Check if parking_id looks like a UUID or a numeric ID
+        import re
+        is_uuid = bool(re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', parking_num, re.IGNORECASE))
+        
+        if is_uuid:
+            # Search by ID (UUID)
+            parking_result = supabase.table('parkings').select(
+                'ip_address, port, description'
+            ).eq('id', parking_num).execute()
+        else:
+            # Search by description (numeric parking ID)
+            parking_result = supabase.table('parkings').select(
+                'ip_address, port, description'
+            ).eq('description', parking_num).execute()
         
         if not parking_result.data:
             # Try fallback to project_parking_mapping table
@@ -4146,9 +4156,9 @@ def company_manager_proxy():
             return jsonify({'success': False, 'message': 'חסרים נתוני חיבור'}), 500
         
 
-        # בניית URL - עם פורט קבוע לבדיקה
+        # בניית URL - עם פורט ברירת מחדל אם לא נמצא
         if port is None or port == 0:
-            port = 8240  # פורט ברירת מחדל
+            port = 443  # פורט ברירת מחדל
             # Using default port
     
         # השתמש תמיד ב-HTTPS לשרתי החניון
@@ -4225,6 +4235,14 @@ def company_manager_proxy():
             # Handle usage profiles endpoint
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/usageprofiles"
             method = 'GET'  # Usage profiles are always GET
+        elif 'fielddevices' in endpoint.lower():
+            # Handle field devices endpoint for mobile controller
+            url = f"{protocol}://{ip_address}:{port}/DeviceControlWebService/fielddevices"
+            method = 'GET'  # Field devices are always GET
+        elif 'events' in endpoint.lower() and 'CustomerMediaWebService' not in endpoint:
+            # Handle events endpoint for mobile controller
+            url = f"{protocol}://{ip_address}:{port}/DeviceControlWebService/{endpoint}"
+            method = 'GET'  # Events are always GET
         elif 'CustomerMediaWebService' in endpoint:
             # אם כבר יש CustomerMediaWebService ב-endpoint
             url = f"{protocol}://{ip_address}:{port}/{endpoint}"
@@ -4238,7 +4256,7 @@ def company_manager_proxy():
         headers = {'Content-Type': 'application/json'}
         
         # Basic Auth - תמיד לשרת החניון
-        if 'CustomerMediaWebService' in endpoint or 'contracts' in endpoint or 'consumer' in endpoint or 'usageprofiles' in endpoint:
+        if 'CustomerMediaWebService' in endpoint or 'contracts' in endpoint or 'consumer' in endpoint or 'usageprofiles' in endpoint or 'fielddevices' in endpoint or 'events' in endpoint:
             # TODO: החלף עם ה-credentials הנכונים!
             auth_string = base64.b64encode(b'2022:2022').decode('ascii')
             headers['Authorization'] = f'Basic {auth_string}'
@@ -4246,7 +4264,11 @@ def company_manager_proxy():
         
         try:
             # timeout מוגבר ל-30 שניות ב-production
-            timeout_seconds = 30 if not is_local_dev else 25
+            # For device control endpoints, use even longer timeout
+            if 'fielddevices' in endpoint or 'events' in endpoint:
+                timeout_seconds = 45 if not is_local_dev else 30
+            else:
+                timeout_seconds = 30 if not is_local_dev else 25
             # Attempting connection
             
             # ביצוע הקריאה - פשוט כמו שהיה
