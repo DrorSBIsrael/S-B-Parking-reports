@@ -1498,11 +1498,27 @@ def test_email_system():
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     """Serve static files with no-cache headers"""
-    response = make_response(app.send_static_file(filename))
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '-1'
-    return response
+    try:
+        response = make_response(app.send_static_file(filename))
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+        
+        # Set proper MIME type for JavaScript files
+        if filename.endswith('.js'):
+            response.headers['Content-Type'] = 'application/javascript; charset=utf-8'
+        
+        print(f"✅ Serving static file: {filename}")
+        return response
+    except Exception as e:
+        print(f"❌ Error serving static file {filename}: {str(e)}")
+        # Try alternative method
+        try:
+            static_dir = os.path.join(app.root_path, 'static')
+            return send_from_directory(static_dir, filename)
+        except Exception as e2:
+            print(f"❌ Alternative method also failed: {str(e2)}")
+            return "File not found", 404
 
 @app.route('/<filename>.js')
 def serve_js_files(filename):
@@ -1510,6 +1526,18 @@ def serve_js_files(filename):
     try:
         return send_from_directory('.', f'{filename}.js', mimetype='application/javascript')
     except FileNotFoundError:
+        return "File not found", 404
+
+# Specific route for mobile-parking-controller.js
+@app.route('/static/js/mobile-parking-controller.js')
+def serve_mobile_controller_js():
+    """Serve the mobile parking controller JavaScript file"""
+    try:
+        static_js_path = os.path.join(app.root_path, 'static', 'js')
+        return send_from_directory(static_js_path, 'mobile-parking-controller.js', 
+                                   mimetype='application/javascript; charset=utf-8')
+    except Exception as e:
+        print(f"❌ Error serving mobile-parking-controller.js: {str(e)}")
         return "File not found", 404
 
 @app.route('/')
@@ -2788,15 +2816,15 @@ def parking_tour_search():
         except requests.exceptions.Timeout as e:
             print(f"❌ Timeout error: {str(e)}")
             return jsonify({
-                        'success': False,
+                'success': False,
                 'message': 'תם הזמן לחיבור לשרת החניון'
             })
         except requests.exceptions.ConnectionError as e:
             print(f"❌ Connection error: {str(e)}")
             return jsonify({
-                        'success': False,
+                'success': False,
                 'message': f'לא ניתן להתחבר ל-proxy'
-                    })
+            })
         except requests.exceptions.RequestException as e:
             print(f"❌ Request error: {type(e).__name__}: {str(e)}")
             return jsonify({
