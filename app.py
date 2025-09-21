@@ -2942,6 +2942,13 @@ def mobile_controller_devices():
             
             if proxy_result.get('success', False):
                 devices_data = proxy_result.get('data', [])
+                
+                # Store cell computers in session if available
+                cell_computers = proxy_result.get('cellComputers', [])
+                if cell_computers:
+                    session['cell_computers'] = cell_computers
+                    print(f"📱 Stored cell computers in session: {cell_computers}")
+                
                 # עיבוד הנתונים למבנה שאנחנו צריכים
                 devices = []
                 for device in devices_data:
@@ -3100,6 +3107,80 @@ def mobile_controller_events():
         print(f"Error in mobile_controller_events: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בקבלת אירועים'}), 500
 
+@app.route('/api/mobile-controller/device-status', methods=['POST'])
+def mobile_controller_device_status():
+    """Get status for a specific device"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        # בדיקת הרשאות
+        user_result = supabase.table('user_parkings').select(
+            'project_number, code_type'
+        ).eq('email', session['user_email']).execute()
+        
+        if not user_result.data or user_result.data[0].get('code_type', '').lower() != 'mobile_controller':
+            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+        
+        data = request.get_json()
+        device_num = data.get('device')
+        parking_id = user_result.data[0].get('project_number')
+        
+        print(f"📱 Device Status Check for device: {device_num}")
+        
+        # Get cell computer number from session
+        cell_computer_num = 1
+        if 'cell_computers' in session:
+            cell_computers = session.get('cell_computers', [])
+            if cell_computers:
+                cell_computer_num = int(cell_computers[0])
+        
+        # Use special command 0xA137 (41271) for status check
+        proxy_data = {
+            'parking_id': parking_id,
+            'endpoint': f'DeviceControlWebService/command/{cell_computer_num}/{device_num}/41271',  # 0xA137
+            'method': 'PUT',
+            'data': {}
+        }
+        
+        # Add internal session for proxy authentication
+        proxy_data['_internal_session'] = {
+            'user_email': session.get('user_email'),
+            'user_access_level': session.get('user_access_level'),
+            'user_permissions': session.get('user_permissions'),
+            'user_project_number': session.get('user_project_number'),
+            'user_company_list': session.get('user_company_list')
+        }
+        
+        # Use the company-manager proxy
+        port = os.environ.get('PORT', '5000')
+        proxy_url = f'http://localhost:{port}/api/company-manager/proxy'
+        
+        response = requests.post(
+            proxy_url,
+            json=proxy_data,
+            headers={
+                'Content-Type': 'application/json',
+                'Cookie': request.headers.get('Cookie', '')
+            },
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            proxy_result = response.json()
+            if proxy_result.get('success', False):
+                return jsonify({
+                    'success': True,
+                    'status': 'checked',
+                    'device': device_num
+                })
+        
+        return jsonify({'success': False, 'message': 'שגיאה בבדיקת סטטוס'}), 500
+        
+    except Exception as e:
+        print(f"Error in mobile_controller_device_status: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה בבדיקת סטטוס'}), 500
+
 @app.route('/api/mobile-controller/system-status', methods=['POST'])
 def mobile_controller_system_status():
     """Get system status for mobile controller"""
@@ -3165,10 +3246,15 @@ def mobile_controller_command():
         for device_num in devices:
             try:
                 # For Scheidt, we need cell computer number
-                # TODO: This should come from the geometry response or database
-                # For now, trying common values
-                cell_computer_num = 1  # Often 1 for single facility systems
-                # You might need to extract this from the full device path in geometry
+                # Try to get it from the last devices response or use default
+                cell_computer_num = 1  # Default
+                
+                # Try to get from session if we saved it from geometry
+                if 'cell_computers' in session:
+                    cell_computers = session.get('cell_computers', [])
+                    if cell_computers:
+                        cell_computer_num = int(cell_computers[0])
+                        print(f"📱 Using cell computer number from session: {cell_computer_num}")
                 
                 proxy_data = {
                     'parking_id': parking_id,
@@ -4573,6 +4659,16 @@ def company_manager_proxy():
                                         })
                                 
                                 print(f"   ✅ Found {len(devices)} devices in geometry")
+                                
+                                # Store cell computers in session for command use
+                                if cell_computers and internal_session:
+                                    # If we have internal session, we need to pass it back
+                                    return jsonify({
+                                        'success': True, 
+                                        'data': devices,
+                                        'cellComputers': cell_computers
+                                    })
+                                
                                 return jsonify({'success': True, 'data': devices})
                             
                             elif 'events' in endpoint or 'lastevents' in endpoint:
@@ -4609,6 +4705,20 @@ def company_manager_proxy():
                                 version_elem = root.find('.//version-no')
                                 if version_elem is not None:
                                     return jsonify({'success': True, 'data': {'version': version_elem.text}})
+                            
+                            elif 'command' in endpoint:
+                                # Parse command response
+                                print(f"   📱 Parsing command response")
+                                status_elem = root.find('.//status')
+                                if status_elem is not None:
+                                    status_code = int(status_elem.text)
+                                    success = status_code == 0
+                                    print(f"   📱 Command response status: {status_code} ({'Success' if success else 'Failed'})")
+                                    return jsonify({
+                                        'success': success,
+                                        'status': status_code,
+                                        'message': 'Command executed' if success else 'Command failed'
+                                    })
                             
                             # Default response for other DeviceControlWebService endpoints
                             return jsonify({'success': True, 'data': response.text})
