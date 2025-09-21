@@ -3078,6 +3078,33 @@ def mobile_controller_events():
         print(f"Error in mobile_controller_events: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בקבלת אירועים'}), 500
 
+@app.route('/api/mobile-controller/system-status', methods=['POST'])
+def mobile_controller_system_status():
+    """Get system status for mobile controller"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        # בדיקת הרשאות
+        user_result = supabase.table('user_parkings').select(
+            'project_number, code_type'
+        ).eq('email', session['user_email']).execute()
+        
+        if not user_result.data or user_result.data[0].get('code_type', '').lower() != 'mobile_controller':
+            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+        
+        # For now, return basic status
+        return jsonify({
+            'success': True,
+            'status': 'online',
+            'connected': True,
+            'parking_id': user_result.data[0].get('project_number')
+        })
+        
+    except Exception as e:
+        print(f"Error in mobile_controller_system_status: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה בקבלת סטטוס'}), 500
+
 @app.route('/api/mobile-controller/command', methods=['POST'])
 def mobile_controller_command():
     """Send command to parking devices"""
@@ -4232,7 +4259,7 @@ def company_manager_proxy():
         headers = {'Content-Type': 'application/json'}
         
         # Basic Auth - תמיד לשרת החניון
-        if 'CustomerMediaWebService' in endpoint or 'contracts' in endpoint or 'consumer' in endpoint or 'usageprofiles' in endpoint or 'fielddevices' in endpoint or 'events' in endpoint:
+        if 'CustomerMediaWebService' in endpoint or 'contracts' in endpoint or 'consumer' in endpoint or 'usageprofiles' in endpoint or 'DeviceControlWebService' in endpoint:
             # TODO: החלף עם ה-credentials הנכונים!
             auth_string = base64.b64encode(b'2022:2022').decode('ascii')
             headers['Authorization'] = f'Basic {auth_string}'
@@ -4241,7 +4268,7 @@ def company_manager_proxy():
         try:
             # timeout מוגבר ל-30 שניות ב-production
             # For device control endpoints, use even longer timeout
-            if 'fielddevices' in endpoint or 'events' in endpoint:
+            if 'DeviceControlWebService' in endpoint:
                 timeout_seconds = 45 if not is_local_dev else 30
             else:
                 timeout_seconds = 30 if not is_local_dev else 25
