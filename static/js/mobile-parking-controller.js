@@ -129,26 +129,34 @@ class MobileParkingController {
     async executeCommand(commandType, deviceNumber = null) {
         const device = deviceNumber || this.selectedDevice;
         
+        console.log(`🔧 MobileParkingController.executeCommand called with: commandType=${commandType}, deviceNumber=${deviceNumber}, selectedDevice=${this.selectedDevice}`);
+        
         if (!device) {
             throw new Error('לא נבחר מכשיר');
         }
         
         const command = this.commands[commandType];
+        console.log(`📋 Command mapping for ${commandType}:`, command);
+        
         if (!command) {
             throw new Error('פקודה לא תקינה');
         }
         
         try {
+            const requestData = {
+                parking_id: this.parkingId,
+                devices: [device], // Send as array for backward compatibility
+                command: command.code,
+                command_name: command.name
+            };
+            
+            console.log(`📤 Sending command request:`, requestData);
+            
             const response = await fetch(`${this.baseUrl}/command`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'same-origin',
-                body: JSON.stringify({
-                    parking_id: this.parkingId,
-                    devices: [device], // Send as array for backward compatibility
-                    command: command.code,
-                    command_name: command.name
-                })
+                body: JSON.stringify(requestData)
             });
             
             const data = await response.json();
