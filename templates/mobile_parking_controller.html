@@ -829,16 +829,9 @@
                 showToast('שגיאה בטעינת מכשירים', 'error');
                 hideLoading();
                 
-                // For demo, use mock data
-                const mockDevices = [
-                    { number: 101, type: 'entry', status: 1, barrier: 'closed', lastEvent: '10:30' },
-                    { number: 102, type: 'entry', status: 1, barrier: 'open', lastEvent: '10:25' },
-                    { number: 201, type: 'exit', status: 1, barrier: 'closed', lastEvent: '10:28' },
-                    { number: 202, type: 'exit', status: 4, barrier: 'closed', lastEvent: '10:15' },
-                    { number: 301, type: 'pass', status: 1, barrier: 'open', lastEvent: '10:20' }
-                ];
-                controller.devices = mockDevices;
-                displayDevices(mockDevices);
+                // Display empty state
+                const grid = document.getElementById('devicesGrid');
+                grid.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;">לא נמצאו מכשירים או שיש בעיית חיבור</div>';
                 updateDeviceCount();
             }
         }
@@ -997,16 +990,24 @@
 
         // Load events
         async function loadEvents() {
-            // Mock events data
-            events = [
-                { time: '10:30', device: 101, type: 'entry', message: 'כניסת רכב - לוחית 12-345-67' },
-                { time: '10:28', device: 201, type: 'exit', message: 'יציאת רכב - תשלום 25 ₪' },
-                { time: '10:25', device: 102, type: 'entry', message: 'כניסת רכב - לוחית 98-765-43' },
-                { time: '10:20', device: 301, type: 'pass', message: 'מעבר מנוי - תג 12345' },
-                { time: '10:15', device: 202, type: 'alert', message: '⚠️ התראה - נדרשת תחזוקה' }
-            ];
-            
-            displayEvents();
+            try {
+                // Use controller to load events
+                const loadedEvents = await controller.loadEvents();
+                events = loadedEvents.map(event => ({
+                    time: event.timestamp ? new Date(event.timestamp).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '',
+                    device: event.device,
+                    type: event.type || 'event',
+                    message: event.description || event.message || 'אירוע'
+                }));
+                displayEvents();
+            } catch (error) {
+                console.error('Error loading events:', error);
+                showToast('שגיאה בטעינת אירועים', 'error');
+                
+                // Display empty state
+                const eventsList = document.getElementById('eventsList');
+                eventsList.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;">אין אירועים להצגה</div>';
+            }
         }
 
         // Display events
