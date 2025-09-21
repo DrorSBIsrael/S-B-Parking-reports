@@ -2901,13 +2901,19 @@ def mobile_controller_devices():
                 'method': 'GET'
             }
             
+            # Add internal session for proxy authentication
+            proxy_data['_internal_session'] = {
+                'user_email': session.get('user_email'),
+                'user_access_level': session.get('user_access_level'),
+                'user_permissions': session.get('user_permissions'),
+                'user_project_number': session.get('user_project_number'),
+                'user_company_list': session.get('user_company_list')
+            }
+            
             # Use the company-manager proxy
-            proxy_url = '/api/company-manager/proxy'
-            if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
-                proxy_url = 'http://localhost:5000/api/company-manager/proxy'
-            else:
-                base_url = request.url_root.rstrip('/')
-                proxy_url = base_url + proxy_url
+            # Always use localhost to avoid timeout in Render
+            port = os.environ.get('PORT', '5000')
+            proxy_url = f'http://localhost:{port}/api/company-manager/proxy'
             
             response = requests.post(
                 proxy_url,
@@ -3008,13 +3014,19 @@ def mobile_controller_events():
                 'method': 'GET'
             }
             
+            # Add internal session for proxy authentication
+            proxy_data['_internal_session'] = {
+                'user_email': session.get('user_email'),
+                'user_access_level': session.get('user_access_level'),
+                'user_permissions': session.get('user_permissions'),
+                'user_project_number': session.get('user_project_number'),
+                'user_company_list': session.get('user_company_list')
+            }
+            
             # Use the company-manager proxy
-            proxy_url = '/api/company-manager/proxy'
-            if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
-                proxy_url = 'http://localhost:5000/api/company-manager/proxy'
-            else:
-                base_url = request.url_root.rstrip('/')
-                proxy_url = base_url + proxy_url
+            # Always use localhost to avoid timeout in Render
+            port = os.environ.get('PORT', '5000')
+            proxy_url = f'http://localhost:{port}/api/company-manager/proxy'
             
             response = requests.post(
                 proxy_url,
@@ -3118,13 +3130,19 @@ def mobile_controller_command():
                     }
                 }
                 
+                # Add internal session for proxy authentication
+                proxy_data['_internal_session'] = {
+                    'user_email': session.get('user_email'),
+                    'user_access_level': session.get('user_access_level'),
+                    'user_permissions': session.get('user_permissions'),
+                    'user_project_number': session.get('user_project_number'),
+                    'user_company_list': session.get('user_company_list')
+                }
+                
                 # Use the company-manager proxy
-                proxy_url = '/api/company-manager/proxy'
-                if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
-                    proxy_url = 'http://localhost:5000/api/company-manager/proxy'
-                else:
-                    base_url = request.url_root.rstrip('/')
-                    proxy_url = base_url + proxy_url
+                # Always use localhost to avoid timeout in Render
+                port = os.environ.get('PORT', '5000')
+                proxy_url = f'http://localhost:{port}/api/company-manager/proxy'
                 
                 response = requests.post(
                     proxy_url,
@@ -3997,7 +4015,20 @@ def company_manager_proxy():
         # בדיקה אם אנחנו במצב פיתוח מקומי
         is_local_dev = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
         
-        if 'user_email' not in session:
+        # Get request data first
+        data = request.get_json()
+        if not data:
+            # No JSON data in request
+            return jsonify({'success': False, 'message': 'חסרים נתונים'}), 400
+            
+        # Check for internal session data (for internal API calls)
+        internal_session = None
+        if data and '_internal_session' in data:
+            internal_session = data.pop('_internal_session')
+            if internal_session:
+                print(f"📱 Internal session received: {internal_session.get('user_email')}")
+        
+        if 'user_email' not in session and not internal_session:
             if is_local_dev:
                 # במצב פיתוח - דלג על בדיקת login
                 # LOCAL DEV MODE - Skipping login check
@@ -4006,10 +4037,12 @@ def company_manager_proxy():
                 # User not logged in
                 return jsonify({'success': False, 'message': 'לא מחובר'}), 401
         
-        data = request.get_json()
-        if not data:
-            # No JSON data in request
-            return jsonify({'success': False, 'message': 'חסרים נתונים'}), 400
+        # Use internal session if provided
+        if internal_session:
+            current_user_email = internal_session.get('user_email')
+            print(f"📱 Using internal session for user: {current_user_email}")
+        else:
+            current_user_email = session.get('user_email')
             
         parking_id = data.get('parking_id')
         endpoint = data.get('endpoint')
