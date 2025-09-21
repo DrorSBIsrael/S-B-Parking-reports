@@ -9,7 +9,7 @@ class MobileParkingController {
     constructor() {
         this.baseUrl = '/api/mobile-controller';
         this.devices = [];
-        this.selectedDevices = [];
+        this.selectedDevice = null; // Changed to single selection
         this.parkingId = null;
         this.connectionStatus = false;
         this.events = [];
@@ -124,13 +124,13 @@ class MobileParkingController {
     }
     
     /**
-     * Execute command on selected devices
+     * Execute command on selected device
      */
-    async executeCommand(commandType, deviceNumbers = null) {
-        const devices = deviceNumbers || this.selectedDevices;
+    async executeCommand(commandType, deviceNumber = null) {
+        const device = deviceNumber || this.selectedDevice;
         
-        if (!devices || devices.length === 0) {
-            throw new Error('לא נבחרו מכשירים');
+        if (!device) {
+            throw new Error('לא נבחר מכשיר');
         }
         
         const command = this.commands[commandType];
@@ -145,7 +145,7 @@ class MobileParkingController {
                 credentials: 'same-origin',
                 body: JSON.stringify({
                     parking_id: this.parkingId,
-                    devices: devices,
+                    devices: [device], // Send as array for backward compatibility
                     command: command.code,
                     command_name: command.name
                 })
@@ -308,44 +308,40 @@ class MobileParkingController {
     }
     
     /**
-     * Toggle device selection
+     * Select a single device (radio button behavior)
      */
-    toggleDeviceSelection(deviceNumber) {
-        const index = this.selectedDevices.indexOf(deviceNumber);
-        
-        if (index > -1) {
-            this.selectedDevices.splice(index, 1);
+    selectDevice(deviceNumber) {
+        // If same device clicked, deselect it
+        if (this.selectedDevice === deviceNumber) {
+            this.selectedDevice = null;
         } else {
-            this.selectedDevices.push(deviceNumber);
+            this.selectedDevice = deviceNumber;
         }
         
-        return this.selectedDevices;
+        return this.selectedDevice;
     }
     
     /**
      * Clear device selection
      */
     clearSelection() {
-        this.selectedDevices = [];
-        return this.selectedDevices;
+        this.selectedDevice = null;
+        return this.selectedDevice;
     }
     
     /**
-     * Select all devices
+     * Get selected device info
      */
-    selectAllDevices() {
-        this.selectedDevices = this.devices.map(d => d.number);
-        return this.selectedDevices;
+    getSelectedDevice() {
+        if (!this.selectedDevice) return null;
+        return this.devices.find(d => d.number === this.selectedDevice);
     }
     
     /**
-     * Select devices by type
+     * Check if device is selected
      */
-    selectDevicesByType(type) {
-        this.selectedDevices = this.devices
-            .filter(d => this.getDeviceType(d.number) === type)
-            .map(d => d.number);
-        return this.selectedDevices;
+    isDeviceSelected(deviceNumber) {
+        return this.selectedDevice === deviceNumber;
     }
     
     /**
@@ -410,7 +406,7 @@ class MobileParkingController {
     destroy() {
         this.stopMonitors();
         this.devices = [];
-        this.selectedDevices = [];
+        this.selectedDevice = null;
         this.events = [];
     }
 }
