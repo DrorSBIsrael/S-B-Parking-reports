@@ -2537,6 +2537,36 @@ def parking_tour_page():
     
     return render_template('parking_tour.html')
 
+@app.route('/mobile-parking-controller')
+def mobile_parking_controller_page():
+    """דף בקרת חניון למובייל - Mobile Parking Controller"""
+    if 'user_email' not in session:
+        return redirect(url_for('login_page'))
+    
+    # בדיקת הרשאות - רק למשתמשים עם קוד mobile_controller
+    try:
+        user_result = supabase.table('user_parkings').select(
+            'code_type, project_number, parking_name, access_level, permissions'
+        ).eq('email', session['user_email']).execute()
+        
+        if not user_result.data:
+            print(f"⚠️ No user data found for {session['user_email']}")
+            return redirect(url_for('dashboard'))
+        
+        user_data = user_result.data[0]
+        code_type = user_data.get('code_type', '')
+        
+        # בדיקה שהמשתמש הוא mobile_controller
+        if code_type.lower() != 'mobile_controller':
+            print(f"⚠️ Unauthorized access attempt to mobile-parking-controller by {session['user_email']} (code_type: {code_type})")
+            return redirect(url_for('dashboard'))
+        
+    except Exception as e:
+        print(f"Error checking controller permissions: {str(e)}")
+        return redirect(url_for('dashboard'))
+    
+    return render_template('mobile_parking_controller.html')
+
 # ========== API לחיפוש מנויים - Parking Tour ==========
 
 @app.route('/api/parking-tour/search', methods=['POST'])
@@ -2646,149 +2676,126 @@ def parking_tour_search():
         except Exception as e:
             print(f"❌ Error getting parking data: {str(e)}, using defaults")
         
-        print(f"🔌 Using server connection for parking {parking_id}...")
+        print(f"🔌 Using proxy connection for parking {parking_id}...")
         
-        # בניית URL ישירות לשרת החניון
-        protocol = "https"
-        url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers?lpn={clean_plate}"
-        
-        print(f"📤 Direct URL: {url}")
-        
-        # הכנת headers עם Basic Auth
-        auth_string = base64.b64encode(b'2022:2022').decode('ascii')
-        headers = {
-            'Authorization': f'Basic {auth_string}',
-            'Content-Type': 'application/json',
-            'Accept': 'application/xml,application/json'
-        }
-        
+        # שימוש ב-proxy של המערכת כמו ב-company-manager
         try:
-            # קריאה ישירה לשרת
-            print(f"🌐 Making direct request to parking server...")
+            # בניית בקשה ל-proxy
+            proxy_data = {
+                'parking_id': parking_id,
+                'endpoint': f'consumers?lpn={clean_plate}',
+                'method': 'GET'
+            }
             
-            # ביטול אזהרות SSL
-            import urllib3
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            print(f"📤 Sending to proxy: {proxy_data}")
             
-            response = requests.get(url, headers=headers, verify=False, timeout=30)
+            # כתובת ה-proxy - בסביבת production נשתמש בכתובת המלאה
+            if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
+                proxy_url = 'http://localhost:5000/api/company-manager/proxy'
+            else:
+                # ב-production, השתמש בכתובת יחסית
+                proxy_url = '/api/company-manager/proxy'
+                
+            print(f"🌐 Using proxy URL: {proxy_url}")
             
+            # קריאה ל-proxy - תמיד השתמש ב-requests
+            # בסביבת production, נבנה את ה-URL המלא
+            if proxy_url.startswith('/'):
+                # סביבת production - בנה URL מלא
+                base_url = request.url_root.rstrip('/')
+                proxy_url = base_url + proxy_url
+                print(f"🌐 Built full proxy URL: {proxy_url}")
+            
+            response = requests.post(
+                proxy_url,
+                json=proxy_data,
+                headers={
+                    'Content-Type': 'application/json',
+                    'Cookie': request.headers.get('Cookie', '')  # העבר את ה-session cookies
+                },
+                timeout=30
+            )
+            
+            # עיבוד התשובה מה-proxy
             print(f"📡 Response status: {response.status_code}")
             print(f"📄 Response headers: {dict(response.headers)}")
             
             if response.status_code != 200:
-                print(f"❌ Server returned {response.status_code}")
+                print(f"❌ Proxy returned {response.status_code}")
                 print(f"📄 Error response: {response.text[:500]}")
                 return jsonify({
                     'success': False,
                     'message': 'שגיאה בחיפוש במערכת החניון'
                 })
             
-            # עיבוד התשובה
-            content_type = response.headers.get('content-type', '')
-            print(f"📄 Content-Type: {content_type}")
-            print(f"📄 Response body (first 1000 chars): {response.text[:1000]}")
+            try:
+                proxy_result = response.json()
+            except Exception as e:
+                print(f"❌ Failed to parse proxy response as JSON: {str(e)}")
+                print(f"📄 Response text: {response.text[:500]}")
+                return jsonify({
+                    'success': False,
+                    'message': 'שגיאה בפענוח תשובת השרת'
+                })
             
-            consumers_data = []
+            # עיבוד התשובה מה-proxy
+            print(f"📊 Proxy response: {proxy_result}")
             
-            if 'xml' in content_type or response.text.startswith('<?xml'):
-                print(f"📋 Parsing XML response...")
-                import xml.etree.ElementTree as ET
+            # בדיקת התשובה מה-proxy
+            if not proxy_result:
+                print(f"❌ Empty proxy response")
+                return jsonify({
+                    'success': False,
+                    'message': 'תשובה ריקה מהשרת'
+                })
+            
+            if not proxy_result.get('success', False):
+                print(f"❌ Proxy returned error: {proxy_result}")
+                error_msg = proxy_result.get('message') or proxy_result.get('error', 'שגיאה בחיפוש במערכת החניון')
+                return jsonify({
+                    'success': False,
+                    'message': error_msg
+                })
+            
+            # עיבוד הנתונים מה-proxy
+            consumers_data = proxy_result.get('data', [])
+            if isinstance(consumers_data, dict):
+                # אם קיבלנו אובייקט יחיד, הפוך למערך
+                consumers_data = [consumers_data]
+            elif not isinstance(consumers_data, list):
+                consumers_data = []
+            
+            print(f"✅ Got {len(consumers_data)} consumers from proxy")
+            
+            # עיבוד התוצאות - הנתונים כבר נקראו מה-proxy
+            consumers = consumers_data
                 
-                try:
-                    root = ET.fromstring(response.text)
-                    print(f"📋 Root element: {root.tag}")
-                    
-                    # Option 1: consumers/consumer structure
-                    consumers_elem = root.find('.//consumers')
-                    if consumers_elem is not None:
-                        print(f"📋 Found consumers element")
-                        for consumer_elem in consumers_elem.findall('consumer'):
-                            consumer_data = {}
-                            for child in consumer_elem:
-                                consumer_data[child.tag] = child.text
-                            consumers_data.append(consumer_data)
-                            print(f"📋 Consumer found: {consumer_data}")
-                    
-                    # Option 2: Direct consumer elements
-                    if not consumers_data:
-                        for consumer_elem in root.findall('.//consumer'):
-                            consumer_data = {}
-                            for child in consumer_elem:
-                                consumer_data[child.tag] = child.text
-                            consumers_data.append(consumer_data)
-                            print(f"📋 Consumer found (direct): {consumer_data}")
-                    
-                    # Option 3: Root is consumer
-                    if not consumers_data and root.tag == 'consumer':
-                        consumer_data = {}
-                        for child in root:
-                            consumer_data[child.tag] = child.text
-                        consumers_data = [consumer_data]
-                        print(f"📋 Consumer found (root): {consumer_data}")
-                
-                except ET.ParseError as e:
-                    print(f"❌ XML Parse error: {str(e)}")
-                    return jsonify({
+        except requests.exceptions.Timeout as e:
+            print(f"❌ Timeout error: {str(e)}")
+            return jsonify({
                         'success': False,
-                        'message': 'שגיאה בפענוח תשובת השרת'
-                    })
-            else:
-                # Try JSON
-                print(f"📋 Trying to parse as JSON...")
-                try:
-                    json_data = response.json()
-                    if isinstance(json_data, list):
-                        consumers_data = json_data
-                    elif isinstance(json_data, dict):
-                        if 'consumers' in json_data:
-                            consumers_data = json_data['consumers']
-                        elif 'consumer' in json_data:
-                            consumers_data = [json_data['consumer']]
-                        else:
-                            consumers_data = [json_data]
-                    print(f"📋 Parsed JSON successfully: {len(consumers_data)} consumers")
-                except:
-                    print(f"❌ Failed to parse as JSON")
-                    return jsonify({
+                'message': 'תם הזמן לחיבור לשרת החניון'
+            })
+        except requests.exceptions.ConnectionError as e:
+            print(f"❌ Connection error: {str(e)}")
+            return jsonify({
                         'success': False,
-                        'message': 'שגיאה בפענוח תשובת השרת'
+                'message': f'לא ניתן להתחבר ל-proxy'
                     })
-            
-            result = {'success': True, 'data': consumers_data}
-            print(f"✅ Search completed successfully! Found {len(consumers_data)} consumers")
-                
         except requests.exceptions.RequestException as e:
-            print(f"❌ Request error: {str(e)}")
+            print(f"❌ Request error: {type(e).__name__}: {str(e)}")
             return jsonify({
                 'success': False,
-                'message': f'שגיאה בחיבור לשרת החניון'
+                'message': f'שגיאה בחיבור ל-proxy'
             })
         except Exception as e:
-            print(f"❌ Unexpected error: {str(e)}")
+            print(f"❌ Unexpected error: {type(e).__name__}: {str(e)}")
             import traceback
             print(traceback.format_exc())
             return jsonify({
                 'success': False,
-                'message': 'שגיאה בחיפוש במערכת החניון'
+                'message': f'שגיאה בחיפוש במערכת החניון: {type(e).__name__}'
             })
-        
-        # עיבוד התוצאות מה-proxy
-        consumers_data = result.get('data', {})
-        consumers = []
-        
-        # ה-proxy כבר עשה את הפענוח של XML/JSON
-        if isinstance(consumers_data, list):
-            consumers = consumers_data
-        elif isinstance(consumers_data, dict):
-            if 'consumers' in consumers_data and 'consumer' in consumers_data['consumers']:
-                consumer_list = consumers_data['consumers']['consumer']
-                consumers = consumer_list if isinstance(consumer_list, list) else [consumer_list]
-            elif 'consumer' in consumers_data:
-                consumer_list = consumers_data['consumer']
-                consumers = consumer_list if isinstance(consumer_list, list) else [consumer_list]
-            else:
-                # אולי זה consumer בודד
-                consumers = [consumers_data]
         
         # עיבוד התוצאות
         found_subscribers = []
