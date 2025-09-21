@@ -2647,6 +2647,16 @@ def mobile_controller_devices():
             
             print(f"📱 Proxy data: {proxy_data}")
             
+            # Add internal session for proxy authentication
+            proxy_data['_internal_session'] = {
+                'user_email': session.get('user_email'),
+                'user_access_level': session.get('user_access_level'),
+                'user_permissions': session.get('user_permissions'),
+                'user_project_number': session.get('user_project_number'),
+                'user_company_list': session.get('user_company_list')
+            }
+            print(f"📱 Adding internal session: user={session.get('user_email')}, access={session.get('user_access_level')}")
+            
             # Use the company-manager proxy
             proxy_url = '/api/company-manager/proxy'
             if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
@@ -2770,6 +2780,16 @@ def mobile_controller_events():
                 'method': 'GET'
             }
             
+            # Add internal session for proxy authentication
+            proxy_data['_internal_session'] = {
+                'user_email': session.get('user_email'),
+                'user_access_level': session.get('user_access_level'),
+                'user_permissions': session.get('user_permissions'),
+                'user_project_number': session.get('user_project_number'),
+                'user_company_list': session.get('user_company_list')
+            }
+            print(f"📱 Adding internal session: user={session.get('user_email')}, access={session.get('user_access_level')}")
+            
             # Use the company-manager proxy
             proxy_url = '/api/company-manager/proxy'
             if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
@@ -2860,6 +2880,16 @@ def mobile_controller_system_status():
                 'endpoint': 'system/status',
                 'method': 'GET'
             }
+            
+            # Add internal session for proxy authentication
+            proxy_data['_internal_session'] = {
+                'user_email': session.get('user_email'),
+                'user_access_level': session.get('user_access_level'),
+                'user_permissions': session.get('user_permissions'),
+                'user_project_number': session.get('user_project_number'),
+                'user_company_list': session.get('user_company_list')
+            }
+            print(f"📱 Adding internal session: user={session.get('user_email')}, access={session.get('user_access_level')}")
             
             # Use the company-manager proxy
             proxy_url = '/api/company-manager/proxy'
@@ -2978,6 +3008,15 @@ def mobile_controller_command():
                         'command': command,
                         'command_name': command_mapping.get(command, 'UNKNOWN')
                     }
+                }
+                
+                # Add internal session for proxy authentication
+                proxy_data['_internal_session'] = {
+                    'user_email': session.get('user_email'),
+                    'user_access_level': session.get('user_access_level'),
+                    'user_permissions': session.get('user_permissions'),
+                    'user_project_number': session.get('user_project_number'),
+                    'user_company_list': session.get('user_company_list')
                 }
                 
                 # Use the company-manager proxy
@@ -4148,7 +4187,17 @@ def company_manager_proxy():
         # בדיקה אם אנחנו במצב פיתוח מקומי
         is_local_dev = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
         
-        if 'user_email' not in session:
+        # Get request data first
+        data = request.get_json()
+        
+        # Check for internal session data (for internal API calls)
+        internal_session = None
+        if data and '_internal_session' in data:
+            internal_session = data.pop('_internal_session')
+            if internal_session:
+                print(f"📱 Internal session received: {internal_session.get('user_email')}")
+        
+        if 'user_email' not in session and not internal_session:
             if is_local_dev:
                 # במצב פיתוח - דלג על בדיקת login
                 # LOCAL DEV MODE - Skipping login check
@@ -4157,7 +4206,13 @@ def company_manager_proxy():
                 # User not logged in
                 return jsonify({'success': False, 'message': 'לא מחובר'}), 401
         
-        data = request.get_json()
+        # Use internal session if provided
+        if internal_session:
+            current_user_email = internal_session.get('user_email')
+            print(f"📱 Using internal session for user: {current_user_email}")
+        else:
+            current_user_email = session.get('user_email')
+        
         if not data:
             # No JSON data in request
             return jsonify({'success': False, 'message': 'חסרים נתונים'}), 400
