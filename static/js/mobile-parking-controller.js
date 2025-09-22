@@ -129,14 +129,11 @@ class MobileParkingController {
     async executeCommand(commandType, deviceNumber = null) {
         const device = deviceNumber || this.selectedDevice;
         
-        console.log(`🔧 MobileParkingController.executeCommand called with: commandType=${commandType}, deviceNumber=${deviceNumber}, selectedDevice=${this.selectedDevice}`);
-        
         if (!device) {
             throw new Error('לא נבחר מכשיר');
         }
         
         const command = this.commands[commandType];
-        console.log(`📋 Command mapping for ${commandType}:`, command);
         
         if (!command) {
             throw new Error('פקודה לא תקינה');
@@ -149,8 +146,6 @@ class MobileParkingController {
                 command: command.code,
                 command_name: command.name
             };
-            
-            console.log(`📤 Sending command request:`, requestData);
             
             const response = await fetch(`${this.baseUrl}/command`, {
                 method: 'POST',
@@ -169,21 +164,17 @@ class MobileParkingController {
                         case 'open':
                             this.devices[deviceIndex].barrier = 'open';
                             this.devices[deviceIndex].doorOpen = true;
-                            console.log(`✅ Updated device ${device} status to OPEN`);
                             break;
                         case 'close':
                             this.devices[deviceIndex].barrier = 'closed';
                             this.devices[deviceIndex].doorOpen = false;
-                            console.log(`✅ Updated device ${device} status to CLOSED`);
                             break;
                         case 'lock':
                             this.devices[deviceIndex].barrier = 'locked';
                             this.devices[deviceIndex].doorOpen = false;
-                            console.log(`✅ Updated device ${device} status to LOCKED`);
                             break;
                         case 'unlock':
                             // Unlock doesn't change barrier state, just removes lock
-                            console.log(`✅ Device ${device} UNLOCKED`);
                             break;
                     }
                 }
