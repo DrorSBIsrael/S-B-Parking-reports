@@ -793,19 +793,11 @@
         <!-- Control Panel -->
         <div class="control-panel">
             <div class="control-tabs">
-                <button class="tab-btn active" onclick="switchTab('devices')">
+                <div class="tab-btn active">
                     <span>🚗</span>
                     <span>מכשירים</span>
                     <span id="devicesCount">(0)</span>
-                </button>
-                <button class="tab-btn" onclick="switchTab('events')">
-                    <span>📊</span>
-                    <span>אירועים</span>
-                </button>
-                <button class="tab-btn" onclick="switchTab('status')">
-                    <span>📈</span>
-                    <span>סטטוס מערכת</span>
-                </button>
+                </div>
             </div>
 
             <!-- Devices View -->
@@ -814,43 +806,8 @@
                     <!-- Devices will be loaded here -->
                 </div>
             </div>
-
-            <!-- Events View -->
-            <div id="eventsView" class="tab-content" style="display: none;">
-                <div class="events-panel">
-                    <div class="events-header">
-                        <h3 class="events-title">אירועים אחרונים</h3>
-                        <div class="events-filter">
-                            <button class="filter-btn active" onclick="filterEvents('all')">הכל</button>
-                            <button class="filter-btn" onclick="filterEvents('entry')">כניסות</button>
-                            <button class="filter-btn" onclick="filterEvents('exit')">יציאות</button>
-                            <button class="filter-btn" onclick="filterEvents('alerts')">התראות</button>
-                        </div>
-                    </div>
-                    <div id="eventsList">
-                        <!-- Events will be loaded here -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Status View -->
-            <div id="statusView" class="tab-content" style="display: none;">
-                <div class="events-panel">
-                    <h3 class="events-title">סטטוס מערכת</h3>
-                    <div id="systemStatus">
-                        <!-- System status will be loaded here -->
-                    </div>
-                </div>
-            </div>
         </div>
 
-        <!-- Global Control Button -->
-        <div class="control-buttons" style="padding: 15px; text-align: center;">
-            <button class="control-btn btn-status" onclick="getSystemStatus()" style="margin: 0 auto; max-width: 200px; display: flex; align-items: center; justify-content: center;">
-                    <span>📊</span>
-                <span>קבל מצב כללי</span>
-                </button>
-        </div>
     </div>
 
     <!-- Loading Overlay -->
@@ -874,11 +831,10 @@
         // Check if script loaded successfully
         setTimeout(() => {
             if (typeof MobileParkingController === 'undefined') {
-                console.warn('⚠️ Trying alternative path for mobile-parking-controller.js');
                 const script = document.createElement('script');
                 script.src = '/static/js/mobile-parking-controller.js?v=' + Date.now();
                 script.onerror = () => {
-                    console.error('❌ Failed to load mobile-parking-controller.js from all paths');
+                    showToast('שגיאה בטעינת המערכת', 'error');
                 };
                 document.head.appendChild(script);
             }
@@ -895,7 +851,6 @@
             try {
                 // Check if MobileParkingController is defined
                 if (typeof MobileParkingController === 'undefined') {
-                    console.error('❌ MobileParkingController is not defined!');
                     showToast('שגיאה בטעינת המערכת', 'error');
                     return;
                 }
@@ -914,7 +869,6 @@
             });
             
             } catch (error) {
-                console.error('❌ Error initializing controller:', error);
                 showToast('שגיאה באתחול המערכת', 'error');
             }
         });
@@ -933,7 +887,6 @@
                     document.getElementById('parkingName').textContent = currentParking.name;
                 }
             } catch (error) {
-                console.error('Error loading user data:', error);
                 showToast('שגיאה בטעינת נתוני משתמש', 'error');
             }
         }
@@ -949,7 +902,6 @@
                 updateDeviceCount();
                 hideLoading();
             } catch (error) {
-                console.error('Error loading devices:', error);
                 showToast('שגיאה בטעינת מכשירים', 'error');
                 hideLoading();
                 
@@ -1117,7 +1069,6 @@
                 await loadDevices();
                 
             } catch (error) {
-                console.error('Command execution error:', error);
                 showToast(error.message || 'שגיאה בביצוע הפקודה', 'error');
             } finally {
                 hideLoading();
@@ -1136,7 +1087,6 @@
         
         // Execute command for specific device
         async function executeDeviceCommand(deviceNumber, command) {
-            console.log(`🎯 Executing command: ${command} for device: ${deviceNumber}`);
             showLoading();
             
             try {
@@ -1154,7 +1104,6 @@
                 }, 1500);
                 
             } catch (error) {
-                console.error('❌ Command execution error:', error);
                 showToast(error.message || 'שגיאה בביצוע הפקודה', 'error');
             } finally {
                 hideLoading();
@@ -1178,237 +1127,14 @@
                 await loadDevices();
                 
             } catch (error) {
-                console.error('Error sending price:', error);
                 showToast(error.message || 'שגיאה בשליחת מחיר', 'error');
             } finally {
                 hideLoading();
             }
         }
         
-        // Get system status - global status for all devices
-        async function getSystemStatus() {
-            showLoading();
-            
-            try {
-                // Reload all devices to get latest status
-                await loadDevices();
-                
-                // Calculate statistics
-                const total = controller.devices.length;
-                const active = controller.devices.filter(d => d.deviceState === 1 || d.status === 1).length;
-                const warnings = controller.devices.filter(d => d.deviceState === 2 || d.deviceState === 3 || d.deviceState === 5).length;
-                const errors = controller.devices.filter(d => d.deviceState === 0 || d.deviceState === 6).length;
-                const openBarriers = controller.devices.filter(d => d.doorOpen || d.barrier === 'open').length;
-                
-                // Display system status
-                const statusHTML = `
-                    <div style="padding: 20px;">
-                        <h4>סטטוס כללי של המערכת</h4>
-                        <div style="display: grid; gap: 15px; margin-top: 20px;">
-                            <div class="device-status">
-                                <span class="status-label">סה"כ מכשירים:</span>
-                                <span class="status-value">${total}</span>
-                            </div>
-                            <div class="device-status">
-                                <span class="status-label">מכשירים תקינים:</span>
-                                <span class="status-value status-normal">${active}</span>
-                            </div>
-                            <div class="device-status">
-                                <span class="status-label">תקלות תפעוליות:</span>
-                                <span class="status-value status-operational-issue">${warnings}</span>
-                            </div>
-                            <div class="device-status">
-                                <span class="status-label">תקלות חמורות:</span>
-                                <span class="status-value status-error">${errors}</span>
-                            </div>
-                            <div class="device-status">
-                                <span class="status-label">מחסומים פתוחים:</span>
-                                <span class="status-value ${openBarriers > 0 ? 'barrier-open-blink' : ''}">${openBarriers}</span>
-                            </div>
-                        </div>
-                        <div style="margin-top: 20px; text-align: center;">
-                            <button onclick="closeModal()" class="control-btn btn-primary">סגור</button>
-                        </div>
-                    </div>
-                `;
-                
-                showModal(statusHTML);
-                
-            } catch (error) {
-                console.error('Error getting system status:', error);
-                showToast('שגיאה בקבלת סטטוס המערכת', 'error');
-            } finally {
-                hideLoading();
-            }
-        }
 
-        // Switch tabs
-        function switchTab(tab) {
-            // Update tab buttons
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.closest('.tab-btn').classList.add('active');
-            
-            // Update content
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.style.display = 'none';
-            });
-            document.getElementById(tab + 'View').style.display = 'block';
-            
-            // Load tab-specific data
-            if (tab === 'events') {
-                loadEvents();
-            } else if (tab === 'status') {
-                loadSystemStatus();
-            }
-        }
 
-        // Load events
-        async function loadEvents() {
-            try {
-                // Use controller to load events
-                const loadedEvents = await controller.loadEvents();
-                events = loadedEvents.map(event => ({
-                    time: event.timestamp ? new Date(event.timestamp).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '',
-                    device: event.device,
-                    type: event.type || 'event',
-                    message: event.description || event.message || 'אירוע'
-                }));
-                displayEvents();
-            } catch (error) {
-                console.error('Error loading events:', error);
-                showToast('שגיאה בטעינת אירועים', 'error');
-                
-                // Display empty state
-                const eventsList = document.getElementById('eventsList');
-                eventsList.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;">אין אירועים להצגה</div>';
-            }
-        }
-
-        // Display events
-        function displayEvents(filter = 'all') {
-            const eventsList = document.getElementById('eventsList');
-            eventsList.innerHTML = '';
-            
-            const filteredEvents = filter === 'all' ? events :
-                                  filter === 'alerts' ? events.filter(e => e.type === 'alert') :
-                                  events.filter(e => e.type === filter);
-            
-            filteredEvents.forEach(event => {
-                const eventItem = document.createElement('div');
-                eventItem.className = 'event-item';
-                
-                // Determine icon based on event type and content
-                let icon = '📋';
-                let eventClass = '';
-                if (event.type === 'open' || (event.message && event.message.includes('HAND_OPEN'))) {
-                    icon = '🔓';
-                    eventClass = 'event-open';
-                } else if (event.type === 'close' || (event.message && event.message.includes('HAND_CLOSE'))) {
-                    icon = '🔒';
-                    eventClass = 'event-close';
-                } else if (event.type === 'alarm' || event.alarm === '1') {
-                    icon = '🚨';
-                    eventClass = 'event-alarm';
-                } else if (event.type === 'error') {
-                    icon = '❌';
-                    eventClass = 'event-error';
-                } else if (event.type === 'entry') {
-                    icon = '➡️';
-                } else if (event.type === 'exit') {
-                    icon = '⬅️';
-                } else if (event.type === 'pass') {
-                    icon = '↔️';
-                }
-                
-                if (eventClass) {
-                    eventItem.classList.add(eventClass);
-                }
-                
-                const deviceName = event.deviceName ? ` - ${event.deviceName}` : '';
-                
-                eventItem.innerHTML = `
-                    <span class="event-icon">${icon}</span>
-                    <span class="event-time">${event.time}</span>
-                    <span class="event-device">מכשיר ${event.device}${deviceName}</span>
-                    <span class="event-message">${event.message}</span>
-                `;
-                
-                eventsList.appendChild(eventItem);
-            });
-        }
-
-        // Filter events
-        function filterEvents(filter) {
-            // Update filter buttons
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            displayEvents(filter);
-        }
-
-        // Load system status
-        async function loadSystemStatus() {
-            const statusContainer = document.getElementById('systemStatus');
-            
-            try {
-                // Try to get system status from controller
-                const systemStatus = await controller.getSystemStatus();
-                
-                statusContainer.innerHTML = `
-                    <div style="padding: 20px;">
-                        <h4>סטטוס כללי</h4>
-                        <div style="display: grid; gap: 15px; margin-top: 15px;">
-                            <div class="device-status">
-                                <span class="status-label">מכשירים פעילים:</span>
-                                <span class="status-value status-normal">${controller.devices.filter(d => d.status === 1).length}/${controller.devices.length}</span>
-                            </div>
-                            <div class="device-status">
-                                <span class="status-label">התראות:</span>
-                                <span class="status-value status-warning">${controller.devices.filter(d => d.status === 4).length}</span>
-                            </div>
-                            <div class="device-status">
-                                <span class="status-label">מחסומים פתוחים:</span>
-                                <span class="status-value">${controller.devices.filter(d => d.barrier === 'open').length}</span>
-                            </div>
-                            <div class="device-status">
-                                <span class="status-label">אירועים היום:</span>
-                                <span class="status-value">${systemStatus?.eventsToday || '1,234'}</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            } catch (error) {
-                console.error('Error loading system status:', error);
-                // Use local data
-                statusContainer.innerHTML = `
-                    <div style="padding: 20px;">
-                        <h4>סטטוס כללי</h4>
-                        <div style="display: grid; gap: 15px; margin-top: 15px;">
-                            <div class="device-status">
-                                <span class="status-label">מכשירים פעילים:</span>
-                                <span class="status-value status-normal">${controller.devices.filter(d => d.status === 1).length}/${controller.devices.length}</span>
-                            </div>
-                            <div class="device-status">
-                                <span class="status-label">התראות:</span>
-                                <span class="status-value status-warning">${controller.devices.filter(d => d.status === 4).length}</span>
-                            </div>
-                            <div class="device-status">
-                                <span class="status-label">מחסומים פתוחים:</span>
-                                <span class="status-value">${controller.devices.filter(d => d.barrier === 'open').length}</span>
-                            </div>
-                            <div class="device-status">
-                                <span class="status-label">אירועים היום:</span>
-                                <span class="status-value">1,234</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-        }
 
         // Connection monitor - handled by controller
         function startConnectionMonitor() {
@@ -1416,16 +1142,6 @@
             // which triggers 'connectionStatusChanged' events
         }
 
-        // Events monitor - handled by controller
-        function startEventsMonitor() {
-            // Events monitoring is handled by the controller
-            // We just need to refresh the display when on events tab
-            setInterval(() => {
-                if (document.getElementById('eventsView').style.display !== 'none') {
-                    loadEvents();
-                }
-            }, 5000); // Every 5 seconds
-        }
 
         // Update connection status
         function updateConnectionStatus(connected) {
