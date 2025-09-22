@@ -264,6 +264,13 @@
             border-radius: 4px;
         }
         
+        .status-locked {
+            color: white;
+            background: #9C27B0;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        
         /* Blinking animation for open barrier */
         .barrier-open-blink {
             animation: slowBlink 2s ease-in-out infinite;
@@ -840,9 +847,9 @@
         <!-- Global Control Button -->
         <div class="control-buttons" style="padding: 15px; text-align: center;">
             <button class="control-btn btn-status" onclick="getSystemStatus()" style="margin: 0 auto; max-width: 200px; display: flex; align-items: center; justify-content: center;">
-                <span>📊</span>
+                    <span>📊</span>
                 <span>קבל מצב כללי</span>
-            </button>
+                </button>
         </div>
     </div>
 
@@ -977,10 +984,13 @@
             let statusClass = 'status-normal';
             let statusText = 'תקין';
             
-            // Set status based on priority: error > operational issue > open barrier > normal
+            // Set status based on priority: error > locked > operational issue > open barrier > normal
             if (deviceState === 0 || deviceState === 6) {
                 statusClass = 'status-error';
                 statusText = 'לא פעיל';
+            } else if (device.barrier === 'locked') {
+                statusClass = 'status-locked';
+                statusText = 'נעול';
             } else if (deviceState === 2 || deviceState === 3 || deviceState === 5) {
                 statusClass = 'status-operational-issue';
                 statusText = 'תקלה תפעולית';
@@ -1002,7 +1012,10 @@
             let barrierStatus = 'לא ידוע';
             let barrierIcon = '❓';
             
-            if (device.barrier === 'open' || device.doorOpen) {
+            if (device.barrier === 'locked') {
+                barrierStatus = 'נעול';
+                barrierIcon = '🔐';
+            } else if (device.barrier === 'open' || device.doorOpen === true) {
                 barrierStatus = 'פתוח';
                 barrierIcon = '🔓';
             } else if (device.barrier === 'closed' || device.doorOpen === false) {
@@ -1034,7 +1047,7 @@
                         </div>
                         ${device.name ? `<div class="info-item"><span class="info-label">שם:</span><span class="info-value">${device.name}</span></div>` : ''}
                         ${device.doorOpen ? '<div class="info-item" style="color: #e74c3c;"><span class="info-label">⚠️ דלת:</span><span class="info-value">פתוחה</span></div>' : ''}
-                    </div>
+                        </div>
                     <div class="device-actions">
                         <button class="device-btn btn-open" onclick="executeDeviceCommand(${device.number}, 'open')">
                             🔓 פתח
@@ -1132,8 +1145,13 @@
                 
                 showToast(`הפקודה "${getCommandText(command)}" נשלחה למכשיר ${deviceNumber}`, 'success');
                 
-                // Reload devices to get updated status
-                await loadDevices();
+                // Update display immediately
+                displayDevices();
+                
+                // Also reload from server after a short delay
+                setTimeout(async () => {
+                    await loadDevices();
+                }, 1500);
                 
             } catch (error) {
                 console.error('❌ Command execution error:', error);
