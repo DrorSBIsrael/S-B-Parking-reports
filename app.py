@@ -3197,16 +3197,116 @@ def mobile_controller_system_status():
             return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
         
         # For now, return basic status
-            return jsonify({
-                'success': True,
+        return jsonify({
+            'success': True,
             'status': 'online',
             'connected': True,
             'parking_id': user_result.data[0].get('project_number')
-            })
+        })
         
     except Exception as e:
         print(f"Error in mobile_controller_system_status: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בקבלת סטטוס'}), 500
+
+@app.route('/api/mobile-controller/send-price', methods=['POST'])
+def mobile_controller_send_price():
+    """Send price to exit device"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+        
+        # בדיקת הרשאות
+        user_result = supabase.table('user_parkings').select(
+            'code_type, project_number'
+        ).eq('email', session['user_email']).execute()
+        
+        if not user_result.data or user_result.data[0].get('code_type', '').lower() != 'mobile_controller':
+            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+        
+        data = request.get_json()
+        device = data.get('device')
+        amount = data.get('amount', 0)
+        parking_id = data.get('parking_id') or user_result.data[0].get('project_number')
+        
+        print(f"📱 Mobile Controller Send Price: Device {device}, Amount: {amount}")
+        
+        # בדיקה שמדובר במכשיר יציאה
+        if not device or device < 200 or device > 299:
+            return jsonify({'success': False, 'message': 'ניתן לשלוח מחיר רק למכשירי יציאה (200-299)'}), 400
+        
+        # בניית פקודת מחיר לפי הפרוטוקול
+        # Format: 0xA306 (41734) עם פרמטר של המחיר
+        command = 41734  # 0xA306 - PRICE_SEND
+        
+        try:
+            # Get cell computer number from session
+            cell_computer_num = 1  # Default
+            if 'cell_computers' in session:
+                cell_computers = session.get('cell_computers', [])
+                if cell_computers:
+                    cell_computer_num = int(cell_computers[0])
+            
+            proxy_data = {
+                'parking_id': parking_id,
+                'endpoint': f'DeviceControlWebService/sendprice/{cell_computer_num}/{device}/{amount}',
+                'method': 'PUT',
+                'data': {}
+            }
+            
+            # Add internal session for proxy authentication
+            proxy_data['_internal_session'] = {
+                'user_email': session.get('user_email'),
+                'user_access_level': session.get('user_access_level'),
+                'user_permissions': session.get('user_permissions'),
+                'user_project_number': session.get('user_project_number'),
+                'user_company_list': session.get('user_company_list')
+            }
+            
+            # Use the company-manager proxy
+            port = os.environ.get('PORT', '5000')
+            proxy_url = f'http://localhost:{port}/api/company-manager/proxy'
+            
+            response = requests.post(
+                proxy_url,
+                json=proxy_data,
+                headers={
+                    'Content-Type': 'application/json',
+                    'Cookie': request.headers.get('Cookie', '')
+                },
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                proxy_result = response.json()
+                if proxy_result.get('success', False):
+                    print(f"✅ Price {amount} sent successfully to device {device}")
+                    return jsonify({
+                        'success': True,
+                        'message': f'מחיר {amount} ש"ח נשלח בהצלחה למכשיר {device}',
+                        'device': device,
+                        'amount': amount
+                    })
+                else:
+                    return jsonify({
+                        'success': False,
+                        'message': proxy_result.get('message', 'שגיאה בשליחת מחיר')
+                    })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': f'שגיאה בשליחת מחיר: HTTP {response.status_code}'
+                })
+                
+        except Exception as e:
+            print(f"❌ Error sending price: {str(e)}")
+            return jsonify({
+                'success': False,
+                'message': f'שגיאה בשליחת מחיר: {str(e)}'
+            })
+            
+    except Exception as e:
+        print(f"Error in mobile_controller_send_price: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה בשליחת מחיר'}), 500
 
 @app.route('/api/mobile-controller/command', methods=['POST'])
 def mobile_controller_command():
@@ -3234,8 +3334,8 @@ def mobile_controller_command():
         command_mapping = {
             0xA50A: 'HAND_OPEN',      # 42250 - פתח מחסום
             0xA50B: 'HAND_CLOSE',     # 42251 - סגור מחסום
-            0xA50E: 'BLOCK_CLOSED',   # 42254 - נעל מחסום
-            0xA50F: 'UNBLOCK_CLOSED', # 42255 - בטל נעילה
+            0xA500: 'BLOCK',          # 42240 - נעל מחסום
+            0xA501: 'UNBLOCK',        # 42241 - בטל נעילה
             0xA137: 'CHECK_STATUS'    # בדיקת סטטוס בלבד
         }
         
@@ -3255,6 +3355,10 @@ def mobile_controller_command():
                     if cell_computers:
                         cell_computer_num = int(cell_computers[0])
                         print(f"📱 Using cell computer number from session: {cell_computer_num}")
+                
+                # Log the actual command being sent
+                command_name = command_mapping.get(command, f'Unknown ({command})')
+                print(f"📱 Sending command {command_name} ({command}) to device {device_num}")
                 
                 proxy_data = {
                     'parking_id': parking_id,
