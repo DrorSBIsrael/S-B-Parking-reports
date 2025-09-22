@@ -24,10 +24,10 @@ class MobileParkingController {
         
         // Command mapping based on protocol
         this.commands = {
-            open: { code: 42250, name: 'HAND_OPEN', display: 'פתח מחסום' },
-            close: { code: 42251, name: 'HAND_CLOSE', display: 'סגור מחסום' },
-            lock: { code: 42254, name: 'BLOCK_CLOSED', display: 'נעל מחסום' },
-            unlock: { code: 42255, name: 'UNBLOCK_CLOSED', display: 'בטל נעילה' }
+            open: { code: 42250, name: 'HAND_OPEN', display: 'פתח מחסום' },      // A50A
+            close: { code: 42251, name: 'HAND_CLOSE', display: 'סגור מחסום' },    // A50B
+            lock: { code: 42240, name: 'BLOCK', display: 'נעל מחסום' },          // A500
+            unlock: { code: 42241, name: 'UNBLOCK', display: 'בטל נעילה' }      // A501
         };
         
         // Device states mapping
@@ -162,8 +162,35 @@ class MobileParkingController {
             const data = await response.json();
             
             if (data.success) {
-                // Refresh devices to get updated status
-                await this.loadDevices();
+                // Update local device status based on command
+                const deviceIndex = this.devices.findIndex(d => d.number === device);
+                if (deviceIndex !== -1) {
+                    switch(commandType) {
+                        case 'open':
+                            this.devices[deviceIndex].barrier = 'open';
+                            this.devices[deviceIndex].doorOpen = true;
+                            console.log(`✅ Updated device ${device} status to OPEN`);
+                            break;
+                        case 'close':
+                            this.devices[deviceIndex].barrier = 'closed';
+                            this.devices[deviceIndex].doorOpen = false;
+                            console.log(`✅ Updated device ${device} status to CLOSED`);
+                            break;
+                        case 'lock':
+                            this.devices[deviceIndex].barrier = 'locked';
+                            this.devices[deviceIndex].doorOpen = false;
+                            console.log(`✅ Updated device ${device} status to LOCKED`);
+                            break;
+                        case 'unlock':
+                            // Unlock doesn't change barrier state, just removes lock
+                            console.log(`✅ Device ${device} UNLOCKED`);
+                            break;
+                    }
+                }
+                
+                // Also refresh devices to get server status
+                setTimeout(() => this.loadDevices(), 1000);
+                
                 return data;
             } else {
                 throw new Error(data.message || 'Command execution failed');
