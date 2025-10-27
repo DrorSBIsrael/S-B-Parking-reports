@@ -37,6 +37,32 @@
             color: #2c3e50;
             font-size: 28px;
         }
+
+        /* 🆕 עיצוב כפתור התנתק - תוסף חדש! */
+.logout-btn {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: #dc3545;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.logout-btn:hover {
+    background: #c82333;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+.logout-btn:active {
+    transform: translateY(0);
+}
         
         .parking-info {
             background: white;
@@ -343,6 +369,7 @@
 <body>
     <div class="container">
         <div class="header">
+            <button class="logout-btn" onclick="logout()">🚪 התנתק</button>
             <h1>🅿️ ניהול משתמשים - מנהל חניון</h1>
         </div>
         
@@ -423,7 +450,7 @@
                                 <span>N - יצירת מנויים חדשים</span>
                             </label>
                             <label class="permission-item">
-                                <input type="checkbox" name="permissions" value="P">
+                                <input type="checkbox" name="permissions" value="P" checked>
                                 <span>P - עדכון פרופילים</span>
                             </label>
                             <label class="permission-item">
@@ -577,7 +604,18 @@
     <script>
         let parkingInfo = null;
         let allUsers = [];
+
+        // 🆕 פונקציית התנתקות - תוסף חדש!
+function logout() {
+    if (confirm('האם אתה בטוח שברצונך להתנתק?')) {
+        // ניקוי המידע המקומי
+        sessionStorage.clear();
+        localStorage.clear();
         
+        // הפניה לדף ההתחברות
+        window.location.href = '/login.html';
+    }
+}
         // Format permissions for display
         function formatPermissions(permissions) {
             if (!permissions || permissions === 'B') {
@@ -882,6 +920,7 @@
         window.closeEditModal = closeEditModal;
         
         // טעינה ראשונית
+        window.logout = logout; // 🆕 הוספת פונקציית logout לסקופ הגלובלי
         window.addEventListener('load', loadParkingInfo);
     </script>
 <script>(function(){'use strict';document.addEventListener('keydown',function(e){if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&e.key==='I')||(e.ctrlKey&&e.shiftKey&&e.key==='J')||(e.ctrlKey&&e.key==='u')){e.preventDefault();e.stopPropagation();alert('פעולה לא מותרת במערכת זו');return false;}});document.addEventListener('contextmenu',function(e){e.preventDefault();alert('עכבר ימני חסום במערכת זו');return false;});document.addEventListener('selectstart',function(e){e.preventDefault();return false;});document.addEventListener('dragstart',function(e){e.preventDefault();return false;});let devtools={open:false,orientation:null};setInterval(function(){if(window.outerHeight-window.innerHeight>200||window.outerWidth-window.innerWidth>200){if(!devtools.open){devtools.open=true;alert('סגירת כלי פיתוח נדרשת');window.location.href='about:blank';}}else{devtools.open=false;}},500);setInterval(function(){console.clear();},1000);})();</script></body>
