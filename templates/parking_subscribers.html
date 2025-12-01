@@ -2516,19 +2516,16 @@
                 // Get day of week (0 = Sunday, 6 = Saturday)
                 const dayOfWeek = fromDate.getDay();
 
-                // Calculate days until Saturday (end of week)
-                const daysUntilSaturday = 6 - dayOfWeek;
-
-                // Calculate end date (max Saturday of same week)
-                const maxEndDate = new Date(fromDate);
-                maxEndDate.setDate(fromDate.getDate() + daysUntilSaturday);
+                // Calculate tomorrow (default duration = 1 day)
+                const tomorrow = new Date(fromDate);
+                tomorrow.setDate(fromDate.getDate() + 1);
 
                 // Format the date back to DD/MM/YYYY
-                const endDay = String(maxEndDate.getDate()).padStart(2, '0');
-                const endMonth = String(maxEndDate.getMonth() + 1).padStart(2, '0');
-                const endYear = maxEndDate.getFullYear();
+                const endDay = String(tomorrow.getDate()).padStart(2, '0');
+                const endMonth = String(tomorrow.getMonth() + 1).padStart(2, '0');
+                const endYear = tomorrow.getFullYear();
 
-                // Set the valid until date to the same week's Saturday
+                // Set the valid until date to tomorrow
                 validUntilInput.value = `${endDay}/${endMonth}/${endYear}`;
 
                 // Add a help text about the week limitation
@@ -2541,14 +2538,14 @@
                     helpText.style.marginTop = '5px';
                     validUntilInput.parentElement.appendChild(helpText);
                 }
-                helpText.textContent = `* אורח מוגבל לשבוע הנוכחי (כרגע עד מחר   ${endDay}/${endMonth})`;
+                helpText.textContent = `* ברירת מחדל: יום אחד (עד ${endDay}/${endMonth})`;
             };
 
             // Add event listener
             validFromInput.addEventListener('change', guestDateChangeHandler);
             validFromInput.addEventListener('blur', guestDateChangeHandler);
 
-            // Also limit the until date input
+            // Warn if date is beyond current week, but ALLOW it (don't reset)
             validUntilInput.addEventListener('change', function () {
                 const fromValue = validFromInput.value;
                 const untilValue = validUntilInput.value;
@@ -2579,14 +2576,9 @@
                 const maxEndDate = new Date(fromDate);
                 maxEndDate.setDate(fromDate.getDate() + daysUntilSaturday);
 
-                // If the selected until date is after the week's Saturday, reset it
+                // If the selected until date is after the week's Saturday, just warn
                 if (untilDate > maxEndDate) {
-                    const endDay = String(maxEndDate.getDate()).padStart(2, '0');
-                    const endMonth = String(maxEndDate.getMonth() + 1).padStart(2, '0');
-                    const endYear = maxEndDate.getFullYear();
-                    validUntilInput.value = `${endDay}/${endMonth}/${endYear}`;
-
-                    showToast('⚠️ אורח מוגבל לשבוע הנוכחי בלבד', 'warning');
+                    showToast('⚠️ שים לב: תאריך הסיום חורג מהשבוע הנוכחי', 'warning');
                 }
             });
 
