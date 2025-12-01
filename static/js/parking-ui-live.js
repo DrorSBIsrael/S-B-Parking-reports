@@ -2257,19 +2257,25 @@ class ParkingUIIntegrationXML {
                     return formattedDate + '+02:00';
                 };
 
+                // Prepare names with deletion logic
+                const rawLastName = (subscriberData.lastName || subscriberData.surname || '').trim();
+                const lastName = rawLastName || 'פנוי'; // If empty, set to 'פנוי'
+                const firstName = (subscriberData.firstName || '').trim();
+                const fullName = `${lastName} ${firstName}`.trim();
+
                 consumerData = {
                     consumer: {
                         id: subscriberData.subscriberNum,
                         contractid: this.currentContract.id,
-                        name: `${subscriberData.lastName || ''} ${subscriberData.firstName || ''}`.trim() || '',
+                        name: fullName,
                         // Send dates with timezone
                         xValidFrom: formatDateWithTimezone(subscriberData.validFrom),
                         xValidUntil: formatDateWithTimezone(subscriberData.validUntil),
                         filialId: this.currentContract.filialId || '2228'  // Add filialId
                     },
                     person: {
-                        firstName: (subscriberData.firstName || '').trim(),
-                        surname: (subscriberData.lastName || subscriberData.surname || '').trim()
+                        firstName: firstName,
+                        surname: lastName
                     },
                     identification: {
                         ptcptType: '2',  // Required field from documentation
@@ -2291,10 +2297,10 @@ class ParkingUIIntegrationXML {
                     limit: '9999900',
                     status: '0',  // Active status
                     delete: '0',  // Not deleted
-                    // Vehicle data - clean dashes from vehicle numbers, send null if empty
-                    lpn1: subscriberData.vehicle1 ? subscriberData.vehicle1.replace(/-/g, '') : null,
-                    lpn2: subscriberData.vehicle2 ? subscriberData.vehicle2.replace(/-/g, '') : null,
-                    lpn3: subscriberData.vehicle3 ? subscriberData.vehicle3.replace(/-/g, '') : null
+                    // Vehicle data - clean dashes from vehicle numbers, send '11111111' if empty
+                    lpn1: subscriberData.vehicle1 ? subscriberData.vehicle1.replace(/-/g, '') : '11111111',
+                    lpn2: subscriberData.vehicle2 ? subscriberData.vehicle2.replace(/-/g, '') : '11111111',
+                    lpn3: subscriberData.vehicle3 ? subscriberData.vehicle3.replace(/-/g, '') : '11111111'
                 };
 
                 // UPDATE payload prepared
@@ -2318,18 +2324,24 @@ class ParkingUIIntegrationXML {
                     return formattedDate + '+02:00';
                 };
 
+                // Prepare names with deletion logic
+                const rawLastName = (subscriberData.lastName || subscriberData.surname || '').trim();
+                const lastName = rawLastName || 'פנוי'; // If empty, set to 'פנוי'
+                const firstName = (subscriberData.firstName || '').trim();
+                const fullName = `${lastName} ${firstName}`.trim();
+
                 consumerData = {
                     consumer: {
                         id: '',  // Empty for new subscriber
                         contractid: this.currentContract.id,
-                        name: `${subscriberData.lastName || ''} ${subscriberData.firstName || ''}`.trim() || '',
+                        name: fullName,
                         xValidFrom: formatDateWithTimezone(subscriberData.validFrom),
                         xValidUntil: formatDateWithTimezone(subscriberData.validUntil),
                         filialId: this.currentContract.filialId || '2228'
                     },
                     person: {
-                        firstName: (subscriberData.firstName || '').trim(),
-                        surname: (subscriberData.lastName || subscriberData.surname || '').trim()
+                        firstName: firstName,
+                        surname: lastName
                     },
                     identification: {
                         ptcptType: '2',
@@ -2351,10 +2363,10 @@ class ParkingUIIntegrationXML {
                     limit: '9999900',
                     status: '0',
                     delete: '0',
-                    // Vehicles
-                    lpn1: subscriberData.vehicle1 ? subscriberData.vehicle1.replace(/-/g, '') : null,
-                    lpn2: subscriberData.vehicle2 ? subscriberData.vehicle2.replace(/-/g, '') : null,
-                    lpn3: subscriberData.vehicle3 ? subscriberData.vehicle3.replace(/-/g, '') : null
+                    // Vehicles - send '11111111' if empty
+                    lpn1: subscriberData.vehicle1 ? subscriberData.vehicle1.replace(/-/g, '') : '11111111',
+                    lpn2: subscriberData.vehicle2 ? subscriberData.vehicle2.replace(/-/g, '') : '11111111',
+                    lpn3: subscriberData.vehicle3 ? subscriberData.vehicle3.replace(/-/g, '') : '11111111'
                 };
 
                 // NEW payload prepared
@@ -2478,11 +2490,11 @@ class ParkingUIIntegrationXML {
 
                         // For large companies, try WITHOUT identification at all
                         const minimalData = {
-                            firstName: consumerData.firstName || consumerData.surname || consumerData.lastName || 'Unknown',
-                            surname: consumerData.surname || consumerData.lastName || consumerData.firstName || 'Unknown',
-                            lpn1: consumerData.lpn1 || null,
-                            lpn2: consumerData.lpn2 || null,
-                            lpn3: consumerData.lpn3 || null,
+                            firstName: consumerData.person.firstName,
+                            surname: consumerData.person.surname,
+                            lpn1: consumerData.lpn1 || '11111111',
+                            lpn2: consumerData.lpn2 || '11111111',
+                            lpn3: consumerData.lpn3 || '11111111',
                             consumer: consumerData.consumer
                             // NO identification block at all for large companies
                         };
