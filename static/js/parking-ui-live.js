@@ -9,11 +9,11 @@ class ParkingUIIntegrationXML {
         this.currentContract = null; // Contract = Company
         this.subscribers = [];
         this.isLoading = false;
-        
+
         // Sorting state
         this.currentSortField = null;
         this.currentSortDirection = 'asc';
-        
+
         // Map company IDs to contract IDs - for new server
         this.companyToContract = {
             '1000': '1000',
@@ -21,10 +21,10 @@ class ParkingUIIntegrationXML {
             '3': '3',
             '4': '4',
         };
-        
+
         // Initialize API configuration
         this.initializeAPI();
-        
+
         // Setup sorting after DOM is ready
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.setupSorting());
@@ -32,7 +32,7 @@ class ParkingUIIntegrationXML {
             this.setupSorting();
         }
     }
-    
+
     /**
      * Setup filter listeners
      */
@@ -42,35 +42,35 @@ class ParkingUIIntegrationXML {
         if (presenceFilter) {
             presenceFilter.addEventListener('change', () => this.applyFilters());
         }
-        
+
         // Setup date filter
         const dateFilter = document.getElementById('filterDate');
         if (dateFilter) {
             dateFilter.addEventListener('change', () => this.applyFilters());
         }
-        
+
         // Setup search box
         const searchBox = document.getElementById('searchBox');
         if (searchBox) {
             searchBox.addEventListener('input', () => this.applyFilters());
         }
     }
-    
+
     /**
      * Apply filters to current subscribers
      */
     applyFilters() {
         if (!this.subscribers || this.subscribers.length === 0) return;
-        
+
         const searchTerm = document.getElementById('searchBox')?.value?.toLowerCase() || '';
         const presenceFilter = document.getElementById('filterPresence')?.value || '';
         const dateFilter = document.getElementById('filterDate')?.value || '';
-        
+
         let filtered = [...this.subscribers];
-        
+
         // Apply search filter
         if (searchTerm) {
-            filtered = filtered.filter(s => 
+            filtered = filtered.filter(s =>
                 s.firstName?.toLowerCase().includes(searchTerm) ||
                 s.lastName?.toLowerCase().includes(searchTerm) ||
                 s.subscriberNum?.toString().includes(searchTerm) ||
@@ -83,7 +83,7 @@ class ParkingUIIntegrationXML {
                 s.tagNum?.toLowerCase().includes(searchTerm)
             );
         }
-        
+
         // Apply presence filter
         if (presenceFilter) {
             filtered = filtered.filter(s => {
@@ -92,15 +92,15 @@ class ParkingUIIntegrationXML {
                 return true;
             });
         }
-        
+
         // Apply date filter
         if (dateFilter) {
             const now = new Date();
             filtered = filtered.filter(s => {
                 const validDate = new Date(s.validUntil);
                 const daysUntilExpiry = Math.floor((validDate - now) / (1000 * 60 * 60 * 24));
-                
-                switch(dateFilter) {
+
+                switch (dateFilter) {
                     case 'valid':
                         return validDate >= now;
                     case 'expired':
@@ -114,64 +114,64 @@ class ParkingUIIntegrationXML {
                 }
             });
         }
-        
+
         // Apply current sorting if exists
         if (this.currentSortField) {
             filtered = this.sortSubscribers(filtered);
         }
-        
+
         this.displaySubscribers(filtered);
     }
-    
+
     /**
      * Initialize API with configuration
      */
     initializeAPI() {
         // Get configuration from config.js if available
         const globalConfig = window.parkingConfig?.current || {};
-        
+
         // Check if we should use proxy based on config or auto-detect
-        const useProxy = globalConfig.useProxy !== undefined 
-            ? globalConfig.useProxy 
+        const useProxy = globalConfig.useProxy !== undefined
+            ? globalConfig.useProxy
             : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-        
+
         this.api.setConfig({
             baseUrl: '/api/company-manager/proxy', // Always use Flask proxy
             servicePath: useProxy ? '' : '/CustomerMediaWebService',
             username: globalConfig.username || '2022',
             password: globalConfig.password || '2022'
         });
-        
+
         // XML API configured for parking server
     }
-    
+
     /**
      * Load companies from server or use mock data
      */
     async loadCompanies() {
         this.setLoading(true);
         // Loading parkings from Flask
-        
+
         try {
             // Get parkings list from Flask (not from parking API)
             // Calling Flask API
             const response = await fetch('/api/company-manager/get-parkings');
             const result = await response.json();
             // Flask API result received
-            
+
             if (result.success && result.parkings) {
                 // Got parkings from Flask
-                
+
                 // Use parkings instead of contracts/companies
                 const parkings = result.parkings;
-                
+
                 if (!parkings || parkings.length === 0) {
                     this.loadMockParkings();
                     return;
                 }
-                
+
                 // Found parkings
-                
+
                 // If only one parking, auto-select it (without displaying it)
                 if (parkings.length === 1) {
                     // Auto-selecting single parking
@@ -180,7 +180,7 @@ class ParkingUIIntegrationXML {
                     // Display parkings as cards only if multiple
                     this.displayParkings(parkings);
                 }
-                
+
 
             } else {
                 // Use mock data as fallback
@@ -195,16 +195,16 @@ class ParkingUIIntegrationXML {
             this.setLoading(false);
         }
     }
-    
+
     /**
      * Load mock parkings for fallback
      */
     async loadMockParkings() {
         // Using mock parkings data
         const mockParkings = [
-            { 
-                id: 'mock-1', 
-                name: 'חניון בדיקות', 
+            {
+                id: 'mock-1',
+                name: 'חניון בדיקות',
                 location: 'תל אביב',
                 project_number: '1000',
                 ip_address: '10.0.0.1',
@@ -213,28 +213,28 @@ class ParkingUIIntegrationXML {
             }
         ];
         this.displayParkings(mockParkings);
-        
+
         // Auto-select if only one parking
         if (mockParkings.length === 1) {
             // Auto-selecting single parking
             await this.selectParking(mockParkings[0]);
         }
     }
-    
+
     /**
      * Display parkings as cards
      */
     displayParkings(parkings) {
         const companyList = document.getElementById('companyList');
         if (!companyList) return;
-        
+
         companyList.innerHTML = '';
-        
+
         parkings.forEach(parking => {
             const card = document.createElement('div');
             card.className = 'company-card';
             card.onclick = () => this.selectParking(parking);
-            
+
             card.innerHTML = `
                 <div class="company-header">
                     <h3>${parking.name}</h3>
@@ -254,17 +254,17 @@ class ParkingUIIntegrationXML {
                     ${parking.ip_address}:${parking.port}
                 </div>
             `;
-            
+
             companyList.appendChild(card);
         });
     }
-    
+
     /**
      * Select a parking and then load its companies
      */
     async selectParking(parking) {
         // Selected parking
-        
+
         // Show loading message immediately
         const companyList = document.getElementById('companyList');
         if (companyList) {
@@ -275,32 +275,32 @@ class ParkingUIIntegrationXML {
                 </div>
             `;
         }
-        
+
         // Set the current parking in API
         this.api.setCurrentParking(parking.id);
-        
+
         // Store parking info
         this.currentParking = parking;
         window.currentParking = parking;
-        
+
         // Update user display with parking name
         if (typeof loadCurrentUser === 'function') {
             loadCurrentUser();
         }
-        
+
         // Update UI
         document.querySelectorAll('.company-card').forEach(card => {
             card.classList.remove('selected');
         });
-        
+
         if (event && event.currentTarget) {
             event.currentTarget.classList.add('selected');
         }
-        
+
         // Now load companies/contracts from this parking
         await this.loadCompaniesFromParking();
     }
-    
+
     /**
      * Load companies from selected parking
      */
@@ -309,20 +309,20 @@ class ParkingUIIntegrationXML {
             console.error('No parking selected');
             return;
         }
-        
+
         this.setLoading(true);
         // Loading companies from parking
-        
+
         try {
             // Now we can call the parking API
             const result = await this.api.getContracts();
-            
+
             if (result.success && result.data) {
                 // Received company data
-                
+
                 // Process contracts/companies - handle array, 'contracts' and 'contract'
                 let contracts = [];
-                
+
                 // Check if result.data is already an array (from XML parser)
                 if (Array.isArray(result.data)) {
                     // Data is already an array
@@ -333,31 +333,31 @@ class ParkingUIIntegrationXML {
                     // Found contracts object
                     // If contracts.contract exists, use it
                     if (result.data.contracts.contract) {
-                        contracts = Array.isArray(result.data.contracts.contract) 
-                            ? result.data.contracts.contract 
+                        contracts = Array.isArray(result.data.contracts.contract)
+                            ? result.data.contracts.contract
                             : [result.data.contracts.contract];
                     }
-                } 
+                }
                 // Fallback to 'contract' (singular)
                 else if (result.data.contract) {
                     // Found contract object
-                    contracts = Array.isArray(result.data.contract) 
-                        ? result.data.contract 
+                    contracts = Array.isArray(result.data.contract)
+                        ? result.data.contract
                         : [result.data.contract];
                 }
-                
+
                 // Total contracts found
-                
+
                 // Filter companies based on user's company_list (if provided)
                 const userCompanyList = window.userCompanyList || localStorage.getItem('company_list') || '';
                 // User company list retrieved
-                
+
                 let filteredContracts = contracts;
                 if (userCompanyList && userCompanyList !== 'all') {
                     // Use the new parseCompanyList function that supports ranges
                     const allowedIds = this.parseCompanyList(userCompanyList);
                     // Filtering for companies
-                    
+
                     filteredContracts = contracts.filter(contract => {
                         const contractId = String(contract.id?.['#text'] || contract.id || '');
                         const isAllowed = allowedIds.includes(contractId);
@@ -366,21 +366,21 @@ class ParkingUIIntegrationXML {
                         }
                         return isAllowed;
                     });
-                    
+
                     // After filtering
                 }
-                
+
                 // Convert to company format - extract the actual values from XML structure
                 const companies = filteredContracts.map(contract => {
                     // Extract values from XML structure (they come as {#text: "value"})
                     const id = contract.id?.['#text'] || contract.id || '';
                     const name = contract.name?.['#text'] || contract.name || '';
-                    
+
                     // Debug: log what we got
                     if (id === '2') {
                         // Debug contract data
                     }
-                    
+
                     return {
                         id: id,
                         name: name || this.currentParking?.name || `חברה ${id}`,  // Use parking name as fallback
@@ -388,10 +388,10 @@ class ParkingUIIntegrationXML {
                         subscribersCount: 0
                     };
                 });
-                
+
                 // Displaying companies
                 this.displayCompanies(companies);
-                
+
                 if (companies.length === 1) {
                     await this.selectCompany(companies[0]);
                 }
@@ -406,7 +406,7 @@ class ParkingUIIntegrationXML {
             this.setLoading(false);
         }
     }
-    
+
     /**
      * Load mock companies for fallback
      */
@@ -418,28 +418,28 @@ class ParkingUIIntegrationXML {
             { id: '1000', name: 'חברה בדיקה ב', companyName: 'חברה בדיקה ב', subscribersCount: 45 }
         ];
         this.displayCompanies(mockCompanies);
-        
+
         // Auto-select if only one company
         if (mockCompanies.length === 1) {
             // Auto-selecting single company
             await this.selectCompany(mockCompanies[0]);
         }
     }
-    
+
     /**
      * Display companies in UI
      */
     displayCompanies(companies) {
         const companyList = document.getElementById('companyList');
         if (!companyList) return;
-        
+
         companyList.innerHTML = '';
-        
+
         companies.forEach(async (company) => {
             const card = document.createElement('div');
             card.className = 'company-card';
             card.onclick = () => this.selectCompany(company);
-            
+
             // Start with basic info
             card.innerHTML = `
                 <div class="company-header">
@@ -477,14 +477,14 @@ class ParkingUIIntegrationXML {
                 <div class="facilities-info" id="facilities-${company.id}" style="display: none;">
                 </div>
             `;
-            
+
             companyList.appendChild(card);
-            
+
             // Load additional data asynchronously
             this.loadCompanyCardData(company);
         });
     }
-    
+
     /**
      * Refresh single company card data
      */
@@ -492,31 +492,31 @@ class ParkingUIIntegrationXML {
         // Find company from displayed companies
         const companyCards = document.querySelectorAll('.company-card');
         let company = null;
-        
+
         // Look for the company in the current contract list
         if (this.currentParking && this.currentParking.contracts) {
             company = this.currentParking.contracts.find(c => c.id === companyId);
         }
-        
+
         if (!company) {
             // Try to find in any available company data
-            const companyCard = Array.from(companyCards).find(card => 
+            const companyCard = Array.from(companyCards).find(card =>
                 card.innerHTML.includes(`#${companyId}`)
             );
             if (companyCard) {
                 company = { id: companyId, name: '' };
             }
         }
-        
+
         if (!company) return;
-        
+
         // Show loading indicator on refresh button
         const refreshBtn = document.querySelector(`button[onclick*="refreshCompanyCard('${companyId}')"]`);
         if (refreshBtn) {
             refreshBtn.innerHTML = '⏳';
             refreshBtn.disabled = true;
         }
-        
+
         try {
             // Reload company data
             await this.loadCompanyCardData(company);
@@ -531,7 +531,7 @@ class ParkingUIIntegrationXML {
             }
         }
     }
-    
+
     /**
      * Load additional data for company card
      */
@@ -539,28 +539,28 @@ class ParkingUIIntegrationXML {
         try {
             // Get company contract data with facility info
             // Loading detailed data for company
-            
+
             // Get company basic data
             const directResult = await this.api.makeRequest(`/contracts/${company.id}`);
             // Direct API response received
-            
+
             // Get enhanced details with pooling data
             const result = await this.api.getEnhancedContractDetails(company.id);
-            
+
             if (result.success && result.data) {
                 // Handle both array and single object responses
                 let contractData = Array.isArray(result.data) ? result.data[0] : result.data;
                 // Enhanced contract data received
-                
+
                 // DON'T USE totalVehicles - removed from API as it's not accurate
                 // We'll count actual subscribers later when we fetch them
-                
+
                 // For now, don't update subscriber count here - will be done when fetching actual subscribers
                 // Contract detail received
-                
+
                 // Process facilities data - check for pooling data!
                 let facilityData = null;
-                
+
                 // Check for pooling data
                 if (contractData.pooling && contractData.pooling.poolingDetail) {
                     facilityData = contractData.pooling.poolingDetail;
@@ -569,20 +569,20 @@ class ParkingUIIntegrationXML {
                     // Sometimes poolingDetail is at the root level
                     facilityData = contractData.poolingDetail;
                     // Found facility data at root level
-                } 
-                
+                }
+
                 if (!facilityData) {
                     // No pooling data found
                 }
-                
+
                 // DON'T use consumerCount from pooling - it's not accurate
                 // We'll count actual subscribers when we fetch them
                 // totalVehicles removed completely from API
-                
+
                 if (facilityData) {
                     const facilities = Array.isArray(facilityData) ? facilityData : [facilityData];
                     // Processing facilities
-                    
+
                     // Find main facility (facility: "0" with extCardProfile: "0") - this is the general company data
                     const mainFacility = facilities.find(f => {
                         const facilityId = f.facility;
@@ -591,10 +591,10 @@ class ParkingUIIntegrationXML {
                         // Look for facility="0" with extCardProfile="0"
                         return (facilityId === "0" || facilityId === 0) && (profileId === "0" || profileId === 0);
                     });
-                    
+
                     let presentCount = 0;
                     let maxCount = 0;
-                    
+
                     if (mainFacility) {
                         // Use main facility data (facility="0" is the general company data)
                         presentCount = parseInt(mainFacility.presentCounter) || 0;
@@ -611,7 +611,7 @@ class ParkingUIIntegrationXML {
                             maxCount += max;
                         });
                     }
-                    
+
                     // Store facilities breakdown for tooltip/details
                     const facilitiesBreakdown = facilities
                         .filter(f => f.facility !== "0" && f.facility !== 0) // Skip the summary
@@ -620,11 +620,11 @@ class ParkingUIIntegrationXML {
                             present: parseInt(f.presentCounter) || 0,
                             max: parseInt(f.maxCounter) || 0
                         }));
-                    
+
                     if (facilitiesBreakdown.length > 0) {
                         // Parking lots breakdown calculated
                     }
-                    
+
                     // Update presence data
                     const presentEl = document.getElementById(`present-${company.id}`);
                     const maxEl = document.getElementById(`max-${company.id}`);
@@ -636,7 +636,7 @@ class ParkingUIIntegrationXML {
                         maxEl.textContent = maxCount.toString();
                         // Setting max count
                     }
-                    
+
                     // Update occupancy bar
                     const occupancy = maxCount > 0 ? Math.round((presentCount / maxCount) * 100) : 0;
                     const occupancyBar = document.getElementById(`occupancy-${company.id}`);
@@ -649,7 +649,7 @@ class ParkingUIIntegrationXML {
                             occupancyBar.style.background = 'linear-gradient(90deg, #ffc107, #ffdd57)';
                         }
                     }
-                    
+
                     // Show sub-facilities if any
                     const subFacilities = facilities.filter(f => f.facility !== "0" && f.facility !== 0);
                     if (subFacilities.length > 0) {
@@ -672,10 +672,10 @@ class ParkingUIIntegrationXML {
                 } else {
                     // No facility data found
                     // No facility data found
-                    
+
                     const presentEl = document.getElementById(`present-${company.id}`);
                     const maxEl = document.getElementById(`max-${company.id}`);
-                    
+
                     // Show real data: 0 if no data
                     if (presentEl) {
                         presentEl.textContent = "?";
@@ -685,7 +685,7 @@ class ParkingUIIntegrationXML {
                         maxEl.textContent = "?";
                         // No data for max
                     }
-                    
+
                     // Hide occupancy bar when no data
                     const occupancyBar = document.getElementById(`occupancy-${company.id}`);
                     if (occupancyBar) {
@@ -698,17 +698,17 @@ class ParkingUIIntegrationXML {
                 // No contract data in response
                 const presentEl = document.getElementById(`present-${company.id}`);
                 const maxEl = document.getElementById(`max-${company.id}`);
-                
+
                 // Define contractData from result if not defined
                 const contractData = result?.data || {};
-                
+
                 // Try to use data from enhanced API response
                 const present = contractData.presentConsumers || 0;
                 const max = contractData.consumerCount || 0;
-                
+
                 if (presentEl) presentEl.textContent = present.toString();
                 if (maxEl) maxEl.textContent = max.toString();
-                
+
                 // Using enhanced API data
             }
         } catch (error) {
@@ -716,49 +716,49 @@ class ParkingUIIntegrationXML {
             const vehiclesEl = document.getElementById(`vehicles-${company.id}`);
             const presentEl = document.getElementById(`present-${company.id}`);
             const maxEl = document.getElementById(`max-${company.id}`);
-            
+
             if (vehiclesEl) vehiclesEl.textContent = company.subscribersCount * 2 || 0;
             if (presentEl) presentEl.textContent = "0";
             if (maxEl) maxEl.textContent = "0";
         }
     }
-    
+
     /**
      * Select a company and load its subscribers
      */
     async selectCompany(company) {
         // Store the full company object with correct name
         // If no name, use the parking name or a default
-        const contractName = company.name || company.firstName || company.companyName || 
-                            this.currentParking?.name || 'חניון';
-        
+        const contractName = company.name || company.firstName || company.companyName ||
+            this.currentParking?.name || 'חניון';
+
         this.currentContract = {
             ...company,
             name: contractName,
             parkingName: this.currentParking?.name || contractName,
             filialId: company.filialId || '2228'  // Default filialId
         };
-        
+
         // Also set global currentCompany for form compatibility
         window.currentCompany = company;
-        
+
         // Update UI
         document.querySelectorAll('.company-card').forEach(card => {
             card.classList.remove('selected');
         });
-        
+
         if (event && event.currentTarget) {
             event.currentTarget.classList.add('selected');
         }
-        
+
         // Log company name for debugging
         // Company selected
-        
+
         // Keep company selector visible even with one company (for occupancy data)
         const companySelector = document.getElementById('companySelector');
         const companies = document.querySelectorAll('.company-card');
         // Removed hiding logic - always show company card for occupancy info
-        
+
         // Show main content
         const mainContent = document.getElementById('mainContent');
         if (mainContent) {
@@ -768,14 +768,14 @@ class ParkingUIIntegrationXML {
                 companyNameElement.textContent = `- ${company.name || company.companyName}`;
             }
         }
-        
+
         // Load subscribers
         await this.loadSubscribers();
-        
+
         // Update button permissions after loading
         this.updateButtonPermissions();
     }
-    
+
     /**
      * Parse company_list format with ranges
      * Example: "1,2,5-10,60" => ["1", "2", "5", "6", "7", "8", "9", "10", "60"]
@@ -784,17 +784,17 @@ class ParkingUIIntegrationXML {
         if (!companyListString || companyListString === 'all') {
             return 'all';
         }
-        
+
         const companies = [];
         const parts = companyListString.split(',');
-        
+
         for (const part of parts) {
             const trimmed = part.trim();
-            
+
             // Check if it's a range (e.g., "5-10")
             if (trimmed.includes('-')) {
                 const [start, end] = trimmed.split('-').map(n => parseInt(n.trim()));
-                
+
                 if (!isNaN(start) && !isNaN(end)) {
                     // Add all numbers in range
                     for (let i = start; i <= end; i++) {
@@ -808,19 +808,19 @@ class ParkingUIIntegrationXML {
                 }
             }
         }
-        
+
         // Remove duplicates and sort
         return [...new Set(companies)].sort((a, b) => parseInt(a) - parseInt(b));
     }
-    
 
-    
+
+
     /**
      * Update a single subscriber row with new data
      */
     updateSubscriberRowOld(subscriber, index) {
         // Skip debug logs for performance
-        
+
         // Update the subscriber in the main array FIRST
         if (this.subscribers && index >= 0 && index < this.subscribers.length) {
             // Update the array with the new data
@@ -830,27 +830,27 @@ class ParkingUIIntegrationXML {
                 hasFullDetails: true
             };
         }
-        
+
         const tbody = document.getElementById('subscribersTableBody');
         if (!tbody) return;
-        
+
         const rows = tbody.getElementsByTagName('tr');
         if (index >= 0 && index < rows.length) {
             const row = rows[index];
-            
+
             // Find row by subscriberNum if index doesn't match
-            const targetRow = row.dataset.subscriberNum === subscriber.subscriberNum ? 
-                row : 
+            const targetRow = row.dataset.subscriberNum === subscriber.subscriberNum ?
+                row :
                 Array.from(rows).find(r => r.dataset.subscriberNum === subscriber.subscriberNum);
-                
+
             if (!targetRow) {
                 return;
             }
-            
+
             // Re-render the entire row with updated data
             const validUntil = new Date(subscriber.validUntil || subscriber.xValidUntil || '2030-12-31');
             const isExpired = validUntil < new Date();
-            
+
             targetRow.innerHTML = `
                 <td>${subscriber.companyNum || ''}</td>
                 <td>${subscriber.companyName || ''}</td>
@@ -866,7 +866,7 @@ class ParkingUIIntegrationXML {
                 <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                 <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
-            
+
             // Remove hover indicator if has full details
             if (subscriber.hasFullDetails) {
                 targetRow.removeAttribute('data-hover-loadable');
@@ -875,53 +875,53 @@ class ParkingUIIntegrationXML {
             }
         }
     }
-    
+
     /**
      * Load subscribers for current company - Progressive Loading
      */
     async loadSubscribers(forceFullLoad = false) {
         if (!this.currentContract) return;
-        
+
         // Clear any existing progress messages first
         this.hideProgressMessage();
-        
+
         this.setLoading(true, 'loadingState');
         this.showProgressMessage(forceFullLoad ? 'טוען את כל נתוני המנויים...' : 'טוען רשימת מנויים...');
-        
+
         try {
             // Get performance settings from config
             const perfConfig = window.parkingConfig?.performance || {};
-            
+
             // Get subscribers progressively
             const result = await this.api.getSubscribersProgressive(this.currentContract.id, {
                 batchSize: perfConfig.batchSize || 5,
                 companyName: this.currentContract.name || this.currentContract.firstName || this.currentContract.companyName || `חברה ${this.currentContract.id}`,  // Pass correct company name
                 forceFullLoad: forceFullLoad,  // Force loading all details if requested
-                
+
                 // Callback when basic data is ready
                 onBasicLoaded: (basicSubscribers) => {
                     this.subscribers = basicSubscribers;
-                    
+
                     // Update the actual subscriber count in the company card
                     const subscribersEl = document.getElementById(`subscribers-${this.currentContract.id}`);
                     if (subscribersEl) {
                         subscribersEl.textContent = basicSubscribers.length;
                     }
-                    
+
                     // Update all subscribers with correct company name and loading strategy
                     const companyName = this.currentContract.name || this.currentContract.firstName || `חברה ${this.currentContract.id}`;
                     const isLargeCompany = this.subscribers.length > 300;
                     this.subscribers.forEach(sub => {
                         // Only update company name if it's missing
                         if (!sub.companyName) {
-                        sub.companyName = companyName.trim();
+                            sub.companyName = companyName.trim();
                         }
                         sub.isLargeCompany = isLargeCompany;
                     });
-                    
+
                     // Get company name and display immediately
                     this.updateCompanyInfo();
-                    
+
                     // Display basic data immediately - with fade transition for smooth update
                     const tbody = document.getElementById('subscribersTableBody');
                     if (tbody) {
@@ -934,27 +934,27 @@ class ParkingUIIntegrationXML {
                             tbody.style.opacity = '1';
                         }, 100);
                     }
-                    
+
                     // Hide loading but show progress in status bar
                     this.setLoading(false, 'loadingState');
                     const tableContainer = document.getElementById('tableContainer');
                     if (tableContainer) {
                         tableContainer.style.display = 'block';
                     }
-                    
+
                     // Setup sorting and filters after table is populated
                     setTimeout(() => {
                         this.setupSorting();
                         this.setupFilters();
                     }, 100);
-                    
+
                     // Show subtle progress indicator only for medium/large companies
                     // Small companies (≤30) load instantly, so no need for progress
                     if (basicSubscribers.length > 30) {
                         this.showBackgroundProgress('טוען פרטים מלאים ברקע...');
                     }
                 },
-                
+
                 // Callback when each detail is loaded
                 onDetailLoaded: (subscriber, index) => {
                     // Update the specific row in the table
@@ -962,7 +962,7 @@ class ParkingUIIntegrationXML {
                     // Update present count in header
                     this.updatePresentCount();
                 },
-                
+
                 // Progress callback
                 onProgress: (progress) => {
                     // Check if this is a large company notification
@@ -980,7 +980,7 @@ class ParkingUIIntegrationXML {
                     } else if (progress.message) {
                         // Show progress message
                         this.showProgressMessage(progress.message);
-                        
+
                         // If we reached 100%, hide progress after a short delay
                         if (progress.percent && progress.percent >= 100) {
                             // Show completion message briefly, then hide
@@ -992,7 +992,7 @@ class ParkingUIIntegrationXML {
                         this.updateBackgroundProgress(
                             `טוען פרטים... ${progress.current}/${progress.total} (${progress.percent}%)`
                         );
-                        
+
                         if (progress.percent >= 100) {
                             // Hide immediately when done
                             this.hideBackgroundProgress();
@@ -1000,7 +1000,7 @@ class ParkingUIIntegrationXML {
                     }
                 }
             });
-            
+
             if (!result.success) {
                 console.error('Failed to load subscribers:', result);
                 this.showNotification('לא נמצאו מנויים לחברה זו', 'warning');
@@ -1021,7 +1021,7 @@ class ParkingUIIntegrationXML {
         } finally {
             // Hide background loading message
             this.hideBackgroundProgress();
-            
+
             // If we're still showing the progress message after 5 seconds, something went wrong
             setTimeout(() => {
                 const progressMsg = document.getElementById('progressMessage');
@@ -1032,7 +1032,7 @@ class ParkingUIIntegrationXML {
             }, 5000);
         }
     }
-    
+
     /**
      * Update button permissions based on user permissions
      */
@@ -1041,7 +1041,7 @@ class ParkingUIIntegrationXML {
         if (typeof updateButtonPermissions === 'function') {
             updateButtonPermissions();
         }
-        
+
         // Show permissions info to user
         const permissions = window.userPermissions || '';
         if (permissions) {
@@ -1062,14 +1062,14 @@ class ParkingUIIntegrationXML {
                 const permList = permissions.split('').map(p => permMap[p] || p).join(', ');
                 permissionText += permList;
             }
-            
+
             // Show notification briefly
             setTimeout(() => {
                 this.showNotification(permissionText, 'info', 3000);
             }, 1000);
         }
     }
-    
+
     /**
      * Update company info in header
      */
@@ -1078,15 +1078,15 @@ class ParkingUIIntegrationXML {
             const companyResult = await this.api.getContractDetails(this.currentContract.id);
             if (companyResult.success) {
                 const companyName = companyResult.data.name || `חברה ${this.currentContract.id}`;
-                
+
                 // Update company name in subscribers
                 this.subscribers.forEach(sub => {
                     sub.companyName = companyName;
                 });
-                
+
                 // Count present subscribers
                 const presentCount = this.subscribers.filter(s => s.presence).length;
-                
+
                 // Update header with clean company name
                 const companyNameElement = document.getElementById('companyName');
                 if (companyNameElement) {
@@ -1094,12 +1094,12 @@ class ParkingUIIntegrationXML {
                     const isLargeCompany = this.subscribers.length > 300;
                     const statusText = isLargeCompany ? ' 🚀' : '';
                     companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''})${statusText}`;
-                    
+
                     // Add tooltip for large companies
                     if (isLargeCompany) {
                         companyNameElement.title = 'חברה גדולה - פרטי מנויים נטענים לפי דרישה';
                     }
-                    
+
                     // Show/hide reload button for large companies
                     const reloadButton = document.getElementById('reloadFullButton');
                     if (reloadButton) {
@@ -1110,7 +1110,7 @@ class ParkingUIIntegrationXML {
         } catch (error) {
         }
     }
-    
+
     /**
      * Update present count after loading details
      */
@@ -1120,21 +1120,21 @@ class ParkingUIIntegrationXML {
         if (companyNameElement) {
             const currentText = companyNameElement.textContent;
             const companyName = currentText.split('(')[0].trim().replace('- ', '').replace(' 🚀', '');
-            
+
             // Check if this is a large company
             const isLargeCompany = this.subscribers.length > 300;
             const statusText = isLargeCompany ? ' 🚀 מצב מהיר' : '';
-            
+
             // Update with clean format
             companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''})${statusText}`;
-            
+
             // Add tooltip for large companies
             if (isLargeCompany) {
                 companyNameElement.title = 'חברה גדולה - פרטי מנויים נטענים לפי דרישה';
             }
         }
     }
-    
+
     /**
      * Refresh only a single subscriber instead of reloading all
      * @param {string} subscriberNum - The subscriber number to refresh
@@ -1146,33 +1146,33 @@ class ParkingUIIntegrationXML {
                 this.displaySubscribers(this.subscribers);
                 return;
             }
-            
+
             // Find the subscriber in our list
             const existingIndex = this.subscribers.findIndex(s => s.subscriberNum === subscriberNum);
-            
+
             // Get the updated subscriber data from server
             const result = await this.api.getSubscriber(this.currentContract.id, subscriberNum);
-            
+
             if (result.success && result.data) {
                 const updatedSubscriber = result.data;
-                
+
                 if (existingIndex >= 0) {
                     // Update existing subscriber
                     this.subscribers[existingIndex] = updatedSubscriber;
-                    
+
                     // Update only the specific row in the table
                     this.updateSubscriberRow(updatedSubscriber, existingIndex);
                 } else {
                     // New subscriber - add to list
                     this.subscribers.push(updatedSubscriber);
-                    
+
                     // Re-display the entire table (easier than inserting a new row)
                     this.displaySubscribers(this.subscribers);
                 }
-                
+
                 // Update counts in header
                 this.updatePresentCount();
-                
+
                 // Show success notification
                 this.showNotification('המנוי עודכן בהצלחה', 'success');
             } else {
@@ -1185,42 +1185,42 @@ class ParkingUIIntegrationXML {
             this.displaySubscribers(this.subscribers);
         }
     }
-    
+
     /**
      * Update a single subscriber row when detail is loaded
      */
     updateSubscriberRow(subscriber, index) {
         const tbody = document.getElementById('subscribersTableBody');
         if (!tbody) return;
-        
+
         // Update the subscriber in the main array
-        const subIndex = this.subscribers.findIndex(s => 
+        const subIndex = this.subscribers.findIndex(s =>
             String(s.subscriberNum) === String(subscriber.subscriberNum)
         );
         if (subIndex !== -1) {
             this.subscribers[subIndex] = subscriber;
         }
-        
+
         const rows = tbody.getElementsByTagName('tr');
         // Try to find row by index or by subscriber number
         let targetRow = rows[index];
         if (!targetRow || targetRow.dataset.subscriberNum !== String(subscriber.subscriberNum)) {
             targetRow = Array.from(rows).find(r => r.dataset.subscriberNum === String(subscriber.subscriberNum));
         }
-        
+
         if (targetRow) {
             // Update the row with full data
             const validUntil = new Date(subscriber.validUntil || subscriber.xValidUntil || '2030-12-31');
             const isExpired = validUntil < new Date();
-            
+
             // Update the onclick handler to use the updated subscriber
             targetRow.onclick = () => {
-                const currentSubscriber = this.subscribers.find(s => 
+                const currentSubscriber = this.subscribers.find(s =>
                     String(s.subscriberNum) === String(subscriber.subscriberNum)
                 ) || subscriber;
                 this.editSubscriber(currentSubscriber);
             };
-            
+
             targetRow.innerHTML = `
                 <td>${subscriber.companyNum || ''}</td>
                 <td>${subscriber.companyName || ''}</td>
@@ -1236,25 +1236,25 @@ class ParkingUIIntegrationXML {
                 <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                 <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
-            
+
             // Remove hover loading attributes if has full details
             if (subscriber.hasFullDetails) {
                 targetRow.style.opacity = '1';
                 targetRow.removeAttribute('data-hover-loadable');
                 targetRow.title = '';
             }
-            
+
             // Add subtle animation to show update - only if visible
             if (window.getComputedStyle(targetRow).display !== 'none') {
                 targetRow.style.transition = 'background-color 0.5s, opacity 0.2s';
-            targetRow.style.backgroundColor = '#e8f5e9';
-            setTimeout(() => {
-                targetRow.style.backgroundColor = '';
-            }, 500);
+                targetRow.style.backgroundColor = '#e8f5e9';
+                setTimeout(() => {
+                    targetRow.style.backgroundColor = '';
+                }, 500);
             }
         }
     }
-    
+
     /**
      * Show background progress indicator
      */
@@ -1282,7 +1282,7 @@ class ParkingUIIntegrationXML {
         progressBar.textContent = message;
         progressBar.style.display = 'block';
     }
-    
+
     /**
      * Update background progress
      */
@@ -1292,7 +1292,7 @@ class ParkingUIIntegrationXML {
             progressBar.textContent = message;
         }
     }
-    
+
     /**
      * Hide background progress
      */
@@ -1306,7 +1306,7 @@ class ParkingUIIntegrationXML {
             }, 300);
         }
     }
-    
+
     /**
      * Show progress message
      */
@@ -1335,7 +1335,7 @@ class ParkingUIIntegrationXML {
         progressDiv.textContent = message;
         progressDiv.style.display = 'block';
     }
-    
+
     /**
      * Hide progress message
      */
@@ -1347,7 +1347,7 @@ class ParkingUIIntegrationXML {
             progressDiv.remove();
         }
     }
-    
+
     /**
      * Load mock subscribers for demo
      */
@@ -1357,7 +1357,7 @@ class ParkingUIIntegrationXML {
             this.setupSorting();
             this.setupFilters();
         }, 100);
-        
+
         const mockSubscribers = [
             {
                 companyNum: this.currentContract.id,
@@ -1390,11 +1390,11 @@ class ParkingUIIntegrationXML {
                 presence: false
             }
         ];
-        
+
         this.subscribers = mockSubscribers;
         this.displaySubscribers(mockSubscribers);
     }
-    
+
     /**
      * Setup sorting functionality on table headers
      */
@@ -1403,14 +1403,14 @@ class ParkingUIIntegrationXML {
         sortableHeaders.forEach(header => {
             header.addEventListener('click', () => {
                 const field = header.getAttribute('data-sort');
-                
+
                 // Reset all headers
                 sortableHeaders.forEach(h => {
                     h.classList.remove('sort-asc', 'sort-desc');
                     const icon = h.querySelector('.sort-icon');
                     if (icon) icon.innerHTML = '⇅';
                 });
-                
+
                 // Update sort direction
                 if (this.currentSortField === field) {
                     this.currentSortDirection = this.currentSortDirection === 'asc' ? 'desc' : 'asc';
@@ -1418,61 +1418,61 @@ class ParkingUIIntegrationXML {
                     this.currentSortField = field;
                     this.currentSortDirection = 'asc';
                 }
-                
+
                 // Update header visual
                 header.classList.add(this.currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
-                
+
                 // Update sort icon
                 const icon = header.querySelector('.sort-icon');
                 if (icon) {
                     icon.innerHTML = this.currentSortDirection === 'asc' ? '↑' : '↓';
                 }
-                
+
                 // Sort and redisplay
                 this.sortAndDisplaySubscribers();
             });
         });
     }
-    
+
     /**
      * Sort subscribers array
      */
     sortSubscribers(subscribers) {
         if (!this.currentSortField || !subscribers) return subscribers;
-        
+
         return [...subscribers].sort((a, b) => {
             let aVal = a[this.currentSortField];
             let bVal = b[this.currentSortField];
-            
+
             // Handle dates
             if (this.currentSortField === 'validUntil' || this.currentSortField === 'validFrom') {
                 aVal = new Date(aVal || '1900-01-01');
                 bVal = new Date(bVal || '1900-01-01');
             }
-            
+
             // Handle presence (boolean)
             if (this.currentSortField === 'presence') {
                 aVal = aVal ? 1 : 0;
                 bVal = bVal ? 1 : 0;
             }
-            
+
             // Handle numbers
             if (!isNaN(aVal) && !isNaN(bVal)) {
                 aVal = Number(aVal);
                 bVal = Number(bVal);
             }
-            
+
             // Handle null/undefined
             if (aVal === null || aVal === undefined) aVal = '';
             if (bVal === null || bVal === undefined) bVal = '';
-            
+
             // Compare
             if (aVal < bVal) return this.currentSortDirection === 'asc' ? -1 : 1;
             if (aVal > bVal) return this.currentSortDirection === 'asc' ? 1 : -1;
             return 0;
         });
     }
-    
+
     /**
      * Sort and display subscribers
      */
@@ -1480,33 +1480,33 @@ class ParkingUIIntegrationXML {
         // Apply filters (which includes sorting)
         this.applyFilters();
     }
-    
+
     /**
      * Setup hover loading for a row
      */
     setupHoverLoading(row, subscriber, index) {
         let hoverTimeout = null;
         let isLoadingDetails = false;
-        
+
         // Get hover delay from config or use default
         const hoverDelay = window.parkingConfig?.performance?.hoverLoadDelay || 500; // Default 500ms
-        
+
         // Mouse enter - start timer
         row.addEventListener('mouseenter', async (e) => {
             // Don't load if already has full details or already loading
             if (subscriber.hasFullDetails || isLoadingDetails) return;
-            
+
             // Clear any existing timeout
             if (hoverTimeout) {
                 clearTimeout(hoverTimeout);
             }
-            
+
             // Start loading after configured delay
             hoverTimeout = setTimeout(async () => {
                 if (isLoadingDetails || subscriber.hasFullDetails) return;
-                
+
                 isLoadingDetails = true;
-                
+
                 // Add loading indicator to the row
                 const originalOpacity = row.style.opacity;
                 const originalBackground = row.style.background;
@@ -1515,37 +1515,37 @@ class ParkingUIIntegrationXML {
                 row.style.backgroundSize = '200% 100%';
                 row.style.animation = 'shimmer 1.5s infinite';
                 row.classList.add('loading-details');
-                
+
                 // Update title
                 const originalTitle = row.title;
                 row.title = '⏳ טוען פרטים...';
-                
+
                 // Add loading icon to first cell
                 const firstCell = row.querySelector('td:first-child');
                 const originalFirstCellContent = firstCell ? firstCell.innerHTML : '';
                 if (firstCell) {
                     firstCell.innerHTML = `<span style="display: inline-block; animation: spin 1s linear infinite;">⏳</span> ${originalFirstCellContent}`;
                 }
-                
+
                 try {
-                    
+
                     // Get full details
                     const result = await this.api.getConsumerDetailOnDemand(
                         this.currentContract.id,
                         subscriber.subscriberNum
                     );
-                    
+
                     if (result.success && result.data) {
                         // Update subscriber with full details - preserve important fields
                         const detail = result.data;
-                        
+
                         // Preserve company name and other UI-specific fields
                         const preservedFields = {
                             companyName: subscriber.companyName,
                             isLargeCompany: subscriber.isLargeCompany,
                             loadingStrategy: subscriber.loadingStrategy
                         };
-                        
+
                         // Map the detail fields properly - DON'T let detail override preserved fields
                         Object.assign(subscriber, {
                             ...detail,
@@ -1573,10 +1573,10 @@ class ParkingUIIntegrationXML {
                             cardno: detail.identification?.cardno || detail.cardno || subscriber.cardno,
                             hasFullDetails: true
                         });
-                        
+
                         // Update the row in the table
                         this.updateSubscriberRow(subscriber, index);
-                        
+
                         // Remove hover effects
                         row.style.opacity = '1';
                         row.style.background = '';
@@ -1584,12 +1584,12 @@ class ParkingUIIntegrationXML {
                         row.classList.remove('loading-details');
                         row.title = '';
                         row.removeAttribute('data-hover-loadable');
-                        
+
                         // Restore first cell
                         if (firstCell) {
                             firstCell.innerHTML = originalFirstCellContent;
                         }
-                        
+
                     } else {
                         // Restore original styles on error
                         row.style.opacity = originalOpacity;
@@ -1597,7 +1597,7 @@ class ParkingUIIntegrationXML {
                         row.style.animation = '';
                         row.classList.remove('loading-details');
                         row.title = originalTitle;
-                        
+
                         // Restore first cell
                         if (firstCell) {
                             firstCell.innerHTML = originalFirstCellContent;
@@ -1611,7 +1611,7 @@ class ParkingUIIntegrationXML {
                     row.style.animation = '';
                     row.classList.remove('loading-details');
                     row.title = originalTitle;
-                    
+
                     // Restore first cell
                     if (firstCell) {
                         firstCell.innerHTML = originalFirstCellContent;
@@ -1621,7 +1621,7 @@ class ParkingUIIntegrationXML {
                 }
             }, hoverDelay); // Configurable delay before loading
         });
-        
+
         // Mouse leave - cancel loading
         row.addEventListener('mouseleave', () => {
             if (hoverTimeout) {
@@ -1630,20 +1630,20 @@ class ParkingUIIntegrationXML {
             }
         });
     }
-    
+
     /**
      * Display subscribers in table
      */
     displaySubscribers(subscribers) {
         // Skip debug logs for performance
-        
+
         const tbody = document.getElementById('subscribersTableBody');
         if (!tbody) return;
-        
+
         // Check if user can edit subscribers (for permission display)
         const permissions = window.userPermissions || '';
         const canEdit = permissions !== 'B' && permissions !== '';
-        
+
         // Ensure the actions column header exists
         const tableHead = document.querySelector('#subscribersTable thead tr');
         if (tableHead && !tableHead.querySelector('th[data-translate="actions"]')) {
@@ -1652,15 +1652,15 @@ class ParkingUIIntegrationXML {
             actionsHeader.textContent = 'פעולות';
             tableHead.appendChild(actionsHeader);
         }
-        
+
         tbody.innerHTML = '';
-        
+
         // For very large lists, use DocumentFragment for better performance
         let fragment = document.createDocumentFragment();
         const isVeryLarge = subscribers.length > 500;
-        
+
         if (isVeryLarge) {
-            
+
             // Show loading message for very large companies
             const loadingRow = document.createElement('tr');
             loadingRow.innerHTML = `
@@ -1674,59 +1674,59 @@ class ParkingUIIntegrationXML {
             `;
             tbody.appendChild(loadingRow);
         }
-        
+
         // Batch rendering for very large lists
         const BATCH_SIZE = 100;
         let currentBatch = 0;
-        
+
         const renderBatch = () => {
             const start = currentBatch * BATCH_SIZE;
             const end = Math.min(start + BATCH_SIZE, subscribers.length);
-            
+
             for (let index = start; index < end; index++) {
                 const subscriber = subscribers[index];
-            const row = document.createElement('tr');
-            
-            // Always allow viewing subscriber details
-            // P permission is only needed for profile updates
-            row.onclick = () => {
-                const currentSubscriber = this.subscribers.find(s => 
-                    String(s.subscriberNum) === String(subscriber.subscriberNum)
-                ) || subscriber;
-                this.editSubscriber(currentSubscriber);
-            };
-            row.style.cursor = 'pointer';
-            
-            row.dataset.subscriberNum = subscriber.subscriberNum;
-            row.dataset.index = index;
-            
-            // Add hover loading for large companies without full details
-            if (subscriber.isLargeCompany && !subscriber.hasFullDetails) {
-                row.setAttribute('data-hover-loadable', 'true');
-                if (canEdit) {
-                row.title = 'עמוד עם העכבר לטעינת פרטים מלאים';
-                } else {
-                    row.title = 'אין הרשאה לערוך מנויים (דרושה הרשאת P) | עמוד עם העכבר לטעינת פרטים מלאים';
+                const row = document.createElement('tr');
+
+                // Always allow viewing subscriber details
+                // P permission is only needed for profile updates
+                row.onclick = () => {
+                    const currentSubscriber = this.subscribers.find(s =>
+                        String(s.subscriberNum) === String(subscriber.subscriberNum)
+                    ) || subscriber;
+                    this.editSubscriber(currentSubscriber);
+                };
+                row.style.cursor = 'pointer';
+
+                row.dataset.subscriberNum = subscriber.subscriberNum;
+                row.dataset.index = index;
+
+                // Add hover loading for large companies without full details
+                if (subscriber.isLargeCompany && !subscriber.hasFullDetails) {
+                    row.setAttribute('data-hover-loadable', 'true');
+                    if (canEdit) {
+                        row.title = 'עמוד עם העכבר לטעינת פרטים מלאים';
+                    } else {
+                        row.title = 'אין הרשאה לערוך מנויים (דרושה הרשאת P) | עמוד עם העכבר לטעינת פרטים מלאים';
+                    }
+                    if (!row.style.opacity || row.style.opacity === '1') {
+                        row.style.opacity = '0.85';
+                    }
+                    // Setup hover loading only once
+                    this.setupHoverLoading(row, subscriber, index);
+                } else if (!subscriber.hasFullDetails) {
+                    // For small/medium companies without full details
+                    if (!row.style.opacity || row.style.opacity === '1') {
+                        row.style.opacity = '0.85';
+                    }
+                    if (!row.title) {
+                        row.title = 'נתונים בסיסיים - טוען פרטים...';
+                    }
                 }
-                if (!row.style.opacity || row.style.opacity === '1') {
-                row.style.opacity = '0.85';
-                }
-                // Setup hover loading only once
-                this.setupHoverLoading(row, subscriber, index);
-            } else if (!subscriber.hasFullDetails) {
-                // For small/medium companies without full details
-                if (!row.style.opacity || row.style.opacity === '1') {
-                row.style.opacity = '0.85';
-                }
-                if (!row.title) {
-                    row.title = 'נתונים בסיסיים - טוען פרטים...';
-                }
-            }
-            
-            const validUntil = new Date(subscriber.validUntil || subscriber.xValidUntil || '2030-12-31');
-            const isExpired = validUntil < new Date();
-            
-            row.innerHTML = `
+
+                const validUntil = new Date(subscriber.validUntil || subscriber.xValidUntil || '2030-12-31');
+                const isExpired = validUntil < new Date();
+
+                row.innerHTML = `
                 <td>${subscriber.companyNum || ''}</td>
                 <td>${subscriber.companyName || ''}</td>
                 <td>${subscriber.subscriberNum || subscriber.id || ''}</td>
@@ -1741,14 +1741,14 @@ class ParkingUIIntegrationXML {
                 <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                 <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
-            // Add to fragment for better performance
-            if (isVeryLarge) {
-                fragment.appendChild(row);
-            } else {
-            tbody.appendChild(row);
+                // Add to fragment for better performance
+                if (isVeryLarge) {
+                    fragment.appendChild(row);
+                } else {
+                    tbody.appendChild(row);
+                }
             }
-            }
-            
+
             // For batch rendering, schedule next batch
             if (isVeryLarge && end < subscribers.length) {
                 currentBatch++;
@@ -1771,35 +1771,35 @@ class ParkingUIIntegrationXML {
                     tbody.innerHTML = '';
                 }
                 tbody.appendChild(fragment);
-                
+
                 // Clear loading state after all batches are done
                 this.setLoading(false, 'loadingState');
                 this.hideProgressMessage();
                 this.hideBackgroundProgress();
-                
+
                 // Force remove any loading overlays
                 const loadingState = document.getElementById('loadingState');
                 if (loadingState) {
                     loadingState.style.display = 'none';
                 }
-                
+
                 const progressMsg = document.getElementById('progressMessage');
                 if (progressMsg) {
                     progressMsg.remove();
                 }
-                
+
                 // Make sure table is visible
                 const tableContainer = document.getElementById('tableContainer');
                 if (tableContainer) {
                     tableContainer.style.display = 'block';
                 }
-                
+
                 // Show completion message
                 this.showNotification(`✅ נטענו ${subscribers.length} מנויים`, 'success', 3000);
-                
+
             }
         };
-        
+
         // Start rendering
         if (isVeryLarge) {
             renderBatch();
@@ -1807,12 +1807,12 @@ class ParkingUIIntegrationXML {
             // For smaller lists, use the regular forEach
             subscribers.forEach((subscriber, index) => {
                 const row = document.createElement('tr');
-                
+
                 // Always allow viewing subscriber details
                 // P permission is only needed for profile updates
                 row.onclick = () => {
                     // Find the current subscriber data
-                    const currentSubscriber = this.subscribers.find(s => 
+                    const currentSubscriber = this.subscribers.find(s =>
                         s.subscriberNum === subscriber.subscriberNum
                     ) || subscriber;
                     // Trigger the edit function from the HTML page
@@ -1820,36 +1820,36 @@ class ParkingUIIntegrationXML {
                         window.editSubscriber(currentSubscriber);
                     }
                 };
-                
+
                 row.dataset.subscriberNum = subscriber.subscriberNum;
                 row.dataset.index = index;
-                
+
                 // Add hover loading for large companies without full details
                 if (subscriber.isLargeCompany && !subscriber.hasFullDetails) {
                     row.setAttribute('data-hover-loadable', 'true');
                     if (canEdit) {
-                    row.title = 'עמוד עם העכבר לטעינת פרטים מלאים';
+                        row.title = 'עמוד עם העכבר לטעינת פרטים מלאים';
                     } else {
                         row.title = 'אין הרשאה לערוך מנויים (דרושה הרשאת P) | עמוד עם העכבר לטעינת פרטים מלאים';
                     }
                     if (!row.style.opacity || row.style.opacity === '1') {
-                    row.style.opacity = '0.85';
+                        row.style.opacity = '0.85';
                     }
                     // Setup hover loading only once
                     this.setupHoverLoading(row, subscriber, index);
                 } else if (!subscriber.hasFullDetails) {
                     // For small/medium companies without full details
                     if (!row.style.opacity || row.style.opacity === '1') {
-                    row.style.opacity = '0.85';
+                        row.style.opacity = '0.85';
                     }
                     if (!row.title) {
                         row.title = 'נתונים בסיסיים - טוען פרטים...';
                     }
                 }
-                
+
                 const validUntil = new Date(subscriber.validUntil || subscriber.xValidUntil || '2030-12-31');
                 const isExpired = validUntil < new Date();
-                
+
                 row.innerHTML = `
                     <td>${subscriber.companyNum || ''}</td>
                     <td>${subscriber.companyName || ''}</td>
@@ -1865,65 +1865,65 @@ class ParkingUIIntegrationXML {
                     <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                     <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
-            tbody.appendChild(row);
-        });
-            
+                tbody.appendChild(row);
+            });
+
             // Clear loading state for smaller companies
             this.setLoading(false, 'loadingState');
             this.hideProgressMessage();
             this.hideBackgroundProgress();
         }
     }
-    
+
     /**
      * Get profiles available in the system
      */
     async getCompanyProfiles() {
         if (!this.currentContract) return [];
-        
+
         try {
-            
+
             // Get all subscribers to see what profiles are in use
             const profilesInUse = new Map();
             let needToLoadDetails = true;
-            
+
             // First check if we already have profiles in current subscribers
             if (this.subscribers && this.subscribers.length > 0) {
-                
+
                 this.subscribers.forEach((subscriber, idx) => {
                     // Check multiple places for profile info
-                    const profileId = subscriber.profileId || subscriber.profile || subscriber.extCardProfile || 
-                                     subscriber.identification?.usageProfile?.id;
-                    
+                    const profileId = subscriber.profileId || subscriber.profile || subscriber.extCardProfile ||
+                        subscriber.identification?.usageProfile?.id;
+
                     if (!profileId) return; // Skip if no profile ID
-                    
+
                     // Profile name might be the profile field itself if it contains name
                     let profileName = subscriber.profileName || subscriber.identification?.usageProfile?.name;
-                    
+
                     // If no profile name but we have profile field with text, use it
                     if (!profileName && subscriber.profile && isNaN(subscriber.profile)) {
                         profileName = subscriber.profile;
                     }
-                    
+
                     // Always create default name based on ID if no name exists
                     if (!profileName) {
-                        profileName = profileId === '1' ? 'כול החניונים' : 
-                                    profileId === '0' ? 'רגיל' : 
-                                    profileId === '2' ? 'חניון מנויים' :
+                        profileName = profileId === '1' ? 'כול החניונים' :
+                            profileId === '0' ? 'רגיל' :
+                                profileId === '2' ? 'חניון מנויים' :
                                     profileId === '3' ? 'VIP' :
-                                    profileId === '4' ? 'נכה' :
-                                    profileId === '5' ? '-2 חניון' :
-                                    `פרופיל ${profileId}`;
+                                        profileId === '4' ? 'נכה' :
+                                            profileId === '5' ? '-2 חניון' :
+                                                `פרופיל ${profileId}`;
                     }
-                    
+
                     profilesInUse.set(profileId, profileName);
                     needToLoadDetails = false;
                 });
             }
-            
+
             // If we need more details and have few subscribers, load their details
             if (needToLoadDetails && this.subscribers && this.subscribers.length > 0 && this.subscribers.length <= 10) {
-                
+
                 for (let i = 0; i < Math.min(5, this.subscribers.length); i++) {
                     const subscriber = this.subscribers[i];
                     try {
@@ -1931,22 +1931,22 @@ class ParkingUIIntegrationXML {
                             this.currentContract.id,
                             subscriber.subscriberNum || subscriber.id
                         );
-                        
+
                         if (details.success && details.data) {
-                            const profileId = details.data.identification?.usageProfile?.id || 
-                                            details.data.profile || 
-                                            details.data.extCardProfile;
-                            
+                            const profileId = details.data.identification?.usageProfile?.id ||
+                                details.data.profile ||
+                                details.data.extCardProfile;
+
                             const profileName = details.data.identification?.usageProfile?.name ||
-                                              details.data.profileName ||
-                                              (profileId === '1' ? 'כול החניונים' : 
-                                               profileId === '0' ? 'רגיל' : 
-                                               profileId === '2' ? 'חניון מנויים' :
-                                               profileId === '3' ? 'VIP' :
-                                               profileId === '4' ? 'נכה' :
-                                               profileId === '5' ? '-2 חניון' :
-                                               `פרופיל ${profileId}`);
-                            
+                                details.data.profileName ||
+                                (profileId === '1' ? 'כול החניונים' :
+                                    profileId === '0' ? 'רגיל' :
+                                        profileId === '2' ? 'חניון מנויים' :
+                                            profileId === '3' ? 'VIP' :
+                                                profileId === '4' ? 'נכה' :
+                                                    profileId === '5' ? '-2 חניון' :
+                                                        `פרופיל ${profileId}`);
+
                             if (profileId && profileName) {
                                 profilesInUse.set(profileId, profileName);
                             }
@@ -1956,7 +1956,7 @@ class ParkingUIIntegrationXML {
                     }
                 }
             }
-            
+
             // If we found profiles in use, return them
             if (profilesInUse.size > 0) {
                 const profiles = [];
@@ -1965,17 +1965,17 @@ class ParkingUIIntegrationXML {
                 });
                 return profiles;
             }
-            
+
             // If no profiles found in subscribers, return empty array
             return [];
-            
+
         } catch (error) {
             console.error('[getCompanyProfiles] Error:', error);
             // Return empty array on error
             return [];
         }
     }
-    
+
     /**
      * Load and populate usage profiles in the select element
      */
@@ -1983,19 +1983,19 @@ class ParkingUIIntegrationXML {
         try {
             const profileSelect = document.getElementById('editProfile');
             if (!profileSelect) return;
-            
+
             let profiles = [];
-            
+
             // Get company profiles for both new and existing subscribers
             profiles = await this.getCompanyProfiles();
-            
+
             // Clear and populate select
             profileSelect.innerHTML = '';
-            
+
             // Check if user has permission to change profile
             const permissions = window.userPermissions || '';
             const canChangeProfile = permissions.includes('P');
-            
+
             if (profiles.length > 0) {
                 // If user can't change profile, get the last subscriber's profile
                 let defaultProfileId = null;
@@ -2003,7 +2003,7 @@ class ParkingUIIntegrationXML {
                     // Find the last subscriber (highest ID or last in array)
                     const lastSubscriber = this.subscribers[this.subscribers.length - 1];
                     defaultProfileId = lastSubscriber.profileId || lastSubscriber.profile || '1';
-                    
+
                     // Find if this profile exists in our profiles list
                     const profileExists = profiles.some(p => p.id === defaultProfileId);
                     if (!profileExists && lastSubscriber.profile) {
@@ -2014,7 +2014,7 @@ class ParkingUIIntegrationXML {
                         });
                     }
                 }
-                
+
                 profiles.forEach(profile => {
                     const option = document.createElement('option');
                     option.value = profile.id;
@@ -2022,7 +2022,7 @@ class ParkingUIIntegrationXML {
                     option.textContent = profile.name;
                     profileSelect.appendChild(option);
                 });
-                
+
                 // Set default value
                 if (!canChangeProfile && defaultProfileId) {
                     profileSelect.value = defaultProfileId;
@@ -2036,14 +2036,14 @@ class ParkingUIIntegrationXML {
                     profileSelect.style.cursor = '';
                     profileSelect.title = '';
                 }
-                
+
                 // If only one profile, disable the select
                 if (profiles.length === 1) {
                     profileSelect.disabled = true;
                     profileSelect.style.backgroundColor = '#f0f0f0';
                     profileSelect.style.color = '#888';
                     profileSelect.style.cursor = 'not-allowed';
-                    
+
                     const profileHelpText = document.getElementById('profileHelpText');
                     if (profileHelpText) {
                         profileHelpText.textContent = '* פרופיל יחיד בחברה';
@@ -2055,7 +2055,7 @@ class ParkingUIIntegrationXML {
                     profileSelect.style.backgroundColor = '';
                     profileSelect.style.color = '';
                     profileSelect.style.cursor = '';
-                    
+
                     const profileHelpText = document.getElementById('profileHelpText');
                     if (profileHelpText) {
                         profileHelpText.textContent = '* בחר פרופיל מהרשימה';
@@ -2067,15 +2067,15 @@ class ParkingUIIntegrationXML {
                 const currentSubscriber = window.currentEditingSubscriber || window.editingSubscriber;
                 if (currentSubscriber && currentSubscriber.profile) {
                     const profileId = currentSubscriber.profileId || currentSubscriber.profile || '1';
-                    const profileName = currentSubscriber.profileName || 
-                                      (profileId === '1' ? 'כול החניונים' : 
-                                       profileId === '0' ? 'רגיל' : 
-                                       profileId === '2' ? 'חניון מנויים' :
-                                       profileId === '3' ? 'VIP' :
-                                       profileId === '4' ? 'נכה' :
-                                       profileId === '5' ? '-2 חניון' :
-                                       `פרופיל ${profileId}`);
-                    
+                    const profileName = currentSubscriber.profileName ||
+                        (profileId === '1' ? 'כול החניונים' :
+                            profileId === '0' ? 'רגיל' :
+                                profileId === '2' ? 'חניון מנויים' :
+                                    profileId === '3' ? 'VIP' :
+                                        profileId === '4' ? 'נכה' :
+                                            profileId === '5' ? '-2 חניון' :
+                                                `פרופיל ${profileId}`);
+
                     const option = document.createElement('option');
                     option.value = profileId;
                     option.textContent = profileName;
@@ -2091,42 +2091,42 @@ class ParkingUIIntegrationXML {
                     profileSelect.disabled = true;
                 }
             }
-                
+
         } catch (error) {
             console.error('[loadUsageProfiles] Error loading profiles:', error);
         }
     }
-    
+
     /**
      * Edit subscriber - prepare data for modal
      */
     async editSubscriber(subscriber) {
-        
+
         // Always allow viewing subscriber details
         // Permission check will be done when saving changes
-        
+
         // Check if we have full details
         if (!subscriber.hasFullDetails) {
-            
+
             // Show loading indicator
             this.showProgressMessage('טוען פרטי מנוי...');
-            
+
             try {
                 // Check if this is from a large company
                 if (subscriber.isLargeCompany) {
                     // Large company subscriber - loading details on-demand
                 }
-                
+
                 // Get full details on demand
                 const result = await this.api.getConsumerDetailOnDemand(
-                    this.currentContract.id, 
+                    this.currentContract.id,
                     subscriber.subscriberNum
                 );
-                
+
                 if (result.success) {
                     const detail = result.data;
-                    
-                    
+
+
                     // Preserve important fields and map correctly
                     const preservedFields = {
                         companyName: subscriber.companyName,
@@ -2135,7 +2135,7 @@ class ParkingUIIntegrationXML {
                         isLargeCompany: subscriber.isLargeCompany,
                         loadingStrategy: subscriber.loadingStrategy
                     };
-                    
+
                     // Update subscriber with full details - map fields properly
                     Object.assign(subscriber, {
                         ...detail,
@@ -2156,15 +2156,15 @@ class ParkingUIIntegrationXML {
                         // Mark as having full details
                         hasFullDetails: true
                     });
-                    
+
                     // Update the row in the table
-                    const index = this.subscribers.findIndex(s => 
+                    const index = this.subscribers.findIndex(s =>
                         s.subscriberNum === subscriber.subscriberNum
                     );
                     if (index !== -1) {
                         this.updateSubscriberRow(subscriber, index);
                     }
-                    
+
                     if (subscriber.isLargeCompany) {
                         // Full details loaded successfully
                     }
@@ -2176,7 +2176,7 @@ class ParkingUIIntegrationXML {
                 this.hideProgressMessage();
             }
         }
-        
+
         // Open edit modal with full data
         if (window.editSubscriber) {
             // ALWAYS use the company name from current contract, don't trust subscriber data
@@ -2187,63 +2187,63 @@ class ParkingUIIntegrationXML {
             subscriber.vehicle1 = subscriber.vehicle1 || subscriber.lpn1 || '';
             subscriber.vehicle2 = subscriber.vehicle2 || subscriber.lpn2 || '';
             subscriber.vehicle3 = subscriber.vehicle3 || subscriber.lpn3 || '';
-            
+
             window.editSubscriber(subscriber);
         } else {
             console.error('[editSubscriber] window.editSubscriber function not found!');
         }
     }
-    
+
     /**
      * Save subscriber (create or update)
      */
     async saveSubscriber(subscriberData) {
         if (!this.currentContract) return;
-        
+
         // Check if trying to update profile
         const permissions = window.userPermissions || '';
-        const currentSubscriber = this.subscribers.find(s => 
+        const currentSubscriber = this.subscribers.find(s =>
             String(s.subscriberNum) === String(subscriberData.subscriberNum)
         );
-        
+
         // If updating an existing subscriber and changing profile, need P permission
-        if (currentSubscriber && subscriberData.profileId && 
-            String(currentSubscriber.profile) !== String(subscriberData.profileId) && 
+        if (currentSubscriber && subscriberData.profileId &&
+            String(currentSubscriber.profile) !== String(subscriberData.profileId) &&
             !permissions.includes('P')) {
             this.showNotification('אין לך הרשאה לשנות פרופיל (דרושה הרשאת P)', 'error');
             return;
         }
-        
+
         this.setLoading(true);
-        
+
         try {
             let result;
-            
+
             // Double-check if this is really a new subscriber
             // If subscriberNum is provided and not empty, it's likely an update
             // Only consider it new if isNew is true AND no subscriber number
             const isReallyNew = subscriberData.isNew === true && (!subscriberData.subscriberNum || subscriberData.subscriberNum === '');
-            
+
             // Additional check: if we have a subscriber number but isNew is somehow undefined/null,
             // assume it's an update
             const shouldUpdate = !isReallyNew && subscriberData.subscriberNum && subscriberData.subscriberNum !== '';
-            
 
-            
+
+
             // Prepare consumer data for XML API
             let consumerData;
-            
+
             if (shouldUpdate) {
                 // Preparing UPDATE data
 
-                
+
                 // For UPDATE - structure data according to API spec for /detail endpoint
                 // Add timezone to dates for XML format
                 const formatDateWithTimezone = (date) => {
                     if (!date) return '';
-                    
+
                     let formattedDate = date;
-                    
+
                     // Convert DD/MM/YYYY to YYYY-MM-DD if needed
                     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(date)) {
                         const parts = date.split('/');
@@ -2252,11 +2252,11 @@ class ParkingUIIntegrationXML {
                         const year = parts[2];
                         formattedDate = `${year}-${month}-${day}`;
                     }
-                    
+
                     // Add Israel timezone (+02:00 or +03:00 depending on DST)
                     return formattedDate + '+02:00';
                 };
-                
+
                 consumerData = {
                     consumer: {
                         id: subscriberData.subscriberNum,
@@ -2296,15 +2296,15 @@ class ParkingUIIntegrationXML {
                     lpn2: (subscriberData.vehicle2 || '').replace(/-/g, ''),
                     lpn3: (subscriberData.vehicle3 || '').replace(/-/g, '')
                 };
-                
+
                 // UPDATE payload prepared
             } else {
                 // For NEW subscriber - send full structure matching documentation
                 const formatDateWithTimezone = (date) => {
                     if (!date) return '';
-                    
+
                     let formattedDate = date;
-                    
+
                     // Convert DD/MM/YYYY to YYYY-MM-DD if needed
                     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(date)) {
                         const parts = date.split('/');
@@ -2313,11 +2313,11 @@ class ParkingUIIntegrationXML {
                         const year = parts[2];
                         formattedDate = `${year}-${month}-${day}`;
                     }
-                    
+
                     // Add Israel timezone
                     return formattedDate + '+02:00';
                 };
-                
+
                 consumerData = {
                     consumer: {
                         id: '',  // Empty for new subscriber
@@ -2331,9 +2331,9 @@ class ParkingUIIntegrationXML {
                         firstName: (subscriberData.firstName || '').trim(),
                         surname: (subscriberData.lastName || subscriberData.surname || '').trim()
                     },
-                identification: {
-                    ptcptType: '2',
-                    cardno: subscriberData.tagNum || '',
+                    identification: {
+                        ptcptType: '2',
+                        cardno: subscriberData.tagNum || '',
                         cardclass: '1',  // Keep as 1
                         identificationType: '54',  // Back to 54 as per your requirement
                         validFrom: formatDateWithTimezone(subscriberData.validFrom),
@@ -2342,8 +2342,8 @@ class ParkingUIIntegrationXML {
                         status: '0',  // Active
                         ptcptGrpNo: '-1',
                         chrgOvdrftAcct: '0',
-                    usageProfile: {
-                        id: subscriberData.profileId || '1',
+                        usageProfile: {
+                            id: subscriberData.profileId || '1',
                             name: subscriberData.profile || 'Standard'
                         }
                     },
@@ -2356,17 +2356,17 @@ class ParkingUIIntegrationXML {
                     lpn2: (subscriberData.vehicle2 || '').replace(/-/g, ''),
                     lpn3: (subscriberData.vehicle3 || '').replace(/-/g, '')
                 };
-                
+
                 // NEW payload prepared
             }
-            
+
             if (isReallyNew) {
                 // Need to ensure subscribers list is loaded
                 if (!this.subscribers || this.subscribers.length === 0) {
                     // Loading subscribers list for numbering
                     await this.loadSubscribers();
                 }
-                
+
                 // Calculate next available subscriber number
                 if (!subscriberData.subscriberNum || subscriberData.subscriberNum === '') {
                     // Check if this is a guest
@@ -2376,13 +2376,13 @@ class ParkingUIIntegrationXML {
                             const num = parseInt(s.subscriberNum);
                             return !isNaN(num) && num >= 40001;
                         });
-                        
+
                         let nextGuestId = 40001;
                         if (existingGuests.length > 0) {
                             const maxGuestId = Math.max(...existingGuests.map(s => parseInt(s.subscriberNum)));
                             nextGuestId = maxGuestId + 1;
                         }
-                        
+
                         consumerData.consumer.id = String(nextGuestId);
                         // Creating guest
                     } else {
@@ -2391,13 +2391,13 @@ class ParkingUIIntegrationXML {
                             const num = parseInt(s.subscriberNum);
                             return !isNaN(num) && num < 40001;
                         });
-                        
+
                         let nextId = 1;
                         if (companySubscribers.length > 0) {
                             const maxId = Math.max(...companySubscribers.map(s => parseInt(s.subscriberNum)));
                             nextId = maxId + 1;
                         }
-                        
+
                         // Don't send ID for regular subscribers - let server assign
                         consumerData.consumer.id = '';
                         // Creating regular subscriber
@@ -2407,14 +2407,14 @@ class ParkingUIIntegrationXML {
                     consumerData.consumer.id = subscriberData.subscriberNum;
                     // Using provided subscriber number
                 }
-                
+
                 // Create new consumer with all details in one call
                 result = await this.api.addConsumer(this.currentContract.id, consumerData);
-                
+
                 // Server response received
-                
+
                 if (result.success) {
-                    
+
                     // Check if we got the created consumer ID from server
                     if (result.data && result.data.id) {
                         consumerData.consumer.id = result.data.id;
@@ -2459,53 +2459,51 @@ class ParkingUIIntegrationXML {
                     subscriberData.subscriberNum,
                     consumerData
                 );
-                
-                // Server response
-                
 
-                
+                // Server response
+
+
+
                 // If update failed with 500 error, try different approaches
                 if (!result.success && result.error && result.error.includes('500')) {
                     // Update failed with 500
-                    
+
                     // Check if this is company 8 or other large companies
-                    const isLargeCompany = this.currentContract.id === '8' || 
-                                          this.currentContract.id === '4' || 
-                                          this.currentContract.id === '10';
-                    
+                    const isLargeCompany = this.currentContract.id === '8' ||
+                        this.currentContract.id === '4' ||
+                        this.currentContract.id === '10';
+
                     if (isLargeCompany) {
                         // Large company detected
-                        
+
                         // For large companies, try WITHOUT identification at all
                         const minimalData = {
                             firstName: consumerData.firstName || consumerData.surname || consumerData.lastName || 'Unknown',
                             surname: consumerData.surname || consumerData.lastName || consumerData.firstName || 'Unknown',
                             lpn1: consumerData.lpn1 || '',
-                            // Only include lpn2 if not empty
-                            ...(consumerData.lpn2 ? { lpn2: consumerData.lpn2 } : {}),
-                            // Only include lpn3 if lpn2 exists
-                            ...(consumerData.lpn2 && consumerData.lpn3 ? { lpn3: consumerData.lpn3 } : {}),
+                            lpn2: consumerData.lpn2 || '',
+                            lpn3: consumerData.lpn3 || '',
                             consumer: consumerData.consumer
                             // NO identification block at all for large companies
                         };
-                        
+
                         // Trying with minimal data
                         result = await this.api.updateConsumer(
                             this.currentContract.id,
                             subscriberData.subscriberNum,
                             minimalData
                         );
-                        
+
                         if (result.success) {
                             // Consumer updated successfully
                             this.showNotification('✅ הנתונים הבסיסיים נשמרו בהצלחה', 'success');
                         }
                     }
-                    
+
                     // If still failed, try without identification at all for problematic companies
                     if (!result.success) {
                         // Still failing
-                        
+
                         // Create a copy without identification
                         const dataWithoutIdentification = {
                             firstName: consumerData.firstName || consumerData.surname || 'Unknown',
@@ -2518,49 +2516,49 @@ class ParkingUIIntegrationXML {
                             consumer: consumerData.consumer
                             // NO identification at all
                         };
-                        
+
                         result = await this.api.updateConsumer(
                             this.currentContract.id,
                             subscriberData.subscriberNum,
                             dataWithoutIdentification
                         );
-                        
+
                         if (result.success) {
                             // Consumer updated successfully
                             this.showNotification('⚠️ הנתונים נשמרו ללא פרופיל שימוש', 'warning');
                         }
                     }
                 }
-                
+
                 if (result.success) {
                     // Consumer updated successfully
                 }
             }
-            
+
             if (result.success) {
                 // Use message from server if available, otherwise show generic success
                 const message = result.message || result.data?.message || 'הנתונים נשמרו בהצלחה';
                 this.showNotification(message, 'success');
-                
+
                 // Only update the specific subscriber in the list, don't reload everything
                 if (shouldUpdate && subscriberData.subscriberNum) {
                     // Find and update the subscriber in our local array
                     // IMPORTANT: Compare subscriberNum to subscriberNum, not id!
                     // Convert to string for comparison
                     const subscriberNumStr = String(subscriberData.subscriberNum);
-                    
+
                     // Looking for subscriber in array
-                    
-                    const index = this.subscribers.findIndex(s => 
-                        String(s.subscriberNum) === subscriberNumStr || 
+
+                    const index = this.subscribers.findIndex(s =>
+                        String(s.subscriberNum) === subscriberNumStr ||
                         String(s.id) === subscriberNumStr
                     );
-                    
+
                     // Found subscriber
-                    
+
                     if (index !== -1) {
                         // Updating subscriber
-                        
+
                         // Update local data - preserve important fields
                         const updatedSubscriber = {
                             ...this.subscribers[index],
@@ -2590,12 +2588,12 @@ class ParkingUIIntegrationXML {
                             loadingStrategy: this.subscribers[index].loadingStrategy,
                             hasFullDetails: false  // Reset to force reload on next edit
                         };
-                        
+
                         // CRITICAL: Actually update the subscriber in the array!
                         this.subscribers[index] = updatedSubscriber;
-                        
+
                         // Updated subscriber in array
-                        
+
                         // Update the specific row in the table
                         this.updateSubscriberRow(this.subscribers[index], index);
                     }
@@ -2603,7 +2601,7 @@ class ParkingUIIntegrationXML {
                     // For new subscribers, add to the list without reloading
                     // Use the ID from server response if available
                     const subscriberId = result.data?.id || consumerData.consumer.id || subscriberData.subscriberNum;
-                    
+
                     const newSubscriber = {
                         ...subscriberData,
                         id: subscriberId,
@@ -2623,30 +2621,30 @@ class ParkingUIIntegrationXML {
                         profile: subscriberData.profile || subscriberData.profileId || '',
                         profileName: subscriberData.profileName || ''
                     };
-                    
+
                     // Add to subscribers array
                     this.subscribers.push(newSubscriber);
-                    
+
                     // Add only the new row instead of re-displaying the entire table
                     const tbody = document.querySelector('#subscribersTable tbody');
                     if (tbody) {
                         const newRow = document.createElement('tr');
                         const newIndex = this.subscribers.length - 1;
-                        
+
                         // Set row attributes
                         newRow.dataset.subscriberNum = newSubscriber.subscriberNum;
                         newRow.onclick = () => {
                             // Find the current subscriber data (might have been updated)
-                            const currentSubscriber = this.subscribers.find(s => 
+                            const currentSubscriber = this.subscribers.find(s =>
                                 s.subscriberNum === newSubscriber.subscriberNum
                             ) || newSubscriber;
                             this.editSubscriber(currentSubscriber);
                         };
-                        
+
                         // Create row content - match the structure from displaySubscribers
                         const validUntil = new Date(newSubscriber.validUntil || '2030-12-31');
                         const isExpired = validUntil < new Date();
-                        
+
                         newRow.innerHTML = `
                             <td>${newSubscriber.companyNum || ''}</td>
                             <td>${newSubscriber.companyName || ''}</td>
@@ -2662,14 +2660,14 @@ class ParkingUIIntegrationXML {
                             <td>${this.formatDate(newSubscriber.validFrom) || ''}</td>
                             <td style="text-align: center; font-size: 18px;">${newSubscriber.presence ? '✅' : '❌'}</td>
                         `;
-                        
+
                         tbody.appendChild(newRow);
                     }
-                    
+
                     // Update counts in header
                     this.updatePresentCount();
                 }
-                
+
                 // Send email notification if email provided (for updates too)
                 if (!isReallyNew && subscriberData.email && result.success) {
                     try {
@@ -2700,12 +2698,12 @@ class ParkingUIIntegrationXML {
                         // Don't show error for updates - email is optional
                     }
                 }
-                
+
                 return true;
             } else {
                 // Provide clearer error messages based on the error type
                 let errorMessage = 'שגיאה בשמירת הנתונים';
-                
+
                 if (result.error) {
                     if (result.error.includes('500') || result.error.includes('Internal Server Error')) {
                         // Check if it's a present subscriber error
@@ -2724,13 +2722,13 @@ class ParkingUIIntegrationXML {
                         errorMessage = `❌ ${result.error}`;
                     }
                 }
-                
+
                 this.showNotification(errorMessage, 'error');
                 return false;
             }
         } catch (error) {
             console.error('Error saving subscriber:', error);
-            
+
             // Try to provide a meaningful error message
             let errorMessage = 'שגיאה בשמירת הנתונים';
             if (error.message) {
@@ -2742,29 +2740,29 @@ class ParkingUIIntegrationXML {
                     errorMessage = `❌ ${error.message}`;
                 }
             }
-            
+
             this.showNotification(errorMessage, 'error');
             return false;
         } finally {
             this.setLoading(false);
         }
     }
-    
+
     /**
      * Delete subscriber
      */
     async deleteSubscriber(subscriberId) {
         if (!this.currentContract) return;
-        
+
         if (!confirm('האם אתה בטוח שברצונך למחוק מנוי זה?')) {
             return;
         }
-        
+
         this.setLoading(true);
-        
+
         try {
             const result = await this.api.deleteConsumer(this.currentContract.id, subscriberId);
-            
+
             if (result.success) {
                 this.showNotification('המנוי נמחק בהצלחה', 'success');
                 await this.loadSubscribers(); // Refresh the list
@@ -2778,45 +2776,45 @@ class ParkingUIIntegrationXML {
             this.setLoading(false);
         }
     }
-    
+
     /**
      * Report Functions
      */
-    
+
     // Get parking transactions report for a subscriber
     async getSubscriberReport(subscriberNum, minDate = null, maxDate = null) {
         try {
             // Starting report for subscriber
-            
+
             if (!this.currentContract || !this.currentContract.id) {
                 // No current contract set
                 throw new Error('לא נבחרה חברה');
             }
-            
+
             const contractId = this.currentContract.id;
-            
+
             // Getting report for subscriber
-            
+
             // Get parking transactions from API
             const result = await this.api.getParkingTransactions(contractId, subscriberNum, minDate, maxDate);
             // API response received
-            
+
             if (!result.success) {
                 throw new Error(result.error || 'Failed to get parking transactions');
             }
-            
+
             const transactions = result.data || [];
             // Found transactions
-            
+
             // Filter transactions by type (1, 2, 11, 12)
             const allowedTypes = ['1', '2', '11', '12'];
             const filteredTransactions = transactions.filter(trans => {
                 const typeStr = String(trans.transactionType);
                 return allowedTypes.includes(typeStr);
             });
-            
+
             // Filtered transactions
-            
+
             // Format transactions for display
             const formattedTransactions = filteredTransactions.map(trans => ({
                 date: this.formatDateTime(trans.transactionTime),
@@ -2826,7 +2824,7 @@ class ParkingUIIntegrationXML {
                 device: trans.device || '-',
                 amount: trans.amount ? `₪${trans.amount}` : '-'
             }));
-            
+
             return {
                 success: true,
                 data: formattedTransactions,
@@ -2835,7 +2833,7 @@ class ParkingUIIntegrationXML {
                     totalAmount: filteredTransactions.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
                 }
             };
-            
+
         } catch (error) {
             console.error('[getSubscriberReport] Error:', error);
             return {
@@ -2844,7 +2842,7 @@ class ParkingUIIntegrationXML {
             };
         }
     }
-    
+
     // Format date and time for display
     formatDateTime(dateTimeStr) {
         if (!dateTimeStr) return '-';
@@ -2860,7 +2858,7 @@ class ParkingUIIntegrationXML {
             return dateTimeStr;
         }
     }
-    
+
     // Get transaction type name
     getTransactionTypeName(typeCode) {
         const types = {
@@ -2875,7 +2873,7 @@ class ParkingUIIntegrationXML {
         };
         return types[String(typeCode)] || `סוג ${typeCode}`;
     }
-    
+
     /**
      * UI Helper Functions
      */
@@ -2884,12 +2882,12 @@ class ParkingUIIntegrationXML {
             this.showNotification('אין נתונים לייצוא', 'warning');
             return;
         }
-        
-        
+
+
         // Check if all subscribers have full details
         const subscribersWithoutDetails = this.subscribers.filter(s => !s.hasFullDetails);
         if (subscribersWithoutDetails.length > 0) {
-            
+
             // For large companies, offer to load all details first
             if (subscribersWithoutDetails.length > 10) {
                 const confirmLoad = confirm(`יש ${subscribersWithoutDetails.length} מנויים ללא פרטים מלאים.\nהאם לטעון את כל הפרטים לפני הייצוא? (עלול לקחת זמן)`);
@@ -2900,32 +2898,32 @@ class ParkingUIIntegrationXML {
                 }
             }
         }
-        
+
         // Create CSV content
         const headers = [
             'מספר חברה',
-            'שם חברה', 
+            'שם חברה',
             'מספר מנוי',
             'שם פרטי',
             'שם משפחה',
             'מספר תג',
             'רכב 1',
-            'רכב 2', 
+            'רכב 2',
             'רכב 3',
             'תחילת תוקף',
             'בתוקף עד',
             'פרופיל',
             'נוכחות'
         ];
-        
+
         // Create CSV rows
         const rows = this.subscribers.map(subscriber => {
-            
+
             return [
-            subscriber.companyNum || '',
-            subscriber.companyName || '',
-            subscriber.subscriberNum || '',
-            subscriber.firstName || '',
+                subscriber.companyNum || '',
+                subscriber.companyName || '',
+                subscriber.subscriberNum || '',
+                subscriber.firstName || '',
                 subscriber.lastName || subscriber.surname || subscriber.name || '',
                 subscriber.tagNum || subscriber.cardno || '',
                 subscriber.vehicle1 || subscriber.lpn1 || '',
@@ -2937,39 +2935,39 @@ class ParkingUIIntegrationXML {
                 subscriber.presence || subscriber.present ? 'נוכח' : 'לא נוכח'
             ];
         });
-        
+
         // Combine headers and rows
         const csvContent = [
             headers.join(','),
             ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
         ].join('\n');
-        
+
         // Add BOM for Hebrew support in Excel
         const BOM = '\uFEFF';
         const csvWithBOM = BOM + csvContent;
-        
+
         // Create blob and download
         const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
-        
+
         // Generate filename with timestamp
         const now = new Date();
         const dateStr = now.toISOString().split('T')[0];
-        const timeStr = now.toTimeString().split(':').slice(0,2).join('-');
+        const timeStr = now.toTimeString().split(':').slice(0, 2).join('-');
         const companyName = this.currentContract ? this.currentContract.name : 'all';
         const filename = `parking_subscribers_${companyName}_${dateStr}_${timeStr}.csv`;
-        
+
         link.setAttribute('href', url);
         link.setAttribute('download', filename);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
+
         this.showNotification(`הקובץ ${filename} יוצא בהצלחה`, 'success');
     }
-    
+
     /**
      * Helper methods for UI
      */
@@ -2979,13 +2977,13 @@ class ParkingUIIntegrationXML {
         if (loadingElement) {
             loadingElement.style.display = isLoading ? 'block' : 'none';
         }
-        
+
         const tableContainer = document.getElementById('tableContainer');
         if (tableContainer && elementId === 'loadingState') {
             tableContainer.style.display = isLoading ? 'none' : 'block';
         }
     }
-    
+
     showNotification(message, type = 'info') {
         if (window.showToast) {
             window.showToast(message, type);
@@ -2993,18 +2991,18 @@ class ParkingUIIntegrationXML {
             alert(message);
         }
     }
-    
+
     formatDate(dateString) {
         if (!dateString) return '';
-        
+
         // If already in DD/MM/YYYY format, return as is
         if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateString)) {
             return dateString;
         }
-        
+
         // Handle XML date format with timezone (e.g., "2014-08-15+02:00")
         const cleanDate = dateString.split('+')[0].split('T')[0];
-        
+
         // If in server format (YYYY-MM-DD), convert to European
         if (/^\d{4}-\d{2}-\d{2}/.test(cleanDate)) {
             const parts = cleanDate.split('-');
@@ -3013,7 +3011,7 @@ class ParkingUIIntegrationXML {
             const day = parts[2];
             return `${day}/${month}/${year}`;
         }
-        
+
         // Try to parse as date
         const date = new Date(cleanDate);
         if (!isNaN(date.getTime())) {
@@ -3022,10 +3020,10 @@ class ParkingUIIntegrationXML {
             const year = date.getFullYear();
             return `${day}/${month}/${year}`;
         }
-        
+
         return dateString;
     }
-    
+
     getProfileText(profile) {
         const profiles = {
             'regular': 'רגיל',
@@ -3035,25 +3033,25 @@ class ParkingUIIntegrationXML {
         };
         return profiles[profile] || profile || 'רגיל';
     }
-    
+
     /**
      * Initialize the integration
      */
 
-    
+
     async initialize() {
-        
+
         // Load initial data
         await this.loadCompanies();
-        
+
         // Update button permissions
         this.updateButtonPermissions();
-        
+
         // Set up event listeners
         this.setupEventListeners();
-        
+
     }
-    
+
     setupEventListeners() {
         // Override the global save function
         if (window.saveSubscriber) {
@@ -3062,7 +3060,7 @@ class ParkingUIIntegrationXML {
                 // Get form data
                 const profileSelect = document.getElementById('editProfile');
                 const selectedOption = profileSelect.selectedOptions[0];
-                
+
                 const formData = {
                     companyNum: document.getElementById('editCompanyNum').value,
                     companyName: document.getElementById('editCompanyName').value,
@@ -3080,13 +3078,13 @@ class ParkingUIIntegrationXML {
                     profile: selectedOption?.getAttribute('data-profile-name') || selectedOption?.text || 'regular',
                     email: document.getElementById('editEmail')?.value || '',
                     isNew: !window.editingSubscriber,  // New subscriber if editingSubscriber is null
-                    isGuest: document.getElementById('editFirstName').value === 'אורח' || 
-                            document.getElementById('editModal')?.classList.contains('guest-mode')
+                    isGuest: document.getElementById('editFirstName').value === 'אורח' ||
+                        document.getElementById('editModal')?.classList.contains('guest-mode')
                 };
-                
+
                 // Save via API
                 const success = await this.saveSubscriber(formData);
-                
+
                 if (success) {
                     // Close modal
                     if (window.closeModal) {
