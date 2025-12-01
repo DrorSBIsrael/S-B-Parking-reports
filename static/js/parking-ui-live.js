@@ -2260,7 +2260,8 @@ class ParkingUIIntegrationXML {
                 // Prepare names with deletion logic
                 const rawLastName = (subscriberData.lastName || subscriberData.surname || '').trim();
                 const lastName = rawLastName || 'פנוי'; // If empty, set to 'פנוי'
-                const firstName = (subscriberData.firstName || '').trim();
+                const rawFirstName = (subscriberData.firstName || '').trim();
+                const firstName = rawFirstName || ' '; // If empty, set to space to force update
                 const fullName = `${lastName} ${firstName}`.trim();
 
                 consumerData = {
@@ -2297,10 +2298,10 @@ class ParkingUIIntegrationXML {
                     limit: '9999900',
                     status: '0',  // Active status
                     delete: '0',  // Not deleted
-                    // Vehicle data - clean dashes from vehicle numbers, send '11111111' if empty
-                    lpn1: subscriberData.vehicle1 ? subscriberData.vehicle1.replace(/-/g, '') : '11111111',
-                    lpn2: subscriberData.vehicle2 ? subscriberData.vehicle2.replace(/-/g, '') : '11111111',
-                    lpn3: subscriberData.vehicle3 ? subscriberData.vehicle3.replace(/-/g, '') : '11111111'
+                    // Vehicle data - clean dashes from vehicle numbers, send space if empty to force update
+                    lpn1: subscriberData.vehicle1 ? subscriberData.vehicle1.replace(/-/g, '') : ' ',
+                    lpn2: subscriberData.vehicle2 ? subscriberData.vehicle2.replace(/-/g, '') : ' ',
+                    lpn3: subscriberData.vehicle3 ? subscriberData.vehicle3.replace(/-/g, '') : ' '
                 };
 
                 // UPDATE payload prepared
@@ -2327,7 +2328,8 @@ class ParkingUIIntegrationXML {
                 // Prepare names with deletion logic
                 const rawLastName = (subscriberData.lastName || subscriberData.surname || '').trim();
                 const lastName = rawLastName || 'פנוי'; // If empty, set to 'פנוי'
-                const firstName = (subscriberData.firstName || '').trim();
+                const rawFirstName = (subscriberData.firstName || '').trim();
+                const firstName = rawFirstName || ' '; // If empty, set to space
                 const fullName = `${lastName} ${firstName}`.trim();
 
                 consumerData = {
@@ -2363,10 +2365,10 @@ class ParkingUIIntegrationXML {
                     limit: '9999900',
                     status: '0',
                     delete: '0',
-                    // Vehicles - send '11111111' if empty
-                    lpn1: subscriberData.vehicle1 ? subscriberData.vehicle1.replace(/-/g, '') : '11111111',
-                    lpn2: subscriberData.vehicle2 ? subscriberData.vehicle2.replace(/-/g, '') : '11111111',
-                    lpn3: subscriberData.vehicle3 ? subscriberData.vehicle3.replace(/-/g, '') : '11111111'
+                    // Vehicles - send space if empty
+                    lpn1: subscriberData.vehicle1 ? subscriberData.vehicle1.replace(/-/g, '') : ' ',
+                    lpn2: subscriberData.vehicle2 ? subscriberData.vehicle2.replace(/-/g, '') : ' ',
+                    lpn3: subscriberData.vehicle3 ? subscriberData.vehicle3.replace(/-/g, '') : ' '
                 };
 
                 // NEW payload prepared
@@ -2492,9 +2494,9 @@ class ParkingUIIntegrationXML {
                         const minimalData = {
                             firstName: consumerData.person.firstName,
                             surname: consumerData.person.surname,
-                            lpn1: consumerData.lpn1 || '11111111',
-                            lpn2: consumerData.lpn2 || '11111111',
-                            lpn3: consumerData.lpn3 || '11111111',
+                            lpn1: consumerData.lpn1 || ' ',
+                            lpn2: consumerData.lpn2 || ' ',
+                            lpn3: consumerData.lpn3 || ' ',
                             consumer: consumerData.consumer
                             // NO identification block at all for large companies
                         };
