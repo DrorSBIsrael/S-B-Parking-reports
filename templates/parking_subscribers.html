@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html dir="rtl" lang="he">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,7 +16,7 @@
             --light-bg: #f8f9fa;
             --dark-text: #2c3e50;
             --border-color: #dee2e6;
-            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
         * {
@@ -29,7 +30,8 @@
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             min-height: 100vh;
             direction: rtl;
-            font-size: 13px; /* Reduced font size */
+            font-size: 13px;
+            /* Reduced font size */
             transition: font-size 0.3s ease;
         }
 
@@ -85,7 +87,9 @@
         }
 
         /* Language & Accessibility Controls */
-        .lang-switch, .font-controls, .accessibility-btn {
+        .lang-switch,
+        .font-controls,
+        .accessibility-btn {
             display: flex;
             gap: 5px;
         }
@@ -100,7 +104,7 @@
             transition: all 0.3s;
             white-space: nowrap;
         }
-        
+
         .btn:disabled,
         .btn[disabled] {
             opacity: 0.5 !important;
@@ -108,7 +112,7 @@
             background-color: #cccccc !important;
             color: #666666 !important;
         }
-        
+
         .btn:disabled:hover,
         .btn[disabled]:hover {
             opacity: 0.5 !important;
@@ -128,7 +132,7 @@
             background: #6c757d;
             color: white;
         }
-        
+
         .btn-info {
             background: #17a2b8 !important;
             color: white !important;
@@ -143,7 +147,7 @@
             align-items: center;
             justify-content: center;
         }
-        
+
         .btn-info:hover {
             background: #138496 !important;
             transform: scale(1.1);
@@ -165,28 +169,28 @@
             visibility: visible !important;
             opacity: 1 !important;
         }
-        
+
         .btn-success:hover {
             background: #218838 !important;
             transform: scale(1.1);
         }
-        
+
         /* Force button visibility in table */
         td .btn-success {
             display: inline-flex !important;
             visibility: visible !important;
             opacity: 1 !important;
         }
-        
 
-        
+
+
         /* Uniform action buttons styling */
         .action-buttons {
             display: flex;
             gap: 10px;
             align-items: center;
         }
-        
+
         .action-btn {
             padding: 10px 20px !important;
             font-size: 14px !important;
@@ -202,27 +206,27 @@
             justify-content: center !important;
             white-space: nowrap !important;
         }
-        
+
         .action-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
-        
+
         .action-btn.btn-success {
             background: #28a745 !important;
             color: white !important;
         }
-        
+
         .action-btn.btn-warning {
             background: #ffc107 !important;
             color: #212529 !important;
         }
-        
+
         .action-btn.btn-primary {
             background: #007bff !important;
             color: white !important;
         }
-        
+
         .action-btn.btn-info {
             background: #17a2b8 !important;
             color: white !important;
@@ -269,7 +273,7 @@
             background: rgba(255, 255, 255, 0.2);
             color: white;
         }
-        
+
         .company-card.selected .stat-label,
         .company-card.selected .stat-value,
         .company-card.selected .facility-item {
@@ -391,7 +395,7 @@
         .status-inactive {
             color: var(--danger-color);
         }
-        
+
         /* Sortable Headers */
         .sortable {
             cursor: pointer;
@@ -399,11 +403,11 @@
             position: relative;
             transition: background 0.2s;
         }
-        
+
         .sortable:hover {
             background: rgba(0, 102, 204, 0.05);
         }
-        
+
         .sort-icon {
             font-size: 0.8em;
             margin-left: 5px;
@@ -411,12 +415,12 @@
             display: inline-block;
             transition: all 0.3s;
         }
-        
+
         .sortable.sort-asc .sort-icon {
             color: var(--primary-color);
             transform: rotate(0deg);
         }
-        
+
         .sortable.sort-desc .sort-icon {
             color: var(--primary-color);
             transform: rotate(180deg);
@@ -450,14 +454,14 @@
             overflow-y: auto;
             position: relative;
         }
-        
+
         /* הבטחת הצגת הכפתורים */
         .modal-content .btn {
             display: inline-flex !important;
             align-items: center;
             gap: 5px;
         }
-        
+
         .modal-content button[style*="display: none"] {
             display: inline-flex !important;
         }
@@ -468,7 +472,7 @@
             align-items: center;
             margin-bottom: 20px;
         }
-        
+
         .modal-actions-top {
             display: flex !important;
             justify-content: flex-end;
@@ -483,7 +487,7 @@
             top: 0;
             z-index: 100;
         }
-        
+
         .modal-actions-top .btn {
             display: inline-flex !important;
             align-items: center;
@@ -495,11 +499,11 @@
             visibility: visible !important;
             opacity: 1 !important;
         }
-        
+
         .modal-actions-top .btn span {
             display: inline-block;
         }
-        
+
         .modal-actions-top .btn span:first-child {
             font-size: 18px;
         }
@@ -529,14 +533,14 @@
         }
 
         .form-group input,
-        .form-group         select {
+        .form-group select {
             width: 100%;
             padding: 10px;
             border: 1px solid var(--border-color);
             border-radius: 6px;
             font-size: 0.95em;
         }
-        
+
         select:disabled {
             background-color: #f0f0f0;
             color: #888;
@@ -581,8 +585,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         /* Accessibility Features */
@@ -654,22 +663,24 @@
                 transform: translateX(100%);
                 opacity: 0;
             }
+
             to {
                 transform: translateX(0);
                 opacity: 1;
             }
         }
-        
+
         /* Hover loading animation */
         @keyframes shimmer {
             0% {
                 background-position: -200% 0;
             }
+
             100% {
                 background-position: 200% 0;
             }
         }
-        
+
         /* Loading row style */
         tr.loading-details {
             background: linear-gradient(90deg, #f0f0f0 0%, #ffffff 50%, #f0f0f0 100%);
@@ -677,7 +688,7 @@
             animation: shimmer 1.5s infinite;
             opacity: 0.7;
         }
-        
+
         /* Hover effect for loadable rows */
         tbody tr[data-hover-loadable="true"]:not(.loading-details):hover {
             background-color: #f8f9fa;
@@ -757,20 +768,20 @@
             text-align: right;
             position: relative;
         }
-        
+
         .company-card .company-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 10px;
         }
-        
+
         .company-card h3 {
             font-size: 1.1em;
             margin: 0;
             color: var(--dark-text);
         }
-        
+
         .company-card .company-number {
             font-size: 0.9em;
             color: #666;
@@ -778,33 +789,33 @@
             padding: 2px 8px;
             border-radius: 4px;
         }
-        
+
         .company-card .stats-row {
             display: flex;
             justify-content: space-between;
             margin: 8px 0;
             font-size: 0.9em;
         }
-        
+
         .company-card .stat-item {
             display: flex;
             flex-direction: column;
             align-items: center;
             flex: 1;
         }
-        
+
         .company-card .stat-label {
             color: #666;
             font-size: 0.85em;
             margin-bottom: 2px;
         }
-        
+
         .company-card .stat-value {
             font-weight: 600;
             color: var(--dark-text);
             font-size: 1.1em;
         }
-        
+
         .company-card .occupancy-bar {
             width: 100%;
             height: 6px;
@@ -813,42 +824,43 @@
             overflow: hidden;
             margin-top: 10px;
         }
-        
+
         .company-card .occupancy-fill {
             height: 100%;
             background: linear-gradient(90deg, var(--success-color), var(--primary-color));
             transition: width 0.5s ease;
         }
-        
+
         .company-card .facilities-info {
             margin-top: 10px;
             padding-top: 10px;
             border-top: 1px solid #ddd;
             font-size: 0.85em;
         }
-        
+
         .company-card .facility-item {
             display: flex;
             justify-content: space-between;
             margin: 5px 0;
             color: #666;
         }
-        
+
         /* Force modal buttons to be visible */
-        #cancelTopBtn, #saveTopBtn {
+        #cancelTopBtn,
+        #saveTopBtn {
             display: inline-flex !important;
             visibility: visible !important;
             opacity: 1 !important;
             position: relative !important;
             z-index: 1000 !important;
         }
-        
+
         .modal.show .modal-actions-top {
             display: flex !important;
             visibility: visible !important;
             opacity: 1 !important;
         }
-        
+
         .modal.show .modal-actions-top * {
             visibility: visible !important;
             opacity: 1 !important;
@@ -876,7 +888,7 @@
                 border: 1px solid #000;
             }
         }
-        
+
         /* Footer styles */
         .footer {
             text-align: center;
@@ -887,20 +899,20 @@
             color: #666;
             font-size: 14px;
         }
-        
+
         .footer .credit {
             margin-top: 12px;
             font-size: 16px;
             color: #333;
         }
-        
+
         .footer .company {
             font-weight: 600;
             color: #444;
             font-size: 15px;
             margin-bottom: 8px;
         }
-        
+
         .footer .developer {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             -webkit-background-clip: text;
@@ -909,13 +921,13 @@
             font-weight: 700;
             font-size: 17px;
         }
-        
+
         /* Hover Loading Styles for Advanced Features */
         tr[data-hover-loadable="true"] {
             cursor: help;
             position: relative;
         }
-        
+
         tr[data-hover-loadable="true"]::after {
             content: "⏳";
             position: absolute;
@@ -925,18 +937,23 @@
             opacity: 0.5;
             font-size: 14px;
         }
-        
+
         tr.loading-details {
             background: linear-gradient(90deg, #f0f0f0 0%, #ffffff 50%, #f0f0f0 100%);
             background-size: 200% 100%;
             animation: loading-shimmer 1.5s infinite;
         }
-        
+
         @keyframes loading-shimmer {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
         }
-        
+
         /* Large Company Indicator */
         .large-company-indicator {
             background: #fef3c7;
@@ -947,12 +964,12 @@
             display: inline-block;
             font-size: 14px;
         }
-        
+
         .large-company-indicator::before {
             content: "⚠️ ";
             margin-left: 5px;
         }
-        
+
         /* Progress indicator for background loading */
         .background-progress {
             position: fixed;
@@ -963,17 +980,25 @@
             padding: 10px 15px;
             border-radius: 20px;
             font-size: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
             z-index: 1000;
             animation: pulse 2s infinite;
         }
-        
+
         @keyframes pulse {
-            0% { opacity: 0.9; }
-            50% { opacity: 1; }
-            100% { opacity: 0.9; }
+            0% {
+                opacity: 0.9;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.9;
+            }
         }
-        
+
         /* Limited display notice for large companies */
         .limited-display-notice td {
             background-color: #fff3cd !important;
@@ -983,13 +1008,14 @@
             text-align: center !important;
             font-weight: bold !important;
         }
-        
+
         .limited-display-notice td span {
             display: block;
             margin: 5px 0;
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <!-- Header -->
@@ -1001,19 +1027,24 @@
                 <span style="font-size: 0.7em; font-weight: normal; ">מבית שיידט את בכמן ישראל</span>
             </h1>
             <div class="header-controls">
-                <div class="user-info" style="padding: 5px 10px; background: var(--light-bg); border-radius: 6px; margin-right: 10px;">
+                <div class="user-info"
+                    style="padding: 5px 10px; background: var(--light-bg); border-radius: 6px; margin-right: 10px;">
                     <span>👤 <span id="currentUsername">טוען...</span></span>
                     <span style="margin: 0 10px;">|</span>
                     <span id="userRole">מנהל חברה</span>
                     <span style="margin: 0 10px;">|</span>
-                    <button class="btn btn-danger" onclick="logout()" style="background: #dc3545; color: white; padding: 5px 10px; border-radius: 6px;">
+                    <button class="btn btn-danger" onclick="logout()"
+                        style="background: #dc3545; color: white; padding: 5px 10px; border-radius: 6px;">
                         🚪 התנתק
                     </button>
                 </div>
                 <div style="display: flex; gap: 5px;">
-                    <button onclick="adjustFontSize(-1)" class="btn btn-secondary btn-sm" title="הקטן פונט" style="padding: 5px 10px;">A-</button>
-                    <button onclick="adjustFontSize(0)" class="btn btn-secondary btn-sm" title="גודל רגיל" style="padding: 5px 10px;">A</button>
-                    <button onclick="adjustFontSize(1)" class="btn btn-secondary btn-sm" title="הגדל פונט" style="padding: 5px 10px;">A+</button>
+                    <button onclick="adjustFontSize(-1)" class="btn btn-secondary btn-sm" title="הקטן פונט"
+                        style="padding: 5px 10px;">A-</button>
+                    <button onclick="adjustFontSize(0)" class="btn btn-secondary btn-sm" title="גודל רגיל"
+                        style="padding: 5px 10px;">A</button>
+                    <button onclick="adjustFontSize(1)" class="btn btn-secondary btn-sm" title="הגדל פונט"
+                        style="padding: 5px 10px;">A+</button>
                 </div>
                 <div class="lang-switch">
                     <button class="btn btn-secondary" onclick="toggleLanguage()">
@@ -1082,10 +1113,12 @@
                     <button class="btn btn-primary action-btn" onclick="exportToExcel()">
                         <span data-translate="export">📥 ייצוא לאקסל</span>
                     </button>
-                    <button class="btn btn-secondary action-btn" onclick="refreshSubscribers()" title="רענן רשימת מנויים">
+                    <button class="btn btn-secondary action-btn" onclick="refreshSubscribers()"
+                        title="רענן רשימת מנויים">
                         <span>🔄 רענון</span>
                     </button>
-                    <button class="btn btn-secondary action-btn" id="reloadFullButton" onclick="reloadFullData()" style="display: none;">
+                    <button class="btn btn-secondary action-btn" id="reloadFullButton" onclick="reloadFullData()"
+                        style="display: none;">
                         <span data-translate="reloadFull">🔄 טעינה מלאה</span>
                     </button>
                 </div>
@@ -1093,9 +1126,8 @@
 
             <!-- Search and Filter -->
             <div class="search-filter-container">
-                <input type="text" class="search-box" id="searchBox" 
-                       placeholder="חיפוש לפי שם, מספר מנוי, מספר רכב..." 
-                       data-translate-placeholder="searchPlaceholder">
+                <input type="text" class="search-box" id="searchBox" placeholder="חיפוש לפי שם, מספר מנוי, מספר רכב..."
+                    data-translate-placeholder="searchPlaceholder">
                 <select class="filter-select" id="filterPresence">
                     <option value="" data-translate="allPresence">הכל</option>
                     <option value="present" data-translate="presentOnly">נוכחים בלבד</option>
@@ -1121,19 +1153,29 @@
                 <table class="subscribers-table" id="subscribersTable">
                     <thead>
                         <tr>
-                            <th data-translate="companyNum" data-sort="companyNum" class="sortable">מס' חברה <span class="sort-icon">⇅</span></th>
-                            <th data-translate="companyName" data-sort="companyName" class="sortable">שם חברה <span class="sort-icon">⇅</span></th>
-                            <th data-translate="subscriberNum" data-sort="subscriberNum" class="sortable">מס' מנוי <span class="sort-icon">⇅</span></th>
-                            <th data-translate="firstName" data-sort="firstName" class="sortable">שם פרטי <span class="sort-icon">⇅</span></th>
-                            <th data-translate="lastName" data-sort="lastName" class="sortable">שם משפחה <span class="sort-icon">⇅</span></th>
-                            <th data-translate="tagNum" data-sort="tagNum" class="sortable">מס' תג <span class="sort-icon">⇅</span></th>
-                            <th data-translate="vehicle1" data-sort="vehicle1" class="sortable">רכב 1 <span class="sort-icon">⇅</span></th>
+                            <th data-translate="companyNum" data-sort="companyNum" class="sortable">מס' חברה <span
+                                    class="sort-icon">⇅</span></th>
+                            <th data-translate="companyName" data-sort="companyName" class="sortable">שם חברה <span
+                                    class="sort-icon">⇅</span></th>
+                            <th data-translate="subscriberNum" data-sort="subscriberNum" class="sortable">מס' מנוי <span
+                                    class="sort-icon">⇅</span></th>
+                            <th data-translate="firstName" data-sort="firstName" class="sortable">שם פרטי <span
+                                    class="sort-icon">⇅</span></th>
+                            <th data-translate="lastName" data-sort="lastName" class="sortable">שם משפחה <span
+                                    class="sort-icon">⇅</span></th>
+                            <th data-translate="tagNum" data-sort="tagNum" class="sortable">מס' תג <span
+                                    class="sort-icon">⇅</span></th>
+                            <th data-translate="vehicle1" data-sort="vehicle1" class="sortable">רכב 1 <span
+                                    class="sort-icon">⇅</span></th>
                             <th data-translate="vehicle2">רכב 2</th>
                             <th data-translate="vehicle3">רכב 3</th>
-                            <th data-translate="validUntil" data-sort="validUntil" class="sortable">בתוקף עד <span class="sort-icon">⇅</span></th>
+                            <th data-translate="validUntil" data-sort="validUntil" class="sortable">בתוקף עד <span
+                                    class="sort-icon">⇅</span></th>
                             <th data-translate="profile">פרופיל</th>
-                            <th data-translate="validFrom" data-sort="validFrom" class="sortable">תחילת תוקף <span class="sort-icon">⇅</span></th>
-                            <th data-translate="presence" data-sort="presence" class="sortable">נוכחות <span class="sort-icon">⇅</span></th>
+                            <th data-translate="validFrom" data-sort="validFrom" class="sortable">תחילת תוקף <span
+                                    class="sort-icon">⇅</span></th>
+                            <th data-translate="presence" data-sort="presence" class="sortable">נוכחות <span
+                                    class="sort-icon">⇅</span></th>
                         </tr>
                     </thead>
                     <tbody id="subscribersTableBody">
@@ -1150,36 +1192,41 @@
                     <h2 class="modal-title" data-translate="editSubscriber">עריכת מנוי</h2>
                     <button class="close-btn" onclick="closeModal()">&times;</button>
                 </div>
-                
+
                 <!-- כפתורי פעולה למעלה -->
                 <div class="modal-actions-top" style="display: flex !important;">
-                    <button type="button" onclick="closeModal()" class="btn btn-secondary" id="cancelTopBtn" style="display: inline-flex !important; visibility: visible !important;">
+                    <button type="button" onclick="closeModal()" class="btn btn-secondary" id="cancelTopBtn"
+                        style="display: inline-flex !important; visibility: visible !important;">
                         <span>❌</span>
                         <span data-translate="cancel">ביטול</span>
                     </button>
-                    <button type="button" onclick="saveSubscriber()" class="btn btn-primary" id="saveTopBtn" style="display: inline-flex !important; visibility: visible !important;">
+                    <button type="button" onclick="saveSubscriber()" class="btn btn-primary" id="saveTopBtn"
+                        style="display: inline-flex !important; visibility: visible !important;">
                         <span>💾</span>
                         <span data-translate="save">שמור שינויים</span>
                     </button>
                 </div>
-                
+
                 <form id="editForm">
                     <div style="color: #666; margin-bottom: 15px; font-size: 0.9em;">
                         * שדות חובה: שם משפחה, תחילת תוקף, בתוקף עד
                     </div>
-                    
-                    
+
+
                     <div class="form-group">
                         <label for="editCompanyNum" data-translate="companyNum">מספר חברה</label>
-                        <input type="text" id="editCompanyNum" readonly style="background-color: #f0f0f0; cursor: not-allowed;">
+                        <input type="text" id="editCompanyNum" readonly
+                            style="background-color: #f0f0f0; cursor: not-allowed;">
                     </div>
                     <div class="form-group">
                         <label for="editCompanyName" data-translate="companyName">שם חברה</label>
-                        <input type="text" id="editCompanyName" readonly style="background-color: #f0f0f0; cursor: not-allowed;">
+                        <input type="text" id="editCompanyName" readonly
+                            style="background-color: #f0f0f0; cursor: not-allowed;">
                     </div>
                     <div class="form-group">
                         <label for="editSubscriberNum" data-translate="subscriberNum">מספר מנוי</label>
-                        <input type="text" id="editSubscriberNum" readonly style="background-color: #f0f0f0; cursor: not-allowed;" placeholder="יוקצה אוטומטית">
+                        <input type="text" id="editSubscriberNum" readonly
+                            style="background-color: #f0f0f0; cursor: not-allowed;" placeholder="יוקצה אוטומטית">
                         <small style="color: #666;">* המספר יוקצה אוטומטית ע"י השרת</small>
                     </div>
                     <div class="form-group">
@@ -1213,7 +1260,8 @@
                     </div>
                     <div class="form-group">
                         <label for="editValidUntil" data-translate="validUntil">בתוקף עד *</label>
-                        <input type="text" id="editValidUntil" placeholder="DD/MM/YYYY שדה חובה (מקסימום 31/12/3035)" required>
+                        <input type="text" id="editValidUntil" placeholder="DD/MM/YYYY שדה חובה (מקסימום 31/12/3035)"
+                            required>
                         <small style="color: #666;">פורמט: יום/חודש/שנה • מקסימום: 31/12/3035</small>
                     </div>
                     <div class="form-group">
@@ -1223,7 +1271,7 @@
                         </select>
                         <small style="color: #888;" id="profileHelpText">* עדכון פרופיל דורש הרשאת P</small>
                     </div>
-                    
+
                     <div class="form-group" id="emailGroup">
                         <label for="editEmail" data-translate="email">אימייל</label>
                         <input type="email" id="editEmail" placeholder="כתובת אימייל (אופציונלי)">
@@ -1241,7 +1289,7 @@
                 </form>
             </div>
         </div>
-        
+
         <!-- Transactions Modal -->
         <div class="modal" id="transactionsModal" style="display: none;">
             <div class="modal-content" style="max-width: 1200px; width: 90%;">
@@ -1249,11 +1297,12 @@
                     <h2 class="modal-title">📊 תנועות מנוי</h2>
                     <button class="close-btn" onclick="closeTransactionsModal()">&times;</button>
                 </div>
-                
-                <div class="alert alert-info" style="margin: 20px 0; padding: 15px; background: #d1ecf1; border-left: 4px solid #0c5460; color: #0c5460;">
+
+                <div class="alert alert-info"
+                    style="margin: 20px 0; padding: 15px; background: #d1ecf1; border-left: 4px solid #0c5460; color: #0c5460;">
                     <strong>הערה:</strong> בעתיד, גישה לדוח זה תהיה מוגבלת למשתמשים עם הרשאות מתאימות בלבד.
                 </div>
-                
+
                 <div style="margin: 20px 0;">
                     <label>טווח תאריכים:</label>
                     <input type="date" id="transStartDate" style="margin: 0 10px; padding: 5px;">
@@ -1262,18 +1311,22 @@
                     <button class="btn btn-primary" onclick="loadTransactions()">טען תנועות</button>
                     <button class="btn btn-secondary" onclick="exportTransactions()">📥 ייצא לאקסל</button>
                 </div>
-                
+
                 <div id="transactionsLoading" style="display: none; text-align: center; padding: 40px;">
-                    <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+                    <div class="spinner"
+                        style="border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto;">
+                    </div>
                     <p>טוען תנועות...</p>
                 </div>
-                
-                <div id="transactionsSummary" style="display: none; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                    <span style="margin-right: 20px;"><strong>סה"כ תנועות:</strong> <span id="totalTrans">0</span></span>
+
+                <div id="transactionsSummary"
+                    style="display: none; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <span style="margin-right: 20px;"><strong>סה"כ תנועות:</strong> <span
+                            id="totalTrans">0</span></span>
                     <span style="margin-right: 20px;"><strong>כניסות:</strong> <span id="totalEntries">0</span></span>
                     <span style="margin-right: 20px;"><strong>יציאות:</strong> <span id="totalExits">0</span></span>
                 </div>
-                
+
                 <div id="transactionsTableContainer" style="max-height: 500px; overflow-y: auto; display: none;">
                     <table class="subscribers-table" style="width: 100%;">
                         <thead>
@@ -1289,13 +1342,13 @@
                         </tbody>
                     </table>
                 </div>
-                
+
                 <div id="noTransactions" style="display: none; text-align: center; padding: 40px; color: #666;">
                     <p>לא נמצאו תנועות בתקופה המבוקשת</p>
                 </div>
             </div>
         </div>
-        
+
         <!-- Footer -->
         <div class="footer">
             <div class="company">שיידט את בכמן ישראל</div>
@@ -1307,7 +1360,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
@@ -1480,17 +1533,17 @@
         let currentCompany = null;
         let currentSubscribers = [];
         let editingSubscriber = null;
-        
+
         // Get user permissions from window variable (set by server)
         const getUserPermissions = () => window.userPermissions || '';
-        
+
         // Check user permission
         // G-guest, N-New, P-profile, R-report
         function checkUserPermission(action) {
             const permissions = getUserPermissions();
             // Checking permission
-            
-            switch(action) {
+
+            switch (action) {
                 case 'add_subscriber':
                     return permissions.includes('N'); // New subscriber
                 case 'add_guest':
@@ -1507,12 +1560,12 @@
                     return false;
             }
         }
-        
+
         // Update button states based on permissions
         function updateButtonPermissions() {
             const permissions = getUserPermissions();
             // Updating buttons based on permissions
-            
+
             // Add New Subscriber button
             const addNewBtn = document.querySelector('button[onclick="addNewSubscriber()"]');
             if (addNewBtn) {
@@ -1528,7 +1581,7 @@
                     addNewBtn.style.cursor = 'pointer';
                 }
             }
-            
+
             // Add Guest button
             const addGuestBtn = document.querySelector('button[onclick="addGuestSubscriber()"]');
             if (addGuestBtn) {
@@ -1544,7 +1597,7 @@
                     addGuestBtn.style.cursor = 'pointer';
                 }
             }
-            
+
             // Reports button
             const reportsBtn = document.querySelector('button[onclick="openReportsModal()"]');
             if (reportsBtn) {
@@ -1560,7 +1613,7 @@
                     reportsBtn.style.cursor = 'pointer';
                 }
             }
-            
+
             // Export button - always enabled
             const exportBtn = document.querySelector('button[onclick="exportToExcel()"]');
             if (exportBtn) {
@@ -1569,17 +1622,17 @@
                 exportBtn.style.opacity = '1';
                 exportBtn.style.cursor = 'pointer';
             }
-            
+
             // Update vehicle fields based on permissions (1, 2, or 3)
             const vehicle1 = document.getElementById('editVehicle1');
             const vehicle2 = document.getElementById('editVehicle2');
             const vehicle3 = document.getElementById('editVehicle3');
-            
+
             // Check for vehicle permissions (1, 2, or 3)
             const hasVehicle1 = permissions.includes('1') || permissions.includes('2') || permissions.includes('3');
             const hasVehicle2 = permissions.includes('2') || permissions.includes('3');
             const hasVehicle3 = permissions.includes('3');
-            
+
             // Apply vehicle field permissions
             if (vehicle1) {
                 if (!hasVehicle1) {
@@ -1594,7 +1647,7 @@
                     vehicle1.title = '';
                 }
             }
-            
+
             if (vehicle2) {
                 if (!hasVehicle2) {
                     vehicle2.disabled = true;
@@ -1608,7 +1661,7 @@
                     vehicle2.title = '';
                 }
             }
-            
+
             if (vehicle3) {
                 if (!hasVehicle3) {
                     vehicle3.disabled = true;
@@ -1622,7 +1675,7 @@
                     vehicle3.title = '';
                 }
             }
-            
+
             // Update tag field based on T permission
             const tagField = document.getElementById('editTagNum');
             if (tagField) {
@@ -1643,29 +1696,29 @@
         // Sorting variables
         let currentSortField = null;
         let currentSortDirection = 'asc';
-        
+
         // Initialize application
         function init() {
             loadCompanies();
             setupEventListeners();
             setupSorting();
             updateUIBasedOnPermissions();
-            
+
             // Load saved font size
             const savedFontSize = localStorage.getItem('fontSize');
             if (savedFontSize) {
                 changeFontSize(savedFontSize);
             }
-            
+
             // Check if only one company
             if (mockCompanies.length === 1) {
                 selectCompany(mockCompanies[0]);
             }
-            
+
             // Ensure modal buttons are always visible
             ensureModalButtonsVisible();
         }
-        
+
         // Function to ensure modal buttons remain visible
         function ensureModalButtonsVisible() {
             // Monitor the modal for changes
@@ -1678,7 +1731,7 @@
                     }
                 });
             });
-            
+
             const modal = document.getElementById('editModal');
             if (modal) {
                 modalObserver.observe(modal, {
@@ -1688,7 +1741,7 @@
                     attributeFilter: ['style', 'class']
                 });
             }
-            
+
             // Also check periodically
             setInterval(() => {
                 const topButtons = document.querySelectorAll('.modal-actions-top .btn');
@@ -1700,33 +1753,33 @@
                 });
             }, 500);
         }
-        
+
         // Force show modal buttons
         function forceShowModalButtons() {
             // Get buttons
             const cancelBtn = document.getElementById('cancelTopBtn');
             const saveBtn = document.getElementById('saveTopBtn');
             const modalActions = document.querySelector('.modal-actions-top');
-            
+
             // Force display modal actions container
             if (modalActions) {
                 modalActions.style.cssText = 'display: flex !important; visibility: visible !important; opacity: 1 !important; position: sticky !important; top: 0 !important; z-index: 100 !important;';
             }
-            
+
             // Force display cancel button
             if (cancelBtn) {
                 cancelBtn.style.cssText = 'display: inline-flex !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 1000 !important;';
                 cancelBtn.removeAttribute('hidden');
                 cancelBtn.removeAttribute('disabled');
             }
-            
+
             // Force display save button
             if (saveBtn) {
                 saveBtn.style.cssText = 'display: inline-flex !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 1000 !important;';
                 saveBtn.removeAttribute('hidden');
                 saveBtn.removeAttribute('disabled');
             }
-            
+
             // Double check after a short delay
             setTimeout(() => {
                 const btns = document.querySelectorAll('#cancelTopBtn, #saveTopBtn');
@@ -1739,7 +1792,7 @@
                 });
             }, 100);
         }
-        
+
         // Update UI based on user permissions
         function updateUIBasedOnPermissions() {
             // Update user role display
@@ -1749,15 +1802,15 @@
                 'user': 'משתמש רגיל'
             };
             document.getElementById('userRole').textContent = roleText[userPermissions.role] || 'משתמש';
-            
+
             // Hide/show buttons based on permissions
             const addButton = document.querySelector('[onclick="addNewSubscriber()"]');
             const exportButton = document.querySelector('[onclick="exportToExcel()"]');
-            
+
             if (addButton && !userPermissions.canAddSubscriber) {
                 addButton.style.display = 'none';
             }
-            
+
             if (exportButton && !userPermissions.canExport) {
                 exportButton.style.display = 'none';
             }
@@ -1769,10 +1822,10 @@
             if (window.parkingUIXML) {
                 return;
             }
-            
+
             const companyList = document.getElementById('companyList');
             companyList.innerHTML = '';
-            
+
             mockCompanies.forEach(company => {
                 const card = document.createElement('div');
                 card.className = 'company-card';
@@ -1791,23 +1844,23 @@
             if (window.parkingUIXML) {
                 return;
             }
-            
+
             currentCompany = company;
             document.querySelectorAll('.company-card').forEach(card => {
                 card.classList.remove('selected');
             });
             event && event.currentTarget && event.currentTarget.classList.add('selected');
-            
+
             // Hide company selector if only one company
             if (mockCompanies.length === 1) {
                 document.getElementById('companySelector').style.display = 'none';
             }
-            
+
             // Show main content
             document.getElementById('mainContent').style.display = 'block';
             document.getElementById('companyName').textContent = `- ${company.name}`;
-            
-            
+
+
             // Load subscribers
             loadSubscribers();
         }
@@ -1818,10 +1871,10 @@
             if (window.parkingUIXML) {
                 return;
             }
-            
+
             document.getElementById('loadingState').style.display = 'block';
             document.getElementById('tableContainer').style.display = 'none';
-            
+
             // Simulate API call
             setTimeout(() => {
                 currentSubscribers = mockSubscribers.filter(s => s.companyNum === currentCompany.id);
@@ -1837,10 +1890,10 @@
             if (window.parkingUIXML) {
                 return;
             }
-            
+
             const tbody = document.getElementById('subscribersTableBody');
             tbody.innerHTML = '';
-            
+
             subscribers.forEach(subscriber => {
                 const row = document.createElement('tr');
                 row.onclick = (e) => {
@@ -1849,10 +1902,10 @@
                         editSubscriber(subscriber);
                     }
                 };
-                
+
                 const validDate = new Date(subscriber.validUntil);
                 const isExpired = validDate < new Date();
-                
+
                 row.innerHTML = `
                     <td>${subscriber.companyNum}</td>
                     <td>${subscriber.companyName}</td>
@@ -1875,10 +1928,10 @@
         // Edit subscriber
         async function editSubscriber(subscriber) {
             // Editing subscriber
-            
+
             // Always allow viewing/editing subscriber details
             // Permission check will be done when saving (for profile updates)
-            
+
             // IMPORTANT: Store the subscriber globally for saveSubscriber to check
             // Make sure we have a valid subscriber object
             if (!subscriber || typeof subscriber !== 'object') {
@@ -1886,11 +1939,11 @@
                 showToast('❌ שגיאה בטעינת נתוני המנוי', 'error');
                 return;
             }
-            
+
             window.currentEditingSubscriber = subscriber;
             editingSubscriber = subscriber;
             // Set editing subscriber data
-            
+
             // CRITICAL: Store the edit mode in the modal itself
             const modal = document.getElementById('editModal');
             if (modal) {
@@ -1898,15 +1951,15 @@
                 modal.setAttribute('data-subscriber-num', subscriber.subscriberNum);
                 // Set modal to update mode
             }
-            
+
             // Force show buttons
             forceShowModalButtons();
-            
+
             // Load profiles from company for existing subscriber too
             if (window.parkingUIXML && window.parkingUIXML.loadUsageProfiles) {
                 await window.parkingUIXML.loadUsageProfiles(false); // false = existing subscriber
             }
-            
+
             // Populate form - handle company name properly
             document.getElementById('editCompanyNum').value = subscriber.companyNum;
             // Fix company name - use the correct value from subscriber
@@ -1923,23 +1976,23 @@
             // Use xValidUntil if validUntil is empty (for dates from consumer details)
             const validFrom = subscriber.validFrom || subscriber.xValidFrom || '';
             const validUntil = subscriber.validUntil || subscriber.xValidUntil || '';
-            
+
             // Date mapping completed
-            
+
             document.getElementById('editValidFrom').value = formatDateForDisplay(validFrom) || '';
             document.getElementById('editValidUntil').value = formatDateForDisplay(validUntil) || '';
-            
 
-            
+
+
             // Remove guest mode class for regular edit
             document.getElementById('editModal').classList.remove('guest-mode');
-            
+
             // Set profile for existing subscriber - profiles already loaded from company
             const profileSelect = document.getElementById('editProfile');
-            
+
             // Get the subscriber's current profile
             const profileId = subscriber.profileId || subscriber.profile || subscriber.extCardProfile || subscriber.identification?.usageProfile?.id || '1';
-            
+
             // Wait for profiles to be loaded
             setTimeout(() => {
                 // Set the current profile as selected (if it exists in the options)
@@ -1947,12 +2000,12 @@
                     profileSelect.value = profileId;
                 } else {
                     // If the current profile is not in the company profiles, we need to add it
-                    const profileName = subscriber.profileName || 
-                                       subscriber.identification?.usageProfile?.name ||
-                                       (profileId === '1' ? 'כול החניונים' : 
-                                        profileId === '2' ? 'חניון מנויים' :
-                                        `פרופיל ${profileId}`);
-                    
+                    const profileName = subscriber.profileName ||
+                        subscriber.identification?.usageProfile?.name ||
+                        (profileId === '1' ? 'כול החניונים' :
+                            profileId === '2' ? 'חניון מנויים' :
+                                `פרופיל ${profileId}`);
+
                     const option = document.createElement('option');
                     option.value = profileId;
                     option.setAttribute('data-profile-name', profileName);
@@ -1961,36 +2014,36 @@
                     profileSelect.value = profileId;
                 }
             }, 100);
-            
+
             // No additional fallback needed - we already handle it above
-            
+
             // Check if user has permission to update profile
             const permissions = getUserPermissions();
             const canUpdateProfile = permissions.includes('P');
-            
+
             profileSelect.disabled = !canUpdateProfile;
             if (!canUpdateProfile) {
-            profileSelect.style.backgroundColor = '#f0f0f0';
-            profileSelect.style.color = '#888';
-            profileSelect.style.cursor = 'not-allowed';
+                profileSelect.style.backgroundColor = '#f0f0f0';
+                profileSelect.style.color = '#888';
+                profileSelect.style.cursor = 'not-allowed';
             } else {
                 profileSelect.style.backgroundColor = '';
                 profileSelect.style.color = '';
                 profileSelect.style.cursor = '';
             }
-            
+
             // Update help text
             const profileHelpText = document.getElementById('profileHelpText');
             if (profileHelpText) {
                 profileHelpText.textContent = canUpdateProfile ? '* ניתן לעדכון פרופיל' : '* עדכון פרופיל דורש הרשאת P';
                 profileHelpText.style.color = canUpdateProfile ? '#666' : '#888';
             }
-            
+
             document.getElementById('editEmail').value = subscriber.email || '';
-            
+
             // Show modal
             document.getElementById('editModal').classList.add('show');
-            
+
             // Ensure buttons are visible
             setTimeout(() => {
                 const topButtons = document.querySelectorAll('.modal-actions-top .btn');
@@ -1999,14 +2052,14 @@
                     btn.style.visibility = 'visible';
                     btn.style.opacity = '1';
                 });
-                
+
                 const modalActions = document.querySelector('.modal-actions-top');
                 if (modalActions) {
                     modalActions.style.display = 'flex';
                     modalActions.style.visibility = 'visible';
                     modalActions.style.opacity = '1';
                 }
-                
+
                 // Update field permissions after modal is open
                 updateButtonPermissions();
             }, 10);
@@ -2016,11 +2069,11 @@
         function addGuestSubscriber() {
             addNewSubscriber(true);
         }
-        
+
         // Open reports modal
         function openReportsModal() {
             // Opening reports modal
-            
+
             // Check user permissions
             if (!checkUserPermission('view_reports')) {
                 showToast('אין לך הרשאה לצפות בדוחות (דרושה הרשאת R)', 'error');
@@ -2061,20 +2114,20 @@
                 `;
                 document.body.insertAdjacentHTML('beforeend', modalHtml);
             }
-            
+
             // Load subscribers for current company
             // Loading report subscribers
             loadReportSubscribers();
-            
+
             // Showing modal
             document.getElementById('reportsModal').classList.add('show');
         }
-        
+
         function closeReportsModal() {
             const modal = document.getElementById('reportsModal');
             if (modal) modal.classList.remove('show');
         }
-        
+
         function loadReportSubscribers() {
             // Starting to load subscribers for reports
             const list = document.getElementById('reportSubscriberList');
@@ -2082,10 +2135,10 @@
                 console.error('[loadReportSubscribers] List element not found');
                 return;
             }
-            
+
             // Get subscribers from current company only
             let subscribers = [];
-            
+
             // Try to get from parkingUIXML first (most reliable)
             if (window.parkingUIXML && window.parkingUIXML.subscribers) {
                 subscribers = window.parkingUIXML.subscribers;
@@ -2096,7 +2149,7 @@
             } else {
                 // No subscribers found
             }
-            
+
             // Get current company
             let currentCompanyNum = null;
             if (window.parkingUIXML && window.parkingUIXML.currentContract) {
@@ -2106,9 +2159,9 @@
                 currentCompanyNum = currentCompany.id;
                 // Current company (fallback)
             }
-            
+
             // Total subscribers loaded
-            
+
             list.innerHTML = `
                 <table style="width: 100%; border-collapse: collapse;">
                     <thead>
@@ -2137,20 +2190,20 @@
                     </tbody>
                 </table>
             `;
-            
+
             // Loaded subscribers to report list
         }
-        
+
         function filterReportSubscribers() {
             const searchText = document.getElementById('reportSearchBox').value.toLowerCase();
             const rows = document.querySelectorAll('.report-subscriber-row');
             // Filtering subscribers
-            
+
             let visibleCount = 0;
             rows.forEach(row => {
                 const name = (row.getAttribute('data-name') || '').toLowerCase();
                 const id = (row.getAttribute('data-id') || '').toLowerCase();
-                
+
                 if (name.includes(searchText) || id.includes(searchText)) {
                     row.style.display = '';
                     visibleCount++;
@@ -2158,47 +2211,47 @@
                     row.style.display = 'none';
                 }
             });
-            
+
             // Filtered results
         }
-        
+
         function searchAndSelectSubscriber() {
             const searchBox = document.getElementById('reportSearchBox');
             const searchText = searchBox.value.trim();
-            
+
             if (!searchText) {
                 showToast('⚠️ יש להזין מספר מנוי או שם לחיפוש', 'warning');
                 return;
             }
-            
+
             // Try to find exact match by subscriber number first
             const rows = document.querySelectorAll('.report-subscriber-row');
             let foundRow = null;
-            
+
             rows.forEach(row => {
                 const id = row.getAttribute('data-id');
                 const name = row.getAttribute('data-name');
-                
+
                 // Exact match by subscriber number
                 if (id === searchText) {
                     foundRow = row;
                     return;
                 }
-                
+
                 // Partial match by name (if no exact ID match found)
                 if (!foundRow && name.toLowerCase().includes(searchText.toLowerCase())) {
                     foundRow = row;
                 }
             });
-            
+
             if (foundRow) {
                 // Highlight the found row
                 rows.forEach(r => r.style.background = '');
                 foundRow.style.background = '#e3f2fd';
-                
+
                 // Scroll to the found row
                 foundRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                
+
                 // If exact match, auto-select
                 const id = foundRow.getAttribute('data-id');
                 if (id === searchText) {
@@ -2209,28 +2262,28 @@
                 showToast('⚠️ לא נמצא מנוי מתאים', 'warning');
             }
         }
-        
+
         function selectSubscriberForReport(companyNum, subscriberNum) {
             // Selected subscriber for report
             closeReportsModal();
-            
+
             // Call viewTransactions to show the report
             viewTransactions(companyNum, subscriberNum);
         }
-        
-                // Store current report subscriber
+
+        // Store current report subscriber
         let currentReportSubscriber = null;
-        
+
         // View transactions report for a subscriber
         async function viewTransactions(companyNum, subscriberNum) {
             // Loading transactions
-            
+
             // Store subscriber number for later use
             currentReportSubscriber = subscriberNum;
-            
+
             // Show loading
             showToast('🔄 טוען דוח תנועות...', 'info');
-            
+
             // Create modal for report
             let modal = document.getElementById('transactionsModal');
             if (!modal) {
@@ -2267,37 +2320,37 @@
                 document.body.insertAdjacentHTML('beforeend', modalHtml);
                 modal = document.getElementById('transactionsModal');
             }
-            
+
             // Update title
             document.getElementById('reportTitle').textContent = `דוח תנועות - מנוי ${subscriberNum}`;
-            
+
             // Show modal
             modal.classList.add('show');
-            
+
             // Set default dates (last month)
             const today = new Date();
             const lastMonth = new Date();
             lastMonth.setMonth(lastMonth.getMonth() - 1);
-            
+
             document.getElementById('reportMinDate').valueAsDate = lastMonth;
             document.getElementById('reportMaxDate').valueAsDate = today;
-            
+
             // Load report data
             try {
                 const ui = window.parkingUIXML || window.parkingUI;
                 if (!ui || !ui.getSubscriberReport) {
                     throw new Error('Report function not available');
                 }
-                
+
                 // Format dates for API
                 const minDate = lastMonth.toISOString().split('T')[0];
                 const maxDate = today.toISOString().split('T')[0];
-                
+
                 const result = await ui.getSubscriberReport(subscriberNum, minDate, maxDate);
-                
+
                 if (result.success) {
                     displayTransactionsReport(result.data, result.summary);
-            } else {
+                } else {
                     throw new Error(result.error || 'Failed to load report');
                 }
             } catch (error) {
@@ -2310,10 +2363,10 @@
                 showToast('❌ שגיאה בטעינת הדוח', 'error');
             }
         }
-        
+
         function displayTransactionsReport(transactions, summary) {
             const content = document.getElementById('reportContent');
-            
+
             if (!transactions || transactions.length === 0) {
                 content.innerHTML = `
                     <div style="text-align: center; padding: 40px;">
@@ -2323,7 +2376,7 @@
                 `;
                 return;
             }
-            
+
             let html = `
                 <div style="padding: 10px; background: #f0f0f0; margin-bottom: 10px;">
                     <strong>סה"כ תנועות:</strong> ${summary.total} | 
@@ -2342,7 +2395,7 @@
                     </thead>
                     <tbody>
             `;
-            
+
             transactions.forEach(trans => {
                 html += `
                     <tr>
@@ -2355,40 +2408,40 @@
                     </tr>
                 `;
             });
-            
+
             html += `
                     </tbody>
                 </table>
             `;
-            
+
             content.innerHTML = html;
         }
-        
+
         function closeTransactionsModal() {
             const modal = document.getElementById('transactionsModal');
             if (modal) modal.classList.remove('show');
         }
-        
+
         async function refreshReport() {
             if (!currentReportSubscriber) {
                 showToast('לא נבחר מנוי', 'error');
                 return;
             }
-            
+
             const minDate = document.getElementById('reportMinDate').value;
             const maxDate = document.getElementById('reportMaxDate').value;
-            
+
             document.getElementById('reportContent').innerHTML = `
                 <div style="text-align: center; padding: 40px;">
                     <div class="spinner"></div>
                     <p>טוען נתונים...</p>
                 </div>
             `;
-            
+
             try {
                 const ui = window.parkingUIXML || window.parkingUI;
                 const result = await ui.getSubscriberReport(currentReportSubscriber, minDate, maxDate);
-                
+
                 if (result.success) {
                     displayTransactionsReport(result.data, result.summary);
                 } else {
@@ -2402,7 +2455,7 @@
                 `;
             }
         }
-        
+
         function exportReportToCSV() {
             // Get current displayed data
             const table = document.querySelector('#reportContent table');
@@ -2410,18 +2463,18 @@
                 showToast('אין נתונים לייצוא', 'warning');
                 return;
             }
-            
+
             // Create CSV content
             let csv = '\ufeff'; // BOM for Hebrew
             csv += 'תאריך ושעה,סוג פעולה,כניסה,יציאה,מכשיר,סכום\n';
-            
+
             const rows = table.querySelectorAll('tbody tr');
             rows.forEach(row => {
                 const cells = row.querySelectorAll('td');
                 const rowData = Array.from(cells).map(cell => `"${cell.textContent}"`).join(',');
                 csv += rowData + '\n';
             });
-            
+
             // Download CSV
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
@@ -2432,52 +2485,52 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             showToast('✅ הדוח יוצא בהצלחה', 'success');
         }
-        
+
         // Guest date handlers for week limitation
         let guestDateChangeHandler = null;
-        
+
         function setupGuestDateHandlers() {
             const validFromInput = document.getElementById('editValidFrom');
             const validUntilInput = document.getElementById('editValidUntil');
-            
+
             // Handler function for date changes
-            guestDateChangeHandler = function() {
+            guestDateChangeHandler = function () {
                 const fromValue = validFromInput.value;
                 if (!fromValue) return;
-                
+
                 // Parse the date (DD/MM/YYYY format)
                 const parts = fromValue.split('/');
                 if (parts.length !== 3) return;
-                
+
                 const day = parseInt(parts[0]);
                 const month = parseInt(parts[1]) - 1; // JavaScript months are 0-based
                 const year = parseInt(parts[2]);
-                
+
                 if (isNaN(day) || isNaN(month) || isNaN(year)) return;
-                
+
                 const fromDate = new Date(year, month, day);
-                
+
                 // Get day of week (0 = Sunday, 6 = Saturday)
                 const dayOfWeek = fromDate.getDay();
-                
+
                 // Calculate days until Saturday (end of week)
-                const daysUntilSaturday = (6 - dayOfWeek + 1) % 1 || 1; // If it's Saturday, set to same day
-                
+                const daysUntilSaturday = 6 - dayOfWeek;
+
                 // Calculate end date (max Saturday of same week)
                 const maxEndDate = new Date(fromDate);
                 maxEndDate.setDate(fromDate.getDate() + daysUntilSaturday);
-                
+
                 // Format the date back to DD/MM/YYYY
                 const endDay = String(maxEndDate.getDate()).padStart(2, '0');
                 const endMonth = String(maxEndDate.getMonth() + 1).padStart(2, '0');
                 const endYear = maxEndDate.getFullYear();
-                
+
                 // Set the valid until date to the same week's Saturday
                 validUntilInput.value = `${endDay}/${endMonth}/${endYear}`;
-                
+
                 // Add a help text about the week limitation
                 let helpText = document.getElementById('guestWeekHelp');
                 if (!helpText) {
@@ -2490,86 +2543,86 @@
                 }
                 helpText.textContent = `* אורח מוגבל לשבוע הנוכחי (כרגע עד מחר   ${endDay}/${endMonth})`;
             };
-            
+
             // Add event listener
             validFromInput.addEventListener('change', guestDateChangeHandler);
             validFromInput.addEventListener('blur', guestDateChangeHandler);
-            
+
             // Also limit the until date input
-            validUntilInput.addEventListener('change', function() {
+            validUntilInput.addEventListener('change', function () {
                 const fromValue = validFromInput.value;
                 const untilValue = validUntilInput.value;
-                
+
                 if (!fromValue || !untilValue) return;
-                
+
                 // Parse both dates
                 const fromParts = fromValue.split('/');
                 const untilParts = untilValue.split('/');
-                
+
                 if (fromParts.length !== 3 || untilParts.length !== 3) return;
-                
+
                 const fromDate = new Date(
-                    parseInt(fromParts[2]), 
-                    parseInt(fromParts[1]) - 1, 
+                    parseInt(fromParts[2]),
+                    parseInt(fromParts[1]) - 1,
                     parseInt(fromParts[0])
                 );
-                
+
                 const untilDate = new Date(
-                    parseInt(untilParts[2]), 
-                    parseInt(untilParts[1]) - 1, 
+                    parseInt(untilParts[2]),
+                    parseInt(untilParts[1]) - 1,
                     parseInt(untilParts[0])
                 );
-                
+
                 // Calculate the Saturday of the from date's week
                 const dayOfWeek = fromDate.getDay();
-                const daysUntilSaturday = (6 - dayOfWeek + 1) % 1 || 1;
+                const daysUntilSaturday = 6 - dayOfWeek;
                 const maxEndDate = new Date(fromDate);
                 maxEndDate.setDate(fromDate.getDate() + daysUntilSaturday);
-                
+
                 // If the selected until date is after the week's Saturday, reset it
                 if (untilDate > maxEndDate) {
                     const endDay = String(maxEndDate.getDate()).padStart(2, '0');
                     const endMonth = String(maxEndDate.getMonth() + 1).padStart(2, '0');
                     const endYear = maxEndDate.getFullYear();
                     validUntilInput.value = `${endDay}/${endMonth}/${endYear}`;
-                    
+
                     showToast('⚠️ אורח מוגבל לשבוע הנוכחי בלבד', 'warning');
                 }
             });
-            
+
             // Trigger initial calculation
             if (validFromInput.value) {
                 guestDateChangeHandler();
             }
         }
-        
+
         function removeGuestDateHandlers() {
             const validFromInput = document.getElementById('editValidFrom');
             const validUntilInput = document.getElementById('editValidUntil');
-            
+
             // Remove event listeners
             if (guestDateChangeHandler) {
                 validFromInput.removeEventListener('change', guestDateChangeHandler);
                 validFromInput.removeEventListener('blur', guestDateChangeHandler);
             }
-            
+
             // Remove help text
             const helpText = document.getElementById('guestWeekHelp');
             if (helpText) {
                 helpText.remove();
             }
-            
+
             // Clone and replace to remove all event listeners
             const newUntilInput = validUntilInput.cloneNode(true);
             validUntilInput.parentNode.replaceChild(newUntilInput, validUntilInput);
         }
-        
+
         // Refresh subscribers list (reload current company)
         async function refreshSubscribers() {
             if (window.parkingUIXML && window.parkingUIXML.currentContract) {
                 const currentCompany = window.parkingUIXML.currentContract;
                 showToast('🔄 מרענן רשימת מנויים...', 'info');
-                
+
                 try {
                     // Reload subscribers for current company
                     await window.parkingUIXML.loadSubscribers();
@@ -2582,44 +2635,44 @@
                 showToast('⚠️ יש לבחור חברה תחילה', 'warning');
             }
         }
-        
+
         // Add new subscriber
         async function addNewSubscriber(isGuest = false) {
             // Check user permissions
             const requiredPermission = isGuest ? 'add_guest' : 'add_subscriber';
             if (!checkUserPermission(requiredPermission)) {
-                const message = isGuest ? 
-                    'אין לך הרשאה להוסיף אורחים (דרושה הרשאת G)' : 
+                const message = isGuest ?
+                    'אין לך הרשאה להוסיף אורחים (דרושה הרשאת G)' :
                     'אין לך הרשאה להוסיף מנויים חדשים (דרושה הרשאת N)';
                 showToast(message, 'error');
                 return;
             }
-            
+
             // Get current company from parkingUIXML if available, otherwise use global
             let companyInfo = currentCompany;
             if (window.parkingUIXML && window.parkingUIXML.currentContract) {
                 companyInfo = window.parkingUIXML.currentContract;
             }
-            
+
             if (!companyInfo) {
                 showToast('⚠️ יש לבחור חברה תחילה', 'error');
                 return;
             }
-            
+
             // Load usage profiles from server if available (new subscriber - enabled)
             if (window.parkingUIXML && window.parkingUIXML.loadUsageProfiles) {
                 await window.parkingUIXML.loadUsageProfiles(true); // true = new subscriber
             }
-            
+
             // Get today's date for start
             const today = new Date();
             const todayStr = formatDateForDisplay(today.toISOString().split('T')[0]);
-            
+
             // Get tomorrow's date for end
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             const tomorrowStr = formatDateForDisplay(tomorrow.toISOString().split('T')[0]);
-            
+
             // Default dates
             let defaultStartDateStr;
             let defaultEndDateStr;
@@ -2633,11 +2686,11 @@
                 const currentYear = new Date().getFullYear();
                 defaultEndDateStr = `31/12/${currentYear}`;
             }
-            
+
             editingSubscriber = null; // New subscriber
             window.currentEditingSubscriber = null; // Clear global reference for new subscriber
             // Cleared editing subscriber for new subscriber
-            
+
             // CRITICAL: Store the edit mode in the modal itself
             const modal = document.getElementById('editModal');
             if (modal) {
@@ -2645,10 +2698,10 @@
                 modal.removeAttribute('data-subscriber-num');
                 // Set modal to new mode
             }
-            
+
             // Force show buttons
             forceShowModalButtons();
-            
+
             // Clear form
             document.getElementById('editCompanyNum').value = companyInfo.id || '';
             document.getElementById('editCompanyName').value = companyInfo.name || companyInfo.companyName || '';
@@ -2672,7 +2725,7 @@
             // Profile will be set by loadUsageProfiles based on company profiles
             // document.getElementById('editProfile').value = '1'; // Will be set automatically
             document.getElementById('editEmail').value = '';
-            
+
             // If guest, disable vehicle 2 and 3
             if (isGuest) {
                 document.getElementById('editVehicle2').disabled = true;
@@ -2681,10 +2734,10 @@
                 document.getElementById('editVehicle3').style.opacity = '0.5';
                 document.getElementById('editVehicle2').style.cursor = 'not-allowed';
                 document.getElementById('editVehicle3').style.cursor = 'not-allowed';
-                
+
                 // Add guest mode indicator to modal
                 document.getElementById('editModal').classList.add('guest-mode');
-                
+
                 // For guest - profile can be selected but default to 2
                 const profileSelect = document.getElementById('editProfile');
                 // If profile 2 exists, select it
@@ -2694,17 +2747,17 @@
                         break;
                     }
                 }
-                
+
                 // Guest can choose profile but defaults to 2
                 profileSelect.disabled = false;
-                
+
                 // Update help text for guest
                 const profileHelpText = document.getElementById('profileHelpText');
                 if (profileHelpText) {
                     profileHelpText.textContent = '* אורח - ברירת מחדל פרופיל 2';
                     profileHelpText.style.color = '#666';
                 }
-                
+
                 // Setup guest date handlers for week limitation
                 setupGuestDateHandlers();
             } else {
@@ -2712,20 +2765,20 @@
                 document.getElementById('editVehicle3').disabled = false;
                 // Keep subscriber number readonly - always auto-generated
                 document.getElementById('editSubscriberNum').readOnly = true;
-                
+
                 // Remove guest mode indicator
                 document.getElementById('editModal').classList.remove('guest-mode');
-                
+
                 // Remove guest date handlers
                 removeGuestDateHandlers();
-                
+
                 // New subscriber can always choose profile
                 const profileSelect = document.getElementById('editProfile');
                 profileSelect.disabled = false;
                 profileSelect.style.backgroundColor = '';
                 profileSelect.style.color = '';
                 profileSelect.style.cursor = '';
-                
+
                 // Update help text for new subscriber
                 const profileHelpText = document.getElementById('profileHelpText');
                 if (profileHelpText) {
@@ -2733,10 +2786,10 @@
                     profileHelpText.style.color = '#666';
                 }
             }
-            
+
             // Show modal
             document.getElementById('editModal').classList.add('show');
-            
+
             // Ensure buttons are visible
             setTimeout(() => {
                 const topButtons = document.querySelectorAll('.modal-actions-top .btn');
@@ -2745,14 +2798,14 @@
                     btn.style.visibility = 'visible';
                     btn.style.opacity = '1';
                 });
-                
+
                 const modalActions = document.querySelector('.modal-actions-top');
                 if (modalActions) {
                     modalActions.style.display = 'flex';
                     modalActions.style.visibility = 'visible';
                     modalActions.style.opacity = '1';
                 }
-                
+
                 // Update field permissions after modal is open
                 updateButtonPermissions();
             }, 10);
@@ -2765,16 +2818,16 @@
                 modal.classList.remove('show');
                 editingSubscriber = null;
                 window.currentEditingSubscriber = null;  // Clear global reference too
-                
+
                 // Clear modal data attributes
                 modal.removeAttribute('data-edit-mode');
                 modal.removeAttribute('data-subscriber-num');
-                
+
                 // Cleared editing subscriber
                 // Cleared modal data attributes
             }
         }
-        
+
         // Function to reload full data for large companies
         async function reloadFullData() {
             const ui = window.parkingUIXML || window.parkingUI;
@@ -2782,10 +2835,10 @@
                 alert('אנא בחר חברה תחילה');
                 return;
             }
-            
+
             // Show loading notification
             ui.showNotification('🔄 טוען את כל נתוני המנויים...', 'info');
-            
+
             try {
                 // Force reload with full details
                 await ui.loadSubscribers(true); // Force full reload
@@ -2800,27 +2853,27 @@
         function setupEventListeners() {
             // Search functionality
             document.getElementById('searchBox').addEventListener('input', filterSubscribers);
-            
+
             // Filter listeners - trigger filtering when changed
             document.getElementById('filterPresence').addEventListener('change', () => {
                 filterSubscribers();
             });
-            
+
             document.getElementById('filterDate').addEventListener('change', () => {
                 filterSubscribers();
             });
-            
+
             // Edit form submit
-            document.getElementById('editForm').addEventListener('submit', function(e) {
+            document.getElementById('editForm').addEventListener('submit', function (e) {
                 e.preventDefault();
                 saveSubscriber();
             });
-            
+
             // Close modal on outside click
             // Modal backdrop click to close - fixed to prevent accidental closing
             const editModal = document.getElementById('editModal');
             if (editModal) {
-                editModal.addEventListener('click', function(e) {
+                editModal.addEventListener('click', function (e) {
                     // Only close if clicking on the backdrop itself, not on modal content
                     if (e.target === this && e.target.id === 'editModal') {
                         closeModal();
@@ -2834,11 +2887,11 @@
             const searchTerm = document.getElementById('searchBox').value.toLowerCase();
             const presenceFilter = document.getElementById('filterPresence').value;
             const dateFilter = document.getElementById('filterDate').value;
-            
+
             // Get subscribers from UI integration - includes full details
             const ui = window.parkingUIXML || window.parkingUI;
             let filtered = ui && ui.subscribers ? ui.subscribers : currentSubscribers;
-            
+
             // Search filter
             if (searchTerm) {
                 filtered = filtered.filter(s => {
@@ -2849,17 +2902,17 @@
                     const vehicle2 = (s.vehicle2 || s.lpn2 || '');
                     const vehicle3 = (s.vehicle3 || s.lpn3 || '');
                     const tagNum = (s.tagNum || s.cardno || '').toLowerCase();
-                    
+
                     return firstName.includes(searchTerm) ||
-                           lastName.includes(searchTerm) ||
-                           subscriberNum.includes(searchTerm) ||
-                           vehicle1.includes(searchTerm) ||
-                           vehicle2.includes(searchTerm) ||
-                           vehicle3.includes(searchTerm) ||
-                           tagNum.includes(searchTerm);
+                        lastName.includes(searchTerm) ||
+                        subscriberNum.includes(searchTerm) ||
+                        vehicle1.includes(searchTerm) ||
+                        vehicle2.includes(searchTerm) ||
+                        vehicle3.includes(searchTerm) ||
+                        tagNum.includes(searchTerm);
                 });
             }
-            
+
             // Presence filter
             if (presenceFilter) {
                 filtered = filtered.filter(s => {
@@ -2868,15 +2921,15 @@
                     return true;
                 });
             }
-            
+
             // Date filter
             if (dateFilter) {
                 const now = new Date();
                 filtered = filtered.filter(s => {
                     const validDate = new Date(s.validUntil);
                     const daysUntilExpiry = Math.floor((validDate - now) / (1000 * 60 * 60 * 24));
-                    
-                    switch(dateFilter) {
+
+                    switch (dateFilter) {
                         case 'valid':
                             return validDate >= now;
                         case 'expired':
@@ -2890,66 +2943,66 @@
                     }
                 });
             }
-            
+
             // Apply sorting if active
             if (currentSortField) {
                 filtered = sortSubscribersArray(filtered);
             }
-            
+
             displaySubscribers(filtered);
         }
-        
+
         // Helper function to sort subscribers array
         function sortSubscribersArray(subscribers) {
             if (!currentSortField || !subscribers) return subscribers;
-            
+
             return [...subscribers].sort((a, b) => {
                 let aVal = a[currentSortField];
                 let bVal = b[currentSortField];
-                
+
                 // Handle dates
                 if (currentSortField === 'validUntil' || currentSortField === 'validFrom') {
                     aVal = new Date(aVal || '1900-01-01');
                     bVal = new Date(bVal || '1900-01-01');
                 }
-                
+
                 // Handle presence (boolean)
                 if (currentSortField === 'presence') {
                     aVal = aVal ? 1 : 0;
                     bVal = bVal ? 1 : 0;
                 }
-                
+
                 // Handle numbers
                 if (!isNaN(aVal) && !isNaN(bVal)) {
                     aVal = Number(aVal);
                     bVal = Number(bVal);
                 }
-                
+
                 // Handle null/undefined
                 if (aVal === null || aVal === undefined) aVal = '';
                 if (bVal === null || bVal === undefined) bVal = '';
-                
+
                 // Compare
                 if (aVal < bVal) return currentSortDirection === 'asc' ? -1 : 1;
                 if (aVal > bVal) return currentSortDirection === 'asc' ? 1 : -1;
                 return 0;
             });
         }
-        
+
         // Setup sorting on headers
         function setupSorting() {
             const sortableHeaders = document.querySelectorAll('.sortable');
             sortableHeaders.forEach(header => {
-                header.addEventListener('click', function() {
+                header.addEventListener('click', function () {
                     const field = this.getAttribute('data-sort');
-                    
+
                     // Reset all headers
                     sortableHeaders.forEach(h => {
                         h.classList.remove('sort-asc', 'sort-desc');
                         const icon = h.querySelector('.sort-icon');
                         if (icon) icon.innerHTML = '⇅';
                     });
-                    
+
                     // Update sort direction
                     if (currentSortField === field) {
                         currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
@@ -2957,38 +3010,38 @@
                         currentSortField = field;
                         currentSortDirection = 'asc';
                     }
-                    
+
                     // Update header visual
                     this.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
-                    
+
                     // Update sort icon
                     const icon = this.querySelector('.sort-icon');
                     if (icon) {
                         icon.innerHTML = currentSortDirection === 'asc' ? '↑' : '↓';
                     }
-                    
+
                     // Sort and redisplay
                     sortAndDisplaySubscribers();
                 });
             });
         }
-        
+
         // Sort and display subscribers
         function sortAndDisplaySubscribers() {
             // Just call filter which will apply sorting too
             filterSubscribers();
         }
-        
+
         // Get filtered subscribers (helper for sorting)
         function getFilteredSubscribers() {
             const searchTerm = document.getElementById('searchBox').value.toLowerCase();
             const presenceFilter = document.getElementById('filterPresence').value;
             const dateFilter = document.getElementById('filterDate').value;
-            
+
             // Get subscribers from UI integration - includes full details
             const ui = window.parkingUIXML || window.parkingUI;
             let filtered = ui && ui.subscribers ? ui.subscribers : currentSubscribers;
-            
+
             // Apply same filters as filterSubscribers
             if (searchTerm) {
                 filtered = filtered.filter(s => {
@@ -2999,17 +3052,17 @@
                     const vehicle2 = (s.vehicle2 || s.lpn2 || '');
                     const vehicle3 = (s.vehicle3 || s.lpn3 || '');
                     const tagNum = (s.tagNum || s.cardno || '').toLowerCase();
-                    
+
                     return firstName.includes(searchTerm) ||
-                           lastName.includes(searchTerm) ||
-                           subscriberNum.includes(searchTerm) ||
-                           vehicle1.includes(searchTerm) ||
-                           vehicle2.includes(searchTerm) ||
-                           vehicle3.includes(searchTerm) ||
-                           tagNum.includes(searchTerm);
+                        lastName.includes(searchTerm) ||
+                        subscriberNum.includes(searchTerm) ||
+                        vehicle1.includes(searchTerm) ||
+                        vehicle2.includes(searchTerm) ||
+                        vehicle3.includes(searchTerm) ||
+                        tagNum.includes(searchTerm);
                 });
             }
-            
+
             if (presenceFilter) {
                 filtered = filtered.filter(s => {
                     if (presenceFilter === 'present') return s.presence === true;
@@ -3017,14 +3070,14 @@
                     return true;
                 });
             }
-            
+
             if (dateFilter) {
                 const now = new Date();
                 filtered = filtered.filter(s => {
                     const validDate = new Date(s.validUntil);
                     const daysUntilExpiry = Math.floor((validDate - now) / (1000 * 60 * 60 * 24));
-                    
-                    switch(dateFilter) {
+
+                    switch (dateFilter) {
                         case 'valid':
                             return validDate >= now;
                         case 'expired':
@@ -3038,7 +3091,7 @@
                     }
                 });
             }
-            
+
             return filtered;
         }
 
@@ -3047,32 +3100,32 @@
             // Check if we have the UI integration
             if (window.parkingUIXML || window.parkingUI) {
                 const uiIntegration = window.parkingUIXML || window.parkingUI;
-                
+
                 // Debug logging
                 // Check editing state
-                
+
                 // Use both local and global to ensure we have the right value
                 const currentlyEditing = editingSubscriber || window.currentEditingSubscriber;
                 // Current editing state
-                
+
                 // Extra validation
                 const subscriberNumFromForm = document.getElementById('editSubscriberNum').value;
                 // Subscriber number from form
-                
+
                 // If we have a subscriber number in the form and it's not empty, it's definitely an update
                 const isDefinitelyUpdate = subscriberNumFromForm && subscriberNumFromForm !== '' && subscriberNumFromForm !== '0';
                 // Check if definitely update
-                
+
                 // ULTIMATE FIX: Check the modal's data attribute for edit mode
                 const modal = document.getElementById('editModal');
                 const modalEditMode = modal ? modal.getAttribute('data-edit-mode') : null;
                 const modalSubscriberNum = modal ? modal.getAttribute('data-subscriber-num') : null;
                 // Modal edit mode
-                
+
                 // Determine if new based on multiple factors
                 let isNew = false;
                 let isGuest = false;
-                
+
                 // If editing existing subscriber
                 if (modalEditMode === 'UPDATE' || currentlyEditing || isDefinitelyUpdate) {
                     // Always regular update - keep existing subscriber number
@@ -3083,11 +3136,11 @@
                     isNew = true;
                     // Check if it's a guest from modal class or first name
                     isGuest = document.getElementById('editModal')?.classList.contains('guest-mode') ||
-                              document.getElementById('editFirstName').value.trim() === 'אורח';
+                        document.getElementById('editFirstName').value.trim() === 'אורח';
                 }
-                
+
                 // Final isNew decision
-                
+
                 // Collect form data
                 const formData = {
                     companyNum: document.getElementById('editCompanyNum').value,
@@ -3108,9 +3161,9 @@
                     isNew: isNew,  // Use the calculated value that considers both editing state and form data
                     isGuest: isGuest  // Use the calculated value from above
                 };
-                
+
                 // Form data prepared
-                
+
                 // Validate required fields
                 // Last name is required
                 if (!formData.lastName) {
@@ -3119,7 +3172,7 @@
                     document.getElementById('editLastName').style.borderColor = 'red';
                     return;
                 }
-                
+
                 // Dates are required
                 if (!formData.validFrom) {
                     showToast('⚠️ תחילת תוקף הוא שדה חובה!', 'error');
@@ -3127,25 +3180,25 @@
                     document.getElementById('editValidFrom').style.borderColor = 'red';
                     return;
                 }
-                
+
                 if (!formData.validUntil) {
                     showToast('⚠️ תוקף עד הוא שדה חובה!', 'error');
                     document.getElementById('editValidUntil').focus();
                     document.getElementById('editValidUntil').style.borderColor = 'red';
                     return;
                 }
-                
+
                 // Validate date format and limit - accept both DD/MM/YYYY and YYYY-MM-DD
                 const euroDateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
                 const isoDateRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
-                
+
                 let fromDay, fromMonth, fromYear;
                 let untilDay, untilMonth, untilYear;
-                
+
                 // Check validFrom format
                 const fromEuroMatch = formData.validFrom.match(euroDateRegex);
                 const fromIsoMatch = formData.validFrom.match(isoDateRegex);
-                
+
                 if (fromEuroMatch) {
                     fromDay = parseInt(fromEuroMatch[1]);
                     fromMonth = parseInt(fromEuroMatch[2]);
@@ -3160,11 +3213,11 @@
                     document.getElementById('editValidFrom').style.borderColor = 'red';
                     return;
                 }
-                
+
                 // Check validUntil format
                 const untilEuroMatch = formData.validUntil.match(euroDateRegex);
                 const untilIsoMatch = formData.validUntil.match(isoDateRegex);
-                
+
                 if (untilEuroMatch) {
                     untilDay = parseInt(untilEuroMatch[1]);
                     untilMonth = parseInt(untilEuroMatch[2]);
@@ -3179,9 +3232,9 @@
                     document.getElementById('editValidUntil').style.borderColor = 'red';
                     return;
                 }
-                
 
-                
+
+
                 // Validate date values are in valid ranges
                 if (fromDay < 1 || fromDay > 31 || fromMonth < 1 || fromMonth > 12) {
                     showToast('⚠️ תאריך תחילת תוקף לא תקין', 'error');
@@ -3189,28 +3242,28 @@
                     document.getElementById('editValidFrom').style.borderColor = 'red';
                     return;
                 }
-                
+
                 if (untilDay < 1 || untilDay > 31 || untilMonth < 1 || untilMonth > 12) {
                     showToast('⚠️ תאריך תוקף עד לא תקין', 'error');
                     document.getElementById('editValidUntil').focus();
                     document.getElementById('editValidUntil').style.borderColor = 'red';
                     return;
                 }
-                
+
                 // Check date limit (max 31/12/3035)
                 const maxYear = 3035;
-                if (untilYear > maxYear || (untilYear === maxYear && untilMonth > 12) || 
+                if (untilYear > maxYear || (untilYear === maxYear && untilMonth > 12) ||
                     (untilYear === maxYear && untilMonth === 12 && untilDay > 31)) {
                     showToast(`⚠️ תאריך תוקף עד לא יכול להיות אחרי 31/12/${maxYear}`, 'error');
                     document.getElementById('editValidUntil').focus();
                     document.getElementById('editValidUntil').style.borderColor = 'red';
                     return;
                 }
-                
+
                 // Create date objects for comparison
                 const fromDate = new Date(fromYear, fromMonth - 1, fromDay);
                 const untilDate = new Date(untilYear, untilMonth - 1, untilDay);
-                
+
                 // Check that until date is after from date
                 if (untilDate <= fromDate) {
                     showToast('⚠️ תאריך תוקף עד חייב להיות אחרי תאריך תחילת תוקף', 'error');
@@ -3218,27 +3271,27 @@
                     document.getElementById('editValidUntil').style.borderColor = 'red';
                     return;
                 }
-                
+
                 // Allow phone numbers in names - per user request
-                
+
                 // Reset border colors
                 document.getElementById('editFirstName').style.borderColor = '';
                 document.getElementById('editLastName').style.borderColor = '';
                 document.getElementById('editValidFrom').style.borderColor = '';
                 document.getElementById('editValidUntil').style.borderColor = '';
-                
+
                 // Show loading
                 showToast('שומר נתונים...', 'info');
-                
+
                 // Send to server via API
                 const success = await uiIntegration.saveSubscriber(formData);
-                
+
                 if (success) {
                     // Show success toast
                     showToast('הנתונים נשמרו בהצלחה בשרת', 'success');
                     // Close modal
                     closeModal();
-                    
+
                     // Update only the specific subscriber instead of reloading all
                     if (window.parkingUIXML) {
                         if (formData.isNew) {
@@ -3273,19 +3326,19 @@
             currentLang = currentLang === 'he' ? 'en' : 'he';
             document.body.lang = currentLang;
             document.body.dir = currentLang === 'he' ? 'rtl' : 'ltr';
-            
+
             // Update all translated elements
             document.querySelectorAll('[data-translate]').forEach(element => {
                 const key = element.getAttribute('data-translate');
                 element.textContent = translations[currentLang][key];
             });
-            
+
             // Update placeholders
             document.querySelectorAll('[data-translate-placeholder]').forEach(element => {
                 const key = element.getAttribute('data-translate-placeholder');
                 element.placeholder = translations[currentLang][key];
             });
-            
+
             // Refresh display
             if (currentSubscribers.length > 0) {
                 displaySubscribers(currentSubscribers);
@@ -3344,21 +3397,21 @@
                 <span>${message}</span>
             `;
             document.getElementById('toastContainer').appendChild(toast);
-            
+
             setTimeout(() => {
                 toast.remove();
             }, 3000);
         }
-        
+
         // Format date for display in European format (DD/MM/YYYY)
         function formatDateForDisplay(dateStr) {
             if (!dateStr) return '';
-            
+
             // If already in DD/MM/YYYY format, return as is
             if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
                 return dateStr;
             }
-            
+
             // If in server format (YYYY-MM-DD), convert to European
             if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
                 const parts = dateStr.split(/[-T]/);
@@ -3367,7 +3420,7 @@
                 const day = parts[2];
                 return `${day}/${month}/${year}`;
             }
-            
+
             // Try to parse as date
             const date = new Date(dateStr);
             if (!isNaN(date)) {
@@ -3376,16 +3429,16 @@
                 const year = date.getFullYear();
                 return `${day}/${month}/${year}`;
             }
-            
+
             return dateStr;
         }
-        
+
         // Convert date from DD/MM/YYYY to YYYY-MM-DD for server
         function convertDateToServer(dateStr) {
             if (!dateStr) return '';
-            
+
             let resultDate = '';
-            
+
             // If already in YYYY-MM-DD format
             if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
                 resultDate = dateStr;
@@ -3401,53 +3454,53 @@
             else {
                 resultDate = dateStr;
             }
-            
+
             // Limit date to maximum 31.12.2035
             const MAX_DATE = '2035-12-31';
             if (resultDate > MAX_DATE) {
                 // Date exceeds maximum, limiting
                 return MAX_DATE;
             }
-            
+
             return resultDate;
         }
 
         // Export to Excel
         function exportToExcel() {
             // Export is always allowed - no permission check needed
-            
+
             // Check if we have the UI integration
             if (window.parkingUIXML || window.parkingUI) {
                 const uiIntegration = window.parkingUIXML || window.parkingUI;
                 uiIntegration.exportToCSV();
                 return;
             }
-            
+
             // Get current filtered/sorted data
             const dataToExport = getFilteredSubscribers();
-            
+
             if (!dataToExport || dataToExport.length === 0) {
                 showToast('אין נתונים לייצוא', 'warning');
                 return;
             }
-            
+
             // Create CSV content
             const headers = [
                 'מספר חברה',
-                'שם חברה', 
+                'שם חברה',
                 'מספר מנוי',
                 'שם פרטי',
                 'שם משפחה',
                 'מספר תג',
                 'רכב 1',
-                'רכב 2', 
+                'רכב 2',
                 'רכב 3',
                 'תחילת תוקף',
                 'בתוקף עד',
                 'פרופיל',
                 'נוכחות'
             ];
-            
+
             // Create CSV rows
             const rows = dataToExport.map(subscriber => [
                 subscriber.companyNum || '',
@@ -3464,108 +3517,108 @@
                 translations[currentLang][subscriber.profile] || subscriber.profile || '',
                 subscriber.presence ? 'נוכח' : 'לא נוכח'
             ]);
-            
+
             // Combine headers and rows
             const csvContent = [
                 headers.join(','),
                 ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
             ].join('\n');
-            
+
             // Add BOM for Hebrew support in Excel
             const BOM = '\uFEFF';
             const csvWithBOM = BOM + csvContent;
-            
+
             // Create blob and download
             const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
-            
+
             // Generate filename with timestamp
             const now = new Date();
             const dateStr = now.toISOString().split('T')[0];
-            const timeStr = now.toTimeString().split(':').slice(0,2).join('-');
+            const timeStr = now.toTimeString().split(':').slice(0, 2).join('-');
             const companyName = currentCompany ? currentCompany.name : 'all';
             const filename = `parking_subscribers_${companyName}_${dateStr}_${timeStr}.csv`;
-            
+
             link.setAttribute('href', url);
             link.setAttribute('download', filename);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             showToast(`הקובץ ${filename} יוצא בהצלחה`, 'success');
         }
 
         // Format date
         function formatDate(dateString) {
             if (!dateString) return '';
-            
+
             // Use formatDateForDisplay for consistency
             return formatDateForDisplay(dateString);
         }
 
 
 
-        
+
         // Transactions Modal Functions
         let currentTransactionCompany = null;
         let currentTransactionSubscriber = null;
         let allTransactions = [];
-        
-        window.viewTransactions = function(companyNum, subscriberNum) {
+
+        window.viewTransactions = function (companyNum, subscriberNum) {
             // Check permissions (for future implementation)
             // if (!checkUserPermission('view_transactions')) {
             //     showToast('אין לך הרשאה לצפות בתנועות', 'error');
             //     return;
             // }
-            
+
             currentTransactionCompany = companyNum;
             currentTransactionSubscriber = subscriberNum;
-            
+
             // Set default dates
             const today = new Date();
             const lastMonth = new Date();
             lastMonth.setMonth(lastMonth.getMonth() - 1);
-            
+
             document.getElementById('transStartDate').value = lastMonth.toISOString().split('T')[0];
             document.getElementById('transEndDate').value = today.toISOString().split('T')[0];
-            
+
             // Show modal
             document.getElementById('transactionsModal').style.display = 'block';
-            
+
             // Auto load transactions
             loadTransactions();
         }
-        
-        window.closeTransactionsModal = function() {
+
+        window.closeTransactionsModal = function () {
             document.getElementById('transactionsModal').style.display = 'none';
             currentTransactionCompany = null;
             currentTransactionSubscriber = null;
             allTransactions = [];
         }
-        
-        window.loadTransactions = async function() {
+
+        window.loadTransactions = async function () {
             const startDate = document.getElementById('transStartDate').value;
             const endDate = document.getElementById('transEndDate').value;
-            
+
             // Show loading
             document.getElementById('transactionsLoading').style.display = 'block';
             document.getElementById('transactionsSummary').style.display = 'none';
             document.getElementById('transactionsTableContainer').style.display = 'none';
             document.getElementById('noTransactions').style.display = 'none';
-            
+
             try {
                 const api = window.parkingAPIXML || new ParkingAPIXML();
-                
+
                 // Use the proper API method for parking transactions
                 const result = await api.getParkingTransactions(currentTransactionCompany, currentTransactionSubscriber, startDate, endDate);
-                
+
                 if (result.success && result.data) {
-                    const transactions = Array.isArray(result.data) 
-                        ? result.data 
+                    const transactions = Array.isArray(result.data)
+                        ? result.data
                         : [result.data];
-                    
+
                     // Filter out code 42 and map data
                     allTransactions = transactions
                         .filter(t => parseInt(t.transactionType) !== 42)
@@ -3573,7 +3626,7 @@
                             const typeNum = parseInt(t.transactionType);
                             const isEntry = (typeNum === 1 || typeNum === 2);
                             const isExit = (typeNum === 11 || typeNum === 12);
-                            
+
                             return {
                                 time: t.transactionTime,
                                 typeNum: typeNum,
@@ -3583,7 +3636,7 @@
                                 direction: isEntry ? 'in' : (isExit ? 'out' : 'unknown')
                             };
                         });
-                    
+
                     displayTransactions(allTransactions);
                 } else {
                     // No transactions found
@@ -3596,26 +3649,26 @@
                 document.getElementById('transactionsLoading').style.display = 'none';
             }
         }
-        
+
         function displayTransactions(transactions) {
             // Update summary
             const entries = transactions.filter(t => t.direction === 'in').length;
             const exits = transactions.filter(t => t.direction === 'out').length;
-            
+
             document.getElementById('totalTrans').textContent = transactions.length;
             document.getElementById('totalEntries').textContent = entries;
             document.getElementById('totalExits').textContent = exits;
             document.getElementById('transactionsSummary').style.display = 'block';
-            
+
             // Display table
             const tbody = document.getElementById('transactionsTableBody');
             tbody.innerHTML = '';
-            
+
             transactions.forEach(t => {
                 const row = document.createElement('tr');
                 const time = new Date(t.time);
                 const formattedTime = `${time.toLocaleDateString('he-IL')} ${time.toLocaleTimeString('he-IL')}`;
-                
+
                 let directionIcon = '';
                 if (t.direction === 'in') {
                     directionIcon = '🟢 כניסה';
@@ -3624,7 +3677,7 @@
                 } else {
                     directionIcon = '⚪ אחר';
                 }
-                
+
                 // Device description
                 let deviceDesc = '';
                 const deviceNum = parseInt(t.device);
@@ -3637,7 +3690,7 @@
                 } else {
                     deviceDesc = `יחידה ${t.device}`;
                 }
-                
+
                 row.innerHTML = `
                     <td>${formattedTime}</td>
                     <td>${directionIcon}</td>
@@ -3647,22 +3700,22 @@
                 `;
                 tbody.appendChild(row);
             });
-            
+
             document.getElementById('transactionsTableContainer').style.display = 'block';
         }
-        
-        window.exportTransactions = function() {
+
+        window.exportTransactions = function () {
             if (!allTransactions || allTransactions.length === 0) {
                 showToast('אין תנועות לייצוא', 'error');
                 return;
             }
-            
+
             // Create CSV content
             const headers = ['תאריך ושעה', 'סוג תנועה', 'מספר רכב', 'חניון', 'יחידה'];
             const rows = allTransactions.map(t => {
                 const time = new Date(t.time);
                 let directionText = t.direction === 'in' ? 'כניסה' : (t.direction === 'out' ? 'יציאה' : 'אחר');
-                
+
                 return [
                     `${time.toLocaleDateString('he-IL')} ${time.toLocaleTimeString('he-IL')}`,
                     directionText,
@@ -3671,32 +3724,32 @@
                     t.device
                 ];
             });
-            
+
             // Add BOM for Hebrew
             const BOM = '\uFEFF';
-            const csvContent = BOM + headers.join(',') + '\n' + 
+            const csvContent = BOM + headers.join(',') + '\n' +
                 rows.map(row => row.join(',')).join('\n');
-            
+
             // Download
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
             const filename = `transactions_${currentTransactionSubscriber}_${new Date().toISOString().split('T')[0]}.csv`;
-            
+
             link.setAttribute('href', url);
             link.setAttribute('download', filename);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             showToast('הדוח יוצא בהצלחה', 'success');
         }
-        
+
         // Initialize on load
         window.addEventListener('DOMContentLoaded', init);
     </script>
-    
+
     <!-- Load Configuration and API Integration -->
     <!-- Pass user data to JavaScript -->
     <script>
@@ -3704,11 +3757,11 @@
         window.userCompanyList = "{{ company_list }}";
         window.userPermissions = "{{ permissions }}";
         // Init logs removed
-        
+
         // Auto-logout after 30 minutes of inactivity
         let inactivityTimer;
         const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
-        
+
         function resetInactivityTimer() {
             clearTimeout(inactivityTimer);
             inactivityTimer = setTimeout(() => {
@@ -3716,26 +3769,26 @@
                 window.location.href = '/logout';
             }, INACTIVITY_TIMEOUT);
         }
-        
+
         // Track user activity
         document.addEventListener('mousemove', resetInactivityTimer);
         document.addEventListener('keypress', resetInactivityTimer);
         document.addEventListener('click', resetInactivityTimer);
         document.addEventListener('scroll', resetInactivityTimer);
         document.addEventListener('touchstart', resetInactivityTimer); // For mobile
-        
+
         // Start the timer when page loads
         resetInactivityTimer();
     </script>
-    
+
     <script src="/static/js/config.js?v=20251216_fixed20"></script>
     <script src="/static/js/parking-api-live.js?v=20251216_fixed20"></script>
     <script src="/static/js/parking-ui-live.js?v=20251216_fixed20"></script>
-    
-        <script>
+
+    <script>
         // Override init function to use XML API
         const originalInit = init;
-        init = async function() {
+        init = async function () {
             originalInit();
 
             // Use XML API integration
@@ -3750,18 +3803,18 @@
             try {
                 const response = await fetch('/api/get-current-user');
                 const data = await response.json();
-                
+
                 if (data.success && data.user) {
                     const usernameElement = document.getElementById('currentUsername');
                     if (usernameElement) {
                         // Get parking name if available
                         let displayText = data.user.username || data.user.email;
-                        
+
                         // Add parking name before username
                         if (window.parkingUIXML && window.parkingUIXML.currentParking && window.parkingUIXML.currentParking.name) {
                             displayText = window.parkingUIXML.currentParking.name + ' - ' + displayText;
                         }
-                        
+
                         usernameElement.textContent = displayText;
                     }
                 }
@@ -3808,7 +3861,7 @@
         // Update UI buttons based on permissions
         function updateUIPermissions() {
             const permissions = getUserPermissions();
-            
+
             // Add New Subscriber button
             const addNewBtn = document.querySelector('button[onclick="addNewSubscriber()"]');
             if (addNewBtn) {
@@ -3818,7 +3871,7 @@
                     addNewBtn.style.opacity = '0.5';
                 }
             }
-            
+
             // Add Guest button
             const addGuestBtn = document.querySelector('button[onclick="addGuestSubscriber()"]');
             if (addGuestBtn) {
@@ -3828,7 +3881,7 @@
                     addGuestBtn.style.opacity = '0.5';
                 }
             }
-            
+
             // Reports button
             const reportsBtn = document.querySelector('button[onclick="openReportsModal()"]');
             if (reportsBtn) {
@@ -3838,7 +3891,7 @@
                     reportsBtn.style.opacity = '0.5';
                 }
             }
-            
+
             // Export button
             const exportBtn = document.querySelector('button[onclick="exportToExcel()"]');
             if (exportBtn) {
@@ -3850,7 +3903,7 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Load saved font size preference
             const savedFontSize = localStorage.getItem('preferredFontSize');
             if (savedFontSize) {
@@ -3858,15 +3911,16 @@
                 const newSize = 13 + (currentFontSize * 1);
                 document.body.style.fontSize = newSize + 'px';
             }
-            
+
             // Update button states based on permissions
             updateButtonPermissions();
-            
+
             loadCurrentUser();
-            
+
             // Update UI based on permissions
             setTimeout(updateUIPermissions, 100); // Small delay to ensure DOM is ready
         });
     </script>
 </body>
+
 </html>
