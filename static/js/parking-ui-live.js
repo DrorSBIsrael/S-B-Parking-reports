@@ -2291,10 +2291,10 @@ class ParkingUIIntegrationXML {
                     limit: '9999900',
                     status: '0',  // Active status
                     delete: '0',  // Not deleted
-                    // Vehicle data - clean dashes from vehicle numbers
-                    lpn1: (subscriberData.vehicle1 || '').replace(/-/g, ''),
-                    lpn2: (subscriberData.vehicle2 || '').replace(/-/g, ''),
-                    lpn3: (subscriberData.vehicle3 || '').replace(/-/g, '')
+                    // Vehicle data - clean dashes from vehicle numbers, send null if empty
+                    lpn1: subscriberData.vehicle1 ? subscriberData.vehicle1.replace(/-/g, '') : null,
+                    lpn2: subscriberData.vehicle2 ? subscriberData.vehicle2.replace(/-/g, '') : null,
+                    lpn3: subscriberData.vehicle3 ? subscriberData.vehicle3.replace(/-/g, '') : null
                 };
 
                 // UPDATE payload prepared
@@ -2352,9 +2352,9 @@ class ParkingUIIntegrationXML {
                     status: '0',
                     delete: '0',
                     // Vehicles
-                    lpn1: (subscriberData.vehicle1 || '').replace(/-/g, ''),
-                    lpn2: (subscriberData.vehicle2 || '').replace(/-/g, ''),
-                    lpn3: (subscriberData.vehicle3 || '').replace(/-/g, '')
+                    lpn1: subscriberData.vehicle1 ? subscriberData.vehicle1.replace(/-/g, '') : null,
+                    lpn2: subscriberData.vehicle2 ? subscriberData.vehicle2.replace(/-/g, '') : null,
+                    lpn3: subscriberData.vehicle3 ? subscriberData.vehicle3.replace(/-/g, '') : null
                 };
 
                 // NEW payload prepared
@@ -2480,9 +2480,9 @@ class ParkingUIIntegrationXML {
                         const minimalData = {
                             firstName: consumerData.firstName || consumerData.surname || consumerData.lastName || 'Unknown',
                             surname: consumerData.surname || consumerData.lastName || consumerData.firstName || 'Unknown',
-                            lpn1: consumerData.lpn1 || '',
-                            lpn2: consumerData.lpn2 || '',
-                            lpn3: consumerData.lpn3 || '',
+                            lpn1: consumerData.lpn1 || null,
+                            lpn2: consumerData.lpn2 || null,
+                            lpn3: consumerData.lpn3 || null,
                             consumer: consumerData.consumer
                             // NO identification block at all for large companies
                         };
