@@ -2211,18 +2211,20 @@ def get_user_redirect_url(email):
         
         if user_result.data and len(user_result.data) > 0:
             code_type = user_result.data[0].get('code_type', 'dashboard')
+            # Normalize code_type for case-insensitive checks where appropriate
+            code_type_lower = code_type.lower() if code_type else ''
             
             if code_type == 'master':
                 return '/master-users'
             elif code_type == 'parking_manager':
                 return '/parking-manager-users'
-            elif code_type == 'Dashboard_v2':
+            elif code_type_lower == 'dashboard_v2':
                 return '/dashboard-v2'
-            elif code_type == 'Dashboard_v3':
+            elif code_type_lower == 'dashboard_v3':
                 return '/dashboard-v3'
-            elif code_type == 'parking_manager_partial':
-                return '/parking-manager-users-partial'
-            elif code_type == 'Parking_tour' or code_type == 'parking_tour':
+            elif code_type == 'parking_manager_part':
+                return '/parking-manager-users-part'
+            elif code_type_lower == 'parking_tour':
                 return '/parking-tour'
             elif code_type == 'mobile_controller':
                 return '/mobile-parking-controller'
@@ -2573,23 +2575,30 @@ def dashboard_v3_page():
     return render_template('dashboard_v3.html')
 
 
-@app.route('/parking-manager-users-partial')
-def parking_manager_users_partial_page():
-    """Partial Parking Manager Users Page"""
+@app.route('/parking-manager-users-part')
+def parking_manager_users_part_page():
+    """דף ניהול משתמשים לחניון ספציפי (ניהול חלקי)"""
     if 'user_email' not in session:
         return redirect(url_for('login_page'))
     
     # Check permissions
     try:
-        user_result = supabase.table('user_parkings').select('code_type, project_number, access_level').eq('email', session['user_email']).execute()
-        if not user_result.data or user_result.data[0].get('code_type') != 'parking_manager_partial':
-            print(f"⚠️ Unauthorized access attempt to parking-manager-users-partial by {session['user_email']}")
+        user_result = supabase.table('user_parkings').select('code_type').eq('email', session['user_email']).execute()
+        if not user_result.data:
+            print(f"⚠️ Unauthorized access attempt to parking-manager-users-part by {session['user_email']}")
             return redirect(url_for('dashboard'))
+            
+        code_type = user_result.data[0].get('code_type', '')
+        # Allow both strict check and master/admin override if needed, but primarily strict for this role
+        if code_type != 'parking_manager_part' and code_type != 'master':
+             print(f"⚠️ Unauthorized access attempt to parking-manager-users-part by {session['user_email']} (code_type: {code_type})")
+             return redirect(url_for('dashboard'))
+
     except Exception as e:
-        print(f"Error checking partial manager permissions: {str(e)}")
+        print(f"Error checking parking manager permissions: {str(e)}")
         return redirect(url_for('dashboard'))
     
-    return render_template('parking_manager_users_partial.html')
+    return render_template('parking_manager_users_part.html')
 
 @app.route('/parking-tour')
 def parking_tour_page():
