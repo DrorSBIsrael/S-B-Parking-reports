@@ -2146,41 +2146,14 @@ def verify_code():
                 
                 if user_result.data and len(user_result.data) > 0:
                     user_data = user_result.data[0]
-                    code_type = user_data.get('code_type', 'dashboard')
-                    
-                    # User authenticated successfully
-                    print(f"🔍 User {email} has code_type: '{code_type}'")
-                    
-# קביעת הפניה לפי סוג המשתמש
-                    redirect_url = '/dashboard'  # ברירת מחדל
-                    
-                    if code_type == 'master':
-                        redirect_url = '/master-users'
-                        print(f"🔧 Redirecting MASTER to: {redirect_url}")
-                    elif code_type == 'parking_manager':
-                        redirect_url = '/parking-manager-users'
-                        print(f"🅿️ Redirecting PARKING MANAGER to: {redirect_url}")
-                    elif code_type == 'company_manager':
-                        redirect_url = '/company-manager'
-                    elif code_type == 'Parking_tour' or code_type == 'parking_tour':
-                        redirect_url = '/parking-tour'
-                        print(f"🎫 Redirecting PARKING TOUR to: {redirect_url}")
-                    elif code_type == 'mobile_controller':
-                        redirect_url = '/mobile-parking-controller'
-                        print(f"📱 Redirecting MOBILE CONTROLLER to: {redirect_url}")
-                    else:
-                        # בדיקת access_level למשתמשים רגילים
-                        access_level = user_data.get('access_level', 'single_parking')
-                        if access_level == 'company_manager':
-                            redirect_url = '/company-manager'
-                        else:
-                            redirect_url = '/dashboard'
-                            print(f"📊 Redirecting REGULAR USER to: {redirect_url}")
+                    # Use central redirect logic
+                    redirect_url = get_user_redirect_url(email)
+                    print(f"🔍 User {email} redirected to: {redirect_url}")
 
                     return jsonify({
                         'success': True, 
                         'redirect': redirect_url,
-                        'user_type': code_type
+                        'user_type': user_data.get('code_type', '')
                     })
                 else:
                     print(f"⚠️ User data not found, redirecting to dashboard")
@@ -2220,6 +2193,8 @@ def get_user_redirect_url(email):
                 return '/master-users'
             elif code_type_lower == 'parking_manager':
                 return '/parking-manager-users'
+            elif code_type_lower == 'company_manager':
+                return '/company-manager'
             elif code_type_lower.replace(' ', '_').replace('-', '_') in ['dashboard_v2', 'dashboardv2']:
                 return '/dashboard-v2'
             elif code_type_lower.replace(' ', '_').replace('-', '_') in ['dashboard_v3', 'dashboardv3']:
@@ -2227,7 +2202,7 @@ def get_user_redirect_url(email):
             # Support both old 'partial' and new 'part' naming
             elif code_type_lower in ['parking_manager_partial', 'parking_manager_part']:
                 return '/parking-manager-users-part'
-            elif code_type_lower == 'parking_tour' or code_type_lower == 'parking_tour':
+            elif code_type.lower() == 'parking_tour' or code_type_lower == 'parking_tour':
                 return '/parking-tour'
             elif code_type_lower == 'mobile_controller':
                 return '/mobile-parking-controller'
