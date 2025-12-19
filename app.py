@@ -2216,6 +2216,12 @@ def get_user_redirect_url(email):
                 return '/master-users'
             elif code_type == 'parking_manager':
                 return '/parking-manager-users'
+            elif code_type == 'Dashboard_v2':
+                return '/dashboard-v2'
+            elif code_type == 'Dashboard_v3':
+                return '/dashboard-v3'
+            elif code_type == 'parking_manager_partial':
+                return '/parking-manager-users-partial'
             elif code_type == 'Parking_tour' or code_type == 'parking_tour':
                 return '/parking-tour'
             elif code_type == 'mobile_controller':
@@ -2518,6 +2524,62 @@ def parking_manager_users_page():
         return redirect(url_for('dashboard'))
     
     return render_template('parking_manager_users.html')
+
+@app.route('/dashboard-v2')
+def dashboard_v2_page():
+    """Dashboard V2"""
+    if 'user_email' not in session:
+        return redirect(url_for('login_page'))
+    
+    # Check permissions
+    try:
+        user_result = supabase.table('user_parkings').select('code_type').eq('email', session['user_email']).execute()
+        if not user_result.data or user_result.data[0].get('code_type') != 'Dashboard_v2':
+            print(f"⚠️ Unauthorized access attempt to dashboard-v2 by {session['user_email']}")
+            return redirect(url_for('dashboard'))
+    except Exception as e:
+        print(f"Error checking dashboard-v2 permissions: {str(e)}")
+        return redirect(url_for('dashboard'))
+    
+    return render_template('dashboard_v2.html')
+
+
+@app.route('/dashboard-v3')
+def dashboard_v3_page():
+    """Dashboard V3"""
+    if 'user_email' not in session:
+        return redirect(url_for('login_page'))
+    
+    # Check permissions
+    try:
+        user_result = supabase.table('user_parkings').select('code_type').eq('email', session['user_email']).execute()
+        if not user_result.data or user_result.data[0].get('code_type') != 'Dashboard_v3':
+            print(f"⚠️ Unauthorized access attempt to dashboard-v3 by {session['user_email']}")
+            return redirect(url_for('dashboard'))
+    except Exception as e:
+        print(f"Error checking dashboard-v3 permissions: {str(e)}")
+        return redirect(url_for('dashboard'))
+    
+    return render_template('dashboard_v3.html')
+
+
+@app.route('/parking-manager-users-partial')
+def parking_manager_users_partial_page():
+    """Partial Parking Manager Users Page"""
+    if 'user_email' not in session:
+        return redirect(url_for('login_page'))
+    
+    # Check permissions
+    try:
+        user_result = supabase.table('user_parkings').select('code_type, project_number, access_level').eq('email', session['user_email']).execute()
+        if not user_result.data or user_result.data[0].get('code_type') != 'parking_manager_partial':
+            print(f"⚠️ Unauthorized access attempt to parking-manager-users-partial by {session['user_email']}")
+            return redirect(url_for('dashboard'))
+    except Exception as e:
+        print(f"Error checking partial manager permissions: {str(e)}")
+        return redirect(url_for('dashboard'))
+    
+    return render_template('parking_manager_users_partial.html')
 
 @app.route('/parking-tour')
 def parking_tour_page():
