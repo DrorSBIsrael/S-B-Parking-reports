@@ -2534,8 +2534,13 @@ def dashboard_v2_page():
     # Check permissions
     try:
         user_result = supabase.table('user_parkings').select('code_type').eq('email', session['user_email']).execute()
-        if not user_result.data or user_result.data[0].get('code_type') != 'Dashboard_v2':
+        if not user_result.data:
             print(f"⚠️ Unauthorized access attempt to dashboard-v2 by {session['user_email']}")
+            return redirect(url_for('dashboard'))
+            
+        code_type = user_result.data[0].get('code_type', '')
+        if code_type not in ['Dashboard_v2', 'dashboard_v2', 'master']:
+            print(f"⚠️ Unauthorized access attempt to dashboard-v2 by {session['user_email']} (code_type: {code_type})")
             return redirect(url_for('dashboard'))
     except Exception as e:
         print(f"Error checking dashboard-v2 permissions: {str(e)}")
@@ -2553,8 +2558,13 @@ def dashboard_v3_page():
     # Check permissions
     try:
         user_result = supabase.table('user_parkings').select('code_type').eq('email', session['user_email']).execute()
-        if not user_result.data or user_result.data[0].get('code_type') != 'Dashboard_v3':
+        if not user_result.data:
             print(f"⚠️ Unauthorized access attempt to dashboard-v3 by {session['user_email']}")
+            return redirect(url_for('dashboard'))
+            
+        code_type = user_result.data[0].get('code_type', '')
+        if code_type not in ['Dashboard_v3', 'dashboard_v3', 'master']:
+            print(f"⚠️ Unauthorized access attempt to dashboard-v3 by {session['user_email']} (code_type: {code_type})")
             return redirect(url_for('dashboard'))
     except Exception as e:
         print(f"Error checking dashboard-v3 permissions: {str(e)}")
