@@ -2567,15 +2567,20 @@ def parking_manager_users_part_page():
         return redirect(url_for('login_page'))
     
     # Check permissions
+    # Fetch user data including company_list
     try:
-        user_result = supabase.table('user_parkings').select('code_type').eq('email', session['user_email']).execute()
+        user_result = supabase.table('user_parkings').select('code_type, company_list').eq('email', session['user_email']).execute()
         if not user_result.data:
             print(f"⚠️ Unauthorized access attempt to parking-manager-users-part by {session['user_email']}")
             return redirect(url_for('dashboard'))
             
-        code_type = user_result.data[0].get('code_type', '')
+        user_data = user_result.data[0]
+        code_type = user_data.get('code_type', '')
+        code_type_lower = str(code_type).strip().lower()
+        manager_company_list = user_data.get('company_list', '')
+        
         # Allow 'parking_manager_part' AND 'parking_manager_partial' for legacy support
-        if code_type not in ['parking_manager_part', 'parking_manager_partial'] and code_type != 'master':
+        if code_type_lower not in ['parking_manager_part', 'parking_manager_partial'] and code_type_lower != 'master':
              print(f"⚠️ Unauthorized access attempt to parking-manager-users-part by {session['user_email']} (code_type: {code_type})")
              return redirect(url_for('dashboard'))
 
@@ -2583,7 +2588,7 @@ def parking_manager_users_part_page():
         print(f"Error checking parking manager permissions: {str(e)}")
         return redirect(url_for('dashboard'))
     
-    return render_template('parking_manager_users_part.html')
+    return render_template('parking_manager_users_part.html', manager_company_list=manager_company_list)
 
 @app.route('/parking-tour')
 def parking_tour_page():
