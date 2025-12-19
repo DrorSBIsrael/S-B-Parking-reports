@@ -577,8 +577,63 @@
     </div>
 
     <script>
+        // Inject manager's allowed company list from Flask
+        const MANAGER_COMPANY_LIMIT = "{{ manager_company_list }}";
+
         let parkingInfo = null;
         let allUsers = [];
+
+        // Validation helper: Check if a company ID is allowed
+        function isCompanyAllowed(targetCompanyStr, allowedRangeStr) {
+            // If no limit defined, assume allowed (or you could block, but typically empty means no restriction or not set)
+            if (!allowedRangeStr || allowedRangeStr.trim() === '') {
+                console.log("No company limit set for manager, allowing.");
+                return true;
+            }
+
+            // Parse Allowed Range (e.g. "200-300" or "200-300, 400-500")
+            // We'll normalize it into a list of {min, max} objects
+            const allowedRanges = allowedRangeStr.split(',').map(part => {
+                const [start, end] = part.split('-').map(s => parseInt(s.trim()));
+                return {
+                    min: isNaN(start) ? -1 : start,
+                    max: isNaN(end) ? (isNaN(start) ? -1 : start) : end
+                };
+            }).filter(r => r.min !== -1);
+
+            // Parse Target Inputs (e.g. "250" or "200, 205")
+            // Supports ranges in input too? The prompt implies simple number selection "Choose 200", 
+            // but the input field is "companyList" which usually implies multiple.
+            // We will check EVERY number in the target string.
+            const targetParts = targetCompanyStr.split(',');
+
+            for (let part of targetParts) {
+                part = part.trim();
+                if (!part) continue;
+
+                // Handle if user enters a range like "210-220" - check both ends?
+                // Or if they just enter "210".
+                const [tStart, tEnd] = part.split('-').map(s => parseInt(s.trim()));
+                const valsToCheck = [];
+                if (!isNaN(tStart)) valsToCheck.push(tStart);
+                if (!isNaN(tEnd)) valsToCheck.push(tEnd); // Checks end of range too if exists
+
+                if (valsToCheck.length === 0) return false; // Invalid input
+
+                // Check if ALL values fall within AT LEAST ONE allowed range
+                for (let val of valsToCheck) {
+                    let valAllowed = false;
+                    for (let range of allowedRanges) {
+                        if (val >= range.min && val <= range.max) {
+                            valAllowed = true;
+                            break;
+                        }
+                    }
+                    if (!valAllowed) return false; // Found a disallowed value
+                }
+            }
+            return true;
+        }
 
         // Format permissions for display
         function formatPermissions(permissions) {
@@ -597,6 +652,7 @@
                 '3': 'כל הרכבים',
                 'B': 'בסיס'
             };
+
 
             const permArray = permissions.split('');
             const formatted = permArray.map(p => permMap[p] || p).join(', ');
@@ -764,11 +820,21 @@
                 permissionsString = 'B' + permissionsString;
             }
 
+            const companyList = formData.get('companyList'); // ✅ תיקון שליחת company_list
+
+            // Validation: Check company limits
+            if (!isCompanyAllowed(companyList, MANAGER_COMPANY_LIMIT)) {
+                showAlert('createAlert', 'error', `חריגה מהרשאות ניהול. מותר לך לנהל רק חברות בטווח: ${MANAGER_COMPANY_LIMIT}`);
+                createBtn.textContent = originalText;
+                createBtn.disabled = false;
+                return;
+            }
+
             const userData = {
                 username: formData.get('username'),
                 email: formData.get('email'),
                 access_level: formData.get('accessLevel'),
-                company_list: formData.get('companyList'), // ✅ תיקון שליחת company_list
+                company_list: companyList,
                 permissions: permissionsString
             };
 
@@ -826,12 +892,22 @@
                 permissions.unshift('B');
             }
 
+            const companyList = formData.get('companyList') || '';
+
+            // Validation: Check company limits
+            if (!isCompanyAllowed(companyList, MANAGER_COMPANY_LIMIT)) {
+                showAlert('editAlert', 'error', `חריגה מהרשאות ניהול. מותר לך לנהל רק חברות בטווח: ${MANAGER_COMPANY_LIMIT}`);
+                editBtn.textContent = originalText;
+                editBtn.disabled = false;
+                return;
+            }
+
             const userData = {
                 user_id: formData.get('userId') || '',
                 username: formData.get('username') || '',
                 email: formData.get('email') || '',
                 access_level: formData.get('accessLevel') || 'single_parking',
-                company_list: formData.get('companyList') || '',
+                company_list: companyList,
                 permissions: permissions.join('') || 'B2'
             };
 
