@@ -580,6 +580,16 @@
         // Inject manager's allowed company list from Flask
         const MANAGER_COMPANY_LIMIT = "{{ manager_company_list }}";
 
+        // Update placeholders to show allowed limit
+        document.addEventListener('DOMContentLoaded', function () {
+            const placeholderText = MANAGER_COMPANY_LIMIT ? `לדוגמא: ${MANAGER_COMPANY_LIMIT}` : 'לדוגמא: 100,200-300';
+            const createInput = document.querySelector('input[name="companyList"]');
+            const editInput = document.getElementById('editCompanyList');
+
+            if (createInput) createInput.placeholder = placeholderText;
+            if (editInput) editInput.placeholder = placeholderText;
+        });
+
         let parkingInfo = null;
         let allUsers = [];
 
