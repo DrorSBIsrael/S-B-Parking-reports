@@ -3910,6 +3910,7 @@ def parking_manager_update_user():
              return jsonify({'success': False, 'message': 'כמות רכבים לא יכולה להיות שלילית'})
 
         if manager_limit > 0:
+            print(f"🔍 DEBUG: Check manager_limit={manager_limit} for update")
             # Get current usage - Fetch ALL and filter in Python to ensure safe exclusion
             usage_result = supabase.table('user_parkings').select('user_id, counting').eq('project_number', manager_data['project_number']).execute()
             
