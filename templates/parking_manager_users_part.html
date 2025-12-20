@@ -607,6 +607,48 @@
 
         let parkingInfo = null;
         let allUsers = [];
+        let CURRENT_USER_ID = null;
+
+        // --- Helper: Update Parking Contract via Proxy ---
+        async function updateParkingContract(contractId, countingValue) {
+            if (!contractId || isNaN(contractId) || countingValue < 0) return;
+
+            console.log(`🔌 Syncing contract ${contractId} with counting ${countingValue}...`);
+            showAlert('createAlert', 'info', 'מעדכן מערכת חניון...');
+
+            try {
+                // Determine contract ID (might be single number)
+                // We send JSON, the Backend Proxy converts to XML for contracts/.../detail PUT
+                const payload = {
+                    endpoint: `contracts/${contractId}/detail`,
+                    method: 'PUT',
+                    payload: {
+                        id: contractId,
+                        counting: countingValue
+                    }
+                };
+
+                const response = await fetch('/api/company-manager/proxy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    console.log('✅ Parking update success', data);
+                    showAlert('createAlert', 'success', 'עודכן בהצלחה במסד הנתונים ובמערכת החניון');
+                } else {
+                    console.error('❌ Parking update failed', data);
+                    const errorMsg = data.message || (data.data && data.data.raw) || 'Unknown error';
+                    showAlert('createAlert', 'warning', `עודכן במסד הנתונים אך נכשל בחניון: ${errorMsg}`);
+                }
+            } catch (error) {
+                console.error('❌ Parking update exception', error);
+                showAlert('createAlert', 'warning', `עודכן במסד הנתונים אך שגיאת תקשורת עם החניון`);
+            }
+        }
 
         // Validation helper: Check if a company ID is allowed
         function isCompanyAllowed(targetCompanyStr, allowedRangeStr) {
@@ -693,6 +735,7 @@
                 if (data.success) {
                     parkingInfo = data.parking_info;
                     allUsers = data.users;
+                    CURRENT_USER_ID = data.current_user_id; // Capture ID
 
                     // הצגת פרטי החניון
                     document.getElementById('parkingTitle').textContent = `החניון שלך: ${parkingInfo.parking_name}`;
@@ -701,10 +744,21 @@
                     document.getElementById('parkingName').textContent = parkingInfo.parking_name;
                     document.getElementById('companyType').textContent = parkingInfo.company_type || 'לא צוין';
 
-                    // Show counting balance
+                    // Show counting balance - EXCLUDING SELF
                     if (MANAGER_COUNTING_LIMIT > 0) {
-                        const currentUsage = allUsers.reduce((sum, u) => sum + (u.counting || 0), 0);
+                        const currentUsage = allUsers.reduce((sum, u) => {
+                            // Filter out self logic - ensure ID comparison works
+                            if (u.user_id === CURRENT_USER_ID) return sum;
+                            return sum + (u.counting || 0);
+                        }, 0);
                         document.getElementById('countingBalance').textContent = `${currentUsage} / ${MANAGER_COUNTING_LIMIT}`;
+
+                        // Color warning if near limit
+                        if (currentUsage >= MANAGER_COUNTING_LIMIT) {
+                            document.getElementById('countingBalance').classList.add('text-danger');
+                        } else {
+                            document.getElementById('countingBalance').classList.remove('text-danger');
+                        }
                     } else {
                         document.getElementById('countingBalance').textContent = 'ללא הגבלה';
                     }
@@ -794,34 +848,46 @@
         });
 
         // פונקציית עריכת משתמש
-        function editUser(userId) {
-            const user = allUsers.find(u => {
-                const userIdToCheck = u.id || u.user_id || u.ID;
-                return userIdToCheck == userId;
-            });
-
-            if (!user) {
-                alert('משתמש לא נמצא');
-                return;
-            }
-
-            // מילוי הטופס
-            document.getElementById('editUserId').value = userId;
-            document.getElementById('editUsername').value = user.username || '';
-            document.getElementById('editEmail').value = user.email || '';
-            document.getElementById('editEmail').value = user.email || '';
+        // פונקציית עריכת משתמש - החדשה (Modals)
+        function openEditModal(user) {
+            // Ensure we have ID
+            document.getElementById('editUserId').value = user.user_id || user.id || user.ID;
+            document.getElementById('editUsername').value = user.username;
+            document.getElementById('editEmail').value = user.email;
             document.getElementById('editCompanyList').value = user.company_list || '';
-            document.getElementById('editCounting').value = user.counting || 0;
+            document.getElementById('editCounting').value = (user.counting !== undefined && user.counting !== null) ? user.counting : 0;
             document.getElementById('editAccessLevel').value = 'single_parking'; // תמיד גישה לחניון בלבד
 
-            // סימון ההרשאות הנוכחיות
-            const permissions = user.permissions || 'B2';
-            const editPermissionBoxes = document.querySelectorAll('input[name="editPermissions"]');
-            editPermissionBoxes.forEach(box => {
-                box.checked = permissions.includes(box.value);
+            // Handle Self-Editing Restriction
+            const isSelf = ((user.user_id || user.id || user.ID) === CURRENT_USER_ID);
+            const editComp = document.getElementById('editCompanyList');
+            const editCount = document.getElementById('editCounting');
+
+            if (isSelf) {
+                editComp.disabled = true;
+                editCount.disabled = true;
+                editComp.style.backgroundColor = '#e9ecef'; // Shaded
+                editCount.style.backgroundColor = '#e9ecef'; // Shaded
+                editComp.title = "לא ניתן לערוך את החברות של עצמך";
+            } else {
+                editComp.disabled = false;
+                editCount.disabled = false;
+                editComp.style.backgroundColor = '';
+                editCount.style.backgroundColor = '';
+                editComp.title = "";
+            }
+
+            // Set Checkboxes
+            const perms = user.permissions || '';
+            const checkboxes = document.querySelectorAll('input[name="editPermissions"]');
+            checkboxes.forEach(cb => {
+                if (perms.includes(cb.value)) {
+                    cb.checked = true;
+                } else {
+                    cb.checked = false;
+                }
             });
 
-            // הצגת המודל
             document.getElementById('editModal').style.display = 'block';
         }
 
@@ -831,7 +897,7 @@
             document.getElementById('editAlert').style.display = 'none';
         }
 
-        // יצירת משתמש חדש - חזרה לקוד המקורי עם תיקון company_list
+        // יצירת משתמש חדש
         document.getElementById('createUserForm').addEventListener('submit', async function (e) {
             e.preventDefault();
 
@@ -857,7 +923,7 @@
                 permissionsString = 'B' + permissionsString;
             }
 
-            const companyList = formData.get('companyList'); // ✅ תיקון שליחת company_list
+            const companyList = formData.get('companyList');
 
             // Validation: Check company limits
             if (!isCompanyAllowed(companyList, MANAGER_COMPANY_LIMIT)) {
@@ -867,13 +933,14 @@
                 return;
             }
 
+            const counting = parseInt(formData.get('counting')) || 0;
             const userData = {
                 username: formData.get('username'),
                 email: formData.get('email'),
                 access_level: formData.get('accessLevel'),
                 company_list: companyList,
                 permissions: permissionsString,
-                counting: formData.get('counting')
+                counting: counting
             };
 
             try {
@@ -894,6 +961,11 @@
                     document.querySelector('input[value="B"]').checked = true;
                     document.querySelector('input[value="2"]').checked = true;
                     loadParkingInfo(); // רענון רשימת המשתמשים
+
+                    // Trigger Parking System Update
+                    if (companyList && !isNaN(companyList) && counting >= 0) {
+                        updateParkingContract(companyList, counting);
+                    }
                 } else {
                     showAlert('createAlert', 'error', data.message);
                 }
@@ -930,15 +1002,18 @@
                 permissions.unshift('B');
             }
 
+            // Note: If disabled, companyList is null
             const companyList = formData.get('companyList') || '';
 
             // Validation: Check company limits
-            if (!isCompanyAllowed(companyList, MANAGER_COMPANY_LIMIT)) {
+            if (companyList && !isCompanyAllowed(companyList, MANAGER_COMPANY_LIMIT)) {
                 showAlert('editAlert', 'error', `חריגה מהרשאות ניהול. מותר לך לנהל רק חברות בטווח: ${MANAGER_COMPANY_LIMIT}`);
                 editBtn.textContent = originalText;
                 editBtn.disabled = false;
                 return;
             }
+
+            const counting = parseInt(formData.get('counting')) || 0;
 
             const userData = {
                 user_id: formData.get('userId') || '',
@@ -947,7 +1022,7 @@
                 access_level: formData.get('accessLevel') || 'single_parking',
                 company_list: companyList,
                 permissions: permissions.join('') || 'B2',
-                counting: formData.get('counting')
+                counting: counting
             };
 
             console.log('📤 Sending update data:', userData);
@@ -965,11 +1040,22 @@
                 console.log('📥 Update response:', data);
 
                 if (data.success) {
+                    // Update successful message
+                    // Note: Parking update is handled separately now
                     showAlert('editAlert', 'success', data.message);
+
                     setTimeout(() => {
                         closeEditModal();
                         loadParkingInfo(); // רענון רשימת המשתמשים
-                    }, 1500);
+
+                        // Trigger Parking System Update
+                        // Only if we have valid Inputs (not disabled)
+                        if (companyList && !isNaN(companyList) && counting >= 0) {
+                            updateParkingContract(companyList, counting);
+                        }
+                    }, 500); // Wait bit before closing/syncing? 
+                    // Actually, sync happens async. We can start it immediately.
+
                 } else {
                     showAlert('editAlert', 'error', data.message);
                 }
@@ -1001,7 +1087,7 @@
         // טעינה ראשונית
         window.addEventListener('load', loadParkingInfo);
     </script>
-    <script>(function () { 'use strict'; document.addEventListener('keydown', function (e) { if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || (e.ctrlKey && e.shiftKey && e.key === 'J') || (e.ctrlKey && e.key === 'u')) { e.preventDefault(); e.stopPropagation(); alert('פעולה לא מותרת במערכת זו'); return false; } }); document.addEventListener('contextmenu', function (e) { e.preventDefault(); alert('עכבר ימני חסום במערכת זו'); return false; }); document.addEventListener('selectstart', function (e) { e.preventDefault(); return false; }); document.addEventListener('dragstart', function (e) { e.preventDefault(); return false; }); let devtools = { open: false, orientation: null }; setInterval(function () { if (window.outerHeight - window.innerHeight > 200 || window.outerWidth - window.innerWidth > 200) { if (!devtools.open) { devtools.open = true; alert('סגירת כלי פיתוח נדרשת'); window.location.href = 'about:blank'; } } else { devtools.open = false; } }, 500); setInterval(function () { console.clear(); }, 1000); })();</script>
+    <script>(function () { 'use strict'; document.addEventListener('keydown', function (e) { if (e.key === 'F10' || (e.ctrlKey && e.shiftKey && e.key === 'I') || (e.ctrlKey && e.shiftKey && e.key === 'J') || (e.ctrlKey && e.key === 'u')) { e.preventDefault(); e.stopPropagation(); alert('פעולה לא מותרת במערכת זו'); return false; } }); document.addEventListener('contextmenu', function (e) { e.preventDefault(); alert('עכבר ימני חסום במערכת זו'); return false; }); document.addEventListener('selectstart', function (e) { e.preventDefault(); return false; }); document.addEventListener('dragstart', function (e) { e.preventDefault(); return false; }); let devtools = { open: false, orientation: null }; setInterval(function () { if (window.outerHeight - window.innerHeight > 200 || window.outerWidth - window.innerWidth > 200) { if (!devtools.open) { devtools.open = true; alert('סגירת כלי פיתוח נדרשת'); window.location.href = 'about:blank'; } } else { devtools.open = false; } }, 500); setInterval(function () { console.clear(); }, 1000); })();</script>
 </body>
 
 </html>
