@@ -3795,10 +3795,20 @@ def parking_manager_create_user():
                'https://s-b-parking-reports.onrender.com'
            )
            
+           # Sync counting to parking system if applicable
+           # Check if specific company (single contract ID) and counting provided
+           parking_sync_status = ""
+           if new_counting >= 0 and company_list and company_list.isdigit():
+               success, msg = update_parking_contract_counting(manager_data['project_number'], company_list, new_counting)
+               if success:
+                   parking_sync_status = " ועודכן במערכת החניון."
+               else:
+                   parking_sync_status = f" (נכשל עדכון בחניון: {msg})"
+           
            if email_sent:
-               message = f'מנהל חברה {username} נוצר בהצלחה עבור חניון {manager_data["parking_name"]}! מייל נשלח ל-{validated_email}'
+               message = f'מנהל חברה {username} נוצר בהצלחה עבור חניון {manager_data["parking_name"]}! מייל נשלח ל-{validated_email}{parking_sync_status}'
            else:
-               message = f'מנהל חברה {username} נוצר בהצלחה עבור חניון {manager_data["parking_name"]}, אך לא ניתן לשלוח מייל. הסיסמה הראשונית: Dd123456'
+               message = f'מנהל חברה {username} נוצר בהצלחה עבור חניון {manager_data["parking_name"]}, אך לא ניתן לשלוח מייל. הסיסמה הראשונית: Dd123456{parking_sync_status}'
            
            return jsonify({
                'success': True,
@@ -3944,9 +3954,22 @@ def parking_manager_update_user():
         if result.data:
             print(f"✅ User updated successfully: {username} (ID: {user_id}) - FOR PARKING: {manager_data['project_number']} ({manager_data['parking_name']})")
             
+            # Sync counting to parking system if applicable
+            # Determine effective company list (new or existing)
+            final_company_list = company_list if company_list else current_user.get('company_list')
+            final_company_list = str(final_company_list) if final_company_list else ""
+            
+            parking_sync_status = ""
+            if new_counting >= 0 and final_company_list and final_company_list.isdigit():
+                 success, msg = update_parking_contract_counting(manager_data['project_number'], final_company_list, new_counting)
+                 if success:
+                     parking_sync_status = " ועודכן במערכת החניון."
+                 else:
+                     parking_sync_status = f" (נכשל עדכון בחניון: {msg})"
+
             return jsonify({
                 'success': True,
-                'message': f'המשתמש {username} עודכן בהצלחה עבור חניון {manager_data["parking_name"]}!',
+                'message': f'המשתמש {username} עודכן בהצלחה עבור חניון {manager_data["parking_name"]}!{parking_sync_status}',
                 'user_data': {
                     'user_id': user_id,
                     'username': username,
@@ -4078,9 +4101,162 @@ def company_manager_page():
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
+# ========== Parking System Integration Helper Functions ==========
+
+def get_parking_connection_details(project_number):
+    """
+    Fetch connection details (IP, Port) for a given parking project number.
+    Mirrors logic from company_manager_proxy.
+    """
+    if not supabase:
+        print("❌ Supabase not initialized")
+        return None
+
+    try:
+        # Search by project number (which matches 'description' in parkings table)
+        parking_result = supabase.table('parkings').select(
+            'ip_address, port, description'
+        ).eq('description', str(project_number)).execute()
+
+        if not parking_result.data:
+            # Fallback: project_parking_mapping
+            try:
+                mapping_result = supabase.table('project_parking_mapping').select(
+                    'parking_id, ip_address, port, parking_name'
+                ).eq('project_number', str(project_number)).execute()
+
+                if mapping_result.data:
+                    data = mapping_result.data[0]
+                    return {
+                        'ip_address': data.get('ip_address'),
+                        'port': data.get('port', 443),
+                        'description': data.get('parking_name')
+                    }
+                else:
+                    # Fallback: parking_servers (by name)
+                    servers_result = supabase.table('parking_servers').select(
+                        'server_url, name'
+                    ).eq('name', str(project_number)).execute()
+                    
+                    if servers_result.data:
+                         server_data = servers_result.data[0]
+                         import re
+                         url_match = re.match(r'https?://([^:]+):?(\d+)?', server_data.get('server_url', ''))
+                         if url_match:
+                             return {
+                                 'ip_address': url_match.group(1),
+                                 'port': int(url_match.group(2)) if url_match.group(2) else 443,
+                                 'description': server_data.get('name')
+                             }
+            except Exception as e:
+                print(f"❌ Error searching fallback tables for parking {project_number}: {str(e)}")
+                return None
+        else:
+             data = parking_result.data[0]
+             return {
+                'ip_address': data.get('ip_address'),
+                'port': data.get('port', 443),
+                'description': data.get('description')
+             }
+             
+    except Exception as e:
+        print(f"❌ Error getting parking connection details: {str(e)}")
+        return None
     
+    return None
+
+def update_parking_contract_counting(project_number, contract_id, counting_value):
+    """
+    Updates the parking system contract with the new counting limit via XML PUT request.
+    """
+    print(f"🔄 Attempting to update parking system: Project={project_number}, Contract={contract_id}, Counting={counting_value}")
     
-# ========== API למנהל חברה - חניונים ומנויים ==========
+    connection = get_parking_connection_details(project_number)
+    if not connection:
+        print(f"❌ Could not find connection details for parking {project_number}")
+        return False, "Connection details not found"
+        
+    ip_address = connection['ip_address']
+    port = connection['port']
+    
+    if not ip_address:
+         print(f"❌ Missing IP address for parking {project_number}")
+         return False, "Missing IP address"
+
+    # Construct URL
+    # Format: CustomerMediaWebService/contracts/{id}/detail
+    url = f"https://{ip_address}:{port}/CustomerMediaWebService/contracts/{contract_id}/detail"
+    
+    # Construct XML Payload
+    # Structure:
+    # <?xml version="1.0" encoding="UTF-8"?>
+    # <cm:contractDetail xmlns:cm="http://gsph.sub.com/cust/types">
+    #   <cm:contract>
+    #       <cm:id>2</cm:id> -- contract_id
+    #   </cm:contract>
+    #   <counting>10</counting>
+    # </cm:contractDetail>
+    
+    try:
+        import xml.etree.ElementTree as ET
+        
+        # Define Namespaces - ElementTree handling of namespaces can be tricky. 
+        # Using explicit standard dictionary but manually handling prefixes might be safer if needed.
+        # However, ET.register_namespace usually works globally.
+        # Let's try constructing with 'ns0' or explicit prefix if needed, but 'cm' in tag name is explicit.
+        
+        # NOTE: ElementTree prefixes all tags with the namespace URL in {}. 
+        # To get <cm:contractDetail>, we register the namespace.
+        ns_url = "http://gsph.sub.com/cust/types"
+        ET.register_namespace('cm', ns_url)
+        
+        # Root Element
+        # Using QName syntax {url}tag
+        root = ET.Element(f'{{{ns_url}}}contractDetail')
+        
+        # Contract Wrapper
+        contract_elem = ET.SubElement(root, f'{{{ns_url}}}contract')
+        
+        # ID Element
+        id_elem = ET.SubElement(contract_elem, f'{{{ns_url}}}id')
+        id_elem.text = str(contract_id)
+        
+        # Counting Element - Note: User example showed <counting> without namespace prefix? 
+        # " <counting>10</counting> " -> appears to be NO prefix in user's snippet?
+        # User snippet: <cm:contractDetail ...> ... <cm:id>2</cm:id> </cm:contract> <counting>10</counting>
+        # Let's assume counting is in DEFAULT namespace (no prefix) or same namespace?
+        # User snippet has counting OUTSIDE of contract but INSIDE contractDetail.
+        
+        counting_elem = ET.SubElement(root, 'counting')
+        counting_elem.text = str(counting_value)
+        
+        # Generate String
+        xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
+        
+        print(f"📤 Sending XML to {url}:\n{xml_str}")
+        
+        # Headers
+        auth_string = base64.b64encode(b'2022:2022').decode('ascii')
+        headers = {
+            'Content-Type': 'application/xml',
+            'Authorization': f'Basic {auth_string}'
+        }
+        
+        # Send Request
+        response = requests.put(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=30)
+        
+        print(f"📥 Parking System Response: Code={response.status_code}")
+        
+        if response.status_code in [200, 201]:
+             print("✅ Parking system update successful")
+             return True, "Updated successfully"
+        else:
+             print(f"❌ Parking system update failed: {response.text}")
+             return False, f"Failed with status {response.status_code}"
+
+    except Exception as e:
+        print(f"❌ Exception sending update to parking system: {str(e)}")
+        return False, str(e)
 
 @app.route('/api/get-current-user', methods=['GET'])
 def get_current_user():
