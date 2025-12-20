@@ -2567,9 +2567,9 @@ def parking_manager_users_part_page():
         return redirect(url_for('login_page'))
     
     # Check permissions
-    # Fetch user data including company_list
+    # Fetch user data including company_list and counting
     try:
-        user_result = supabase.table('user_parkings').select('code_type, company_list').eq('email', session['user_email']).execute()
+        user_result = supabase.table('user_parkings').select('code_type, company_list, counting').eq('email', session['user_email']).execute()
         if not user_result.data:
             print(f"⚠️ Unauthorized access attempt to parking-manager-users-part by {session['user_email']}")
             return redirect(url_for('dashboard'))
@@ -2578,6 +2578,7 @@ def parking_manager_users_part_page():
         code_type = user_data.get('code_type', '')
         code_type_lower = str(code_type).strip().lower()
         manager_company_list = user_data.get('company_list', '')
+        manager_counting = user_data.get('counting', 0) or 0
         
         # Allow 'parking_manager_part' AND 'parking_manager_partial' for legacy support
         if code_type_lower not in ['parking_manager_part', 'parking_manager_partial'] and code_type_lower != 'master':
@@ -2588,7 +2589,7 @@ def parking_manager_users_part_page():
         print(f"Error checking parking manager permissions: {str(e)}")
         return redirect(url_for('dashboard'))
     
-    return render_template('parking_manager_users_part.html', manager_company_list=manager_company_list)
+    return render_template('parking_manager_users_part.html', manager_company_list=manager_company_list, manager_counting=manager_counting)
 
 @app.route('/parking-tour')
 def parking_tour_page():
@@ -3568,11 +3569,6 @@ def master_create_user():
         if not is_valid_username:
             return jsonify({'success': False, 'message': username_or_error})
         
-        # אימות אימייל
-        is_valid_email, validated_email = validate_input(email, "email")
-        if not is_valid_email:
-            return jsonify({'success': False, 'message': 'כתובת אימייל לא תקינה'})
-        
         # בדיקה אם המשתמש כבר קיים
         existing_username = supabase.table('user_parkings').select('username').eq('username', username).execute()
         existing_email = supabase.table('user_parkings').select('email').eq('email', validated_email).execute()
@@ -3676,7 +3672,7 @@ def parking_manager_create_user():
        
        # בדיקת הרשאות מנהל חניון
        manager_result = supabase.table('user_parkings').select(
-           'code_type, project_number, parking_name, company_type'
+           'code_type, project_number, parking_name, company_type, counting'
        ).eq('email', session['user_email']).execute()
        
        if not manager_result.data or manager_result.data[0].get('code_type') != 'parking_manager':
@@ -3706,6 +3702,20 @@ def parking_manager_create_user():
        is_valid_email, validated_email = validate_input(email, "email")
        if not is_valid_email:
            return jsonify({'success': False, 'message': 'כתובת אימייל לא תקינה'})
+
+        # Validation: Check counting limit
+       new_counting = int(data.get('counting', 0) or 0)
+       if new_counting < 0:
+            return jsonify({'success': False, 'message': 'כמות רכבים לא יכולה להיות שלילית'})
+
+       manager_limit = manager_data.get('counting', 0) or 0
+       if manager_limit > 0: # Only check if manager has a limit
+            # Get current usage
+            usage_result = supabase.table('user_parkings').select('counting').eq('project_number', manager_data['project_number']).execute()
+            current_usage = sum([(u.get('counting', 0) or 0) for u in usage_result.data])
+            
+            if current_usage + new_counting > manager_limit:
+                 return jsonify({'success': False, 'message': f'חריגה מכמות הרכבים הכוללת. נותר להקצאה: {manager_limit - current_usage}'})
        
        # בדיקה אם המשתמש כבר קיים
        existing_username = supabase.table('user_parkings').select('username').eq('username', username).execute()
@@ -3759,7 +3769,8 @@ def parking_manager_create_user():
            'code_expires_at': None,
            'password_expires_at': None,
            'company_list': company_list if company_list else None,
-           'permissions': permissions  # Store user permissions
+           'permissions': permissions,  # Store user permissions
+           'counting': new_counting
        }
        
        print(f"💾 Creating COMPANY MANAGER user for parking: {manager_data['project_number']} ({manager_data['parking_name']})")
@@ -3813,7 +3824,7 @@ def parking_manager_update_user():
         
         # בדיקת הרשאות מנהל חניון
         manager_result = supabase.table('user_parkings').select(
-            'code_type, project_number, parking_name, company_type'
+            'code_type, project_number, parking_name, company_type, counting'
         ).eq('email', session['user_email']).execute()
         
         if not manager_result.data or manager_result.data[0].get('code_type') != 'parking_manager':
@@ -3880,6 +3891,20 @@ def parking_manager_update_user():
         # וידוא שB תמיד כלול בהרשאות
         if 'B' not in permissions:
             permissions = 'B' + permissions
+
+        # Validation: Check counting limit
+        new_counting = int(data.get('counting', 0) or 0)
+        if new_counting < 0:
+             return jsonify({'success': False, 'message': 'כמות רכבים לא יכולה להיות שלילית'})
+
+        manager_limit = manager_data.get('counting', 0) or 0
+        if manager_limit > 0:
+            # Get current usage EXCLUDING current user
+            usage_result = supabase.table('user_parkings').select('counting').eq('project_number', manager_data['project_number']).neq('user_id', user_id).execute()
+            current_usage = sum([(u.get('counting', 0) or 0) for u in usage_result.data])
+            
+            if current_usage + new_counting > manager_limit:
+                 return jsonify({'success': False, 'message': f'חריגה מכמות הרכבים הכוללת. נותר להקצאה: {manager_limit - current_usage}'})
         
         # הכנת הנתונים לעדכון
         current_time = datetime.now(timezone.utc).isoformat()
@@ -3890,6 +3915,7 @@ def parking_manager_update_user():
             'permissions': permissions,
             'company_list': company_list if company_list else None,
             'access_level': access_level,
+            'counting': new_counting,
             'updated_at': current_time
         }
         
@@ -5447,7 +5473,7 @@ def parking_manager_get_info():
         
         # בדיקת הרשאות מנהל חניון
         user_result = supabase.table('user_parkings').select(
-            'code_type, project_number, parking_name, company_type, company_list'
+            'code_type, project_number, parking_name, company_type, company_list, counting'
         ).eq('email', session['user_email']).execute()
         
         if not user_result.data:
@@ -5464,7 +5490,7 @@ def parking_manager_get_info():
         
         # קבלת משתמשי החניון
         parking_users = supabase.table('user_parkings').select(
-             'user_id, username, email, company_list, permissions, role, access_level, created_at, is_temp_password'
+             'user_id, username, email, company_list, permissions, role, access_level, created_at, is_temp_password, counting'
         ).eq('project_number', user_data['project_number']).order('created_at', desc=True).execute()
         
         users_list = parking_users.data
@@ -5518,7 +5544,8 @@ def parking_manager_get_info():
             'parking_info': {
                 'project_number': user_data['project_number'],
                 'parking_name': user_data['parking_name'],
-                'company_type': user_data['company_type']
+                'company_type': user_data['company_type'],
+                'counting': user_data.get('counting', 0) or 0
             },
             'users': users_list
         })
