@@ -617,11 +617,11 @@
             showAlert('createAlert', 'info', 'מעדכן מערכת חניון...');
 
             try {
-                // Determine contract ID (might be single number)
-                // We send JSON, the Backend Proxy converts to XML for contracts/.../detail PUT
+                // Determine contract ID
                 const payload = {
                     endpoint: `contracts/${contractId}/detail`,
                     method: 'PUT',
+                    parking_id: parkingInfo.project_number, // ✅ Must include parking ID for proxy
                     payload: {
                         id: contractId,
                         counting: countingValue
@@ -747,8 +747,8 @@
                     // Show counting balance - EXCLUDING SELF
                     if (MANAGER_COUNTING_LIMIT > 0) {
                         const currentUsage = allUsers.reduce((sum, u) => {
-                            // Filter out self logic - ensure ID comparison works
-                            if (u.user_id === CURRENT_USER_ID) return sum;
+                            // Filter out self logic - String comparison logic
+                            if (String(u.user_id) === String(CURRENT_USER_ID)) return sum;
                             return sum + (u.counting || 0);
                         }, 0);
                         document.getElementById('countingBalance').textContent = `${currentUsage} / ${MANAGER_COUNTING_LIMIT}`;
@@ -789,6 +789,11 @@
 
             users.forEach(user => {
                 const row = document.createElement('tr');
+
+                // Highlight self
+                if (String(user.user_id) === String(CURRENT_USER_ID)) {
+                    row.style.backgroundColor = '#f8f9fa';
+                }
 
                 const statusClass = user.is_temp_password ? 'status-temp' : 'status-active';
                 const statusText = user.is_temp_password ? 'סיסמה זמנית' : 'פעיל';
@@ -859,7 +864,7 @@
             document.getElementById('editAccessLevel').value = 'single_parking'; // תמיד גישה לחניון בלבד
 
             // Handle Self-Editing Restriction
-            const isSelf = ((user.user_id || user.id || user.ID) === CURRENT_USER_ID);
+            const isSelf = (String(user.user_id || user.id || user.ID) === String(CURRENT_USER_ID));
             const editComp = document.getElementById('editCompanyList');
             const editCount = document.getElementById('editCounting');
 
