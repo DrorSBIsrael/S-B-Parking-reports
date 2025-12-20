@@ -3963,7 +3963,7 @@ def parking_manager_update_user():
             
             # Sync counting to parking system if applicable
             parking_sync_status = ""
-            print(f"🐛 DEBUG SYNC: company_list='{company_list}', counting={new_user_data.get('counting')}")
+            print(f"🐛 DEBUG SYNC: company_list='{company_list}', counting={new_counting}")
             try:
                 # Use new company_list if provided, else current
                 final_company_list = company_list if company_list else current_user.get('company_list')
