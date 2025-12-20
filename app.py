@@ -3904,6 +3904,8 @@ def parking_manager_update_user():
 
         # Validation: Check counting limit
         new_counting = int(data.get('counting', 0) or 0)
+        manager_limit = int(manager_data.get('counting', 0) or 0)
+        
         if new_counting < 0:
              return jsonify({'success': False, 'message': 'כמות רכבים לא יכולה להיות שלילית'})
 
@@ -3944,9 +3946,27 @@ def parking_manager_update_user():
         if result.data:
             print(f"✅ User updated successfully: {username} (ID: {user_id}) - FOR PARKING: {manager_data['project_number']} ({manager_data['parking_name']})")
             
+            # Sync counting to parking system if applicable
+            parking_sync_status = ""
+            try:
+                # Use new company_list if provided, else current
+                final_company_list = company_list if company_list else current_user.get('company_list')
+                target_contract = str(final_company_list).strip() if final_company_list and str(final_company_list).strip().isdigit() else None
+                
+                if target_contract and new_counting >= 0:
+                     print(f"🔄 Auto-syncing contract {target_contract} with counting {new_counting}...")
+                     success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_counting)
+                     if success:
+                         parking_sync_status = " ועודכן במערכת החניון."
+                     else:
+                         print(f"⚠️ Sync failed: {msg}")
+                         parking_sync_status = f" (נכשל עדכון בחניון: {msg})"
+            except Exception as e:
+                print(f"❌ Sync exception: {e}")
+
             return jsonify({
                 'success': True,
-                'message': f'המשתמש {username} עודכן בהצלחה עבור חניון {manager_data["parking_name"]}!',
+                'message': f'המשתמש {username} עודכן בהצלחה עבור חניון {manager_data["parking_name"]}!{parking_sync_status}',
                 'user_data': {
                     'user_id': user_id,
                     'username': username,
