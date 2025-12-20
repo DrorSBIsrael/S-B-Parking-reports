@@ -3795,20 +3795,20 @@ def parking_manager_create_user():
                'https://s-b-parking-reports.onrender.com'
            )
            # Sync counting to parking system if applicable
-            parking_sync_status = ""
-            try:
-                # Use company_list as contract ID if valid (single company)
-                target_contract = company_list if company_list and company_list.strip().isdigit() else None
-                if target_contract and int(new_user_data.get('counting', 0)) >= 0:
-                     print(f"🔄 Auto-syncing contract {target_contract} with counting {new_user_data.get('counting')}...")
-                     success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_user_data.get('counting'))
-                     if success:
-                         parking_sync_status = " ועודכן במערכת החניון."
-                     else:
-                         print(f"⚠️ Sync failed: {msg}")
-                         parking_sync_status = f" (נכשל עדכון בחניון: {msg})"
-            except Exception as e:
-                print(f"❌ Sync exception: {e}")
+           parking_sync_status = ""
+           try:
+               # Use company_list as contract ID if valid (single company)
+               target_contract = company_list if company_list and company_list.strip().isdigit() else None
+               if target_contract and int(new_user_data.get('counting', 0)) >= 0:
+                   print(f"🔄 Auto-syncing contract {target_contract} with counting {new_user_data.get('counting')}...")
+                   success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_user_data.get('counting'))
+                   if success:
+                       parking_sync_status = " ועודכן במערכת החניון."
+                   else:
+                       print(f"⚠️ Sync failed: {msg}")
+                       parking_sync_status = f" (נכשל עדכון בחניון: {msg})"
+           except Exception as e:
+               print(f"❌ Sync exception: {e}")
 
            if email_sent:
                message = f'מנהל חברה {username} נוצר בהצלחה עבור חניון {manager_data["parking_name"]}! מייל נשלח ל-{validated_email}{parking_sync_status}'
