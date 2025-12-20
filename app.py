@@ -5684,7 +5684,7 @@ def parking_manager_get_info():
         
         # בדיקת הרשאות מנהל חניון
         user_result = supabase.table('user_parkings').select(
-            'code_type, project_number, parking_name, company_type, company_list, counting'
+            'user_id, code_type, project_number, parking_name, company_type, company_list, counting'
         ).eq('email', session['user_email']).execute()
         
         if not user_result.data:
