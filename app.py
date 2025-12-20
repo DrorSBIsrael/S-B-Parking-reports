@@ -3795,20 +3795,10 @@ def parking_manager_create_user():
                'https://s-b-parking-reports.onrender.com'
            )
            
-           # Sync counting to parking system if applicable
-           # Check if specific company (single contract ID) and counting provided
-           parking_sync_status = ""
-           if new_counting >= 0 and company_list and company_list.isdigit():
-               success, msg = update_parking_contract_counting(manager_data['project_number'], company_list, new_counting)
-               if success:
-                   parking_sync_status = " ועודכן במערכת החניון."
-               else:
-                   parking_sync_status = f" (נכשל עדכון בחניון: {msg})"
-           
            if email_sent:
-               message = f'מנהל חברה {username} נוצר בהצלחה עבור חניון {manager_data["parking_name"]}! מייל נשלח ל-{validated_email}{parking_sync_status}'
+               message = f'מנהל חברה {username} נוצר בהצלחה עבור חניון {manager_data["parking_name"]}! מייל נשלח ל-{validated_email}'
            else:
-               message = f'מנהל חברה {username} נוצר בהצלחה עבור חניון {manager_data["parking_name"]}, אך לא ניתן לשלוח מייל. הסיסמה הראשונית: Dd123456{parking_sync_status}'
+               message = f'מנהל חברה {username} נוצר בהצלחה עבור חניון {manager_data["parking_name"]}, אך לא ניתן לשלוח מייל. הסיסמה הראשונית: Dd123456'
            
            return jsonify({
                'success': True,
@@ -3954,22 +3944,9 @@ def parking_manager_update_user():
         if result.data:
             print(f"✅ User updated successfully: {username} (ID: {user_id}) - FOR PARKING: {manager_data['project_number']} ({manager_data['parking_name']})")
             
-            # Sync counting to parking system if applicable
-            # Determine effective company list (new or existing)
-            final_company_list = company_list if company_list else current_user.get('company_list')
-            final_company_list = str(final_company_list) if final_company_list else ""
-            
-            parking_sync_status = ""
-            if new_counting >= 0 and final_company_list and final_company_list.isdigit():
-                 success, msg = update_parking_contract_counting(manager_data['project_number'], final_company_list, new_counting)
-                 if success:
-                     parking_sync_status = " ועודכן במערכת החניון."
-                 else:
-                     parking_sync_status = f" (נכשל עדכון בחניון: {msg})"
-
             return jsonify({
                 'success': True,
-                'message': f'המשתמש {username} עודכן בהצלחה עבור חניון {manager_data["parking_name"]}!{parking_sync_status}',
+                'message': f'המשתמש {username} עודכן בהצלחה עבור חניון {manager_data["parking_name"]}!',
                 'user_data': {
                     'user_id': user_id,
                     'username': username,
@@ -4925,7 +4902,32 @@ def company_manager_proxy():
                     print(f"   📝 Sending XML for update (PUT to {url}):")
                     print(f"   📅 Dates in consumer: xValidFrom={payload.get('consumer', {}).get('xValidFrom')}, xValidUntil={payload.get('consumer', {}).get('xValidUntil')}")
                     
-                    # Send as XML
+                    headers['Content-Type'] = 'application/xml'
+                    response = requests.put(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
+                elif '/detail' in endpoint and 'contracts' in endpoint:
+                    # Handle Contract Update - Convert JSON to XML
+                    import xml.etree.ElementTree as ET
+                    ns_url = "http://gsph.sub.com/cust/types"
+                    ET.register_namespace('cm', ns_url)
+                    
+                    root = ET.Element(f'{{{ns_url}}}contractDetail')
+                    
+                    # Contract Wrapper
+                    contract_elem = ET.SubElement(root, f'{{{ns_url}}}contract')
+                    
+                    # Contract ID
+                    if 'id' in payload:
+                        id_elem = ET.SubElement(contract_elem, f'{{{ns_url}}}id')
+                        id_elem.text = str(payload['id'])
+                    
+                    # Counting
+                    if 'counting' in payload:
+                        counting_elem = ET.SubElement(root, f'{{{ns_url}}}counting')
+                        counting_elem.text = str(payload['counting'])
+                        
+                    xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
+                    print(f"   📝 Sending XML for Contract Update (PUT to {url}):\n{xml_str}")
+                    
                     headers['Content-Type'] = 'application/xml'
                     response = requests.put(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
                 else:
@@ -5681,9 +5683,12 @@ def parking_manager_get_info():
              'user_id, username, email, company_list, permissions, role, access_level, created_at, is_temp_password, counting'
         ).eq('project_number', user_data['project_number']).order('created_at', desc=True).execute()
         
-        # Filter out the manager themselves from the list
-        manager_user_id = user_data.get('user_id')
-        users_list = [u for u in parking_users.data if u.get('user_id') != manager_user_id]
+        # קבלת משתמשי החניון
+        parking_users = supabase.table('user_parkings').select(
+             'user_id, username, email, company_list, permissions, role, access_level, created_at, is_temp_password, counting'
+        ).eq('project_number', user_data['project_number']).order('created_at', desc=True).execute()
+        
+        users_list = parking_users.data
         
         # אם זה מנהל חלקי - סינון המשתמשים
         if code_type_lower in ['parking_manager_part', 'parking_manager_partial']:
@@ -5731,6 +5736,7 @@ def parking_manager_get_info():
 
         return jsonify({
             'success': True,
+            'current_user_id': user_data.get('user_id'),
             'parking_info': {
                 'project_number': user_data['project_number'],
                 'parking_name': user_data['parking_name'],
