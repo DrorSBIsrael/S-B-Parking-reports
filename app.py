@@ -3672,12 +3672,13 @@ def parking_manager_create_user():
        
        # בדיקת הרשאות מנהל חניון
        manager_result = supabase.table('user_parkings').select(
-           'code_type, project_number, parking_name, company_type, counting'
+           'code_type, project_number, parking_name, company_type, counting, user_id'
        ).eq('email', session['user_email']).execute()
        if not manager_result.data:
             return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
             
        manager_data = manager_result.data[0]
+       manager_user_id = manager_data.get('user_id')
        code_type = str(manager_data.get('code_type', '')).strip().lower()
         
        if code_type not in ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master']:
@@ -3713,9 +3714,11 @@ def parking_manager_create_user():
 
        manager_limit = manager_data.get('counting', 0) or 0
        if manager_limit > 0: # Only check if manager has a limit
-            # Get current usage
-            usage_result = supabase.table('user_parkings').select('counting').eq('project_number', manager_data['project_number']).execute()
-            current_usage = sum([(u.get('counting', 0) or 0) for u in usage_result.data])
+            # Get current usage - Fetch ALL user IDs and filter in Python
+            usage_result = supabase.table('user_parkings').select('user_id, counting').eq('project_number', manager_data['project_number']).execute()
+            
+            # Exclude manager from the sum
+            current_usage = sum([(u.get('counting', 0) or 0) for u in usage_result.data if u.get('user_id') != manager_user_id])
             
             if current_usage + new_counting > manager_limit:
                  return jsonify({'success': False, 'message': f'חריגה מכמות הרכבים הכוללת. נותר להקצאה: {manager_limit - current_usage}'})
@@ -3827,7 +3830,7 @@ def parking_manager_update_user():
         
         # בדיקת הרשאות מנהל חניון
         manager_result = supabase.table('user_parkings').select(
-            'code_type, project_number, parking_name, company_type, counting'
+            'code_type, project_number, parking_name, company_type, counting, user_id'
         ).eq('email', session['user_email']).execute()
         
         if not manager_result.data:
@@ -3904,14 +3907,17 @@ def parking_manager_update_user():
         if new_counting < 0:
              return jsonify({'success': False, 'message': 'כמות רכבים לא יכולה להיות שלילית'})
 
-        manager_limit = manager_data.get('counting', 0) or 0
         if manager_limit > 0:
             # Get current usage - Fetch ALL and filter in Python to ensure safe exclusion
             usage_result = supabase.table('user_parkings').select('user_id, counting').eq('project_number', manager_data['project_number']).execute()
             
             # Ensure user_id is compared safely (handle string/int)
             target_user_id = int(user_id)
-            current_usage = sum([(u.get('counting', 0) or 0) for u in usage_result.data if int(u.get('user_id')) != target_user_id])
+            manager_user_id = manager_data.get('user_id')
+            
+            # Sum usage EXCLUDING the manager AND the user being updated
+            current_usage = sum([(u.get('counting', 0) or 0) for u in usage_result.data 
+                                 if int(u.get('user_id')) != target_user_id and u.get('user_id') != manager_user_id])
             
             if current_usage + new_counting > manager_limit:
                  return jsonify({'success': False, 'message': f'חריגה מכמות הרכבים הכוללת. נותר להקצאה: {manager_limit - current_usage}'})
