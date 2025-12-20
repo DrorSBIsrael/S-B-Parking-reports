@@ -3674,11 +3674,14 @@ def parking_manager_create_user():
        manager_result = supabase.table('user_parkings').select(
            'code_type, project_number, parking_name, company_type, counting'
        ).eq('email', session['user_email']).execute()
-       
-       if not manager_result.data or manager_result.data[0].get('code_type') != 'parking_manager':
-           return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
-       
+       if not manager_result.data:
+            return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
+            
        manager_data = manager_result.data[0]
+       code_type = str(manager_data.get('code_type', '')).strip().lower()
+        
+       if code_type not in ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master']:
+            return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
        
        data = request.get_json()
        username = data.get('username', '').strip() if data.get('username') else ''
@@ -3827,10 +3830,14 @@ def parking_manager_update_user():
             'code_type, project_number, parking_name, company_type, counting'
         ).eq('email', session['user_email']).execute()
         
-        if not manager_result.data or manager_result.data[0].get('code_type') != 'parking_manager':
+        if not manager_result.data:
             return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
-        
+            
         manager_data = manager_result.data[0]
+        code_type = str(manager_data.get('code_type', '')).strip().lower()
+        
+        if code_type not in ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master']:
+            return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
         
         data = request.get_json()
         user_id = data.get('user_id')
