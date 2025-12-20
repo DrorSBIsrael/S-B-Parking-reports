@@ -3906,9 +3906,12 @@ def parking_manager_update_user():
 
         manager_limit = manager_data.get('counting', 0) or 0
         if manager_limit > 0:
-            # Get current usage EXCLUDING current user
-            usage_result = supabase.table('user_parkings').select('counting').eq('project_number', manager_data['project_number']).neq('user_id', user_id).execute()
-            current_usage = sum([(u.get('counting', 0) or 0) for u in usage_result.data])
+            # Get current usage - Fetch ALL and filter in Python to ensure safe exclusion
+            usage_result = supabase.table('user_parkings').select('user_id, counting').eq('project_number', manager_data['project_number']).execute()
+            
+            # Ensure user_id is compared safely (handle string/int)
+            target_user_id = int(user_id)
+            current_usage = sum([(u.get('counting', 0) or 0) for u in usage_result.data if int(u.get('user_id')) != target_user_id])
             
             if current_usage + new_counting > manager_limit:
                  return jsonify({'success': False, 'message': f'חריגה מכמות הרכבים הכוללת. נותר להקצאה: {manager_limit - current_usage}'})
