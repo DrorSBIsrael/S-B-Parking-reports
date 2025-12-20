@@ -745,21 +745,15 @@
 
                     // Show counting balance - EXCLUDING SELF
                     if (MANAGER_COUNTING_LIMIT > 0) {
-                        console.log("🔍 Debug Quota:");
-                        console.log("Limit:", MANAGER_COUNTING_LIMIT);
-                        console.log("Current User ID:", CURRENT_USER_ID);
-
                         const currentUsage = allUsers.reduce((sum, u) => {
                             // Filter out self logic - String comparison logic
                             const isSelf = String(u.user_id) === String(CURRENT_USER_ID);
                             const val = (u.counting || 0);
-                            console.log(`User ${u.username} (${u.user_id}): ${val} ${isSelf ? '[SELF - EXCLUDED]' : '[INCLUDED]'}`);
 
                             if (isSelf) return sum;
                             return sum + val;
                         }, 0);
 
-                        console.log("Calculated Usage:", currentUsage);
                         document.getElementById('countingBalance').textContent = `${currentUsage} / ${MANAGER_COUNTING_LIMIT}`;
 
                         // Color warning if near limit
