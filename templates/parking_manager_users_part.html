@@ -938,14 +938,13 @@
                 return;
             }
 
-            const counting = parseInt(formData.get('counting')) || 0;
             const userData = {
                 username: formData.get('username'),
                 email: formData.get('email'),
                 access_level: formData.get('accessLevel'),
                 company_list: companyList,
                 permissions: permissionsString,
-                counting: counting
+                counting: formData.get('counting')
             };
 
             try {
@@ -966,11 +965,6 @@
                     document.querySelector('input[value="B"]').checked = true;
                     document.querySelector('input[value="2"]').checked = true;
                     loadParkingInfo(); // רענון רשימת המשתמשים
-
-                    // Trigger Parking System Update
-                    if (companyList && !isNaN(companyList) && counting >= 0) {
-                        updateParkingContract(companyList, counting);
-                    }
                 } else {
                     showAlert('createAlert', 'error', data.message);
                 }
@@ -1018,8 +1012,6 @@
                 return;
             }
 
-            const counting = parseInt(formData.get('counting')) || 0;
-
             const userData = {
                 user_id: formData.get('userId') || '',
                 username: formData.get('username') || '',
@@ -1027,7 +1019,7 @@
                 access_level: formData.get('accessLevel') || 'single_parking',
                 company_list: companyList,
                 permissions: permissions.join('') || 'B2',
-                counting: counting
+                counting: formData.get('counting')
             };
 
             console.log('📤 Sending update data:', userData);
@@ -1045,22 +1037,11 @@
                 console.log('📥 Update response:', data);
 
                 if (data.success) {
-                    // Update successful message
-                    // Note: Parking update is handled separately now
                     showAlert('editAlert', 'success', data.message);
-
                     setTimeout(() => {
                         closeEditModal();
                         loadParkingInfo(); // רענון רשימת המשתמשים
-
-                        // Trigger Parking System Update
-                        // Only if we have valid Inputs (not disabled)
-                        if (companyList && !isNaN(companyList) && counting >= 0) {
-                            updateParkingContract(companyList, counting);
-                        }
-                    }, 500); // Wait bit before closing/syncing? 
-                    // Actually, sync happens async. We can start it immediately.
-
+                    }, 1500);
                 } else {
                     showAlert('editAlert', 'error', data.message);
                 }
