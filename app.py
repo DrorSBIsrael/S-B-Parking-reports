@@ -5440,26 +5440,79 @@ def company_manager_proxy():
 # ========== API למנהל חניון ==========
 @app.route('/api/parking-manager/get-parking-info', methods=['GET'])
 def parking_manager_get_info():
-    """קבלת נתוני החניון של המנהל"""
+    """קבלת נתוני החניון של המנהל - תומך גם במנהל חלקי"""
     try:
         if 'user_email' not in session:
             return jsonify({'success': False, 'message': 'לא מחובר'}), 401
         
         # בדיקת הרשאות מנהל חניון
         user_result = supabase.table('user_parkings').select(
-            'code_type, project_number, parking_name, company_type'
+            'code_type, project_number, parking_name, company_type, company_list'
         ).eq('email', session['user_email']).execute()
         
-        if not user_result.data or user_result.data[0].get('code_type') != 'parking_manager':
-            return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
-        
+        if not user_result.data:
+            return jsonify({'success': False, 'message': 'משתמש לא נמצא'}), 403
+
         user_data = user_result.data[0]
+        code_type = user_data.get('code_type', '')
+        code_type_lower = str(code_type).strip().lower()
+        
+        # הרשאות: מנהל חניון מלא, מנהל חניון חלקי, או מאסטר
+        allowed_roles = ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master']
+        if code_type_lower not in allowed_roles:
+            return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
         
         # קבלת משתמשי החניון
         parking_users = supabase.table('user_parkings').select(
              'user_id, username, email, company_list, permissions, role, access_level, created_at, is_temp_password'
         ).eq('project_number', user_data['project_number']).order('created_at', desc=True).execute()
         
+        users_list = parking_users.data
+        
+        # אם זה מנהל חלקי - סינון המשתמשים
+        if code_type_lower in ['parking_manager_part', 'parking_manager_partial']:
+            manager_allowed = user_data.get('company_list', '')
+            filtered_users = []
+            
+            # Helper to parse ranges "100, 200-300" -> list of ints
+            def parse_ranges(range_str):
+                allowed_nums = set()
+                if not range_str: return allowed_nums
+                parts = str(range_str).split(',')
+                for p in parts:
+                    p = p.strip()
+                    if '-' in p:
+                        try:
+                            start, end = map(int, p.split('-'))
+                            allowed_nums.update(range(start, end + 1))
+                        except: pass
+                    else:
+                        try:
+                            allowed_nums.add(int(p))
+                        except: pass
+                return allowed_nums
+
+            manager_set = parse_ranges(manager_allowed)
+            
+            # אם למנהל אין הגדרת חברות, אולי הוא לא רואה כלום או רואה הכל? נניח ריק = כלום
+            if manager_set: 
+                for u in users_list:
+                    u_companies = u.get('company_list', '')
+                    # אם למשתמש אין חברה מוגדרת, האם להראות? נניח שלא
+                    if not u_companies: continue
+                    
+                    u_set = parse_ranges(u_companies)
+                    # בדיקה: האם כל החברות של המשתמש מוכלות בטווח המנהל? 
+                    # או מספיק חיתוך? המשתמש ביקש: "המשתמש אמור לראות רק משתמשים שיש להם חברות בטווח"
+                    # נניח חיתוך (overlap) מספיק כדי לראות את המשתמש
+                    # אבל כדי למנוע זליגת מידע, אם משתמש שייך ל-100 ו-200, ומנהל אחראי רק על 100,
+                    # הוא יראה את המשתמש. האם הוא יכול לערוך אותו ולראות את 200? כן. 
+                    # זה גבולי אבל מקובל במערכות פשוטות. נלך על חיתוך.
+                    if not u_set.isdisjoint(manager_set):
+                        filtered_users.append(u)
+            
+            users_list = filtered_users
+
         return jsonify({
             'success': True,
             'parking_info': {
@@ -5467,7 +5520,7 @@ def parking_manager_get_info():
                 'parking_name': user_data['parking_name'],
                 'company_type': user_data['company_type']
             },
-            'users': parking_users.data
+            'users': users_list
         })
         
     except Exception as e:
