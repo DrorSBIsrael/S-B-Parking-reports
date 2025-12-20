@@ -804,21 +804,20 @@
                 const permissions = user.permissions || 'B';
                 const permissionDisplay = formatPermissions(permissions);
 
-                // הצגת מספרי חברות
-                const companyList = user.company_list || '-';
+                // Counting display
+                const countingVal = (user.counting !== undefined && user.counting !== null) ? user.counting : '-';
 
                 row.innerHTML = `
-                    <td><strong>${user.username}</strong></td>
+                    <td>${user.username}</td>
                     <td>${user.email}</td>
-                    <td>${companyList}</td>
-                    <td>${user.role || 'משתמש'}</td>
-                    <td>${user.access_level || 'גישה בסיסית'}</td>
-                    <td>${permissionDisplay}</td>
-                    <td>${createdDate}</td>
+                    <td>${companyList}</td> <!-- Company List Column -->
+                    <td dir="ltr" style="text-align: right;">${permissionDisplay}</td>
+                    <td>${countingVal}</td> <!-- Counting Column -->
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    <td>${createdDate}</td>
                     <td>
-                        <button class="btn btn-edit" onclick="editUser('${user.id || user.user_id || user.ID}')">
-                            ✏️ עריכה
+                        <button class="btn-icon" onclick='openEditModal(${JSON.stringify(user)})' title="ערוך">
+                            ✏️
                         </button>
                     </td>
                 `;
