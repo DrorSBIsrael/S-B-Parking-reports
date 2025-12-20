@@ -365,6 +365,10 @@
                     <div class="label">סוג חברה</div>
                     <div class="value" id="companyType">-</div>
                 </div>
+                <div class="parking-detail">
+                    <div class="label">מכסת רכבים כוללת</div>
+                    <div class="value" id="countingBalance">-</div>
+                </div>
             </div>
         </div>
 
@@ -396,6 +400,11 @@
                         <small style="color: #6c757d; font-size: 12px;">
                             הזינו מספרי חברות מופרדים במקף (-) או (,) בלבד. השאירו ריק אם לא רלוונטי.
                         </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="counting">מגבלת כמות רכבים (0 = ללא הגבלה)</label>
+                        <input type="number" id="counting" name="counting" min="0" value="0">
                     </div>
 
                     <div class="form-group">
@@ -514,6 +523,11 @@
                     </div>
 
                     <div class="form-group">
+                        <label for="editCounting">מגבלת כמות רכבים (0 = ללא הגבלה)</label>
+                        <input type="number" id="editCounting" name="counting" min="0" value="0">
+                    </div>
+
+                    <div class="form-group">
                         <label for="editAccessLevel">רמת גישה</label>
                         <select id="editAccessLevel" name="accessLevel">
                             <option value="single_parking">גישה לחניון בלבד</option>
@@ -579,6 +593,7 @@
     <script>
         // Inject manager's allowed company list from Flask
         const MANAGER_COMPANY_LIMIT = "{{ manager_company_list }}";
+        const MANAGER_COUNTING_LIMIT = parseInt("{{ manager_counting }}") || 0;
 
         // Update placeholders to show allowed limit
         document.addEventListener('DOMContentLoaded', function () {
@@ -683,7 +698,17 @@
                     document.getElementById('parkingTitle').textContent = `החניון שלך: ${parkingInfo.parking_name}`;
                     document.getElementById('projectNumber').textContent = parkingInfo.project_number;
                     document.getElementById('parkingName').textContent = parkingInfo.parking_name;
+                    document.getElementById('parkingName').textContent = parkingInfo.parking_name;
                     document.getElementById('companyType').textContent = parkingInfo.company_type || 'לא צוין';
+
+                    // Show counting balance
+                    if (MANAGER_COUNTING_LIMIT > 0) {
+                        const currentUsage = allUsers.reduce((sum, u) => sum + (u.counting || 0), 0);
+                        document.getElementById('countingBalance').textContent = `${currentUsage} / ${MANAGER_COUNTING_LIMIT}`;
+                    } else {
+                        document.getElementById('countingBalance').textContent = 'ללא הגבלה';
+                    }
+
                     document.getElementById('parkingDetails').style.display = 'flex';
 
                     // הצגת רשימת המשתמשים
@@ -784,7 +809,9 @@
             document.getElementById('editUserId').value = userId;
             document.getElementById('editUsername').value = user.username || '';
             document.getElementById('editEmail').value = user.email || '';
+            document.getElementById('editEmail').value = user.email || '';
             document.getElementById('editCompanyList').value = user.company_list || '';
+            document.getElementById('editCounting').value = user.counting || 0;
             document.getElementById('editAccessLevel').value = 'single_parking'; // תמיד גישה לחניון בלבד
 
             // סימון ההרשאות הנוכחיות
@@ -845,7 +872,8 @@
                 email: formData.get('email'),
                 access_level: formData.get('accessLevel'),
                 company_list: companyList,
-                permissions: permissionsString
+                permissions: permissionsString,
+                counting: formData.get('counting')
             };
 
             try {
@@ -918,7 +946,8 @@
                 email: formData.get('email') || '',
                 access_level: formData.get('accessLevel') || 'single_parking',
                 company_list: companyList,
-                permissions: permissions.join('') || 'B2'
+                permissions: permissions.join('') || 'B2',
+                counting: formData.get('counting')
             };
 
             console.log('📤 Sending update data:', userData);
