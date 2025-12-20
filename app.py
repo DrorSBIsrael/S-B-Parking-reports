@@ -4221,13 +4221,9 @@ def update_parking_contract_counting(project_number, contract_id, counting_value
         id_elem = ET.SubElement(contract_elem, f'{{{ns_url}}}id')
         id_elem.text = str(contract_id)
         
-        # Counting Element - Note: User example showed <counting> without namespace prefix? 
-        # " <counting>10</counting> " -> appears to be NO prefix in user's snippet?
-        # User snippet: <cm:contractDetail ...> ... <cm:id>2</cm:id> </cm:contract> <counting>10</counting>
-        # Let's assume counting is in DEFAULT namespace (no prefix) or same namespace?
-        # User snippet has counting OUTSIDE of contract but INSIDE contractDetail.
-        
-        counting_elem = ET.SubElement(root, 'counting')
+        # Counting Element - Adding namespace to be consistent with schema
+        # Assuming <cm:counting> matches the schema defined by xmlns:cm header
+        counting_elem = ET.SubElement(root, f'{{{ns_url}}}counting')
         counting_elem.text = str(counting_value)
         
         # Generate String
@@ -4245,14 +4241,14 @@ def update_parking_contract_counting(project_number, contract_id, counting_value
         # Send Request
         response = requests.put(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=30)
         
-        print(f"📥 Parking System Response: Code={response.status_code}")
+        print(f"📥 Parking System Response: Code={response.status_code}, Body={response.text[:200]}")
         
         if response.status_code in [200, 201]:
              print("✅ Parking system update successful")
              return True, "Updated successfully"
         else:
-             print(f"❌ Parking system update failed: {response.text}")
-             return False, f"Failed with status {response.status_code}"
+             print(f"❌ Parking system update failed: {response.status_code}")
+             return False, f"HTTP {response.status_code}"
 
     except Exception as e:
         print(f"❌ Exception sending update to parking system: {str(e)}")
@@ -5685,7 +5681,9 @@ def parking_manager_get_info():
              'user_id, username, email, company_list, permissions, role, access_level, created_at, is_temp_password, counting'
         ).eq('project_number', user_data['project_number']).order('created_at', desc=True).execute()
         
-        users_list = parking_users.data
+        # Filter out the manager themselves from the list
+        manager_user_id = user_data.get('user_id')
+        users_list = [u for u in parking_users.data if u.get('user_id') != manager_user_id]
         
         # אם זה מנהל חלקי - סינון המשתמשים
         if code_type_lower in ['parking_manager_part', 'parking_manager_partial']:
