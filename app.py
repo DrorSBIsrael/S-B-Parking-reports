@@ -4233,12 +4233,12 @@ def update_parking_contract_counting(project_number, contract_id, counting_value
         id_elem = ET.SubElement(contract_elem, f'{{{ns_url}}}id')
         id_elem.text = str(contract_id)
         
-        # Counting Element - Moving inside contract element based on standard schema patterns
-        # <cm:contract>
-        #   <cm:id>...</cm:id>
+        # Counting Element - Moving back to root level as per original implementation possibility
+        # <cm:contractDetail>
+        #   <cm:contract>...</cm:contract>
         #   <cm:counting>...</cm:counting>
-        # </cm:contract>
-        counting_elem = ET.SubElement(contract_elem, f'{{{ns_url}}}counting')
+        # </cm:contractDetail>
+        counting_elem = ET.SubElement(root, f'{{{ns_url}}}counting')
         counting_elem.text = str(counting_value)
         
         # Generate String
