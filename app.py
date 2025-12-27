@@ -4489,21 +4489,32 @@ def company_manager_search_vehicle():
              return jsonify({'success': False, 'message': 'חסרים נתונים לחיפוש'}), 400
 
         # קבלת פרטי חיבור לחניון
-        # אנחנו צריכים את ה-project_number מתוך ה-parking_id (שהוא ה-id בטבלה)
-        # או שנשתמש ב-get_parking_connection_details אם יש לנו project number
-        # אבל כאן יש לנו parking_id מה-DB.
+        # נשתמש בפונקציית העזר כדי לתמוך בחיפוש לפי מספר פרויקט (description)
+        # וגם בטבלאות מיפוי
+        connection_details = get_parking_connection_details(parking_id)
         
-        # נשלוף את פרטי החניון ישירות כמו ב-get_subscribers
-        parking_result = supabase.table('parkings').select(
-            'ip_address, port, description'
-        ).eq('id', parking_id).execute()
+        if not connection_details:
+             # ננסה גם כ-ID רגיל למקרה שזה כן ID
+             try:
+                 parking_result = supabase.table('parkings').select(
+                    'ip_address, port, description'
+                 ).eq('id', parking_id).execute()
+                 
+                 if parking_result.data:
+                     data = parking_result.data[0]
+                     connection_details = {
+                        'ip_address': data.get('ip_address'),
+                        'port': data.get('port', 443),
+                        'description': data.get('description')
+                     }
+             except:
+                 pass
         
-        if not parking_result.data:
-            return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
+        if not connection_details:
+            return jsonify({'success': False, 'message': 'חניון לא נמצא או חסרים פרטי התחברות'}), 404
             
-        parking_data = parking_result.data[0]
-        ip_address = parking_data.get('ip_address')
-        port = parking_data.get('port', 443)
+        ip_address = connection_details.get('ip_address')
+        port = connection_details.get('port', 443)
         
         if not ip_address:
              return jsonify({'success': False, 'message': 'חסרים נתוני חיבור לחניון'}), 500
@@ -4517,9 +4528,7 @@ def company_manager_search_vehicle():
         
         # 1. חיפוש המנוי
         # נשתמש בנתיב שעבד: /consumers?contractId=2&lpn=...
-        # אם לא סופק contract_id, ננסה לחפש ללא הפרמטר או שנצטרך לדעת אותו. 
-        # API זה בדרך כלל דורש contractId. אם המשתמש לא סיפק, נשתמש ב-description של החניון אם הוא מספרי? לא בטוח.
-        # נניח שחובה לספק contract_id או ברירת מחדל '1000' (מאסטר).
+        # אם לא סופק contract_id, ננסה לחפש ללא הפרמטר
         
         search_contract_id = contract_id if contract_id else '1000' # ברירת מחדל
         
