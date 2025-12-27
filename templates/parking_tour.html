@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html dir="rtl" lang="he">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,7 +16,7 @@
             --light-bg: #f8f9fa;
             --dark-text: #2c3e50;
             --border-color: #dee2e6;
-            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
         * {
@@ -177,7 +178,7 @@
         .subscriber-card:hover {
             border-color: var(--primary-color);
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
 
         .subscriber-header {
@@ -273,8 +274,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .message {
@@ -341,7 +347,9 @@
                 padding: 10px;
             }
 
-            .header, .search-section, .results-section {
+            .header,
+            .search-section,
+            .results-section {
                 padding: 20px;
             }
 
@@ -357,9 +365,10 @@
         }
     </style>
 </head>
+
 <body>
     <button class="logout-btn" onclick="logout()">יציאה</button>
-    
+
     <div class="container">
         <!-- Header -->
         <div class="header">
@@ -374,14 +383,8 @@
             <div class="search-form">
                 <div class="form-group">
                     <label class="form-label" for="licensePlate">מספר רישוי:</label>
-                    <input 
-                        type="text" 
-                        id="licensePlate" 
-                        class="form-input" 
-                        placeholder="12-345-67"
-                        autocomplete="off"
-                        maxlength="10"
-                    >
+                    <input type="text" id="licensePlate" class="form-input" placeholder="12-345-67" autocomplete="off"
+                        maxlength="10">
                 </div>
                 <button class="btn btn-primary" onclick="searchSubscriber()">
                     🔍 חיפוש מנוי
@@ -407,7 +410,7 @@
         // Load user data on page load
         window.addEventListener('DOMContentLoaded', async () => {
             await loadUserData();
-            
+
             // Setup enter key for search
             document.getElementById('licensePlate').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
@@ -423,12 +426,12 @@
                     credentials: 'same-origin'  // חשוב! לשלוח cookies
                 });
                 const data = await response.json();
-                
+
                 if (data.success) {
                     currentUserData = data.user;
                     document.getElementById('parkingName').textContent = currentUserData.parking_name || 'חניון';
                     document.getElementById('userInfo').textContent = `משתמש: ${currentUserData.username || currentUserData.email}`;
-                    
+
                     // Set current parking
                     currentParkingId = currentUserData.project_number;
                 }
@@ -441,7 +444,7 @@
         // Search for subscriber by license plate
         async function searchSubscriber() {
             const licensePlate = document.getElementById('licensePlate').value.trim();
-            
+
             if (!licensePlate) {
                 showMessage('אנא הזן מספר רישוי', 'warning');
                 return;
@@ -451,42 +454,90 @@
             const cleanPlate = licensePlate.replace(/[\s-]/g, '');
 
             showLoading();
-            
-            console.log('Searching for license plate:', cleanPlate);
-            console.log('Current parking ID:', currentParkingId);
-            
+
             try {
-                const response = await fetch('/api/parking-tour/search', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    credentials: 'same-origin',  // חשוב! לשלוח cookies
-                    body: JSON.stringify({
-                        license_plate: cleanPlate
-                    })
+                // Use the new endpoint in app.py
+                const url = `/api/company-manager/search-vehicle?parking_id=${currentParkingId}&lpn=${cleanPlate}`;
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    credentials: 'same-origin'
                 });
 
-                console.log('Response status:', response.status);
                 const result = await response.json();
-                console.log('Response data:', result);
-                
+
                 if (result.success) {
-                    if (result.data && result.data.length > 0) {
-                        displayResults(result.data);
+                    if (result.found) {
+                        // Parse the XML data
+                        const parser = new DOMParser();
+                        const xmlDoc = parser.parseFromString(result.raw_xml, "text/xml");
+
+                        // Extract subscriber details
+                        const subscriber = parseSubscriberXml(xmlDoc);
+
+                        // Add company name from server response
+                        subscriber.companyName = result.company_name;
+                        subscriber.contractId = result.contract_id;
+
+                        displayResults([subscriber]);
                     } else {
+                        // Not found (204)
                         displayNoResults();
                     }
                 } else {
                     console.error('Search failed:', result.message);
                     showMessage(result.message || 'שגיאה בחיפוש', 'error');
-                    hideResults();
                 }
             } catch (error) {
                 console.error('Search error:', error);
-                showMessage('שגיאה בחיפוש מנוי', 'error');
-                hideResults();
+                showMessage('שגיאה בתקשורת עם השרת', 'error');
             }
+        }
+
+        // Helper to parse XML response
+        function parseSubscriberXml(xmlDoc) {
+            // Helper to safe get text content
+            const getText = (selector) => {
+                const el = xmlDoc.querySelector(selector);
+                return el ? el.textContent : '';
+            };
+
+            // Helper to get attribute
+            const getAttr = (selector, attr) => {
+                const el = xmlDoc.querySelector(selector);
+                return el ? el.getAttribute(attr) : '';
+            };
+
+            // Extract fields based on XML structure
+            // Checks multiple possible locations as API structure varies
+            return {
+                id: getText('consumer > id') || getText('id'),
+                subscriberNum: getText('consumer > id') || getText('id'),
+
+                firstName: getText('person > firstName') || getText('firstName'),
+                lastName: getText('person > surname') || getText('surname') || getText('lastName'),
+
+                // Vehicles
+                vehicle1: getText('lpn1'),
+                vehicle2: getText('lpn2'),
+                vehicle3: getText('lpn3'),
+
+                // Validity
+                validUntil: getText('identification > validUntil') || getText('validUntil') || getText('xValidUntil'),
+                validFrom: getText('identification > validFrom') || getText('validFrom'),
+
+                // Tag/Card
+                tagNum: getText('identification > cardno') || getText('cardno'),
+
+                // Profile
+                profileName: getText('identification > usageProfile > name') || getText('profileName') || 'רגיל',
+
+                // Presence
+                presence: getText('identification > status') === '0', // Approximate mapping
+
+                // Raw data for debugging if needed
+                fullDetailsLoaded: true
+            };
         }
 
         // Display search results
@@ -622,4 +673,5 @@
         }
     </script>
 </body>
+
 </html>
