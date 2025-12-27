@@ -4180,6 +4180,7 @@ def get_parking_connection_details(project_number):
 def update_parking_contract_counting(project_number, contract_id, counting_value):
     """
     Updates the parking system contract with the new counting limit via XML PUT request.
+    Using verified structure from local testing.
     """
     print(f"🔄 Attempting to update parking system: Project={project_number}, Contract={contract_id}, Counting={counting_value}")
     
@@ -4199,51 +4200,23 @@ def update_parking_contract_counting(project_number, contract_id, counting_value
     # Format: CustomerMediaWebService/contracts/{id}/detail
     url = f"https://{ip_address}:{port}/CustomerMediaWebService/contracts/{contract_id}/detail"
     
-    # Construct XML Payload
-    # Structure:
-    # <?xml version="1.0" encoding="UTF-8"?>
-    # <cm:contractDetail xmlns:cm="http://gsph.sub.com/cust/types">
-    #   <cm:contract>
-    #       <cm:id>2</cm:id> -- contract_id
-    #   </cm:contract>
-    #   <counting>10</counting>
-    # </cm:contractDetail>
+    # Construct XML Payload manually to ensure exact structure as verified
+    # Note: pooling is a sibling of contract, not child
+    xml_str = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<contractDetail xmlns="http://gsph.sub.com/cust/types">
+    <contract>
+        <id>{contract_id}</id>
+    </contract>
+    <pooling>
+        <poolingDetail>
+            <facility>0</facility>
+            <extCardProfile>0</extCardProfile>
+            <maxCounter>{counting_value}</maxCounter>
+        </poolingDetail>
+    </pooling>
+</contractDetail>'''
     
     try:
-        import xml.etree.ElementTree as ET
-        
-        # Define Namespaces - ElementTree handling of namespaces can be tricky. 
-        # Using explicit standard dictionary but manually handling prefixes might be safer if needed.
-        # However, ET.register_namespace usually works globally.
-        # Let's try constructing with 'ns0' or explicit prefix if needed, but 'cm' in tag name is explicit.
-        
-        # NOTE: ElementTree prefixes all tags with the namespace URL in {}. 
-        # To get <cm:contractDetail>, we register the namespace.
-        ns_url = "http://gsph.sub.com/cust/types"
-        ET.register_namespace('cm', ns_url)
-        
-        # Root Element
-        # Using QName syntax {url}tag
-        root = ET.Element(f'{{{ns_url}}}contractDetail')
-        
-        # Contract Wrapper
-        contract_elem = ET.SubElement(root, f'{{{ns_url}}}contract')
-        
-        # ID Element
-        id_elem = ET.SubElement(contract_elem, f'{{{ns_url}}}id')
-        id_elem.text = str(contract_id)
-        
-        # Counting Element - Moving back to root level as per original implementation possibility
-        # <cm:contractDetail>
-        #   <cm:contract>...</cm:contract>
-        #   <cm:counting>...</cm:counting>
-        # </cm:contractDetail>
-        counting_elem = ET.SubElement(root, f'{{{ns_url}}}counting')
-        counting_elem.text = str(counting_value)
-        
-        # Generate String
-        xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
-        
         print(f"📤 Sending XML to {url}:\n{xml_str}")
         
         # Headers
