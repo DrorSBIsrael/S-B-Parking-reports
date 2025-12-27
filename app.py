@@ -4555,22 +4555,38 @@ def company_manager_search_vehicle():
              # אם נכשל, ננסה להחזיר כפי שהוא
              return jsonify({'success': True, 'found': True, 'raw_data': response.text})
              
-        # נחלץ את ה-contractId מהתשובה אם לא ידענו אותו, או לוידוא
-        # המבנה של consumers יכול להיות רשימה או יחיד. 
-        # נחפש את ה-contractId בתוך האלמנטים.
-        # XML לרוב מכיל namesapces. ננסה להתעלם או לחפש חכם.
-        
-        # נחפש באופן גנרי בטקסט אם ה-parsing מסובך, או נשתמש ב-ET
-        # נניח שהתשובה היא <consumer>...<contractId>2</contractId>...</consumer>
-        
+        # נחלץ את ה-contractId וה-consumerId מהתשובה
         found_contract_id = None
-        # ננסה למצוא תגית שמכילה contractId
+        found_consumer_id = None
+        
+        # חיפוש חכם יותר
+        # בדרך כלל התשובה היא רשימה של consumers או consumer בודד
+        # נחפש contractId ו-id בתוך Consumer
+        
         for elem in root.iter():
-            if 'contractId' in elem.tag or 'contractid' in elem.tag:
+            # חיפוש contractId
+            if (elem.tag.endswith('contractId') or elem.tag.endswith('contractid')) and not found_contract_id:
                 found_contract_id = elem.text
-                break
-            # לפעמים זה בתוך attributes?
             
+            # חיפוש consumerId - בדרך כלל זה ה-id הישיר של ה-Consumer
+            # או שנחפש תגית id שנמצאת תחת consumer
+            if elem.tag.endswith('consumer'):
+                for child in elem:
+                    if child.tag.endswith('id') and not found_consumer_id:
+                        found_consumer_id = child.text
+                        
+            # אם מצאנו את שניהם אפשר לעצור (אם זה יחיד)
+            if found_contract_id and found_consumer_id:
+                break
+                
+        # אם לא מצאנו בסריקה רגילה, ננסה חיפוש שטוח
+        if not found_consumer_id:
+            # ננסה למצוא סתם id
+            for elem in root.iter():
+                if elem.tag.endswith('id') and elem.text and elem.text.isdigit() and len(elem.text) < 10: # מניחים שזה ID קצר
+                    found_consumer_id = elem.text
+                    break
+        
         if not found_contract_id and contract_id:
             found_contract_id = contract_id
             
@@ -4585,27 +4601,38 @@ def company_manager_search_vehicle():
                 if contract_response.status_code == 200:
                     c_root = ET.fromstring(contract_response.content)
                     # נחפש את השם
-                    # <contract>...<name>שם החברה</name>...</contract>
                     for elem in c_root.iter():
                         if 'name' in elem.tag:
                             company_name = elem.text
                             break
             except Exception as e:
                 print(f"Error fetching contract details: {e}")
+
+        # 3. שליפת פרטים מלאים (Detailed Info)
+        # המשתמש ציין שחסרים פרטים וצריך לבצע קריאה ל-detail
+        final_xml_response = response.text # ברירת מחדל - התשובה המקורית
+        
+        if found_contract_id and found_consumer_id:
+            try:
+                # הנתיב לפרטים מלאים: /consumers/{contractId},{consumerId}/detail
+                detail_url = f"https://{ip_address}:{port}/CustomerMediaWebService/consumers/{found_contract_id},{found_consumer_id}/detail"
+                print(f"Fetching full details from: {detail_url}")
+                
+                detail_response = requests.get(detail_url, headers=headers, verify=False, timeout=10)
+                if detail_response.status_code == 200:
+                    final_xml_response = detail_response.text
+            except Exception as e:
+                print(f"Error fetching full consumer details: {e}")
                 
         # בניית התשובה המועשרת
-        # המשתמש ביקש מבנה מסוים, נחזיר JSON שמכיל את המידע
-        
-        # המרה בסיסית של ה-XML ל-JSON או החזרת XML
-        # נחזיר JSON מסודר
-        
         return jsonify({
             'success': True,
             'found': True,
             'lpn': lpn,
             'contract_id': found_contract_id,
+            'consumer_id': found_consumer_id,
             'company_name': company_name,
-            'raw_xml': response.text
+            'raw_xml': final_xml_response
         })
         
     except Exception as e:
