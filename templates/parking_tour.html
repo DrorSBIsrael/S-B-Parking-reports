@@ -598,6 +598,10 @@
                             ${vehicles.map(v => `<span class="vehicle-tag">${v}</span>`).join('')}
                         </div>
                     </div>
+                    <div class="detail-item">
+                        <span class="detail-label">פרופיל:</span>
+                        <span class="detail-value">${subscriber.profileName || 'רגיל'}</span>
+                    </div>
                     ${subscriber.tagNum ? `
                         <div class="detail-item">
                             <span class="detail-label">מספר תג:</span>
