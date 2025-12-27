@@ -4474,6 +4474,136 @@ def company_manager_get_subscribers():
         return jsonify({'success': False, 'message': 'שגיאה בטעינת מנויים'}), 500
 
 
+@app.route('/api/company-manager/search-vehicle', methods=['GET'])
+def company_manager_search_vehicle():
+    """חיפוש רכב והחזרת פרטי מנוי ושם חברה"""
+    try:
+        if 'user_email' not in session:
+            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            
+        parking_id = request.args.get('parking_id')
+        lpn = request.args.get('lpn')
+        contract_id = request.args.get('contract_id') # אופציונלי, לחיפוש בחברה ספציפית
+        
+        if not parking_id or not lpn:
+             return jsonify({'success': False, 'message': 'חסרים נתונים לחיפוש'}), 400
+
+        # קבלת פרטי חיבור לחניון
+        # אנחנו צריכים את ה-project_number מתוך ה-parking_id (שהוא ה-id בטבלה)
+        # או שנשתמש ב-get_parking_connection_details אם יש לנו project number
+        # אבל כאן יש לנו parking_id מה-DB.
+        
+        # נשלוף את פרטי החניון ישירות כמו ב-get_subscribers
+        parking_result = supabase.table('parkings').select(
+            'ip_address, port, description'
+        ).eq('id', parking_id).execute()
+        
+        if not parking_result.data:
+            return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
+            
+        parking_data = parking_result.data[0]
+        ip_address = parking_data.get('ip_address')
+        port = parking_data.get('port', 443)
+        
+        if not ip_address:
+             return jsonify({'success': False, 'message': 'חסרים נתוני חיבור לחניון'}), 500
+
+        auth_string = base64.b64encode(b'2022:2022').decode('ascii')
+        headers = {
+            'Content-Type': 'application/xml',
+            'Authorization': f'Basic {auth_string}',
+             'Accept': 'application/xml'
+        }
+        
+        # 1. חיפוש המנוי
+        # נשתמש בנתיב שעבד: /consumers?contractId=2&lpn=...
+        # אם לא סופק contract_id, ננסה לחפש ללא הפרמטר או שנצטרך לדעת אותו. 
+        # API זה בדרך כלל דורש contractId. אם המשתמש לא סיפק, נשתמש ב-description של החניון אם הוא מספרי? לא בטוח.
+        # נניח שחובה לספק contract_id או ברירת מחדל '1000' (מאסטר).
+        
+        search_contract_id = contract_id if contract_id else '1000' # ברירת מחדל
+        
+        search_url = f"https://{ip_address}:{port}/CustomerMediaWebService/consumers"
+        params = {'lpn': lpn}
+        if contract_id:
+            params['contractId'] = contract_id
+            
+        # ביטול אימות SSL כי זה לרוב Self-Signed בחניונים
+        response = requests.get(search_url, params=params, headers=headers, verify=False, timeout=30)
+        
+        if response.status_code == 204:
+            return jsonify({'success': True, 'found': False, 'message': 'לא נמצא רכב בחניון'}), 200
+            
+        if response.status_code != 200:
+             return jsonify({'success': False, 'message': f'שגיאה בחיפוש: {response.status_code}'}), 500
+             
+        # אם הגענו לפה, נמצא מנוי. נפרסר את ה-XML
+        # נשתמש ב-ElementTree פשוט
+        import xml.etree.ElementTree as ET
+        try:
+            root = ET.fromstring(response.content)
+        except Exception:
+             # אם נכשל, ננסה להחזיר כפי שהוא
+             return jsonify({'success': True, 'found': True, 'raw_data': response.text})
+             
+        # נחלץ את ה-contractId מהתשובה אם לא ידענו אותו, או לוידוא
+        # המבנה של consumers יכול להיות רשימה או יחיד. 
+        # נחפש את ה-contractId בתוך האלמנטים.
+        # XML לרוב מכיל namesapces. ננסה להתעלם או לחפש חכם.
+        
+        # נחפש באופן גנרי בטקסט אם ה-parsing מסובך, או נשתמש ב-ET
+        # נניח שהתשובה היא <consumer>...<contractId>2</contractId>...</consumer>
+        
+        found_contract_id = None
+        # ננסה למצוא תגית שמכילה contractId
+        for elem in root.iter():
+            if 'contractId' in elem.tag or 'contractid' in elem.tag:
+                found_contract_id = elem.text
+                break
+            # לפעמים זה בתוך attributes?
+            
+        if not found_contract_id and contract_id:
+            found_contract_id = contract_id
+            
+        company_name = "לא ידוע"
+        
+        # 2. שליפת שם החברה
+        if found_contract_id:
+            # קריאה לפרטי החוזה
+            contract_url = f"https://{ip_address}:{port}/CustomerMediaWebService/contracts/{found_contract_id}"
+            try:
+                contract_response = requests.get(contract_url, headers=headers, verify=False, timeout=10)
+                if contract_response.status_code == 200:
+                    c_root = ET.fromstring(contract_response.content)
+                    # נחפש את השם
+                    # <contract>...<name>שם החברה</name>...</contract>
+                    for elem in c_root.iter():
+                        if 'name' in elem.tag:
+                            company_name = elem.text
+                            break
+            except Exception as e:
+                print(f"Error fetching contract details: {e}")
+                
+        # בניית התשובה המועשרת
+        # המשתמש ביקש מבנה מסוים, נחזיר JSON שמכיל את המידע
+        
+        # המרה בסיסית של ה-XML ל-JSON או החזרת XML
+        # נחזיר JSON מסודר
+        
+        return jsonify({
+            'success': True,
+            'found': True,
+            'lpn': lpn,
+            'contract_id': found_contract_id,
+            'company_name': company_name,
+            'raw_xml': response.text
+        })
+        
+    except Exception as e:
+        print(f"Search vehicle error: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאה בחיפוש רכב'}), 500
+
+
 @app.route('/api/status', methods=['GET'])
 def api_status():
     """בדיקת סטטוס המערכת"""
