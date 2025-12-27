@@ -1,1265 +1,462 @@
 <!DOCTYPE html>
 <html dir="rtl" lang="he">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>בקרת חניון | שיידט את בכמן ישראל</title>
     <style>
         :root {
             --primary-color: #667eea;
-            --secondary-color: #764ba2;
             --success-color: #28a745;
             --danger-color: #dc3545;
             --warning-color: #ffc107;
-            --info-color: #17a2b8;
-            --light-bg: #f8f9fa;
-            --dark-text: #2c3e50;
-            --border-color: #dee2e6;
-            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --bg-color: #f0f2f5;
             --card-bg: #ffffff;
-            --device-entry: #4CAF50;
-            --device-exit: #f44336;
-            --device-pass: #2196F3;
+            --text-color: #333;
+            --text-secondary: #666;
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             direction: rtl;
-            font-size: 14px;
+            padding-bottom: 80px;
+            /* Space for bottom sheet */
         }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 10px;
-            padding-bottom: 20px;
-        }
-
-        /* Header Section */
-        .header {
-            background: white;
+        /* Header */
+        .app-header {
+            background: var(--card-bg);
             padding: 15px;
-            border-radius: 8px;
             box-shadow: var(--shadow);
-            margin-bottom: 15px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
         }
 
-        .header h1 {
-            color: var(--dark-text);
-            font-size: 1.3em;
+        .app-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .parking-status {
+            font-size: 0.9rem;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
-        .header-icon {
-            font-size: 1em;
-        }
-
-        .parking-info {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .parking-name {
-            color: var(--primary-color);
-            font-size: 1.2em;
-            font-weight: 600;
-        }
-
-        .connection-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.9em;
-        }
-
-        .status-connected {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-disconnected {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .status-indicator {
-            width: 10px;
-            height: 10px;
+        .status-dot {
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
-            background: currentColor;
-            animation: pulse 2s infinite;
+            background-color: #ccc;
         }
 
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+        .status-dot.online {
+            background-color: var(--success-color);
+            box-shadow: 0 0 5px var(--success-color);
         }
 
-        /* Control Panel */
-        .control-panel {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            margin-bottom: 20px;
+        .status-dot.offline {
+            background-color: var(--danger-color);
         }
 
-        .control-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .tab-btn {
-            padding: 10px 20px;
-            border: 2px solid var(--border-color);
-            background: white;
-            border-radius: 8px;
+        .logout-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
             cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
         }
 
-        .tab-btn:hover {
-            border-color: var(--primary-color);
-            background: var(--light-bg);
-        }
-
-        .tab-btn.active {
-            background: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
-        }
-
-        /* Devices Grid */
-        .devices-container {
+        /* Device List */
+        .device-list {
+            padding: 15px;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 12px;
-            margin-bottom: 20px;
+            gap: 15px;
         }
 
         .device-card {
-            background: white;
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            overflow: hidden;
-            transition: all 0.2s;
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: transform 0.2s;
         }
 
         .device-card:active {
             transform: scale(0.98);
         }
 
-        .device-card.selected {
-            border-color: var(--primary-color);
-            background: #f0f4ff;
-        }
-
         .device-header {
-            padding: 10px 12px;
-            color: white;
-            font-weight: 600;
             display: flex;
             justify-content: space-between;
             align-items: center;
-        }
-
-        .device-entry .device-header {
-            background: var(--device-entry);
-        }
-
-        .device-exit .device-header {
-            background: var(--device-exit);
-        }
-
-        .device-pass .device-header {
-            background: var(--device-pass);
-        }
-
-        .device-number {
-            font-size: 1em;
-        }
-
-        .device-type {
-            font-size: 0.8em;
-            opacity: 0.9;
-        }
-
-        .device-body {
-            padding: 10px 12px;
-        }
-
-        .device-status {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .status-label {
-            color: #666;
-            font-size: 0.9em;
-        }
-
-        .status-value {
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .status-normal {
-            color: white;
-            background: #28a745;
-            padding: 2px 8px;
-            border-radius: 4px;
-        }
-
-        .status-warning {
-            color: #212529;
-            background: #ffc107;
-            padding: 2px 8px;
-            border-radius: 4px;
-        }
-
-        .status-error {
-            color: white;
-            background: #dc3545;
-            padding: 2px 8px;
-            border-radius: 4px;
-        }
-        
-        .status-operational-issue {
-            color: #212529;
-            background: #ffc107;
-            padding: 2px 8px;
-            border-radius: 4px;
-        }
-        
-        .status-locked {
-            color: white;
-            background: #9C27B0;
-            padding: 2px 8px;
-            border-radius: 4px;
-        }
-        
-        /* Blinking animation for open barrier */
-        .barrier-open-blink {
-            animation: slowBlink 2s ease-in-out infinite;
-        }
-        
-        @keyframes slowBlink {
-            0%, 100% { 
-                background-color: #28a745;
-                opacity: 1;
-            }
-            50% { 
-                background-color: #5cb85c;
-                opacity: 0.7;
-            }
         }
 
         .device-info {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid var(--border-color);
-        }
-
-        .info-item {
             display: flex;
-            flex-direction: column;
-        }
-        
-        /* Device Action Buttons */
-        .device-actions {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 5px;
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid var(--border-color);
-        }
-
-        .device-btn {
-            padding: 6px 8px;
-            border: 1px solid;
-            background: white;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.75em;
-            font-weight: 500;
-            transition: all 0.2s;
-            text-align: center;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .device-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-        .device-btn:active {
-            transform: translateY(0);
-        }
-
-        .device-btn.btn-open {
-            border-color: #4CAF50;
-            color: #4CAF50;
-        }
-
-        .device-btn.btn-open:hover {
-            background: #4CAF50;
-            color: white;
-        }
-
-        .device-btn.btn-close {
-            border-color: #f44336;
-            color: #f44336;
-        }
-
-        .device-btn.btn-close:hover {
-            background: #f44336;
-            color: white;
-        }
-
-        .device-btn.btn-price {
-            border-color: #FF9800;
-            color: #FF9800;
-            grid-column: span 2;
-        }
-
-        .device-btn.btn-price:hover {
-            background: #FF9800;
-            color: white;
-        }
-
-        .device-btn.btn-lock {
-            border-color: #9C27B0;
-            color: #9C27B0;
-        }
-
-        .device-btn.btn-lock:hover {
-            background: #9C27B0;
-            color: white;
-        }
-
-        .device-btn.btn-unlock {
-            border-color: #2196F3;
-            color: #2196F3;
-        }
-
-        .device-btn.btn-unlock:hover {
-            background: #2196F3;
-            color: white;
-        }
-
-        .info-label {
-            font-size: 0.8em;
-            color: #666;
-        }
-
-        .info-value {
-            font-weight: 600;
-            color: var(--dark-text);
-        }
-
-        /* Control Buttons - Mobile Optimized */
-        .control-buttons {
-            background: white;
-            padding: 15px;
-            border-radius: 12px 12px 0 0;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-        }
-
-        .buttons-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            align-items: center;
             gap: 10px;
-            max-width: 600px;
-            margin: 0 auto;
         }
 
-        .control-btn {
-            padding: 18px 12px;
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            background: white;
-            color: var(--dark-text);
-            font-weight: 600;
-            font-size: 0.95em;
-            cursor: pointer;
-            transition: all 0.2s;
+        .device-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 6px;
-            min-height: 70px;
-            -webkit-tap-highlight-color: transparent;
-            user-select: none;
+            font-size: 1.2rem;
+            background-color: #eef2ff;
+            color: var(--primary-color);
         }
 
-        .control-btn:hover:not(:disabled) {
-            background: var(--light-bg);
-            border-color: var(--primary-color);
-        }
-
-        .control-btn:active:not(:disabled) {
-            transform: scale(0.98);
-            background: #e8e8e8;
-        }
-
-        .control-btn span:first-child {
-            font-size: 1.5em;
-        }
-
-        .control-btn span:last-child {
-            font-size: 0.85em;
-        }
-
-        .btn-open:not(:disabled) {
-            border-color: var(--success-color);
+        .device-icon.entry {
             color: var(--success-color);
+            background-color: #e8f5e9;
         }
 
-        .btn-close:not(:disabled) {
-            border-color: var(--danger-color);
+        .device-icon.exit {
+            color: var(--danger-color);
+            background-color: #ffebee;
+        }
+
+        .device-icon.pass {
+            color: var(--warning-color);
+            background-color: #fff3e0;
+        }
+
+        .device-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .device-status-badge {
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            background-color: #eee;
+        }
+
+        .device-status-badge.open {
+            background-color: #e8f5e9;
+            color: var(--success-color);
+            animation: pulse 2s infinite;
+        }
+
+        .device-status-badge.closed {
+            background-color: #ffebee;
             color: var(--danger-color);
         }
 
-        .btn-lock:not(:disabled) {
-            border-color: var(--warning-color);
-            color: var(--warning-color);
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
+
+            100% {
+                opacity: 1;
+            }
         }
 
-        .btn-unlock:not(:disabled) {
-            border-color: var(--info-color);
-            color: var(--info-color);
-        }
-
-        .btn-price:not(:disabled) {
-            border-color: var(--secondary-color);
-            color: var(--secondary-color);
-        }
-
-        .btn-status:not(:disabled) {
-            border-color: var(--primary-color);
-            color: var(--primary-color);
-        }
-
-        .control-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            background: #f5f5f5;
-            border-color: #ddd;
-            color: #999;
-        }
-
-        /* Events Panel */
-        .events-panel {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .events-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            position: sticky;
-            top: 0;
-            background: white;
-            z-index: 1;
-        }
-
-        .events-title {
-            font-size: 1.2em;
-            font-weight: 600;
-            color: var(--dark-text);
-        }
-
-        .events-filter {
-            display: flex;
+        .device-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 10px;
         }
 
-        .filter-btn {
-            padding: 5px 12px;
-            border: 1px solid var(--border-color);
-            background: white;
-            border-radius: 20px;
-            font-size: 0.85em;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .filter-btn.active {
-            background: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
-        }
-
-        .event-item {
+        .action-btn {
             padding: 12px;
-            border-bottom: 1px solid var(--border-color);
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 12px;
-            transition: background 0.3s;
-        }
-
-        .event-item:hover {
-            background: var(--light-bg);
-        }
-        
-        .event-item.event-open {
-            background-color: rgba(46, 204, 113, 0.1);
-        }
-        
-        .event-item.event-close {
-            background-color: rgba(52, 152, 219, 0.1);
-        }
-        
-        .event-item.event-alarm {
-            background-color: rgba(231, 76, 60, 0.1);
-            border-left: 3px solid #e74c3c;
-        }
-        
-        .event-item.event-error {
-            background-color: rgba(231, 76, 60, 0.05);
-        }
-
-        .event-time {
-            font-weight: 600;
-            color: var(--primary-color);
-            font-size: 0.9em;
-            min-width: 60px;
-        }
-
-        .event-device {
-            background: var(--light-bg);
-            padding: 4px 10px;
-            border-radius: 15px;
-            font-size: 0.85em;
-            font-weight: 600;
-            min-width: 80px;
-            text-align: center;
-        }
-
-        .event-message {
-            flex: 1;
-            color: var(--dark-text);
-        }
-
-        .event-icon {
-            font-size: 1.2em;
-        }
-
-        /* Loading & Messages */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
             justify-content: center;
-            align-items: center;
-            z-index: 9999;
+            gap: 8px;
+            transition: opacity 0.2s;
         }
 
-        .loading-overlay.active {
+        .action-btn:active {
+            opacity: 0.7;
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-open {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .btn-close {
+            background-color: var(--card-bg);
+            border: 2px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        /* Loading */
+        .loading-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-color);
             display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
         }
 
-        .loading-spinner {
-            width: 60px;
-            height: 60px;
-            border: 5px solid white;
+        .loader {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #ddd;
             border-top-color: var(--primary-color);
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
+        /* No Devices */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+
+        /* Toast */
         .toast {
             position: fixed;
             bottom: 20px;
-            right: 20px;
+            right: 50%;
+            transform: translateX(50%);
             padding: 16px 24px;
-            border-radius: 8px;
+            border-radius: 30px;
             color: white;
             font-weight: 600;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
             display: none;
             z-index: 9999;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        .toast.success {
-            background: var(--success-color);
-        }
-
-        .toast.error {
-            background: var(--danger-color);
-        }
-
-        .toast.warning {
-            background: var(--warning-color);
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            body {
-                font-size: 13px;
-            }
-
-            .container {
-                padding: 8px;
-                padding-bottom: 90px;
-            }
-
-            .header {
-                padding: 12px;
-                margin-bottom: 10px;
-            }
-
-            .header h1 {
-                font-size: 1.1em;
-            }
-
-            .parking-name {
-                font-size: 1em;
-            }
-
-            .connection-status {
-                font-size: 0.85em;
-                padding: 6px 12px;
-            }
-
-            .control-panel {
-                padding: 12px;
-                margin-bottom: 10px;
-            }
-
-            .tab-btn {
-                padding: 8px 14px;
-                font-size: 0.9em;
-            }
-
-            .devices-container {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 8px;
-            }
-
-            .device-header {
-                padding: 8px 10px;
-            }
-
-            .device-body {
-                padding: 8px 10px;
-            }
-
-            .info-label {
-                font-size: 0.75em;
-            }
-
-            .info-value {
-                font-size: 0.9em;
-            }
-
-            .control-buttons {
-                padding: 10px;
-            }
-
-            .control-btn {
-                padding: 14px 8px;
-                min-height: 60px;
-            }
-
-            .control-btn span:first-child {
-                font-size: 1.3em;
-            }
-
-            .control-btn span:last-child {
-                font-size: 0.8em;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .devices-container {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        /* Logout button */
-        .logout-btn {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            padding: 6px 14px;
-            background: white;
-            color: #666;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.85em;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .logout-btn:hover {
-            background: #f5f5f5;
-            border-color: #999;
+            text-align: center;
+            min-width: 200px;
         }
     </style>
 </head>
+
 <body>
-    <button class="logout-btn" onclick="logout()">יציאה</button>
-    
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <h1>
-                <span class="header-icon">📱</span>
-                בקרת חניון
-            </h1>
-            <div class="parking-info">
-                <div class="parking-name" id="parkingName">טוען...</div>
-                <div class="connection-status status-disconnected" id="connectionStatus">
-                    <span class="status-indicator"></span>
-                    <span>מנותק</span>
-                </div>
-            </div>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loader"></div>
+        <p style="margin-top: 15px;">טוען מכשירים...</p>
+    </div>
+
+    <!-- Header -->
+    <header class="app-header">
+        <button class="logout-btn" onclick="logout()">יציאה</button>
+        <div class="app-title">בקרת חניון</div>
+        <div class="parking-status">
+            <span id="parkingName">...</span>
+            <div id="connectionDot" class="status-dot"></div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <div id="deviceList" class="device-list">
+            <!-- Devices will be injected here -->
         </div>
 
-        <!-- Control Panel -->
-        <div class="control-panel">
-            <div class="control-tabs">
-                <div class="tab-btn active">
-                    <span>🚗</span>
-                    <span>מכשירים</span>
-                    <span id="devicesCount">(0)</span>
-                </div>
-            </div>
-
-            <!-- Devices View -->
-            <div id="devicesView" class="tab-content">
-                <div class="devices-container" id="devicesGrid">
-                    <!-- Devices will be loaded here -->
-                </div>
-            </div>
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-icon">📱</div>
+            <h3>אין מכשירים זמינים</h3>
+            <p>לא נמצאו מכשירים המוגדרים למשתמש זה.</p>
         </div>
+    </main>
 
-    </div>
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
 
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-spinner"></div>
-    </div>
-    
-    <!-- Modal Container -->
-    <div id="modalContainer" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
-        <div id="modalContent" style="background: white; border-radius: 8px; max-width: 600px; max-height: 80vh; overflow-y: auto; margin: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); direction: rtl;"></div>
-    </div>
-
-    <!-- Toast Messages -->
-    <div class="toast" id="toast"></div>
-
-    <!-- Include Mobile Parking Controller JS -->
+    <!-- Scripts -->
     <script src="/static/js/mobile-parking-controller.js"></script>
-    
-    <!-- Fallback if file doesn't load from static -->
     <script>
-        // Check if script loaded successfully
-        setTimeout(() => {
-            if (typeof MobileParkingController === 'undefined') {
-                const script = document.createElement('script');
-                script.src = '/static/js/mobile-parking-controller.js?v=' + Date.now();
-                script.onerror = () => {
-                    showToast('שגיאה בטעינת המערכת', 'error');
-                };
-                document.head.appendChild(script);
-            }
-        }, 100);
-    </script>
-    
-    <script>
-        // Global variables
-        let controller = null;
-        let currentParking = null;
+        const controller = new MobileParkingController();
+        const deviceListEl = document.getElementById('deviceList');
+        const emptyStateEl = document.getElementById('emptyState');
+        const loadingScreenEl = document.getElementById('loadingScreen');
+        const connectionDotEl = document.getElementById('connectionDot');
+        const parkingNameEl = document.getElementById('parkingName');
+        let currentToastTimeout = null;
 
-        // Initialize
+        // Initial Load
         window.addEventListener('DOMContentLoaded', async () => {
-            try {
-                // Check if MobileParkingController is defined
-                if (typeof MobileParkingController === 'undefined') {
-                    showToast('שגיאה בטעינת המערכת', 'error');
-                    return;
-                }
-                
-                // Initialize the controller
-                controller = new MobileParkingController();
-                await controller.init();
-            
-            // Load initial data
-            await loadUserData();
-            await loadDevices();
-            
-            // Listen for connection status changes
-            window.addEventListener('connectionStatusChanged', (event) => {
-                updateConnectionStatus(event.detail.connected);
-            });
-            
-            } catch (error) {
-                showToast('שגיאה באתחול המערכת', 'error');
+            const success = await controller.init();
+
+            // Update Header Info
+            const userInfo = await controller.getUserInfo();
+            if (userInfo) {
+                parkingNameEl.textContent = userInfo.parking_name || 'חניון';
             }
+
+            renderDevices();
+
+            // Listen for status changes
+            window.addEventListener('connectionStatusChanged', (e) => {
+                connectionDotEl.className = `status-dot ${e.detail.connected ? 'online' : 'offline'}`;
+            });
+
+            // Start polling (UI specific) - controller handles data polling, we can just listen to changes?
+            // Since controller.devices is a simple array, we rely on controller polling logic.
+            // Currently controller has loadDevices() but doesn't auto-notify.
+            // We will hook into the poll manually for now.
+            setInterval(async () => {
+                await controller.loadDevices(); // Force reload using internal method
+                renderDevices();
+            }, 3000);
+
+            loadingScreenEl.style.display = 'none';
         });
 
-        // Load user data
-        async function loadUserData() {
-            try {
-                const response = await fetch('/api/user-info');
-                const data = await response.json();
-                
-                if (data.success) {
-                    currentParking = {
-                        id: data.user.project_number,
-                        name: data.user.parking_name || 'חניון'
-                    };
-                    document.getElementById('parkingName').textContent = currentParking.name;
-                }
-            } catch (error) {
-                showToast('שגיאה בטעינת נתוני משתמש', 'error');
-            }
-        }
+        function renderDevices() {
+            const devices = controller.devices || [];
 
-        // Load devices
-        async function loadDevices() {
-            showLoading();
-            
-            try {
-                // Use controller to load devices
-                const devices = await controller.loadDevices();
-                displayDevices(devices);
-                updateDeviceCount();
-                hideLoading();
-            } catch (error) {
-                showToast('שגיאה בטעינת מכשירים', 'error');
-                hideLoading();
-                
-                // Display empty state
-                const grid = document.getElementById('devicesGrid');
-                grid.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;">לא נמצאו מכשירים או שיש בעיית חיבור</div>';
-                updateDeviceCount();
+            if (devices.length === 0) {
+                deviceListEl.style.display = 'none';
+                emptyStateEl.style.display = 'block';
+                return;
             }
-        }
 
-        // Display devices
-        function displayDevices(deviceList = null) {
-            const grid = document.getElementById('devicesGrid');
-            grid.innerHTML = '';
-            
-            const devices = deviceList || controller.devices;
-            devices.forEach(device => {
-                const card = createDeviceCard(device);
-                grid.appendChild(card);
-            });
-        }
+            deviceListEl.style.display = 'grid';
+            emptyStateEl.style.display = 'none';
 
-        // Create device card
-        function createDeviceCard(device) {
-            const card = document.createElement('div');
-            
-            // Check if barrier is open
-            const isBarrierOpen = device.doorOpen || device.barrier === 'open';
-            
-            // Determine status and styling
-            const deviceState = device.deviceState || device.status || 1;
-            let statusClass = 'status-normal';
-            let statusText = 'תקין';
-            
-            // Set status based on priority: error > locked > operational issue > open barrier > normal
-            if (deviceState === 0 || deviceState === 6) {
-                statusClass = 'status-error';
-                statusText = 'לא פעיל';
-            } else if (device.barrier === 'locked') {
-                statusClass = 'status-locked';
-                statusText = 'נעול';
-            } else if (deviceState === 2 || deviceState === 3 || deviceState === 5) {
-                statusClass = 'status-operational-issue';
-                statusText = 'תקלה תפעולית';
-            } else if (isBarrierOpen) {
-                statusClass = 'status-normal barrier-open-blink';
-                statusText = 'מחסום פתוח';
-            } else if (deviceState === 1) {
-                statusClass = 'status-normal';
-                statusText = 'תקין';
-            }
-            
-            card.className = `device-card device-${device.type} ${isBarrierOpen ? 'barrier-open-blink' : ''}`;
-            card.onclick = () => toggleDeviceSelection(device.number);
-            
-            const typeText = getDeviceTypeText(device.type);
-            const typeIcon = getDeviceTypeIcon(device.type);
-            
-            // Determine barrier status
-            let barrierStatus = 'לא ידוע';
-            let barrierIcon = '❓';
-            
-            if (device.barrier === 'locked') {
-                barrierStatus = 'נעול';
-                barrierIcon = '🔐';
-            } else if (device.barrier === 'open' || device.doorOpen === true) {
-                barrierStatus = 'פתוח';
-                barrierIcon = '🔓';
-            } else if (device.barrier === 'closed' || device.doorOpen === false) {
-                barrierStatus = 'סגור';
-                barrierIcon = '🔒';
-            }
-            
-            card.innerHTML = `
-                <div class="device-header">
-                    <div>
-                        <div class="device-number">${typeIcon} מכשיר ${device.number}</div>
-                        <div class="device-type">${typeText}</div>
-                    </div>
-                    <div style="font-size: 1.5em;">
-                        ${barrierIcon}
-                    </div>
-                </div>
-                <div class="device-body">
-                    <div class="device-status">
-                        <span class="status-label">מצב:</span>
-                        <span class="status-value ${statusClass}">
+            // Rebuild list (simple approach)
+            // Ideally should diff
+            const html = devices.map(device => {
+                const isEntry = device.type === 'entry';
+                const isExit = device.type === 'exit';
+                const isPass = device.type === 'pass';
+                const icon = isEntry ? '➡️' : (isExit ? '⬅️' : '↔️');
+                const iconClass = isEntry ? 'entry' : (isExit ? 'exit' : 'pass');
+
+                const isOpen = device.barrier === 'open';
+                const statusText = isOpen ? 'פתוח' : 'סגור';
+                const statusClass = isOpen ? 'open' : 'closed';
+
+                return `
+                <div class="device-card" id="device-${device.number}">
+                    <div class="device-header">
+                        <div class="device-info">
+                            <div class="device-icon ${iconClass}">${icon}</div>
+                            <div>
+                                <div class="device-name">${device.name || `מכשיר ${device.number}`}</div>
+                                <div style="font-size: 0.8rem; color: #666;">${device.type === 'entry' ? 'כניסה' : (device.type === 'exit' ? 'יציאה' : 'מעבר')}</div>
+                            </div>
+                        </div>
+                        <div class="device-status-badge ${statusClass}">
                             ${statusText}
-                        </span>
+                        </div>
                     </div>
-                    <div class="device-info">
-                        <div class="info-item">
-                            <span class="info-label">מחסום:</span>
-                            <span class="info-value">${barrierStatus}</span>
-                        </div>
-                        ${device.name ? `<div class="info-item"><span class="info-label">שם:</span><span class="info-value">${device.name}</span></div>` : ''}
-                        ${device.doorOpen ? '<div class="info-item" style="color: #e74c3c;"><span class="info-label">⚠️ דלת:</span><span class="info-value">פתוחה</span></div>' : ''}
-                        </div>
                     <div class="device-actions">
-                        <button class="device-btn btn-open" onclick="executeDeviceCommand(${device.number}, 'open')">
-                            🔓 פתח
+                        <button class="action-btn btn-open" onclick="handleCommand('open', ${device.number})">
+                            � פתח
                         </button>
-                        <button class="device-btn btn-close" onclick="executeDeviceCommand(${device.number}, 'close')">
+                        <button class="action-btn btn-close" onclick="handleCommand('close', ${device.number})">
                             🔒 סגור
                         </button>
-                        <button class="device-btn btn-lock" onclick="executeDeviceCommand(${device.number}, 'lock')">
-                            🚫 נעל
-                        </button>
-                        <button class="device-btn btn-unlock" onclick="executeDeviceCommand(${device.number}, 'unlock')">
-                            ✅ בטל נעילה
-                        </button>
-                        ${device.type === 'exit' ? `<button class="device-btn btn-price" onclick="sendPriceToDevice(${device.number})">💰 שלח מחיר</button>` : ''}
                     </div>
                 </div>
-            `;
-            
-            return card;
-        }
+                `;
+            }).join('');
 
-        // Toggle device selection (single selection)
-        function toggleDeviceSelection(deviceNumber) {
-            // Remove selection from all cards
-            document.querySelectorAll('.device-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            
-            // Select new device
-            const selectedDevice = controller.selectDevice(deviceNumber);
-            
-            // Update visual selection
-            if (selectedDevice) {
-                const card = event.currentTarget;
-                card.classList.add('selected');
+            // Only update DOM if changed (prevents flickering input/scroll)
+            if (deviceListEl.innerHTML !== html) {
+                deviceListEl.innerHTML = html;
             }
         }
 
-        // Execute command
-        async function executeCommand(command) {
-            if (!controller.selectedDevice) {
-                showToast('אנא בחר מכשיר', 'warning');
-                return;
+        async function handleCommand(cmd, deviceNum) {
+            // Find button to show loading
+            const cardEl = document.getElementById(`device-${deviceNum}`);
+            const btn = cmd === 'open' ? cardEl.querySelector('.btn-open') : cardEl.querySelector('.btn-close');
+
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
             }
-            
-            showLoading();
-            
+
             try {
-                // Special handling for price and status commands
-                if (command === 'price') {
-                    // For price command, we might need additional input
-                    const amount = prompt('הזן סכום לתשלום:');
-                    if (!amount) {
-                        hideLoading();
-                        return;
-                    }
-                    // Send price to selected device
-                    await controller.sendPrice(controller.selectedDevice, parseFloat(amount));
+                const result = await controller.executeCommand(cmd, deviceNum);
+                if (result.success) {
+                    showToast('✅ פקודה בוצעה', 'success');
                 } else {
-                    // Execute regular command
-                    await controller.executeCommand(command);
+                    showToast('❌ שגיאה: ' + result.message, 'error');
                 }
-                
-                showToast(`הפקודה "${getCommandText(command)}" נשלחה למכשיר ${controller.selectedDevice}`, 'success');
-                
-                // Reload devices to get updated status
-                await loadDevices();
-                
-            } catch (error) {
-                showToast(error.message || 'שגיאה בביצוע הפקודה', 'error');
+            } catch (err) {
+                showToast('❌ שגיאה בתקשורת', 'error');
             } finally {
-                hideLoading();
+                // Determine logic: reload immediately ?
+                // The controller usually returns new state or we poll it.
+                // We'll let the next poll cycle update the UI for 100% truth.
+                // Or force load:
+                await controller.loadDevices();
+                renderDevices(); // Should re-enable button and update state
             }
         }
 
-        // Update barrier status
-        function updateBarrierStatus(status) {
-            if (controller.selectedDevice) {
-                const device = controller.devices.find(d => d.number === controller.selectedDevice);
-                if (device) {
-                    device.barrier = status;
-                }
-            }
-        }
-        
-        // Execute command for specific device
-        async function executeDeviceCommand(deviceNumber, command) {
-            showLoading();
-            
-            try {
-                // Execute command for specific device
-                await controller.executeCommand(command, deviceNumber);
-                
-                showToast(`הפקודה "${getCommandText(command)}" נשלחה למכשיר ${deviceNumber}`, 'success');
-                
-                // Update display immediately
-                displayDevices();
-                
-                // Also reload from server after a short delay
-                setTimeout(async () => {
-                    await loadDevices();
-                }, 1500);
-                
-            } catch (error) {
-                showToast(error.message || 'שגיאה בביצוע הפקודה', 'error');
-            } finally {
-                hideLoading();
-            }
-        }
-        
-        // Send price to specific device
-        async function sendPriceToDevice(deviceNumber) {
-            const amount = prompt('הזן סכום לתשלום:');
-            if (!amount) {
-                return;
-            }
-            
-            showLoading();
-            
-            try {
-                await controller.sendPrice(deviceNumber, parseFloat(amount));
-                showToast(`מחיר ${amount} ש"ח נשלח למכשיר ${deviceNumber}`, 'success');
-                
-                // Reload devices to get updated status
-                await loadDevices();
-                
-            } catch (error) {
-                showToast(error.message || 'שגיאה בשליחת מחיר', 'error');
-            } finally {
-                hideLoading();
-            }
-        }
-        
-
-
-
-        // Connection monitor - handled by controller
-        function startConnectionMonitor() {
-            // Connection monitoring is handled by the controller
-            // which triggers 'connectionStatusChanged' events
-        }
-
-
-        // Update connection status
-        function updateConnectionStatus(connected) {
-            const statusEl = document.getElementById('connectionStatus');
-            if (connected) {
-                statusEl.className = 'connection-status status-connected';
-                statusEl.innerHTML = '<span class="status-indicator"></span><span>מחובר</span>';
-            } else {
-                statusEl.className = 'connection-status status-disconnected';
-                statusEl.innerHTML = '<span class="status-indicator"></span><span>מנותק</span>';
-            }
-        }
-
-        // Update device count
-        function updateDeviceCount() {
-            document.getElementById('devicesCount').textContent = `(${controller.devices.length})`;
-        }
-
-        // Helper functions
-        function getStatusText(status) {
-            const statusMap = {
-                1: 'תקין',
-                2: 'שינוי ידני',
-                3: 'נדרשת תחזוקה',
-                4: 'אזהרה',
-                5: 'לא פעיל חלקית',
-                6: 'לא פעיל',
-                7: 'כניסה כפויה',
-                8: 'חיבור מנותק'
-            };
-            return statusMap[status] || 'לא ידוע';
-        }
-
-        function getDeviceTypeText(type) {
-            const typeMap = {
-                'entry': 'כניסה',
-                'exit': 'יציאה',
-                'pass': 'מעבר'
-            };
-            return typeMap[type] || type;
-        }
-
-        function getDeviceTypeIcon(type) {
-            const iconMap = {
-                'entry': '➡️',
-                'exit': '⬅️',
-                'pass': '↔️'
-            };
-            return iconMap[type] || '🚗';
-        }
-
-        function getCommandText(command) {
-            const commandMap = {
-                'open': 'פתח מחסום',
-                'close': 'סגור מחסום',
-                'lock': 'נעל מחסום',
-                'unlock': 'בטל נעילה',
-                'price': 'שלח מחיר',
-                'status': 'קבל מצב'
-            };
-            return commandMap[command] || command;
-        }
-
-        // UI helpers
-        function showLoading() {
-            document.getElementById('loadingOverlay').classList.add('active');
-        }
-
-        function hideLoading() {
-            document.getElementById('loadingOverlay').classList.remove('active');
-        }
-        
-        function showModal(content) {
-            const modalContainer = document.getElementById('modalContainer');
-            const modalContent = document.getElementById('modalContent');
-            modalContent.innerHTML = content;
-            modalContainer.style.display = 'flex';
-        }
-        
-        function closeModal() {
-            const modalContainer = document.getElementById('modalContainer');
-            modalContainer.style.display = 'none';
-        }
-        
-        // Close modal when clicking outside
-        document.getElementById('modalContainer').addEventListener('click', function(event) {
-            if (event.target === this) {
-                closeModal();
-            }
-        });
-
-        function showToast(message, type = 'success') {
+        function showToast(msg, type) {
             const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = `toast ${type}`;
+            toast.textContent = msg;
+            toast.style.background = type === 'success' ? 'var(--success-color)' : 'var(--danger-color)';
             toast.style.display = 'block';
-            
-            setTimeout(() => {
+
+            if (currentToastTimeout) clearTimeout(currentToastTimeout);
+            currentToastTimeout = setTimeout(() => {
                 toast.style.display = 'none';
             }, 3000);
         }
 
-        // Logout
         function logout() {
-            if (confirm('האם אתה בטוח שברצונך לצאת?')) {
-                if (controller) {
-                    controller.destroy();
-                }
-                window.location.href = '/logout';
-            }
+            if (confirm('לצאת?')) location.href = '/logout';
         }
-
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', () => {
-            if (controller) {
-                controller.destroy();
-            }
-        });
     </script>
 </body>
+
 </html>
