@@ -4182,15 +4182,26 @@ def company_manager_proxy():
                     user_type = user_res.data[0].get('company_type', 'company_manager')
                 
                 # If NOT proxy manager, remove limit from payload to prevent resetting quota
-                if user_type != 'company_manager_proxy' and 'limit' in payload:
-                    print(f"🔒 Security: Removing limit from payload for user {current_user_email} (type: {user_type})")
-                    del payload['limit']
+                if user_type != 'company_manager_proxy':
+                    # Log enforcement
+                    if 'limit' in payload or ('consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']):
+                        print(f"🔒 Security: Removing limit from payload for user {current_user_email} (type: {user_type})")
+                    
+                    # Remove from root payload
+                    if 'limit' in payload:
+                        del payload['limit']
+                        
+                    # Remove from consumer nested dict (just in case structure varies)
+                    if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']:
+                        del payload['consumer']['limit']
                     
             except Exception as e:
                 print(f"⚠️ Error checking user permissions: {str(e)}")
                 # On error, play safe and remove limit just in case
                 if 'limit' in payload:
                     del payload['limit']
+                if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']:
+                        del payload['consumer']['limit']
         
         # Request details received
         
