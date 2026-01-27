@@ -4202,6 +4202,19 @@ def company_manager_proxy():
                     del payload['limit']
                 if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']:
                         del payload['consumer']['limit']
+                
+                # ALSO remove 'counting' which corresponds to contract limits
+                if user_type != 'company_manager_proxy' and 'counting' in payload:
+                    print(f"🔒 Security: Removing counting from payload for user {current_user_email} (type: {user_type})")
+                    del payload['counting']
+                    
+            except Exception as e:
+                print(f"⚠️ Error checking user permissions: {str(e)}")
+                # On error, play safe and remove sensitive fields
+                if 'limit' in payload: del payload['limit']
+                if 'counting' in payload: del payload['counting']
+                if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']:
+                        del payload['consumer']['limit']
         
         # Request details received
         
