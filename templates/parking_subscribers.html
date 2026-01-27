@@ -2863,11 +2863,20 @@
 
             // Close modal on outside click
             // Modal backdrop click to close - fixed to prevent accidental closing
+            // Close modal on outside click
+            // Modal backdrop click to close - fixed to prevent accidental closing (drag-select issue)
             const editModal = document.getElementById('editModal');
+            let mouseDownTarget = null;
+
             if (editModal) {
+                editModal.addEventListener('mousedown', function (e) {
+                    mouseDownTarget = e.target;
+                });
+
                 editModal.addEventListener('click', function (e) {
                     // Only close if clicking on the backdrop itself, not on modal content
-                    if (e.target === this && e.target.id === 'editModal') {
+                    // AND if mousedown was also on backdrop (prevents drag-select closing)
+                    if (e.target === this && e.target.id === 'editModal' && mouseDownTarget === this) {
                         closeModal();
                     }
                 });
