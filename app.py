@@ -4170,6 +4170,28 @@ def company_manager_proxy():
         method = data.get('method', 'GET')
         payload = data.get('payload', {})
         
+        # Check user permissions for limit/quota
+        # Only company_manager_proxy can set limit (quota)
+        if current_user_email:
+            try:
+                # Check user type in DB
+                user_res = supabase.table('user_parkings').select('company_type').eq('email', current_user_email).execute()
+                
+                user_type = 'company_manager' # Default
+                if user_res.data and len(user_res.data) > 0:
+                    user_type = user_res.data[0].get('company_type', 'company_manager')
+                
+                # If NOT proxy manager, remove limit from payload to prevent resetting quota
+                if user_type != 'company_manager_proxy' and 'limit' in payload:
+                    print(f"🔒 Security: Removing limit from payload for user {current_user_email} (type: {user_type})")
+                    del payload['limit']
+                    
+            except Exception as e:
+                print(f"⚠️ Error checking user permissions: {str(e)}")
+                # On error, play safe and remove limit just in case
+                if 'limit' in payload:
+                    del payload['limit']
+        
         # Request details received
         
         # For usageprofiles endpoint, try to use a default parking if none provided
@@ -5398,6 +5420,17 @@ def mobile_controller_devices():
         if 'user_email' not in session:
             return jsonify({'success': False, 'message': 'לא מחובר'}), 401
             
+        # Test Mode for Local Testing
+        if session.get('user_email') == 'test_mobile@local':
+             return jsonify({
+                 'success': True,
+                 'devices': [
+                     {'number': 101, 'name': 'כניסה ראשית', 'type': 'entry', 'status': 1, 'barrier': 'closed'},
+                     {'number': 201, 'name': 'יציאה ראשית', 'type': 'exit', 'status': 1, 'barrier': 'closed'},
+                     {'number': 301, 'name': 'מעבר 1', 'type': 'pass', 'status': 0, 'barrier': 'open'}
+                 ]
+             })
+
         data = request.json
         # parking_id from request or user session?
         # The user has project_number.
@@ -5483,6 +5516,70 @@ def mobile_controller_devices():
         print(f"Mobile devices error: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בטעינת מכשירים'}), 500
 
+@app.route('/api/user-info')
+def get_user_info_api():
+    """Get current user info for mobile app"""
+    email = session.get('user_email')
+    print(f"DEBUG: /api/user-info called. Email in session: {email}")
+    
+    if not email:
+        return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+    
+    # Test Mode
+    if email == 'test_mobile@local':
+        print("DEBUG: Returning TEST MODE user info")
+        return jsonify({
+            'success': True,
+            'user': {
+                'username': 'Test User',
+                'role': 'mobile_controller',
+                'parking_id': 12345,
+                'project_number': 12345
+            }
+        })
+
+    try:
+        user_result = supabase.table('user_parkings').select('*').eq('email', email).execute()
+        if not user_result.data:
+            return jsonify({'success': False, 'message': 'משתמש לא נמצא'}), 404
+            
+        user = user_result.data[0]
+        return jsonify({
+            'success': True,
+            'user': {
+                'username': user.get('username'),
+                'role': user.get('role'),
+                'parking_id': user.get('project_number'),
+                'project_number': user.get('project_number')
+            }
+        })
+    except Exception as e:
+        print(f"Error getting user info (Email: {email}): {str(e)}")
+        return jsonify({'success': False, 'message': f'מסד הנתונים לא זמין (User: {email})'}), 500
+
+@app.route('/mobile-controller-test')
+def mobile_controller_test_page():
+    """Test Page for Mobile Controller Local Testing (Full UI)"""
+    # Security check: Allow only for local testing
+    if 'localhost' not in request.host and '127.0.0.1' not in request.host:
+        return 'Test page is only available on local server', 403
+
+    # Auto-login for testing
+    session['user_email'] = 'test_mobile@local'
+    return render_template('mobile_parking_controller_test.html')
+
+@app.route('/simple-test')
+def simple_test_page():
+    """Minimal Test Page for API Verification"""
+    # Security check: Allow only for local testing
+    if 'localhost' not in request.host and '127.0.0.1' not in request.host:
+        return 'Test page is only available on local server', 403
+
+    # Auto-login for testing
+    session['user_email'] = 'test_mobile@local'
+    return render_template('simple_mobile_test.html')
+
+
 @app.route('/api/mobile-controller/command', methods=['POST'])
 def mobile_controller_command():
     """Execute command on a device."""
@@ -5491,6 +5588,18 @@ def mobile_controller_command():
             return jsonify({'success': False, 'message': 'לא מחובר'}), 401
             
         data = request.json
+        
+        # Test Mode for Local Testing
+        # Test Mode for Local Testing
+        if session.get('user_email') == 'test_mobile@local':
+             cmd_code = data.get('command')
+             return jsonify({
+                 'success': True, 
+                 'message': 'פקודה נשלחה (TEST MODE)', 
+                 'test': True,
+                 'code_sent': cmd_code
+             })
+
         device_num = int(data.get('devices', [0])[0]) # Legacy array format
         if not device_num and 'device' in data: device_num = int(data['device'])
         
