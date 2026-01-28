@@ -4227,61 +4227,74 @@ def company_manager_proxy():
         import re
         is_uuid = bool(re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', parking_num, re.IGNORECASE))
         
-        if is_uuid:
-            # Search by ID (UUID)
-            parking_result = supabase.table('parkings').select(
-                'ip_address, port, description'
-            ).eq('id', parking_num).execute()
-        else:
-            # Search by description (numeric parking ID)
-            parking_result = supabase.table('parkings').select(
-                'ip_address, port, description'
-            ).eq('description', parking_num).execute()
+        # Search for parking data
+        parking_data = None
         
-        if not parking_result.data:
-            # Try fallback to project_parking_mapping table
-            try:
-                mapping_result = supabase.table('project_parking_mapping').select(
-                    'parking_id, ip_address, port, parking_name'
-                ).eq('project_number', parking_num).execute()
+        try:
+            if is_uuid:
+                # Search by ID (UUID)
+                parking_result = supabase.table('parkings').select(
+                    'ip_address, port, description'
+                ).eq('id', parking_num).execute()
+            else:
+                # Search by description (numeric parking ID)
+                parking_result = supabase.table('parkings').select(
+                    'ip_address, port, description'
+                ).eq('description', parking_num).execute()
+            
+            # Check if we have data
+            has_data = False
+            if hasattr(parking_result, 'data') and parking_result.data:
+                has_data = True
+            elif isinstance(parking_result, dict) and 'data' in parking_result and parking_result['data']:
+                has_data = True
                 
-                if mapping_result.data:
-                    # Found in mapping table
-                    mapping_data = mapping_result.data[0]
-                    parking_data = {
-                        'ip_address': mapping_data.get('ip_address'),
-                        'port': mapping_data.get('port', 443),
-                        'description': mapping_data.get('parking_name', parking_num)
-                    }
-                    # Create a result structure similar to parkings table
-                    parking_result = {'data': [parking_data]}
-                else:
-                    # Try parking_servers table as last resort
-                    servers_result = supabase.table('parking_servers').select(
-                        'server_url, name'
-                    ).eq('name', parking_num).execute()
+            if not has_data:
+                # Try fallback to project_parking_mapping table
+                try:
+                    mapping_result = supabase.table('project_parking_mapping').select(
+                        'parking_id, ip_address, port, parking_name'
+                    ).eq('project_number', parking_num).execute()
                     
-                    if servers_result.data:
-                        server_data = servers_result.data[0]
-                        # Extract IP and port from server_url
-                        import re
-                        url_match = re.match(r'https?://([^:]+):?(\d+)?', server_data.get('server_url', ''))
-                        if url_match:
-                            parking_data = {
-                                'ip_address': url_match.group(1),
-                                'port': int(url_match.group(2)) if url_match.group(2) else 443,
-                                'description': server_data.get('name', parking_num)
-                            }
-                            parking_result = {'data': [parking_data]}
-                        else:
-                            return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
+                    if mapping_result.data:
+                        # Found in mapping table
+                        mapping_data = mapping_result.data[0]
+                        parking_data = {
+                            'ip_address': mapping_data.get('ip_address'),
+                            'port': mapping_data.get('port', 443),
+                            'description': mapping_data.get('parking_name', parking_num)
+                        }
                     else:
-                        return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
-            except Exception as e:
-                print(f"❌ Error searching fallback tables: {str(e)}")
-                return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
-        else:
-            parking_data = parking_result.data[0]
+                        # Try parking_servers table as last resort
+                        servers_result = supabase.table('parking_servers').select(
+                            'server_url, name'
+                        ).eq('name', parking_num).execute()
+                        
+                        if servers_result.data:
+                            server_data = servers_result.data[0]
+                            # Extract IP and port from server_url
+                            import re
+                            url_match = re.match(r'https?://([^:]+):?(\d+)?', server_data.get('server_url', ''))
+                            if url_match:
+                                parking_data = {
+                                    'ip_address': url_match.group(1),
+                                    'port': int(url_match.group(2)) if url_match.group(2) else 443,
+                                    'description': server_data.get('name', parking_num)
+                                }
+                            else:
+                                return jsonify({'success': False, 'message': 'חניון לא נמצא - שגיאה בכתובת שרת'}), 404
+                        else:
+                            return jsonify({'success': False, 'message': 'חניון לא נמצא במערכת'}), 404
+                except Exception as e:
+                    print(f"❌ Error searching fallback tables: {str(e)}")
+                    return jsonify({'success': False, 'message': 'שגיאה בחיפוש חניון משני'}), 404
+            else:
+                # Found in primary table
+                parking_data = parking_result.data[0]
+                
+        except Exception as e:
+            print(f"❌ Error searching for parking: {str(e)}")
+            return jsonify({'success': False, 'message': 'שגיאת תקשורת בבדיקת פרטי חניון'}), 500
             
         ip_address = parking_data.get('ip_address')
         port = parking_data.get('port', 443)
