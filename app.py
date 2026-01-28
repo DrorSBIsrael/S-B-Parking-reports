@@ -4179,50 +4179,6 @@ def company_manager_proxy():
         if not parking_id or not endpoint or parking_id == 'null' or parking_id == 'undefined':
             return jsonify({'success': False, 'message': 'חסרים פרמטרים'}), 400
         
-        # Check permissions and remove restricted fields if needed
-        # Logic:
-        # - parking_manager: CANNOT send 'counting' (must be stripped)
-        # - parking_manager_partial: CAN send 'counting'
-        # - company_manager_proxy: CAN send 'counting' & 'limit'
-        # - everyone else: 'limit' is stripped
-        
-        if current_user_email:
-            try:
-                # Default check - safer integration
-                if not supabase:
-                    print("❌ Supabase client not initialized")
-                    user_type = 'company_manager' 
-                else:
-                    user_res = supabase.table('user_parkings').select('company_type').eq('email', current_user_email).execute()
-                    user_type = 'company_manager' # Default if not found
-                    
-                    if hasattr(user_res, 'data') and user_res.data and len(user_res.data) > 0:
-                        user_type = user_res.data[0].get('company_type', 'company_manager')
-                
-                print(f"🔒 Security: User {current_user_email} has type {user_type}")
-                
-                # Check 1: 'limit' is restricted to proxy only
-                if user_type != 'company_manager_proxy':
-                    if 'limit' in payload: 
-                        del payload['limit']
-                    if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']:
-                        del payload['consumer']['limit']
-                
-                # Check 2: 'counting' logic
-                # REMOVE counting if user is 'parking_manager'
-                # KEEP counting if user is 'parking_manager_partial' or 'company_manager_proxy'
-                if user_type == 'parking_manager' or user_type == 'company_manager':
-                    if 'counting' in payload: 
-                        print(f"🔒 Security: Removing counting for {user_type}")
-                        del payload['counting']
-                
-            except Exception as e:
-                print(f"⚠️ Error checking permissions: {str(e)}")
-                # Safer default on error - remove 'limit' but maybe keep 'counting' to avoid breaking partials?
-                # Or stricter: remove both
-                if 'limit' in payload: del payload['limit']
-                # if 'counting' in payload: del payload['counting'] 
-        
         # קבלת נתוני החניון
         # Convert parking_id to string to handle numeric IDs
         parking_num = str(parking_id)
