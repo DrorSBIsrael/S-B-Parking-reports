@@ -4170,46 +4170,6 @@ def company_manager_proxy():
         method = data.get('method', 'GET')
         payload = data.get('payload', {})
         
-        # Check user permissions for limit/quota
-        # Only company_manager_proxy can set limit (quota)
-        if current_user_email:
-            # Default safety - define user_type BEFORE try block
-            user_type = 'company_manager' 
-            
-            try:
-                # Check user type in DB
-                user_res = supabase.table('user_parkings').select('company_type').eq('email', current_user_email).execute()
-                
-                if user_res.data and len(user_res.data) > 0:
-                    user_type = user_res.data[0].get('company_type', 'company_manager')
-                
-                # If NOT proxy manager, remove restricted fields to prevent resetting quota
-                if user_type != 'company_manager_proxy':
-                    # Log enforcement
-                    security_log = False
-                    if 'limit' in payload: security_log = True
-                    if 'counting' in payload: security_log = True
-                    if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']: security_log = True
-                    
-                    if security_log:
-                        print(f"🔒 Security: Removing restricted fields (limit/counting) from payload for user {current_user_email} (type: {user_type})")
-                    
-                    # Remove from root payload
-                    if 'limit' in payload: del payload['limit']
-                    if 'counting' in payload: del payload['counting']
-                        
-                    # Remove from consumer nested dict
-                    if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']:
-                        del payload['consumer']['limit']
-                    
-            except Exception as e:
-                print(f"⚠️ Error checking user permissions: {str(e)}")
-                # On error, play safe and remove ALL sensitive fields
-                if 'limit' in payload: del payload['limit']
-                if 'counting' in payload: del payload['counting']
-                if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']:
-                        del payload['consumer']['limit']
-        
         # Request details received
         
         # For usageprofiles endpoint, try to use a default parking if none provided
@@ -4227,74 +4187,61 @@ def company_manager_proxy():
         import re
         is_uuid = bool(re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', parking_num, re.IGNORECASE))
         
-        # Search for parking data
-        parking_data = None
+        if is_uuid:
+            # Search by ID (UUID)
+            parking_result = supabase.table('parkings').select(
+                'ip_address, port, description'
+            ).eq('id', parking_num).execute()
+        else:
+            # Search by description (numeric parking ID)
+            parking_result = supabase.table('parkings').select(
+                'ip_address, port, description'
+            ).eq('description', parking_num).execute()
         
-        try:
-            if is_uuid:
-                # Search by ID (UUID)
-                parking_result = supabase.table('parkings').select(
-                    'ip_address, port, description'
-                ).eq('id', parking_num).execute()
-            else:
-                # Search by description (numeric parking ID)
-                parking_result = supabase.table('parkings').select(
-                    'ip_address, port, description'
-                ).eq('description', parking_num).execute()
-            
-            # Check if we have data
-            has_data = False
-            if hasattr(parking_result, 'data') and parking_result.data:
-                has_data = True
-            elif isinstance(parking_result, dict) and 'data' in parking_result and parking_result['data']:
-                has_data = True
+        if not parking_result.data:
+            # Try fallback to project_parking_mapping table
+            try:
+                mapping_result = supabase.table('project_parking_mapping').select(
+                    'parking_id, ip_address, port, parking_name'
+                ).eq('project_number', parking_num).execute()
                 
-            if not has_data:
-                # Try fallback to project_parking_mapping table
-                try:
-                    mapping_result = supabase.table('project_parking_mapping').select(
-                        'parking_id, ip_address, port, parking_name'
-                    ).eq('project_number', parking_num).execute()
+                if mapping_result.data:
+                    # Found in mapping table
+                    mapping_data = mapping_result.data[0]
+                    parking_data = {
+                        'ip_address': mapping_data.get('ip_address'),
+                        'port': mapping_data.get('port', 443),
+                        'description': mapping_data.get('parking_name', parking_num)
+                    }
+                    # Create a result structure similar to parkings table
+                    parking_result = {'data': [parking_data]}
+                else:
+                    # Try parking_servers table as last resort
+                    servers_result = supabase.table('parking_servers').select(
+                        'server_url, name'
+                    ).eq('name', parking_num).execute()
                     
-                    if mapping_result.data:
-                        # Found in mapping table
-                        mapping_data = mapping_result.data[0]
-                        parking_data = {
-                            'ip_address': mapping_data.get('ip_address'),
-                            'port': mapping_data.get('port', 443),
-                            'description': mapping_data.get('parking_name', parking_num)
-                        }
-                    else:
-                        # Try parking_servers table as last resort
-                        servers_result = supabase.table('parking_servers').select(
-                            'server_url, name'
-                        ).eq('name', parking_num).execute()
-                        
-                        if servers_result.data:
-                            server_data = servers_result.data[0]
-                            # Extract IP and port from server_url
-                            import re
-                            url_match = re.match(r'https?://([^:]+):?(\d+)?', server_data.get('server_url', ''))
-                            if url_match:
-                                parking_data = {
-                                    'ip_address': url_match.group(1),
-                                    'port': int(url_match.group(2)) if url_match.group(2) else 443,
-                                    'description': server_data.get('name', parking_num)
-                                }
-                            else:
-                                return jsonify({'success': False, 'message': 'חניון לא נמצא - שגיאה בכתובת שרת'}), 404
+                    if servers_result.data:
+                        server_data = servers_result.data[0]
+                        # Extract IP and port from server_url
+                        import re
+                        url_match = re.match(r'https?://([^:]+):?(\d+)?', server_data.get('server_url', ''))
+                        if url_match:
+                            parking_data = {
+                                'ip_address': url_match.group(1),
+                                'port': int(url_match.group(2)) if url_match.group(2) else 443,
+                                'description': server_data.get('name', parking_num)
+                            }
+                            parking_result = {'data': [parking_data]}
                         else:
-                            return jsonify({'success': False, 'message': 'חניון לא נמצא במערכת'}), 404
-                except Exception as e:
-                    print(f"❌ Error searching fallback tables: {str(e)}")
-                    return jsonify({'success': False, 'message': 'שגיאה בחיפוש חניון משני'}), 404
-            else:
-                # Found in primary table
-                parking_data = parking_result.data[0]
-                
-        except Exception as e:
-            print(f"❌ Error searching for parking: {str(e)}")
-            return jsonify({'success': False, 'message': 'שגיאת תקשורת בבדיקת פרטי חניון'}), 500
+                            return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
+                    else:
+                        return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
+            except Exception as e:
+                print(f"❌ Error searching fallback tables: {str(e)}")
+                return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
+        else:
+            parking_data = parking_result.data[0]
             
         ip_address = parking_data.get('ip_address')
         port = parking_data.get('port', 443)
@@ -5451,17 +5398,6 @@ def mobile_controller_devices():
         if 'user_email' not in session:
             return jsonify({'success': False, 'message': 'לא מחובר'}), 401
             
-        # Test Mode for Local Testing
-        if session.get('user_email') == 'test_mobile@local':
-             return jsonify({
-                 'success': True,
-                 'devices': [
-                     {'number': 101, 'name': 'כניסה ראשית', 'type': 'entry', 'status': 1, 'barrier': 'closed'},
-                     {'number': 201, 'name': 'יציאה ראשית', 'type': 'exit', 'status': 1, 'barrier': 'closed'},
-                     {'number': 301, 'name': 'מעבר 1', 'type': 'pass', 'status': 0, 'barrier': 'open'}
-                 ]
-             })
-
         data = request.json
         # parking_id from request or user session?
         # The user has project_number.
@@ -5547,70 +5483,6 @@ def mobile_controller_devices():
         print(f"Mobile devices error: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה בטעינת מכשירים'}), 500
 
-@app.route('/api/user-info')
-def get_user_info_api():
-    """Get current user info for mobile app"""
-    email = session.get('user_email')
-    print(f"DEBUG: /api/user-info called. Email in session: {email}")
-    
-    if not email:
-        return jsonify({'success': False, 'message': 'לא מחובר'}), 401
-    
-    # Test Mode
-    if email == 'test_mobile@local':
-        print("DEBUG: Returning TEST MODE user info")
-        return jsonify({
-            'success': True,
-            'user': {
-                'username': 'Test User',
-                'role': 'mobile_controller',
-                'parking_id': 12345,
-                'project_number': 12345
-            }
-        })
-
-    try:
-        user_result = supabase.table('user_parkings').select('*').eq('email', email).execute()
-        if not user_result.data:
-            return jsonify({'success': False, 'message': 'משתמש לא נמצא'}), 404
-            
-        user = user_result.data[0]
-        return jsonify({
-            'success': True,
-            'user': {
-                'username': user.get('username'),
-                'role': user.get('role'),
-                'parking_id': user.get('project_number'),
-                'project_number': user.get('project_number')
-            }
-        })
-    except Exception as e:
-        print(f"Error getting user info (Email: {email}): {str(e)}")
-        return jsonify({'success': False, 'message': f'מסד הנתונים לא זמין (User: {email})'}), 500
-
-@app.route('/mobile-controller-test')
-def mobile_controller_test_page():
-    """Test Page for Mobile Controller Local Testing (Full UI)"""
-    # Security check: Allow only for local testing
-    if 'localhost' not in request.host and '127.0.0.1' not in request.host:
-        return 'Test page is only available on local server', 403
-
-    # Auto-login for testing
-    session['user_email'] = 'test_mobile@local'
-    return render_template('mobile_parking_controller_test.html')
-
-@app.route('/simple-test')
-def simple_test_page():
-    """Minimal Test Page for API Verification"""
-    # Security check: Allow only for local testing
-    if 'localhost' not in request.host and '127.0.0.1' not in request.host:
-        return 'Test page is only available on local server', 403
-
-    # Auto-login for testing
-    session['user_email'] = 'test_mobile@local'
-    return render_template('simple_mobile_test.html')
-
-
 @app.route('/api/mobile-controller/command', methods=['POST'])
 def mobile_controller_command():
     """Execute command on a device."""
@@ -5619,18 +5491,6 @@ def mobile_controller_command():
             return jsonify({'success': False, 'message': 'לא מחובר'}), 401
             
         data = request.json
-        
-        # Test Mode for Local Testing
-        # Test Mode for Local Testing
-        if session.get('user_email') == 'test_mobile@local':
-             cmd_code = data.get('command')
-             return jsonify({
-                 'success': True, 
-                 'message': 'פקודה נשלחה (TEST MODE)', 
-                 'test': True,
-                 'code_sent': cmd_code
-             })
-
         device_num = int(data.get('devices', [0])[0]) # Legacy array format
         if not device_num and 'device' in data: device_num = int(data['device'])
         
