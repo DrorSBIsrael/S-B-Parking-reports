@@ -4180,13 +4180,17 @@ def company_manager_proxy():
             return jsonify({'success': False, 'message': 'חסרים פרמטרים'}), 400
         
         # Check permissions and remove restricted fields if needed
+        # Logic:
+        # - parking_manager: CANNOT send 'counting' (must be stripped)
+        # - parking_manager_partial: CAN send 'counting'
+        # - company_manager_proxy: CAN send 'counting' & 'limit'
+        # - everyone else: 'limit' is stripped
+        
         if current_user_email:
             try:
                 # Default check - safer integration
-                # Using a broad try/except to prevent ANY DB error from crashing the proxy
                 if not supabase:
                     print("❌ Supabase client not initialized")
-                    # Should we block or allow? Safer to allow but strip
                     user_type = 'company_manager' 
                 else:
                     user_res = supabase.table('user_parkings').select('company_type').eq('email', current_user_email).execute()
@@ -4195,28 +4199,29 @@ def company_manager_proxy():
                     if hasattr(user_res, 'data') and user_res.data and len(user_res.data) > 0:
                         user_type = user_res.data[0].get('company_type', 'company_manager')
                 
-                # If NOT proxy manager, remove restricted fields
+                print(f"🔒 Security: User {current_user_email} has type {user_type}")
+                
+                # Check 1: 'limit' is restricted to proxy only
                 if user_type != 'company_manager_proxy':
-                    # Remove from root payload
                     if 'limit' in payload: 
-                        print(f"🔒 Security: Removing limit from payload for user {current_user_email}")
                         del payload['limit']
-                    if 'counting' in payload: 
-                        print(f"🔒 Security: Removing counting from payload for user {current_user_email}")
-                        del payload['counting']
-                        
-                    # Remove from consumer nested dict
                     if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']:
                         del payload['consumer']['limit']
+                
+                # Check 2: 'counting' logic
+                # REMOVE counting if user is 'parking_manager'
+                # KEEP counting if user is 'parking_manager_partial' or 'company_manager_proxy'
+                if user_type == 'parking_manager' or user_type == 'company_manager':
+                    if 'counting' in payload: 
+                        print(f"🔒 Security: Removing counting for {user_type}")
+                        del payload['counting']
+                
             except Exception as e:
                 print(f"⚠️ Error checking permissions: {str(e)}")
-                # Safer default on error - remove fields to be safe
+                # Safer default on error - remove 'limit' but maybe keep 'counting' to avoid breaking partials?
+                # Or stricter: remove both
                 if 'limit' in payload: del payload['limit']
-                if 'counting' in payload: del payload['counting']
-                if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']:
-                        del payload['consumer']['limit']
-                
-
+                # if 'counting' in payload: del payload['counting'] 
         
         # קבלת נתוני החניון
         # Convert parking_id to string to handle numeric IDs
@@ -4427,124 +4432,114 @@ def company_manager_proxy():
                 # POST request with payload
                 # Check if this is a consumer creation endpoint
                 if 'contracts' in endpoint and 'consumers' in endpoint and payload:
-                    try:
-                        # Convert JSON to XML for consumer creation
-                        import xml.etree.ElementTree as ET
+                    # Convert JSON to XML for consumer creation
+                    import xml.etree.ElementTree as ET
+                    
+                    # Create the XML structure as per API spec
+                    root = ET.Element('consumerDetail', xmlns='http://gsph.sub.com/cust/types')
+                    
+                    # Add consumer element if exists
+                    if 'consumer' in payload:
+                        consumer_elem = ET.SubElement(root, 'consumer')
+                        # Only set href if we have an ID (for guests)
+                        if 'id' in payload['consumer'] and payload['consumer']['id']:
+                            consumer_elem.set('href', f"/consumers/{payload['consumer'].get('contractid', '')},{payload['consumer']['id']}")
                         
-                        # Create the XML structure as per API spec
-                        root = ET.Element('consumerDetail', xmlns='http://gsph.sub.com/cust/types')
-                        
-                        # Add consumer element if exists
-                        if 'consumer' in payload and payload['consumer']: # Safety check added
-                            consumer_elem = ET.SubElement(root, 'consumer')
-                            if 'id' in payload['consumer'] and payload['consumer']['id']:
-                                consumer_elem.set('href', f"/consumers/{payload['consumer'].get('contractid', '')},{payload['consumer']['id']}")
-                            
-                            for key, value in payload['consumer'].items():
-                                # Skip empty id for new regular subscribers - server will assign
-                                if key == 'id' and (value is None or value == ''):
-                                    continue
-                                # Skip href
-                                if key == 'href':
-                                    continue
-                                # Add all non-empty values
-                                if value is not None and value != '':
-                                    elem = ET.SubElement(consumer_elem, key)
+                        for key, value in payload['consumer'].items():
+                            # Skip empty id for new regular subscribers - server will assign
+                            if key == 'id' and (value is None or value == ''):
+                                continue
+                            # Skip href
+                            if key == 'href':
+                                continue
+                            # Add all non-empty values
+                            if value is not None and value != '':
+                                elem = ET.SubElement(consumer_elem, key)
+                                elem.text = str(value)
+                    
+                    # Add person element if exists
+                    if 'person' in payload:
+                        person_elem = ET.SubElement(root, 'person')
+                        for key, value in payload['person'].items():
+                            if value is not None and value != '':
+                                elem = ET.SubElement(person_elem, key)
+                                elem.text = str(value)
+                    
+                    # Add identification element if exists
+                    if 'identification' in payload:
+                        ident_elem = ET.SubElement(root, 'identification')
+                        for key, value in payload['identification'].items():
+                            if value is not None and value != '':
+                                if key == 'usageProfile' and isinstance(value, dict):
+                                    # Handle nested usageProfile
+                                    usage_elem = ET.SubElement(ident_elem, 'usageProfile')
+                                    if 'id' in value and value['id']:
+                                        usage_elem.set('href', f"/usageProfile/{value['id']}")
+                                    for uk, uv in value.items():
+                                        if uk != 'href' and uv is not None and uv != '':
+                                            uelem = ET.SubElement(usage_elem, uk)
+                                            uelem.text = str(uv)
+                                else:
+                                    elem = ET.SubElement(ident_elem, key)
                                     elem.text = str(value)
-                        
-                        # Add person element if exists
-                        if 'person' in payload:
-                            person_elem = ET.SubElement(root, 'person')
-                            for key, value in payload['person'].items():
-                                if value is not None and value != '':
-                                    elem = ET.SubElement(person_elem, key)
-                                    elem.text = str(value)
-                        
-                        # Add identification element if exists
-                        if 'identification' in payload:
-                            ident_elem = ET.SubElement(root, 'identification')
-                            for key, value in payload['identification'].items():
-                                if value is not None and value != '':
-                                    if key == 'usageProfile' and isinstance(value, dict):
-                                        # Handle nested usageProfile
-                                        usage_elem = ET.SubElement(ident_elem, 'usageProfile')
-                                        if 'id' in value and value['id']:
-                                            usage_elem.set('href', f"/usageProfile/{value['id']}")
-                                        for uk, uv in value.items():
-                                            if uk != 'href' and uv is not None and uv != '':
-                                                uelem = ET.SubElement(usage_elem, uk)
-                                                uelem.text = str(uv)
-                                    else:
-                                        elem = ET.SubElement(ident_elem, key)
-                                        elem.text = str(value)
-                        
-                        # Add other root level elements
-                        for key in ['displayText', 'limit', 'status', 'delete', 'lpn1', 'lpn2', 'lpn3']:
-                            if key in payload and payload[key] is not None and payload[key] != '':
-                                elem = ET.SubElement(root, key)
-                                elem.text = str(payload[key])
-                        
-                        # Convert to XML string
-                        xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
-                        print(f"   📝 Sending XML for consumer creation (POST to {url}):")
-                        # print(f"   Consumer ID: {payload.get('consumer', {}).get('id', 'NEW')}")
-                        # print(f"   📄 Full XML being sent:\n{xml_str}")
-                        # print(f"   📏 XML length: {len(xml_str)} characters")
-                        
-                        # Send as XML
-                        headers['Content-Type'] = 'application/xml'
-                        response = requests.post(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
-
-                    except Exception as xml_error:
-                         print(f"❌ Error constructing XML: {str(xml_error)}")
-                         return jsonify({'success': False, 'message': f'Server XML Error: {str(xml_error)}'}), 500
+                    
+                    # Add other root level elements
+                    for key in ['displayText', 'limit', 'status', 'delete', 'lpn1', 'lpn2', 'lpn3']:
+                        if key in payload and payload[key] is not None and payload[key] != '':
+                            elem = ET.SubElement(root, key)
+                            elem.text = str(payload[key])
+                    
+                    # Convert to XML string
+                    xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
+                    print(f"   📝 Sending XML for consumer creation (POST to {url}):")
+                    print(f"   Consumer ID: {payload.get('consumer', {}).get('id', 'NEW')}")
+                    print(f"   📄 Full XML being sent:\n{xml_str}")
+                    print(f"   📏 XML length: {len(xml_str)} characters")
+                    
+                    # Send as XML
+                    headers['Content-Type'] = 'application/xml'
+                    response = requests.post(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
                 else:
                     # Regular POST with JSON
                     response = requests.post(url, json=payload, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'PUT':
                 # For consumer detail updates, convert JSON to XML
                 if '/detail' in endpoint and 'consumer' in endpoint.lower():
-                    try:
-                        # Convert JSON payload to XML for consumer update
-                        import xml.etree.ElementTree as ET
-                        
-                        # Create the XML structure as per API spec
-                        root = ET.Element('consumerDetail', xmlns='http://gsph.sub.com/cust/types')
-                        
-                        # Add consumer element if exists
-                        if 'consumer' in payload and payload['consumer']:
-                            href_val = f"/consumers/{payload['consumer'].get('contractid', '')},{payload['consumer'].get('id', '')}"
-                            consumer_elem = ET.SubElement(root, 'consumer', href=href_val)
-                            for key, value in payload['consumer'].items():
-                                if value and key != 'href':
-                                    elem = ET.SubElement(consumer_elem, key)
-                                    elem.text = str(value)
-                        
-                        # Add person element if exists
-                        if 'person' in payload and payload['person']:
-                            person_elem = ET.SubElement(root, 'person')
-                            for key, value in payload['person'].items():
-                                if value:
-                                    elem = ET.SubElement(person_elem, key)
-                                    elem.text = str(value)
-                                    
-                        # Add identification element
-                        if 'identification' in payload and payload['identification']:
-                            ident_elem = ET.SubElement(root, 'identification')
-                            for key, value in payload['identification'].items():
-                                if value:
-                                     # Handle usageProfile nested dict
-                                    if key == 'usageProfile' and isinstance(value, dict):
-                                        usage_elem = ET.SubElement(ident_elem, 'usageProfile')
-                                        if 'id' in value:
-                                            usage_elem.set('href', f"/usageProfile/{value['id']}")
-                                        # Add fields inside
-                                        for uk, uv in value.items():
-                                            if uk != 'href' and uv is not None:
-                                                 ue = ET.SubElement(usage_elem, uk)
-                                                 ue.text = str(uv)
-                                        continue
-
+                    # Convert JSON payload to XML for consumer update
+                    import xml.etree.ElementTree as ET
+                    
+                    # Create the XML structure as per API spec
+                    root = ET.Element('consumerDetail', xmlns='http://gsph.sub.com/cust/types')
+                    
+                    # Add consumer element if exists
+                    if 'consumer' in payload:
+                        consumer_elem = ET.SubElement(root, 'consumer', href=f"/consumers/{payload['consumer'].get('contractid', '')},{payload['consumer'].get('id', '')}")
+                        for key, value in payload['consumer'].items():
+                            if value and key != 'href':
+                                elem = ET.SubElement(consumer_elem, key)
+                                elem.text = str(value)
+                    
+                    # Add person element if exists
+                    if 'person' in payload:
+                        person_elem = ET.SubElement(root, 'person')
+                        for key, value in payload['person'].items():
+                            if value:
+                                elem = ET.SubElement(person_elem, key)
+                                elem.text = str(value)
+                    
+                    # Add identification element if exists
+                    if 'identification' in payload:
+                        ident_elem = ET.SubElement(root, 'identification')
+                        for key, value in payload['identification'].items():
+                            if value:
+                                if key == 'usageProfile' and isinstance(value, dict):
+                                    # Handle nested usageProfile
+                                    usage_elem = ET.SubElement(ident_elem, 'usageProfile')
+                                    for uk, uv in value.items():
+                                        if uv:
+                                            uelem = ET.SubElement(usage_elem, uk)
+                                            uelem.text = str(uv)
+                                else:
                                     elem = ET.SubElement(ident_elem, key)
                                     # Handle ignorePresence specially - should be '0' or '1'
                                     if key == 'ignorePresence':
@@ -4558,24 +4553,20 @@ def company_manager_proxy():
                                         elem.text = 'true' if value else 'false'
                                     else:
                                         elem.text = str(value)
-                        
-                        # Add root level elements
-                        for key in ['displayText', 'limit', 'status', 'delete', 'lpn1', 'lpn2', 'lpn3']:
-                            if key in payload and payload[key] is not None:
-                                elem = ET.SubElement(root, key)
-                                elem.text = str(payload[key])
-                        
-                        # Convert to XML string
-                        xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
-                        print(f"   📝 Sending XML for consumer update (PUT to {url}):")
-                        # print(f"   📄 XML Payload (len={len(xml_str)})")
-                        
-                        headers['Content-Type'] = 'application/xml'
-                        response = requests.put(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
-
-                    except Exception as xml_error:
-                         print(f"❌ Error constructing XML for PUT: {str(xml_error)}")
-                         return jsonify({'success': False, 'message': f'Server XML Error: {str(xml_error)}'}), 500
+                    
+                    # Add vehicle data at root level
+                    for key in ['lpn1', 'lpn2', 'lpn3']:
+                        if key in payload and payload[key]:
+                            elem = ET.SubElement(root, key)
+                            elem.text = str(payload[key])
+                    
+                    # Convert to XML string
+                    xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
+                    print(f"   📝 Sending XML for update (PUT to {url}):")
+                    print(f"   📅 Dates in consumer: xValidFrom={payload.get('consumer', {}).get('xValidFrom')}, xValidUntil={payload.get('consumer', {}).get('xValidUntil')}")
+                    
+                    headers['Content-Type'] = 'application/xml'
+                    response = requests.put(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
                 elif '/detail' in endpoint and 'contracts' in endpoint:
                     # Handle Contract Update - Convert JSON to XML
                     import xml.etree.ElementTree as ET
