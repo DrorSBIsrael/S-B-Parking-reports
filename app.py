@@ -4179,45 +4179,6 @@ def company_manager_proxy():
         if not parking_id or not endpoint or parking_id == 'null' or parking_id == 'undefined':
             return jsonify({'success': False, 'message': 'חסרים פרמטרים'}), 400
         
-        # Check user permissions for limit/quota/counting
-        # Only company_manager_proxy can set limit (quota)
-        user_type = 'company_manager' # Default safety
-        
-        if current_user_email:
-            try:
-                # Check user type in DB
-                user_res = supabase.table('user_parkings').select('company_type').eq('email', current_user_email).execute()
-                
-                if user_res.data and len(user_res.data) > 0:
-                    user_type = user_res.data[0].get('company_type', 'company_manager')
-                
-                # If NOT proxy manager, remove restricted fields to prevent resetting quota
-                if user_type != 'company_manager_proxy':
-                    # Log enforcement
-                    security_log = False
-                    if 'limit' in payload: security_log = True
-                    if 'counting' in payload: security_log = True
-                    if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']: security_log = True
-                    
-                    if security_log:
-                        print(f"🔒 Security: Removing restricted fields (limit/counting) from payload for user {current_user_email} (type: {user_type})")
-                    
-                    # Remove from root payload
-                    if 'limit' in payload: del payload['limit']
-                    if 'counting' in payload: del payload['counting']
-                        
-                    # Remove from consumer nested dict
-                    if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']:
-                        del payload['consumer']['limit']
-                    
-            except Exception as e:
-                print(f"⚠️ Error checking user permissions: {str(e)}")
-                # On error, play safe and remove ALL sensitive fields
-                if 'limit' in payload: del payload['limit']
-                if 'counting' in payload: del payload['counting']
-                if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']:
-                        del payload['consumer']['limit']
-        
         # קבלת נתוני החניון
         # Convert parking_id to string to handle numeric IDs
         parking_num = str(parking_id)
