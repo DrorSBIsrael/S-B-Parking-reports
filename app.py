@@ -4216,24 +4216,7 @@ def company_manager_proxy():
                 if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']:
                         del payload['consumer']['limit']
                 
-                # If NOT proxy manager, remove restricted fields
-                if user_type != 'company_manager_proxy':
-                    # Remove from root payload
-                    if 'limit' in payload: 
-                        print(f"🔒 Security: Removing limit from payload for user {current_user_email}")
-                        del payload['limit']
-                    if 'counting' in payload: 
-                        print(f"🔒 Security: Removing counting from payload for user {current_user_email}")
-                        del payload['counting']
-                        
-                    # Remove from consumer nested dict
-                    if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']:
-                        del payload['consumer']['limit']
-            except Exception as e:
-                print(f"Error checking permissions: {e}")
-                # Safer default on error
-                if 'limit' in payload: del payload['limit']
-                if 'counting' in payload: del payload['counting']
+
         
         # קבלת נתוני החניון
         # Convert parking_id to string to handle numeric IDs
