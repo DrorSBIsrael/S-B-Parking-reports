@@ -4183,10 +4183,38 @@ def company_manager_proxy():
         if current_user_email:
             try:
                 # Default check - safer integration
-                user_res = supabase.table('user_parkings').select('company_type').eq('email', current_user_email).execute()
-                user_type = 'company_manager'
-                if user_res.data and len(user_res.data) > 0:
-                    user_type = user_res.data[0].get('company_type', 'company_manager')
+                # Using a broad try/except to prevent ANY DB error from crashing the proxy
+                if not supabase:
+                    print("❌ Supabase client not initialized")
+                    # Should we block or allow? Safer to allow but strip
+                    user_type = 'company_manager' 
+                else:
+                    user_res = supabase.table('user_parkings').select('company_type').eq('email', current_user_email).execute()
+                    user_type = 'company_manager' # Default if not found
+                    
+                    if hasattr(user_res, 'data') and user_res.data and len(user_res.data) > 0:
+                        user_type = user_res.data[0].get('company_type', 'company_manager')
+                
+                # If NOT proxy manager, remove restricted fields
+                if user_type != 'company_manager_proxy':
+                    # Remove from root payload
+                    if 'limit' in payload: 
+                        print(f"🔒 Security: Removing limit from payload for user {current_user_email}")
+                        del payload['limit']
+                    if 'counting' in payload: 
+                        print(f"🔒 Security: Removing counting from payload for user {current_user_email}")
+                        del payload['counting']
+                        
+                    # Remove from consumer nested dict
+                    if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']:
+                        del payload['consumer']['limit']
+            except Exception as e:
+                print(f"⚠️ Error checking permissions: {str(e)}")
+                # Safer default on error - remove fields to be safe
+                if 'limit' in payload: del payload['limit']
+                if 'counting' in payload: del payload['counting']
+                if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']:
+                        del payload['consumer']['limit']
                 
                 # If NOT proxy manager, remove restricted fields
                 if user_type != 'company_manager_proxy':
