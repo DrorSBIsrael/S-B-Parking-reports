@@ -4194,13 +4194,13 @@ def company_manager_proxy():
                 print(f"🔒 Checking permissions for {current_user_email} (Type: {user_type})")
                 
                 # 2. Handle 'limit' field (Restricted to Proxy only)
-                if user_type != 'company_manager_proxy':
-                     if 'limit' in payload:
-                         print(f"   🚫 Removing 'limit' for {user_type}")
-                         del payload['limit']
-                     # Also check inside consumer object if exists
-                     if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']:
-                         del payload['consumer']['limit']
+                # if user_type != 'company_manager_proxy':
+                #      if 'limit' in payload:
+                #          print(f"   🚫 Removing 'limit' for {user_type}")
+                #          del payload['limit']
+                #      # Also check inside consumer object if exists
+                #      if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']:
+                #          del payload['consumer']['limit']
 
                 # 3. Handle 'counting' field (Restricted for parking_manager)
                 # "Explicity: parking_manager cannot send counting"
@@ -4208,22 +4208,25 @@ def company_manager_proxy():
                 # 3. Handle 'counting' field (Restricted for parking_manager)
                 # "Explicity: parking_manager cannot send counting"
                 # "parking_manager_partial CAN send counting"
-                if user_type == 'parking_manager':
-                    # Use pop to remove regardless of value (0, "0", null, etc)
-                    if 'counting' in payload:
-                        print(f"   🚫 Removing 'counting' for {user_type}")
-                        payload.pop('counting', None)
-                    
-                    # Also check inside consumer object
-                    if 'consumer' in payload and isinstance(payload['consumer'], dict):
-                        if 'counting' in payload['consumer']:
-                             print(f"   🚫 Removing 'consumer.counting' for {user_type}")
-                             payload['consumer'].pop('counting', None)
+                # 3. Handle 'counting' field (Restricted for parking_manager)
+                # "Explicity: parking_manager cannot send counting"
+                # "parking_manager_partial CAN send counting"
+                # if user_type == 'parking_manager':
+                #     # Use pop to remove regardless of value (0, "0", null, etc)
+                #     if 'counting' in payload:
+                #         print(f"   🚫 Removing 'counting' for {user_type}")
+                #         payload.pop('counting', None)
+                #     
+                #     # Also check inside consumer object
+                #     if 'consumer' in payload and isinstance(payload['consumer'], dict):
+                #         if 'counting' in payload['consumer']:
+                #              print(f"   🚫 Removing 'consumer.counting' for {user_type}")
+                #              payload['consumer'].pop('counting', None)
 
             except Exception as e:
                  print(f"⚠️ Permissions check error: {e}")
                  # Fallback safety: remove restricted fields if error
-                 if 'limit' in payload: del payload['limit']
+                 # if 'limit' in payload: del payload['limit']
         
         # Convert parking_id to string to handle numeric IDs
         parking_num = str(parking_id)
