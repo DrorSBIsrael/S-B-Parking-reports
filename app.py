@@ -4180,6 +4180,48 @@ def company_manager_proxy():
             return jsonify({'success': False, 'message': 'חסרים פרמטרים'}), 400
         
         # קבלת נתוני החניון
+        
+        # New Security Logic (Step-by-Step)
+        if current_user_email and payload:
+            try:
+                # 1. Get user type safely
+                user_type = 'company_manager' # Default conservative
+                if supabase:
+                    user_res = supabase.table('user_parkings').select('company_type').eq('email', current_user_email).execute()
+                    if user_res and hasattr(user_res, 'data') and user_res.data:
+                        user_type = user_res.data[0].get('company_type', 'company_manager')
+                
+                print(f"🔒 Checking permissions for {current_user_email} (Type: {user_type})")
+                
+                # 2. Handle 'limit' field (Restricted to Proxy only)
+                if user_type != 'company_manager_proxy':
+                     if 'limit' in payload:
+                         print(f"   🚫 Removing 'limit' for {user_type}")
+                         del payload['limit']
+                     # Also check inside consumer object if exists
+                     if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'limit' in payload['consumer']:
+                         del payload['consumer']['limit']
+
+                # 3. Handle 'counting' field (Restricted for parking_manager)
+                # "Explicity: parking_manager cannot send counting"
+                # "parking_manager_partial CAN send counting"
+                if user_type == 'parking_manager':
+                    if 'counting' in payload:
+                        print(f"   🚫 Removing 'counting' for {user_type}")
+                        del payload['counting']
+                    # Also check inside consumer object
+                    if 'consumer' in payload and isinstance(payload['consumer'], dict) and 'counting' in payload['consumer']:
+                         del payload['consumer']['counting']
+
+            except Exception as e:
+                 print(f"⚠️ Permissions check error: {e}")
+                 # Fallback safety: remove restricted fields if error
+                 if 'limit' in payload: del payload['limit']
+                 # We don't remove counting on error to be safe towards 'partial' functionality, or do we?
+                 # Safer to remove if unsure?
+                 # User said "Step by step careful", lets just log error for now and assume default safety might interfere with legit valid users
+        
+        # Convert parking_id to string to handle numeric IDs
         # Convert parking_id to string to handle numeric IDs
         parking_num = str(parking_id)
         
