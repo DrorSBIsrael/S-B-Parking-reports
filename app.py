@@ -3124,7 +3124,7 @@ def parking_manager_create_user():
        code_type = str(manager_data.get('code_type', '')).strip().lower()
        print(f"🕵️ Debug: User code_type found in DB: '{code_type}'")
         
-       if code_type not in ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master', 'parking_manager_prox', 'parking_manager_proxy']:
+       if code_type not in ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master', 'parking_manager_prox']:
             return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
        
        data = request.get_json()
@@ -3240,8 +3240,8 @@ def parking_manager_create_user():
            # Sync counting to parking system if applicable
            parking_sync_status = ""
            
-           # ONLY parking_manager_prox (or proxy) allows automatic syncing to parking system
-           if code_type in ['parking_manager_prox', 'parking_manager_proxy']:
+           # ONLY parking_manager_prox allows automatic syncing to parking system
+           if code_type == 'parking_manager_prox':
                try:
                    # Use company_list as contract ID if valid (single company)
                    target_contract = company_list if company_list and company_list.strip().isdigit() else None
@@ -3256,7 +3256,7 @@ def parking_manager_create_user():
                except Exception as e:
                     print(f"⚠️ Sync exception: {str(e)}")
            else:
-                print(f"ℹ️ Skipping parking sync - User type '{code_type}' is not 'parking_manager_prox/proxy'")
+                print(f"ℹ️ Skipping parking sync - User type '{code_type}' is not 'parking_manager_prox'")
 
 
            if email_sent:
@@ -3304,7 +3304,7 @@ def parking_manager_update_user():
         code_type = str(manager_data.get('code_type', '')).strip().lower()
         print(f"🕵️ Debug: User code_type found in DB: '{code_type}'")
         
-        if code_type not in ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master', 'parking_manager_prox', 'parking_manager_proxy']:
+        if code_type not in ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master', 'parking_manager_prox']:
             return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
         
         data = request.get_json()
@@ -3414,8 +3414,8 @@ def parking_manager_update_user():
             # Sync counting to parking system if applicable
             parking_sync_status = ""
             
-            # ONLY parking_manager_prox (or proxy) allows automatic syncing to parking system
-            if code_type in ['parking_manager_prox', 'parking_manager_proxy']:
+            # ONLY parking_manager_prox allows automatic syncing to parking system
+            if code_type == 'parking_manager_prox':
                 try:
                     # Use new company_list if provided, else current
                     final_company_list = company_list if company_list else current_user.get('company_list')
@@ -3432,7 +3432,7 @@ def parking_manager_update_user():
                 except Exception as e:
                     print(f"❌ Sync exception: {e}")
             else:
-                 print(f"ℹ️ Skipping parking sync - User type '{code_type}' is not 'parking_manager_prox/proxy'")
+                 print(f"ℹ️ Skipping parking sync - User type '{code_type}' is not 'parking_manager_prox'")
 
             return jsonify({
                 'success': True,
