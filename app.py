@@ -3123,7 +3123,7 @@ def parking_manager_create_user():
        manager_user_id = manager_data.get('user_id')
        code_type = str(manager_data.get('code_type', '')).strip().lower()
         
-       if code_type not in ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master']:
+       if code_type not in ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master', 'company_manager_proxy']:
             return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
        
        data = request.get_json()
@@ -3238,16 +3238,24 @@ def parking_manager_create_user():
            )
            # Sync counting to parking system if applicable
            parking_sync_status = ""
-           try:
-               # Use company_list as contract ID if valid (single company)
-               target_contract = company_list if company_list and company_list.strip().isdigit() else None
-               if target_contract and int(new_user_data.get('counting', 0)) >= 0:
-                   print(f"🔄 Auto-syncing contract {target_contract} with counting {new_user_data.get('counting')}...")
-                   success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_user_data.get('counting'))
-                   if success:
-                       parking_sync_status = " ועודכן במערכת החניון."
-                   else:
-                       print(f"⚠️ Sync failed: {msg}")
+           
+           # ONLY company_manager_proxy allows automatic syncing to parking system
+           if code_type == 'company_manager_proxy':
+               try:
+                   # Use company_list as contract ID if valid (single company)
+                   target_contract = company_list if company_list and company_list.strip().isdigit() else None
+                   if target_contract and int(new_user_data.get('counting', 0)) >= 0:
+                       print(f"🔄 Auto-syncing contract {target_contract} with counting {new_user_data.get('counting')} (Proxy User)...")
+                       success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_user_data.get('counting'))
+                       if success:
+                           parking_sync_status = " ועודכן במערכת החניון."
+                       else:
+                           print(f"⚠️ Sync failed: {msg}")
+                           parking_sync_status = f" (נכשל סנכרון חניון: {msg})"
+               except Exception as e:
+                    print(f"⚠️ Sync exception: {str(e)}")
+           else:
+                print(f"ℹ️ Skipping parking sync - User type '{code_type}' is not 'company_manager_proxy'")
                        parking_sync_status = f" (נכשל עדכון בחניון: {msg})"
            except Exception as e:
                print(f"❌ Sync exception: {e}")
@@ -3296,7 +3304,7 @@ def parking_manager_update_user():
         manager_data = manager_result.data[0]
         code_type = str(manager_data.get('code_type', '')).strip().lower()
         
-        if code_type not in ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master']:
+        if code_type not in ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master', 'company_manager_proxy']:
             return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
         
         data = request.get_json()
@@ -3405,21 +3413,26 @@ def parking_manager_update_user():
             
             # Sync counting to parking system if applicable
             parking_sync_status = ""
-            try:
-                # Use new company_list if provided, else current
-                final_company_list = company_list if company_list else current_user.get('company_list')
-                target_contract = str(final_company_list).strip() if final_company_list and str(final_company_list).strip().isdigit() else None
-                
-                if target_contract and new_counting >= 0:
-                     print(f"🔄 Auto-syncing contract {target_contract} with counting {new_counting}...")
-                     success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_counting)
-                     if success:
-                         parking_sync_status = " ועודכן במערכת החניון."
-                     else:
-                         print(f"⚠️ Sync failed: {msg}")
-                         parking_sync_status = f" (נכשל עדכון בחניון: {msg})"
-            except Exception as e:
-                print(f"❌ Sync exception: {e}")
+            
+            # ONLY company_manager_proxy allows automatic syncing to parking system
+            if code_type == 'company_manager_proxy':
+                try:
+                    # Use new company_list if provided, else current
+                    final_company_list = company_list if company_list else current_user.get('company_list')
+                    target_contract = str(final_company_list).strip() if final_company_list and str(final_company_list).strip().isdigit() else None
+                    
+                    if target_contract and new_counting >= 0:
+                         print(f"🔄 Auto-syncing contract {target_contract} with counting {new_counting} (Proxy User)...")
+                         success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_counting)
+                         if success:
+                             parking_sync_status = " ועודכן במערכת החניון."
+                         else:
+                             print(f"⚠️ Sync failed: {msg}")
+                             parking_sync_status = f" (נכשל סנכרון חניון: {msg})"
+                except Exception as e:
+                    print(f"❌ Sync exception: {e}")
+            else:
+                 print(f"ℹ️ Skipping parking sync - User type '{code_type}' is not 'company_manager_proxy'")
 
             return jsonify({
                 'success': True,
@@ -3622,9 +3635,9 @@ def get_parking_connection_details(project_number):
 def update_parking_contract_counting(project_number, contract_id, counting_value):
     """
     Updates the parking system contract with the new counting limit via XML PUT request.
-    Using verified structure from local testing.
+    Updated to match company_manager_proxy logic (using <counting> tag).
     """
-    print(f"🔄 Attempting to update parking system: Project={project_number}, Contract={contract_id}, Counting={counting_value}")
+    print(f"🔄 Attempting to update parking system (Proxy Style): Project={project_number}, Contract={contract_id}, Counting={counting_value}")
     
     connection = get_parking_connection_details(project_number)
     if not connection:
@@ -3642,20 +3655,14 @@ def update_parking_contract_counting(project_number, contract_id, counting_value
     # Format: CustomerMediaWebService/contracts/{id}/detail
     url = f"https://{ip_address}:{port}/CustomerMediaWebService/contracts/{contract_id}/detail"
     
-    # Construct XML Payload manually to ensure exact structure as verified
-    # Note: pooling is a sibling of contract, not child
-    xml_str = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    # Construct XML Payload using the structure from company_manager_proxy
+    # This uses the direct <counting> tag which user confirmed is preferred/working in proxy
+    xml_str = f'''<?xml version="1.0" encoding="UTF-8"?>
 <contractDetail xmlns="http://gsph.sub.com/cust/types">
     <contract>
         <id>{contract_id}</id>
     </contract>
-    <pooling>
-        <poolingDetail>
-            <facility>0</facility>
-            <extCardProfile>0</extCardProfile>
-            <maxCounter>{counting_value}</maxCounter>
-        </poolingDetail>
-    </pooling>
+    <counting>{counting_value}</counting>
 </contractDetail>'''
     
     try:
@@ -3678,6 +3685,11 @@ def update_parking_contract_counting(project_number, contract_id, counting_value
              return True, "Updated successfully"
         else:
              print(f"❌ Parking system update failed: {response.status_code}")
+             return False, f"Parking update failed: {response.status_code}"
+             
+    except Exception as e:
+        print(f"❌ Exception sending update to parking: {str(e)}")
+        return False, str(e)
              return False, f"HTTP {response.status_code}"
 
     except Exception as e:
