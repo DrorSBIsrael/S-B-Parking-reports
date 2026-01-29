@@ -3236,22 +3236,30 @@ def parking_manager_create_user():
                'Dd123456',
                'https://s-b-parking-reports.onrender.com'
            )
-           # Sync counting to parking system if applicable
-           parking_sync_status = ""
-           try:
-               # Use company_list as contract ID if valid (single company)
-               target_contract = company_list if company_list and company_list.strip().isdigit() else None
-               # Only sync for parking_manager_prox users
-               if target_contract and int(new_user_data.get('counting', 0)) >= 0 and code_type == 'parking_manager_prox':
-                   print(f"🔄 Auto-syncing contract {target_contract} with counting {new_user_data.get('counting')}...")
-                   success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_user_data.get('counting'))
-                   if success:
-                       parking_sync_status = " ועודכן במערכת החניון."
-                   else:
-                       print(f"⚠️ Sync failed: {msg}")
-                       parking_sync_status = f" (נכשל עדכון בחניון: {msg})"
-           except Exception as e:
-               print(f"❌ Sync exception: {e}")
+            # Sync counting to parking system if applicable
+            parking_sync_status = ""
+            try:
+                # Use company_list as contract ID if valid (single company)
+                target_contract = company_list if company_list and company_list.strip().isdigit() else None
+                
+                print(f"🔄 DEBUG SYNC: Code Type: '{code_type}', Target Contract: '{target_contract}', Counting: {new_user_data.get('counting')}")
+                
+                # Only sync for parking_manager_prox users
+                if target_contract and int(new_user_data.get('counting', 0)) >= 0:
+                    if code_type == 'parking_manager_prox':
+                        print(f"🔄 Auto-syncing contract {target_contract} with counting {new_user_data.get('counting')}...")
+                        success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_user_data.get('counting'))
+                        if success:
+                            parking_sync_status = " ועודכן במערכת החניון."
+                        else:
+                            print(f"⚠️ Sync failed: {msg}")
+                            parking_sync_status = f" (נכשל עדכון בחניון: {msg})"
+                    else:
+                        print(f"ℹ️ Skipping sync: User type '{code_type}' is not 'parking_manager_prox'")
+                else:
+                    print("ℹ️ Skipping sync: No valid contract or counting value")
+            except Exception as e:
+                print(f"❌ Sync exception: {e}")
 
            if email_sent:
                message = f'מנהל חברה {username} נוצר בהצלחה עבור חניון {manager_data["parking_name"]}! מייל נשלח ל-{validated_email}{parking_sync_status}'
@@ -3411,15 +3419,22 @@ def parking_manager_update_user():
                 final_company_list = company_list if company_list else current_user.get('company_list')
                 target_contract = str(final_company_list).strip() if final_company_list and str(final_company_list).strip().isdigit() else None
                 
+                print(f"🔄 DEBUG SYNC UPDATE: Code Type: '{code_type}', Target Contract: '{target_contract}', Counting: {new_counting}")
+
                 # Only sync for parking_manager_prox users
-                if target_contract and new_counting >= 0 and code_type == 'parking_manager_prox':
-                     print(f"🔄 Auto-syncing contract {target_contract} with counting {new_counting}...")
-                     success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_counting)
-                     if success:
-                         parking_sync_status = " ועודכן במערכת החניון."
-                     else:
-                         print(f"⚠️ Sync failed: {msg}")
-                         parking_sync_status = f" (נכשל עדכון בחניון: {msg})"
+                if target_contract and new_counting >= 0:
+                    if code_type == 'parking_manager_prox':
+                        print(f"🔄 Auto-syncing contract {target_contract} with counting {new_counting}...")
+                        success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_counting)
+                        if success:
+                            parking_sync_status = " ועודכן במערכת החניון."
+                        else:
+                            print(f"⚠️ Sync failed: {msg}")
+                            parking_sync_status = f" (נכשל עדכון בחניון: {msg})"
+                    else:
+                         print(f"ℹ️ Skipping sync: User type '{code_type}' is not 'parking_manager_prox'")
+                else:
+                    print("ℹ️ Skipping sync: No valid contract or counting value")
             except Exception as e:
                 print(f"❌ Sync exception: {e}")
 
