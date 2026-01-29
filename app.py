@@ -3256,9 +3256,7 @@ def parking_manager_create_user():
                     print(f"⚠️ Sync exception: {str(e)}")
            else:
                 print(f"ℹ️ Skipping parking sync - User type '{code_type}' is not 'company_manager_proxy'")
-                       parking_sync_status = f" (נכשל עדכון בחניון: {msg})"
-           except Exception as e:
-               print(f"❌ Sync exception: {e}")
+
 
            if email_sent:
                message = f'מנהל חברה {username} נוצר בהצלחה עבור חניון {manager_data["parking_name"]}! מייל נשלח ל-{validated_email}{parking_sync_status}'
