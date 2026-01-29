@@ -3688,11 +3688,6 @@ def update_parking_contract_counting(project_number, contract_id, counting_value
     except Exception as e:
         print(f"❌ Exception sending update to parking: {str(e)}")
         return False, str(e)
-             return False, f"HTTP {response.status_code}"
-
-    except Exception as e:
-        print(f"❌ Exception sending update to parking system: {str(e)}")
-        return False, str(e)
 
 @app.route('/api/get-current-user', methods=['GET'])
 def get_current_user():
