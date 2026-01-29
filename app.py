@@ -2191,7 +2191,7 @@ def get_user_redirect_url(email):
             # Map legacy or approximate values
             if code_type_lower == 'master':
                 return '/master-users'
-            elif code_type_lower == 'parking_manager':
+            elif code_type_lower == 'parking_manager' or code_type_lower == 'parking_manager_prox':
                 return '/parking-manager-users'
             elif code_type_lower == 'company_manager':
                 return '/company-manager'
@@ -2496,7 +2496,7 @@ def parking_manager_users_page():
     # בדיקת הרשאות מנהל חניון
     try:
         user_result = supabase.table('user_parkings').select('code_type, project_number, access_level').eq('email', session['user_email']).execute()
-        if not user_result.data or user_result.data[0].get('code_type') != 'parking_manager':
+        if not user_result.data or user_result.data[0].get('code_type') not in ['parking_manager', 'parking_manager_prox']:
             print(f"⚠️ Unauthorized access attempt to parking-manager-users by {session['user_email']}")
             return redirect(url_for('dashboard'))
     except Exception as e:
@@ -3123,7 +3123,7 @@ def parking_manager_create_user():
        manager_user_id = manager_data.get('user_id')
        code_type = str(manager_data.get('code_type', '')).strip().lower()
         
-       if code_type not in ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master']:
+       if code_type not in ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master', 'parking_manager_prox']:
             return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
        
        data = request.get_json()
@@ -3241,7 +3241,8 @@ def parking_manager_create_user():
            try:
                # Use company_list as contract ID if valid (single company)
                target_contract = company_list if company_list and company_list.strip().isdigit() else None
-               if target_contract and int(new_user_data.get('counting', 0)) >= 0:
+               # Only sync for parking_manager_prox users
+               if target_contract and int(new_user_data.get('counting', 0)) >= 0 and code_type == 'parking_manager_prox':
                    print(f"🔄 Auto-syncing contract {target_contract} with counting {new_user_data.get('counting')}...")
                    success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_user_data.get('counting'))
                    if success:
@@ -3296,7 +3297,7 @@ def parking_manager_update_user():
         manager_data = manager_result.data[0]
         code_type = str(manager_data.get('code_type', '')).strip().lower()
         
-        if code_type not in ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master']:
+        if code_type not in ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master', 'parking_manager_prox']:
             return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
         
         data = request.get_json()
@@ -3410,7 +3411,8 @@ def parking_manager_update_user():
                 final_company_list = company_list if company_list else current_user.get('company_list')
                 target_contract = str(final_company_list).strip() if final_company_list and str(final_company_list).strip().isdigit() else None
                 
-                if target_contract and new_counting >= 0:
+                # Only sync for parking_manager_prox users
+                if target_contract and new_counting >= 0 and code_type == 'parking_manager_prox':
                      print(f"🔄 Auto-syncing contract {target_contract} with counting {new_counting}...")
                      success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_counting)
                      if success:
@@ -5292,15 +5294,10 @@ def parking_manager_get_info():
         code_type = user_data.get('code_type', '')
         code_type_lower = str(code_type).strip().lower()
         
-        # הרשאות: מנהל חניון מלא, מנהל חניון חלקי, או מאסטר
-        allowed_roles = ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master']
+        # הרשאות: מנהל חניון מלא, מנהל חניון חלקי, או מאסטר או פרוקס
+        allowed_roles = ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master', 'parking_manager_prox']
         if code_type_lower not in allowed_roles:
             return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
-        
-        # קבלת משתמשי החניון
-        parking_users = supabase.table('user_parkings').select(
-             'user_id, username, email, company_list, permissions, role, access_level, created_at, is_temp_password, counting'
-        ).eq('project_number', user_data['project_number']).order('created_at', desc=True).execute()
         
         # קבלת משתמשי החניון
         parking_users = supabase.table('user_parkings').select(
