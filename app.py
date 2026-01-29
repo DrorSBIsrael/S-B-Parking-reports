@@ -2496,8 +2496,9 @@ def parking_manager_users_page():
     # בדיקת הרשאות מנהל חניון
     try:
         user_result = supabase.table('user_parkings').select('code_type, project_number, access_level').eq('email', session['user_email']).execute()
-        if not user_result.data or user_result.data[0].get('code_type') != 'parking_manager':
-            print(f"⚠️ Unauthorized access attempt to parking-manager-users by {session['user_email']}")
+        code_type = user_result.data[0].get('code_type')
+        if not user_result.data or code_type not in ['parking_manager', 'parking_manager_prox']:
+            print(f"⚠️ Unauthorized access attempt to parking-manager-users by {session['user_email']} (Code: {code_type})")
             return redirect(url_for('dashboard'))
     except Exception as e:
         # Error checking parking manager permissions: {str(e)}")
@@ -5300,7 +5301,7 @@ def parking_manager_get_info():
         code_type_lower = str(code_type).strip().lower()
         
         # הרשאות: מנהל חניון מלא, מנהל חניון חלקי, או מאסטר
-        allowed_roles = ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master']
+        allowed_roles = ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master', 'parking_manager_prox']
         if code_type_lower not in allowed_roles:
             return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
         
