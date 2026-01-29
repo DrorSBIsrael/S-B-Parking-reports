@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>שגיאת שרת - מערכת דוחות חניונים S&B</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-blue: #1E40AF;
+            --primary-orange: #EA580C;
+            --secondary-blue: #3B82F6;
+            --error-red: #DC2626;
+            --warning-orange: #EA580C;
+            --gray-50: #F9FAFB;
+            --gray-100: #F3F4F6;
+            --gray-200: #E5E7EB;
+            --gray-300: #D1D5DB;
+            --gray-600: #4B5563;
+            --gray-700: #374151;
+            --gray-900: #111827;
+            --white: #FFFFFF;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans Hebrew', sans-serif;
+            background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 50%, #FCA5A5 100%);
+            min-height: 100vh;
+            color: var(--gray-900);
+            line-height: 1.6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .error-container {
+            background: var(--white);
+            border-radius: 24px;
+            box-shadow: var(--shadow-xl);
+            padding: 3rem;
+            width: 100%;
+            max-width: 650px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(220, 38, 38, 0.2);
+            animation: shake 0.6s ease-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+            20%, 40%, 60%, 80% { transform: translateX(3px); }
+        }
+
+        .error-icon {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, var(--error-red), #B91C1C);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 4rem;
+            margin: 0 auto 2rem;
+            box-shadow: var(--shadow-xl);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(220, 38, 38, 0); }
+        }
+
+        .error-code {
+            font-size: 6rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--error-red), var(--warning-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+            line-height: 1;
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+        }
+
+        .error-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--gray-900);
+            margin-bottom: 1rem;
+        }
+
+        .error-description {
+            color: var(--gray-600);
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+            font-weight: 500;
+            line-height: 1.6;
+        }
+
+        .technical-info {
+            background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+            border: 1px solid #F59E0B;
+            border-radius: 14px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: right;
+        }
+
+        .technical-title {
+            font-weight: 700;
+            color: #92400E;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .technical-list {
+            color: #92400E;
+            font-size: 0.9rem;
+            font-weight: 500;
+            line-height: 1.8;
+        }
+
+        .technical-list li {
+            margin-bottom: 0.5rem;
+            list-style: none;
+            padding-right: 1.5rem;
+            position: relative;
+        }
+
+        .technical-list li::before {
+            content: '🔧';
+            position: absolute;
+            right: 0;
+        }
+
+        .actions-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            padding: 1.2rem 2rem;
+            border: none;
+            border-radius: 14px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+            color: white;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .btn-secondary {
+            background: var(--white);
+            color: var(--gray-700);
+            border: 2px solid var(--gray-300);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-400);
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--error-red), #B91C1C);
+            color: white;
+            box-shadow: var(--shadow);
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .contact-section {
+            background: linear-gradient(135deg, #EEF2FF, #E0E7FF);
+            border-radius: 14px;
+            padding: 1.5rem;
+            border: 1px solid var(--secondary-blue);
+            margin-bottom: 2rem;
+        }
+
+        .contact-title {
+            font-weight: 700;
+            color: var(--secondary-blue);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .contact-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .contact-option {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            color: var(--secondary-blue);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.8rem;
+            border-radius: 10px;
+            background: rgba(59, 130, 246, 0.1);
+            transition: all 0.2s ease;
+        }
+
+        .contact-option:hover {
+            background: rgba(59, 130, 246, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .logo-section {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-orange));
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            box-shadow: var(--shadow);
+        }
+
+        .logo-text-main {
+            font-size: 0.9rem;
+            line-height: 1;
+            letter-spacing: 1px;
+        }
+
+        .logo-text-sub {
+            font-size: 0.5rem;
+            opacity: 0.9;
+        }
+
+        .logo-info {
+            text-align: right;
+        }
+
+        .logo-title {
+            font-weight: 700;
+            color: var(--gray-900);
+            font-size: 1.1rem;
+        }
+
+        .logo-subtitle {
+            color: var(--gray-600);
+            font-size: 0.9rem;
+        }
+
+        .auto-refresh {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #F0FDF4;
+            border: 1px solid #22C55E;
+            border-radius: 10px;
+            color: #15803D;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .error-container {
+                padding: 2rem 1.5rem;
+                margin: 1rem;
+            }
+
+            .error-code {
+                font-size: 4rem;
+            }
+
+            .error-title {
+                font-size: 1.8rem;
+            }
+
+            .error-description {
+                font-size: 1rem;
+            }
+
+            .error-icon {
+                width: 100px;
+                height: 100px;
+                font-size: 3rem;
+            }
+
+            .contact-options {
+                grid-template-columns: 1fr;
+            }
+
+            .logo-section {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <!-- אייקון שגיאה -->
+        <div class="error-icon">
+            ⚠️
+        </div>
+        
+        <!-- קוד שגיאה -->
+        <div class="error-code">500</div>
+        
+        <!-- כותרות -->
+        <h1 class="error-title">שגיאת שרת פנימית</h1>
+        <p class="error-description">
+            מצטערים, משהו השתבש בשרת שלנו. הבעיה כבר דווחה לצוות הטכני<br>
+            ואנחנו עובדים על פתרון מהיר.
+        </p>
+        
+        <!-- מידע טכני -->
+        <div class="technical-info">
+            <div class="technical-title">
+                🔧 מה קרה?
+            </div>
+            <ul class="technical-list">
+                <li>השרת נתקל בבעיה בלתי צפויה</li>
+                <li>הבעיה דווחה אוטומטית לצוות התמיכה</li>
+                <li>לא איבדת מידע - הנתונים שלך בטוחים</li>
+                <li>זה זמני - המערכת תחזור לפעול בקרוב</li>
+            </ul>
+        </div>
+        
+        <!-- כפתורי פעולה -->
+        <div class="actions-section">
+            <button class="btn btn-primary" onclick="location.reload()">
+                <span>🔄</span>
+                <span>נסה שוב</span>
+            </button>
+            
+            <a href="/" class="btn btn-secondary">
+                <span>🏠</span>
+                <span>חזור לעמוד הראשי</span>
+            </a>
+            
+            <a href="mailto:support@sbparking.co.il?subject=שגיאה 500 במערכת&body=נתקלתי בשגיאה 500 במערכת דוחות החניונים" class="btn btn-danger">
+                <span>📧</span>
+                <span>דווח על הבעיה</span>
+            </a>
+        </div>
+        
+        <!-- אפשרויות יצירת קשר -->
+        <div class="contact-section">
+            <div class="contact-title">
+                🆘 צריך עזרה מיידית?
+            </div>
+            <div class="contact-options">
+                <a href="tel:+972501234567" class="contact-option">
+                    <span>📞</span>
+                    <span>חייג לתמיכה</span>
+                </a>
+                <a href="https://wa.me/972501234567?text=שגיאה 500 במערכת דוחות החניונים" class="contact-option">
+                    <span>📱</span>
+                    <span>ווטסאפ</span>
+                </a>
+                <a href="mailto:support@sbparking.co.il" class="contact-option">
+                    <span>📧</span>
+                    <span>אימייל</span>
+                </a>
+            </div>
+        </div>
+        
+        <!-- רענון אוטומטי -->
+        <div class="auto-refresh">
+            <span>🔄</span>
+            העמוד ינסה לטעון מחדש אוטומטית בעוד <span id="countdown">30</span> שניות
+        </div>
+        
+        <!-- לוגו ומידע -->
+        <div class="logo-section">
+            <div class="logo">
+                <div class="logo-text-main">S&B</div>
+                <div class="logo-text-sub">PARKING</div>
+            </div>
+            <div class="logo-info">
+                <div class="logo-title">S&B Parking Reports</div>
+                <div class="logo-subtitle">מערכת דוחות חניונים מתקדמת</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ספירה לאחור לרענון אוטומטי
+        let countdown = 30;
+        const countdownElement = document.getElementById('countdown');
+        
+        const timer = setInterval(() => {
+            countdown--;
+            countdownElement.textContent = countdown;
+            
+            if (countdown <= 0) {
+                clearInterval(timer);
+                location.reload();
+            }
+        }, 1000);
+        
+        // אפשרות לעצור את הרענון
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                clearInterval(timer);
+                countdownElement.parentElement.innerHTML = '⏸️ רענון אוטומטי הופסק. לחץ F5 לרענון ידני.';
+            }
+        });
+        
+        // אנימציה לאייקון השגיאה
+        document.addEventListener('DOMContentLoaded', function() {
+            const icon = document.querySelector('.error-icon');
+            
+            setInterval(() => {
+                icon.style.animation = 'none';
+                setTimeout(() => {
+                    icon.style.animation = 'pulse 2s infinite';
+                }, 10);
+            }, 5000);
+        });
+    </script>
+</body>
+</html>
