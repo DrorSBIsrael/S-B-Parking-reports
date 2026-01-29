@@ -15,13 +15,13 @@ import urllib3
 import json
 from datetime import datetime, timedelta, timezone
 
-# ביטול אזהרות SSL
+# ׳‘׳™׳˜׳•׳ ׳׳–׳”׳¨׳•׳× SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# טעינת משתני סביבה מקובץ .env
+# ׳˜׳¢׳™׳ ׳× ׳׳©׳×׳ ׳™ ׳¡׳‘׳™׳‘׳” ׳׳§׳•׳‘׳¥ .env
 load_dotenv()
 
-# הוסר ייבוא proxy_endpoints - הקוד נמצא ישירות בקובץ
+# ׳”׳•׳¡׳¨ ׳™׳™׳‘׳•׳ proxy_endpoints - ׳”׳§׳•׳“ ׳ ׳׳¦׳ ׳™׳©׳™׳¨׳•׳× ׳‘׳§׳•׳‘׳¥
 
 try:
     import imaplib
@@ -40,14 +40,14 @@ except ImportError as e:
     # Email monitoring not available
 
 ERROR_EMAILS_DISABLED = True
-# הגדרות מיילים אוטומטיים - להוסיף אחרי ההגדרות הקיימות:
+# ׳”׳’׳“׳¨׳•׳× ׳׳™׳™׳׳™׳ ׳׳•׳˜׳•׳׳˜׳™׳™׳ - ׳׳”׳•׳¡׳™׳£ ׳׳—׳¨׳™ ׳”׳”׳’׳“׳¨׳•׳× ׳”׳§׳™׳™׳׳•׳×:
 if EMAIL_MONITORING_AVAILABLE:
-    EMAIL_CHECK_INTERVAL = 5  # בדיקה כל 5 דקות
-    PROCESSED_EMAILS_LIMIT = 100  # מקסימום מיילים לזכור
-    processed_email_ids = []  # רשימה לזכור מיילים שכבר עובדו
+    EMAIL_CHECK_INTERVAL = 5  # ׳‘׳“׳™׳§׳” ׳›׳ 5 ׳“׳§׳•׳×
+    PROCESSED_EMAILS_LIMIT = 100  # ׳׳§׳¡׳™׳׳•׳ ׳׳™׳™׳׳™׳ ׳׳–׳›׳•׳¨
+    processed_email_ids = []  # ׳¨׳©׳™׳׳” ׳׳–׳›׳•׳¨ ׳׳™׳™׳׳™׳ ׳©׳›׳‘׳¨ ׳¢׳•׳‘׳“׳•
     last_cache_reset = None
 password_reset_codes = {}
-# רשימת שולחים מורשים לשליחת קבצי נתונים
+# ׳¨׳©׳™׳׳× ׳©׳•׳׳—׳™׳ ׳׳•׳¨׳©׳™׳ ׳׳©׳׳™׳—׳× ׳§׳‘׳¦׳™ ׳ ׳×׳•׳ ׳™׳
 AUTHORIZED_SENDERS = [
     'Dror@sbparking.co.il',
     'dror@sbparking.co.il',  # case insensitive
@@ -59,8 +59,8 @@ AUTHORIZED_SENDERS = [
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
-app.config['JSON_AS_ASCII'] = False  # תמיכה בעברית ב-JSON
-app.config['JSONIFY_MIMETYPE'] = 'application/json; charset=utf-8'  # קידוד UTF-8
+app.config['JSON_AS_ASCII'] = False  # ׳×׳׳™׳›׳” ׳‘׳¢׳‘׳¨׳™׳× ׳‘-JSON
+app.config['JSONIFY_MIMETYPE'] = 'application/json; charset=utf-8'  # ׳§׳™׳“׳•׳“ UTF-8
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable caching for development
 
 # Supabase configuration
@@ -81,7 +81,7 @@ else:
         # Supabase connection failed
         supabase = None
 
-# הגדרות מייל עם Gmail + Environment Variables
+# ׳”׳’׳“׳¨׳•׳× ׳׳™׳™׳ ׳¢׳ Gmail + Environment Variables
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
 app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'
@@ -101,17 +101,17 @@ except Exception as e:
     # Mail system initialization failed
     mail = None
 
-# הגנות אבטחה
+# ׳”׳’׳ ׳•׳× ׳׳‘׳˜׳—׳”
 def validate_input(input_text, input_type="general"):
-    """אימות קלט מפני SQL Injection ותקיפות אחרות"""
+    """׳׳™׳׳•׳× ׳§׳׳˜ ׳׳₪׳ ׳™ SQL Injection ׳•׳×׳§׳™׳₪׳•׳× ׳׳—׳¨׳•׳×"""
     
     if not input_text:
-        return False, "שדה ריק"
+        return False, "׳©׳“׳” ׳¨׳™׳§"
     
-    # הגנה בסיסית - הסרת תווים מסוכנים
+    # ׳”׳’׳ ׳” ׳‘׳¡׳™׳¡׳™׳× - ׳”׳¡׳¨׳× ׳×׳•׳•׳™׳ ׳׳¡׳•׳›׳ ׳™׳
     input_text = html.escape(input_text.strip())
     
-    # רשימת מילים מסוכנות (SQL Injection)
+    # ׳¨׳©׳™׳׳× ׳׳™׳׳™׳ ׳׳¡׳•׳›׳ ׳•׳× (SQL Injection)
     dangerous_words = [
         'select', 'insert', 'update', 'delete', 'drop', 'create', 'alter',
         'union', 'join', 'exec', 'execute', 'script', 'declare', 'cast',
@@ -119,71 +119,71 @@ def validate_input(input_text, input_type="general"):
         'shutdown', 'sp_', 'xp_', 'cmdshell', 'openrowset', 'opendatasource'
     ]
     
-    # בדיקת מילים מסוכנות
+    # ׳‘׳“׳™׳§׳× ׳׳™׳׳™׳ ׳׳¡׳•׳›׳ ׳•׳×
     lower_input = input_text.lower()
     for word in dangerous_words:
         if word in lower_input:
             # Security threat detected
-            return False, f"קלט לא חוקי - מכיל מילה אסורה: {word}"
+            return False, f"׳§׳׳˜ ׳׳ ׳—׳•׳§׳™ - ׳׳›׳™׳ ׳׳™׳׳” ׳׳¡׳•׳¨׳”: {word}"
     
-    # בדיקת תווים מסוכנים
+    # ׳‘׳“׳™׳§׳× ׳×׳•׳•׳™׳ ׳׳¡׳•׳›׳ ׳™׳
     dangerous_chars = ["'", '"', ';', '--', '/*', '*/', '<', '>', '&', '|', '`']
     for char in dangerous_chars:
         if char in input_text:
             # Security threat detected
-            return False, f"קלט לא חוקי - מכיל תו אסור: {char}"
+            return False, f"׳§׳׳˜ ׳׳ ׳—׳•׳§׳™ - ׳׳›׳™׳ ׳×׳• ׳׳¡׳•׳¨: {char}"
     
-    # אימות לפי סוג הקלט
+    # ׳׳™׳׳•׳× ׳׳₪׳™ ׳¡׳•׳’ ׳”׳§׳׳˜
     if input_type == "username":
         if not re.match(r'^[a-zA-Z0-9._]+$', input_text):
-            return False, "שם משתמש יכול להכיל רק אותיות באנגלית, מספרים, נקודה וקו תחתון"
+            return False, "׳©׳ ׳׳©׳×׳׳© ׳™׳›׳•׳ ׳׳”׳›׳™׳ ׳¨׳§ ׳׳•׳×׳™׳•׳× ׳‘׳׳ ׳’׳׳™׳×, ׳׳¡׳₪׳¨׳™׳, ׳ ׳§׳•׳“׳” ׳•׳§׳• ׳×׳—׳×׳•׳"
         if len(input_text) < 3 or len(input_text) > 50:
-            return False, "שם משתמש חייב להיות בין 3-50 תווים"
+            return False, "׳©׳ ׳׳©׳×׳׳© ׳—׳™׳™׳‘ ׳׳”׳™׳•׳× ׳‘׳™׳ 3-50 ׳×׳•׳•׳™׳"
     
     elif input_type == "password":
         if len(input_text) < 4 or len(input_text) > 100:
-            return False, "סיסמה חייבת להיות בין 4-100 תווים"
+            return False, "׳¡׳™׳¡׳׳” ׳—׳™׳™׳‘׳× ׳׳”׳™׳•׳× ׳‘׳™׳ 4-100 ׳×׳•׳•׳™׳"
     
     elif input_type == "email":
         email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         if not re.match(email_pattern, input_text):
-            return False, "כתובת אימייל לא תקינה"
+            return False, "׳›׳×׳•׳‘׳× ׳׳™׳׳™׳™׳ ׳׳ ׳×׳§׳™׳ ׳”"
     
     elif input_type == "verification_code":
         if not re.match(r'^[0-9]{6}$', input_text):
-            return False, "קוד אימות חייב להיות 6 ספרות בלבד"
+            return False, "׳§׳•׳“ ׳׳™׳׳•׳× ׳—׳™׳™׳‘ ׳׳”׳™׳•׳× 6 ׳¡׳₪׳¨׳•׳× ׳‘׳׳‘׳“"
     
     return True, input_text
 
 def rate_limit_check(identifier, max_attempts=5, time_window=300):
-    """בדיקת הגבלת קצב - מונע התקפות brute force"""
+    """׳‘׳“׳™׳§׳× ׳”׳’׳‘׳׳× ׳§׳¦׳‘ - ׳׳•׳ ׳¢ ׳”׳×׳§׳₪׳•׳× brute force"""
     # Rate limit check
     return True
 
 def generate_verification_code():
-    """יצירת קוד אימות של 6 ספרות"""
+    """׳™׳¦׳™׳¨׳× ׳§׳•׳“ ׳׳™׳׳•׳× ׳©׳ 6 ׳¡׳₪׳¨׳•׳×"""
     return ''.join(random.choices(string.digits, k=6))
 
 def store_verification_code(email, code):
-    """שמירת קוד אימות בטבלת user_parkings הקיימת"""
+    """׳©׳׳™׳¨׳× ׳§׳•׳“ ׳׳™׳׳•׳× ׳‘׳˜׳‘׳׳× user_parkings ׳”׳§׳™׳™׳׳×"""
     if not supabase:
         # Supabase not available
         return False
         
     try:
-        # אימות אימייל לפני שמירה
+        # ׳׳™׳׳•׳× ׳׳™׳׳™׳™׳ ׳׳₪׳ ׳™ ׳©׳׳™׳¨׳”
         is_valid, validated_email = validate_input(email, "email")
         if not is_valid:
             # Invalid email format
             return False
         
-        # חישוב זמן תפוגה (10 דקות מעכשיו)
+        # ׳—׳™׳©׳•׳‘ ׳–׳׳ ׳×׳₪׳•׳’׳” (10 ׳“׳§׳•׳× ׳׳¢׳›׳©׳™׳•)
         expires_at = datetime.now() + timedelta(minutes=10)
         expires_str = expires_at.strftime('%Y-%m-%d %H:%M:%S')
         
         # Updating user_parkings
         
-        # שימוש ב-Supabase עם פרמטרים בטוחים
+        # ׳©׳™׳׳•׳© ׳‘-Supabase ׳¢׳ ׳₪׳¨׳׳˜׳¨׳™׳ ׳‘׳˜׳•׳—׳™׳
         result = supabase.table('user_parkings').update({
             'verification_code': code,
             'code_expires_at': expires_str
@@ -197,19 +197,19 @@ def store_verification_code(email, code):
         return False
 
 def send_verification_email(email, code):
-    """שליחת מייל עם Gmail + App Password מ-Environment Variables"""
+    """׳©׳׳™׳—׳× ׳׳™׳™׳ ׳¢׳ Gmail + App Password ׳-Environment Variables"""
     
     if not mail:
         # Mail system not available
         return False
     
-    # אימות אימייל
+    # ׳׳™׳׳•׳× ׳׳™׳׳™׳™׳
     is_valid, validated_email = validate_input(email, "email")
     if not is_valid:
         # Invalid email format
         return False
     
-    # בדיקה שיש נתונים
+    # ׳‘׳“׳™׳§׳” ׳©׳™׳© ׳ ׳×׳•׳ ׳™׳
     if not app.config['MAIL_USERNAME'] or not app.config['MAIL_PASSWORD']:
         # Gmail credentials missing
         return False
@@ -218,19 +218,19 @@ def send_verification_email(email, code):
         # Starting Gmail send
         
         msg = Message(
-            subject='קוד אימות - S&B Parking',
+            subject='׳§׳•׳“ ׳׳™׳׳•׳× - S&B Parking',
             recipients=[validated_email],
             html=f"""
             <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">
-                <h2 style="color: #667eea;">שיידט את בכמן ישראל</h2>
-                <h3>קוד האימות שלך:</h3>
+                <h2 style="color: #667eea;">׳©׳™׳™׳“׳˜ ׳׳× ׳‘׳›׳׳ ׳™׳©׳¨׳׳</h2>
+                <h3>׳§׳•׳“ ׳”׳׳™׳׳•׳× ׳©׳׳:</h3>
                 <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
                     <span style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px;">{code}</span>
                 </div>
-                <p>הקוד תקף ל-10 דקות בלבד.</p>
-                <p>אם לא ביקשת קוד זה, התעלם מהודעה זו.</p>
+                <p>׳”׳§׳•׳“ ׳×׳§׳£ ׳-10 ׳“׳§׳•׳× ׳‘׳׳‘׳“.</p>
+                <p>׳׳ ׳׳ ׳‘׳™׳§׳©׳× ׳§׳•׳“ ׳–׳”, ׳”׳×׳¢׳׳ ׳׳”׳•׳“׳¢׳” ׳–׳•.</p>
                 <hr>
-                <p style="color: #666; font-size: 12px;">S&B Parking - מערכת דוחות חניות</p>
+                <p style="color: #666; font-size: 12px;">S&B Parking - ׳׳¢׳¨׳›׳× ׳“׳•׳—׳•׳× ׳—׳ ׳™׳•׳×</p>
             </div>
             """,
             sender=app.config['MAIL_USERNAME']
@@ -247,13 +247,13 @@ def send_verification_email(email, code):
         return False
 
 def verify_code_from_database(email, code):
-    """בדיקת קוד אימות מטבלת user_parkings"""
+    """׳‘׳“׳™׳§׳× ׳§׳•׳“ ׳׳™׳׳•׳× ׳׳˜׳‘׳׳× user_parkings"""
     if not supabase:
         # Supabase not available
         return False
         
     try:
-        # אימות קלט
+        # ׳׳™׳׳•׳× ׳§׳׳˜
         is_valid_email, validated_email = validate_input(email, "email")
         is_valid_code, validated_code = validate_input(code, "verification_code")
         
@@ -265,7 +265,7 @@ def verify_code_from_database(email, code):
             # Invalid code format
             return False
         
-        # חיפוש משתמש עם הקוד
+        # ׳—׳™׳₪׳•׳© ׳׳©׳×׳׳© ׳¢׳ ׳”׳§׳•׳“
         result = supabase.table('user_parkings').select('verification_code, code_expires_at').eq('email', validated_email).execute()
         
         if not result.data:
@@ -282,14 +282,14 @@ def verify_code_from_database(email, code):
             # Code mismatch
             return False
             
-        # בדיקת תוקף
+        # ׳‘׳“׳™׳§׳× ׳×׳•׳§׳£
         if expires_at_str:
             expires_at = datetime.fromisoformat(expires_at_str.replace('Z', '').replace('+00:00', ''))
             if datetime.now() > expires_at:
                 # Code expired
                 return False
         
-        # מחיקת הקוד אחרי שימוש מוצלח
+        # ׳׳—׳™׳§׳× ׳”׳§׳•׳“ ׳׳—׳¨׳™ ׳©׳™׳׳•׳© ׳׳•׳¦׳׳—
         supabase.table('user_parkings').update({
             'verification_code': None,
             'code_expires_at': None
@@ -302,7 +302,7 @@ def verify_code_from_database(email, code):
         # Database verification failed
         return False
 def connect_to_gmail_imap():
-    """התחברות ל-Gmail IMAP"""
+    """׳”׳×׳—׳‘׳¨׳•׳× ׳-Gmail IMAP"""
     if not EMAIL_MONITORING_AVAILABLE:
         return None
         
@@ -312,7 +312,7 @@ def connect_to_gmail_imap():
         gmail_user = os.environ.get('GMAIL_USERNAME')
         gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
         
-        # תיקון type checking - וידוא שהמשתנים לא None
+        # ׳×׳™׳§׳•׳ type checking - ׳•׳™׳“׳•׳ ׳©׳”׳׳©׳×׳ ׳™׳ ׳׳ None
         if not gmail_user or not gmail_password:
             # Missing Gmail credentials
             return None
@@ -327,7 +327,7 @@ def connect_to_gmail_imap():
         return None
 
 def download_csv_from_email(msg):
-    """הורדת קובץ CSV מהמייל - שמירת bytes מקוריים לזיהוי קידוד"""
+    """׳”׳•׳¨׳“׳× ׳§׳•׳‘׳¥ CSV ׳׳”׳׳™׳™׳ - ׳©׳׳™׳¨׳× bytes ׳׳§׳•׳¨׳™׳™׳ ׳׳–׳™׳”׳•׳™ ׳§׳™׳“׳•׳“"""
     csv_files = []
     
     try:
@@ -339,10 +339,10 @@ def download_csv_from_email(msg):
                     file_data = part.get_payload(decode=True)
                     
                     if file_data:
-                        # שמירת הבייטים המקוריים - לא נמיר לstring כאן!
+                        # ׳©׳׳™׳¨׳× ׳”׳‘׳™׳™׳˜׳™׳ ׳”׳׳§׳•׳¨׳™׳™׳ - ׳׳ ׳ ׳׳™׳¨ ׳string ׳›׳׳!
                         csv_files.append({
                             'filename': filename,
-                            'data': file_data  # נשאיר את זה כ-bytes
+                            'data': file_data  # ׳ ׳©׳׳™׳¨ ׳׳× ׳–׳” ׳›-bytes
                         })
                         
                         # Found CSV attachment
@@ -354,19 +354,19 @@ def download_csv_from_email(msg):
         return []
 
 def parse_csv_content(csv_content):
-    """פרסור CSV עם זיהוי קידוד אוטומטי לעברית ואימות תקינות"""
+    """׳₪׳¨׳¡׳•׳¨ CSV ׳¢׳ ׳–׳™׳”׳•׳™ ׳§׳™׳“׳•׳“ ׳׳•׳˜׳•׳׳˜׳™ ׳׳¢׳‘׳¨׳™׳× ׳•׳׳™׳׳•׳× ׳×׳§׳™׳ ׳•׳×"""
     try:
         # Check input type
         
-        # אם זה bytes, ננסה קידודים שונים
+        # ׳׳ ׳–׳” bytes, ׳ ׳ ׳¡׳” ׳§׳™׳“׳•׳“׳™׳ ׳©׳•׳ ׳™׳
         if isinstance(csv_content, bytes):
-            # רשימת קידודים לניסיון - העברית קודם
+            # ׳¨׳©׳™׳׳× ׳§׳™׳“׳•׳“׳™׳ ׳׳ ׳™׳¡׳™׳•׳ - ׳”׳¢׳‘׳¨׳™׳× ׳§׳•׳“׳
             encodings_to_try = [
-                'windows-1255',  # עברית ANSI
-                'cp1255',        # עברית
-                'utf-8-sig',     # UTF-8 עם BOM
-                'utf-8',         # UTF-8 רגיל
-                'iso-8859-8',    # עברית ISO
+                'windows-1255',  # ׳¢׳‘׳¨׳™׳× ANSI
+                'cp1255',        # ׳¢׳‘׳¨׳™׳×
+                'utf-8-sig',     # UTF-8 ׳¢׳ BOM
+                'utf-8',         # UTF-8 ׳¨׳’׳™׳
+                'iso-8859-8',    # ׳¢׳‘׳¨׳™׳× ISO
                 'cp1252',        # Western European
                 'latin1'         # fallback
             ]
@@ -393,38 +393,38 @@ def parse_csv_content(csv_content):
         else:
             used_encoding = 'already_string'
         
-        # אם זה לא string, נמיר
+        # ׳׳ ׳–׳” ׳׳ string, ׳ ׳׳™׳¨
         if not isinstance(csv_content, str):
             csv_content = str(csv_content)
         
         # Content parsed
         
-        # ניקוי בסיסי
+        # ׳ ׳™׳§׳•׳™ ׳‘׳¡׳™׳¡׳™
         csv_content = csv_content.strip()
         if not csv_content:
             # Empty content after decoding
             return None
         
-        # הדפסת השורה הראשונה כדי לבדוק עברית
+        # ׳”׳“׳₪׳¡׳× ׳”׳©׳•׳¨׳” ׳”׳¨׳׳©׳•׳ ׳” ׳›׳“׳™ ׳׳‘׳“׳•׳§ ׳¢׳‘׳¨׳™׳×
         first_line = csv_content.split('\n')[0]
         # Check first line
         
-        # ⚠️ בדיקת תקינות CSV - אם זה קובץ SQL או לא תקין
+        # ג ן¸ ׳‘׳“׳™׳§׳× ׳×׳§׳™׳ ׳•׳× CSV - ׳׳ ׳–׳” ׳§׳•׳‘׳¥ SQL ׳׳• ׳׳ ׳×׳§׳™׳
         if any(sql_keyword in first_line.lower() for sql_keyword in ['connect', 'insert', 'select', 'values', 'create']):
             # Invalid file: SQL detected, not CSV
             return None
         
-        # בדיקה שיש כותרות CSV תקינות
+        # ׳‘׳“׳™׳§׳” ׳©׳™׳© ׳›׳•׳×׳¨׳•׳× CSV ׳×׳§׳™׳ ׳•׳×
         if 'ProjectNumber' not in first_line:
             # Invalid CSV: Missing expected header
             return None
         
-        # אם יש עברית בשורה הראשונה, נדווח על כך
+        # ׳׳ ׳™׳© ׳¢׳‘׳¨׳™׳× ׳‘׳©׳•׳¨׳” ׳”׳¨׳׳©׳•׳ ׳”, ׳ ׳“׳•׳•׳— ׳¢׳ ׳›׳
         if any('\u0590' <= char <= '\u05FF' for char in first_line):
             # Hebrew characters detected in header
             pass
         
-        # ניסיון פרסור פשוט עם פסיק
+        # ׳ ׳™׳¡׳™׳•׳ ׳₪׳¨׳¡׳•׳¨ ׳₪׳©׳•׳˜ ׳¢׳ ׳₪׳¡׳™׳§
         try:
             reader = csv.DictReader(io.StringIO(csv_content))
             rows = list(reader)
@@ -434,13 +434,13 @@ def parse_csv_content(csv_content):
                 columns = list(rows[0].keys())
                 # Check columns
                 
-                # בדיקה נוספת - אם השורה הראשונה ריקה או לא תקינה
+                # ׳‘׳“׳™׳§׳” ׳ ׳•׳¡׳₪׳× - ׳׳ ׳”׳©׳•׳¨׳” ׳”׳¨׳׳©׳•׳ ׳” ׳¨׳™׳§׳” ׳׳• ׳׳ ׳×׳§׳™׳ ׳”
                 if not rows or not any(rows[0].values()):
                     # Invalid CSV: First data row is empty
                     return None
                 
-                # בדיקה אם יש עברית בנתונים
-                for i, row in enumerate(rows[:3]):  # בדיקת 3 שורות ראשונות
+                # ׳‘׳“׳™׳§׳” ׳׳ ׳™׳© ׳¢׳‘׳¨׳™׳× ׳‘׳ ׳×׳•׳ ׳™׳
+                for i, row in enumerate(rows[:3]):  # ׳‘׳“׳™׳§׳× 3 ׳©׳•׳¨׳•׳× ׳¨׳׳©׳•׳ ׳•׳×
                     for key, value in row.items():
                         if value and any('\u0590' <= char <= '\u05FF' for char in str(value)):
                             # Hebrew text found
@@ -451,25 +451,25 @@ def parse_csv_content(csv_content):
             # Comma parsing failed
             pass
         
-        # אם הגענו לכאן, הקובץ לא תקין
+        # ׳׳ ׳”׳’׳¢׳ ׳• ׳׳›׳׳, ׳”׳§׳•׳‘׳¥ ׳׳ ׳×׳§׳™׳
         # Invalid CSV: Could not parse
         return None
         
     except Exception as e:
-        print(f"❌ General error in CSV parsing: {e}")
+        print(f"ג General error in CSV parsing: {e}")
         return None
 
 def convert_to_csv_import_format(csv_rows):
-    """המרה לפורמט csv_import_shekels - עם תמיכה בשורות מרובות"""
+    """׳”׳׳¨׳” ׳׳₪׳•׳¨׳׳˜ csv_import_shekels - ׳¢׳ ׳×׳׳™׳›׳” ׳‘׳©׳•׳¨׳•׳× ׳׳¨׳•׳‘׳•׳×"""
     converted_rows = []
     
-    print(f"🔄 Processing {len(csv_rows)} rows from CSV...")
+    print(f"נ”„ Processing {len(csv_rows)} rows from CSV...")
     
     for index, row in enumerate(csv_rows):
         try:
-            print(f"📝 Processing row {index + 1}/{len(csv_rows)}...")
+            print(f"נ“ Processing row {index + 1}/{len(csv_rows)}...")
             
-            # המרת תאריך
+            # ׳”׳׳¨׳× ׳×׳׳¨׳™׳
             date_str = str(row.get('TTCRET', '')).strip()
             if '/' in date_str:
                 parts = date_str.split('/')
@@ -481,7 +481,7 @@ def convert_to_csv_import_format(csv_rows):
             else:
                 formatted_date = date_str
                 
-            # המרת נתוני כסף - הערכים כבר בשקלים!
+            # ׳”׳׳¨׳× ׳ ׳×׳•׳ ׳™ ׳›׳¡׳£ - ׳”׳¢׳¨׳›׳™׳ ׳›׳‘׳¨ ׳‘׳©׳§׳׳™׳!
             def safe_int(value, default=0):
                 try:
                     if value is None or value == '':
@@ -490,16 +490,16 @@ def convert_to_csv_import_format(csv_rows):
                 except (ValueError, TypeError):
                     return default
             
-            # הערכים כבר בשקלים - לא צריך חישובים!
+            # ׳”׳¢׳¨׳›׳™׳ ׳›׳‘׳¨ ׳‘׳©׳§׳׳™׳ - ׳׳ ׳¦׳¨׳™׳ ׳—׳™׳©׳•׳‘׳™׳!
             cash_shekels = safe_int(row.get('SCASH'))
             credit_shekels = safe_int(row.get('SCREDIT'))
             pango_shekels = safe_int(row.get('SPANGO'))
             celo_shekels = safe_int(row.get('SCELO'))
             
-            # בדיקת טקסט בעברית
+            # ׳‘׳“׳™׳§׳× ׳˜׳§׳¡׳˜ ׳‘׳¢׳‘׳¨׳™׳×
             ctext_value = str(row.get('CTEXT', '')).strip()
             if ctext_value and any('\u0590' <= char <= '\u05FF' for char in ctext_value):
-                print(f"🇮🇱 Hebrew text in row {index + 1}: '{ctext_value}'")
+                print(f"נ‡®נ‡± Hebrew text in row {index + 1}: '{ctext_value}'")
             
             converted_row = {
                 'project_number': str(row.get('ProjectNumber', '')),
@@ -511,7 +511,7 @@ def convert_to_csv_import_format(csv_rows):
                 'report_date': formatted_date,
                 'ctext': ctext_value,
                 
-                # כסף בשקלים (נשמור כאגורות בשדות הללו)
+                # ׳›׳¡׳£ ׳‘׳©׳§׳׳™׳ (׳ ׳©׳׳•׳¨ ׳›׳׳’׳•׳¨׳•׳× ׳‘׳©׳“׳•׳× ׳”׳׳׳•)
                 's_cash_agorot': cash_shekels,
                 's_credit_agorot': credit_shekels,
                 's_pango_agorot': pango_shekels,
@@ -519,13 +519,13 @@ def convert_to_csv_import_format(csv_rows):
                 'stot_cacr': safe_int(row.get('STOTCACR')),
                 's_exp_agorot': safe_int(row.get('SEXP')),
                 
-                # מקודדים
+                # ׳׳§׳•׳“׳“׳™׳
                 's_encoder1': safe_int(row.get('SENCODER1')),
                 's_encoder2': safe_int(row.get('SENCODER2')),
                 's_encoder3': safe_int(row.get('SENCODER3')),
                 'sencodertot': safe_int(row.get('SENCODERTOT')),
                 
-                # תנועה
+                # ׳×׳ ׳•׳¢׳”
                 't_open_b': safe_int(row.get('TOPENB')),
                 't_entry_s': safe_int(row.get('TENTRYS')),
                 't_entry_p': safe_int(row.get('TENTRYP')),
@@ -536,7 +536,7 @@ def convert_to_csv_import_format(csv_rows):
                 't_entry_ap': safe_int(row.get('TENTRYAP')),
                 't_exit_ap': safe_int(row.get('TEEITAP')),
                 
-                # זמני שהייה
+                # ׳–׳׳ ׳™ ׳©׳”׳™׳™׳”
                 'tsper1': safe_int(row.get('TSPER1')),
                 'tsper2': safe_int(row.get('TSPER2')),
                 'stay_015': safe_int(row.get('STAY015')),
@@ -554,47 +554,47 @@ def convert_to_csv_import_format(csv_rows):
                 'tsper5': safe_int(row.get('TSPER5')),
                 'tsper6': safe_int(row.get('TSPER6')),
                 
-                # מטא-דטה
+                # ׳׳˜׳-׳“׳˜׳”
                 'created_at': datetime.now().isoformat(),
                 'uploaded_by': 'email_automation'
             }
             
             converted_rows.append(converted_row)
             
-            print(f"✅ Row {index+1}: project {converted_row['project_number']}, cash: {cash_shekels} shekels, text: '{ctext_value}'")
+            print(f"ג… Row {index+1}: project {converted_row['project_number']}, cash: {cash_shekels} shekels, text: '{ctext_value}'")
             
         except Exception as e:
             # Error converting row {index+1}: {str(e)}")
             print(f"   Row data: {row}")
-            continue  # ממשיך לשורה הבאה במקום להפסיק
+            continue  # ׳׳׳©׳™׳ ׳׳©׳•׳¨׳” ׳”׳‘׳׳” ׳‘׳׳§׳•׳ ׳׳”׳₪׳¡׳™׳§
     
     # Successfully converted rows
     return converted_rows
 
 def insert_to_csv_import_shekels(converted_data):
-    """הכנסה לטבלת csv_import_shekels (שלב ביניים) - גרסה מתוקנת"""
+    """׳”׳›׳ ׳¡׳” ׳׳˜׳‘׳׳× csv_import_shekels (׳©׳׳‘ ׳‘׳™׳ ׳™׳™׳) - ׳’׳¨׳¡׳” ׳׳×׳•׳§׳ ׳×"""
     if not supabase:
         # Supabase not available
         return 0
         
     try:
-        print(f"🔄 Preparing to insert {len(converted_data)} rows to csv_import_shekels")
+        print(f"נ”„ Preparing to insert {len(converted_data)} rows to csv_import_shekels")
         
-        # מחיקת נתונים ישנים מהטבלה
+        # ׳׳—׳™׳§׳× ׳ ׳×׳•׳ ׳™׳ ׳™׳©׳ ׳™׳ ׳׳”׳˜׳‘׳׳”
         try:
-            print("🧹 Clearing old data from csv_import_shekels...")
+            print("נ§¹ Clearing old data from csv_import_shekels...")
             delete_result = supabase.table('csv_import_shekels').delete().gt('id', 0).execute()
-            print("✅ Old data cleared successfully")
+            print("ג… Old data cleared successfully")
         except Exception as e:
-            print(f"⚠️ Could not clear old data: {str(e)}")
-            # ממשיכים גם אם המחיקה נכשלה
+            print(f"ג ן¸ Could not clear old data: {str(e)}")
+            # ׳׳׳©׳™׳›׳™׳ ׳’׳ ׳׳ ׳”׳׳—׳™׳§׳” ׳ ׳›׳©׳׳”
         
-        # ניקוי הנתונים - הסרת שדות שלא צריכים ווידוא תקינות
+        # ׳ ׳™׳§׳•׳™ ׳”׳ ׳×׳•׳ ׳™׳ - ׳”׳¡׳¨׳× ׳©׳“׳•׳× ׳©׳׳ ׳¦׳¨׳™׳›׳™׳ ׳•׳•׳™׳“׳•׳ ׳×׳§׳™׳ ׳•׳×
         cleaned_data = []
         
         for i, row in enumerate(converted_data):
             try:
-                # יצירת שורה נקייה עם הכל הערכים הנדרשים
+                # ׳™׳¦׳™׳¨׳× ׳©׳•׳¨׳” ׳ ׳§׳™׳™׳” ׳¢׳ ׳”׳›׳ ׳”׳¢׳¨׳›׳™׳ ׳”׳ ׳“׳¨׳©׳™׳
                 cleaned_row = {
                     'project_number': str(row.get('project_number', '')).strip(),
                     'l_global_ref': int(row.get('l_global_ref', 0)),
@@ -605,7 +605,7 @@ def insert_to_csv_import_shekels(converted_data):
                     'report_date': str(row.get('report_date', '')).strip(),
                     'ctext': str(row.get('ctext', '')).strip(),
                     
-                    # כסף בשקלים
+                    # ׳›׳¡׳£ ׳‘׳©׳§׳׳™׳
                     's_cash_shekels': float(row.get('s_cash_shekels', 0)),
                     's_credit_shekels': float(row.get('s_credit_shekels', 0)),
                     's_pango_shekels': float(row.get('s_pango_shekels', 0)),
@@ -613,7 +613,7 @@ def insert_to_csv_import_shekels(converted_data):
                     'total_revenue_shekels': float(row.get('total_revenue_shekels', 0)),
                     'net_revenue_shekels': float(row.get('net_revenue_shekels', 0)),
                     
-                    # כסף באגורות
+                    # ׳›׳¡׳£ ׳‘׳׳’׳•׳¨׳•׳×
                     's_cash_agorot': int(row.get('s_cash_agorot', 0)),
                     's_credit_agorot': int(row.get('s_credit_agorot', 0)),
                     's_pango_agorot': int(row.get('s_pango_agorot', 0)),
@@ -621,13 +621,13 @@ def insert_to_csv_import_shekels(converted_data):
                     'stot_cacr': int(row.get('stot_cacr', 0)),
                     's_exp_agorot': int(row.get('s_exp_agorot', 0)),
                     
-                    # מקודדים
+                    # ׳׳§׳•׳“׳“׳™׳
                     's_encoder1': int(row.get('s_encoder1', 0)),
                     's_encoder2': int(row.get('s_encoder2', 0)),
                     's_encoder3': int(row.get('s_encoder3', 0)),
                     'sencodertot': int(row.get('sencodertot', 0)),
                     
-                    # תנועה
+                    # ׳×׳ ׳•׳¢׳”
                     't_open_b': int(row.get('t_open_b', 0)),
                     't_entry_s': int(row.get('t_entry_s', 0)),
                     't_entry_p': int(row.get('t_entry_p', 0)),
@@ -638,7 +638,7 @@ def insert_to_csv_import_shekels(converted_data):
                     't_entry_ap': int(row.get('t_entry_ap', 0)),
                     't_exit_ap': int(row.get('t_exit_ap', 0)),
                     
-                    # זמני שהייה
+                    # ׳–׳׳ ׳™ ׳©׳”׳™׳™׳”
                     'tsper1': int(row.get('tsper1', 0)),
                     'tsper2': int(row.get('tsper2', 0)),
                     'stay_015': int(row.get('stay_015', 0)),
@@ -656,7 +656,7 @@ def insert_to_csv_import_shekels(converted_data):
                     'tsper5': int(row.get('tsper5', 0)),
                     'tsper6': int(row.get('tsper6', 0)),
                     
-                    # מטא-דטה (created_at ו-uploaded_by יווצרו אוטומטית)
+                    # ׳׳˜׳-׳“׳˜׳” (created_at ׳•-uploaded_by ׳™׳•׳•׳¦׳¨׳• ׳׳•׳˜׳•׳׳˜׳™׳×)
                 }
                 
                 cleaned_data.append(cleaned_row)
@@ -667,12 +667,12 @@ def insert_to_csv_import_shekels(converted_data):
                 continue
         
         if not cleaned_data:
-            print("❌ No valid data after cleaning")
+            print("ג No valid data after cleaning")
             return 0
             
-        print(f"✅ Cleaned {len(cleaned_data)} rows successfully")
+        print(f"ג… Cleaned {len(cleaned_data)} rows successfully")
         
-        # הכנסת הנתונים בקבוצות
+        # ׳”׳›׳ ׳¡׳× ׳”׳ ׳×׳•׳ ׳™׳ ׳‘׳§׳‘׳•׳¦׳•׳×
         batch_size = 200
         total_inserted = 0
         
@@ -681,62 +681,62 @@ def insert_to_csv_import_shekels(converted_data):
             batch_num = i // batch_size + 1
             
             try:
-                print(f"🔄 Inserting batch {batch_num}: {len(batch)} rows")
+                print(f"נ”„ Inserting batch {batch_num}: {len(batch)} rows")
                 
                 result = supabase.table('csv_import_shekels').insert(batch).execute()
                 
                 if result.data:
                     batch_count = len(result.data)
                     total_inserted += batch_count
-                    print(f"✅ Batch {batch_num} inserted successfully: {batch_count} rows")
+                    print(f"ג… Batch {batch_num} inserted successfully: {batch_count} rows")
                 else:
-                    print(f"⚠️ Batch {batch_num} returned no data")
+                    print(f"ג ן¸ Batch {batch_num} returned no data")
                     
             except Exception as batch_error:
                 # Error in batch {batch_num}: {str(batch_error)}")
                 
-                # אם הקבוצה נכשלה, ננסה שורה אחת בכל פעם
-                print(f"🔄 Trying individual rows for batch {batch_num}...")
+                # ׳׳ ׳”׳§׳‘׳•׳¦׳” ׳ ׳›׳©׳׳”, ׳ ׳ ׳¡׳” ׳©׳•׳¨׳” ׳׳—׳× ׳‘׳›׳ ׳₪׳¢׳
+                print(f"נ”„ Trying individual rows for batch {batch_num}...")
                 for j, single_row in enumerate(batch):
                     try:
                         single_result = supabase.table('csv_import_shekels').insert([single_row]).execute()
                         if single_result.data:
                             total_inserted += 1
-                            if j % 10 == 0:  # הדפסה כל 10 שורות
-                                print(f"   ✅ Row {i+j+1} inserted")
+                            if j % 10 == 0:  # ׳”׳“׳₪׳¡׳” ׳›׳ 10 ׳©׳•׳¨׳•׳×
+                                print(f"   ג… Row {i+j+1} inserted")
                     except Exception as single_error:
-                        print(f"   ❌ Row {i+j+1} failed: {str(single_error)}")
-                        # בדיקה אם זו שגיאת מבנה חמורה
+                        print(f"   ג Row {i+j+1} failed: {str(single_error)}")
+                        # ׳‘׳“׳™׳§׳” ׳׳ ׳–׳• ׳©׳’׳™׳׳× ׳׳‘׳ ׳” ׳—׳׳•׳¨׳”
                         if "column" in str(single_error).lower() and "does not exist" in str(single_error).lower():
-                            print(f"   🚨 CRITICAL: Column structure error - stopping batch")
+                            print(f"   נ¨ CRITICAL: Column structure error - stopping batch")
                             break
         
-        print(f"✅ Total inserted to csv_import_shekels: {total_inserted} rows out of {len(converted_data)}")
+        print(f"ג… Total inserted to csv_import_shekels: {total_inserted} rows out of {len(converted_data)}")
         return total_inserted
         
     except Exception as e:
-        print(f"❌ General error inserting to csv_import_shekels: {str(e)}")
+        print(f"ג General error inserting to csv_import_shekels: {str(e)}")
         return 0
 
 def transfer_to_parking_data():
-    """העברה מ csv_import_shekels ל parking_data - עם תיקונים"""
+    """׳”׳¢׳‘׳¨׳” ׳ csv_import_shekels ׳ parking_data - ׳¢׳ ׳×׳™׳§׳•׳ ׳™׳"""
     if not supabase:
         # Supabase not available
         return 0
         
     try:
-        print("🔄 Starting transfer from csv_import_shekels to parking_data...")
+        print("נ”„ Starting transfer from csv_import_shekels to parking_data...")
         
-        # קבלת כל הנתונים מטבלת הביניים
+        # ׳§׳‘׳׳× ׳›׳ ׳”׳ ׳×׳•׳ ׳™׳ ׳׳˜׳‘׳׳× ׳”׳‘׳™׳ ׳™׳™׳
         csv_result = supabase.table('csv_import_shekels').select('*').execute()
         
         if not csv_result.data:
-            print("⚠️ No data in csv_import_shekels to transfer")
+            print("ג ן¸ No data in csv_import_shekels to transfer")
             return 0
         
         # Found rows in csv_import_shekels
         
-        # פונקציה לקבלת parking_id
+        # ׳₪׳•׳ ׳§׳¦׳™׳” ׳׳§׳‘׳׳× parking_id
         def get_parking_id(project_number):
             try:
                 if not supabase:
@@ -749,7 +749,7 @@ def transfer_to_parking_data():
                 # Error getting parking_id: {str(e)}")
                 return None
         
-        # עיבוד הנתונים להעברה - עם בדיקות כפילות משופרות
+        # ׳¢׳™׳‘׳•׳“ ׳”׳ ׳×׳•׳ ׳™׳ ׳׳”׳¢׳‘׳¨׳” - ׳¢׳ ׳‘׳“׳™׳§׳•׳× ׳›׳₪׳™׳׳•׳× ׳׳©׳•׳₪׳¨׳•׳×
         successful_transfers = 0
         failed_transfers = 0
         skipped_duplicates = 0
@@ -763,18 +763,18 @@ def transfer_to_parking_data():
                 s_shift_id = int(row.get('s_shift_id', 0))
                 
                 if project_number <= 0:
-                    print(f"⚠️ Row {i+1}: Skipping - invalid project_number")
+                    print(f"ג ן¸ Row {i+1}: Skipping - invalid project_number")
                     failed_transfers += 1
                     continue
                 
                 parking_id = get_parking_id(project_number)
                 
-                # תיקון c_text
+                # ׳×׳™׳§׳•׳ c_text
                 ctext_value = str(row.get('ctext', '')).strip()
                 if ctext_value in ["' '", "'  '", "''", ""]:
                     ctext_value = ""
                 
-                # יצירת שורה חדשה
+                # ׳™׳¦׳™׳¨׳× ׳©׳•׳¨׳” ׳—׳“׳©׳”
                 transfer_row = {
                     'parking_id': parking_id,
                     'project_number': project_number,
@@ -824,11 +824,11 @@ def transfer_to_parking_data():
                     'imported_at': datetime.now().isoformat()
                 }
                 
-                # 🆕 בדיקה משופרת עם 3 שדות מזהים (במקום 5)
+                # נ†• ׳‘׳“׳™׳§׳” ׳׳©׳•׳₪׳¨׳× ׳¢׳ 3 ׳©׳“׳•׳× ׳׳–׳”׳™׳ (׳‘׳׳§׳•׳ 5)
                 try:
-                    print(f"🔄 Checking row {i+1}/{len(csv_result.data)}: project {project_number}, date {report_date}, text: '{ctext_value}'")
+                    print(f"נ”„ Checking row {i+1}/{len(csv_result.data)}: project {project_number}, date {report_date}, text: '{ctext_value}'")
                     
-                    # בדיקה עם שילוב שדות - כמו constraint במסד הנתונים
+                    # ׳‘׳“׳™׳§׳” ׳¢׳ ׳©׳™׳׳•׳‘ ׳©׳“׳•׳× - ׳›׳׳• constraint ׳‘׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳
                     existing_check = supabase.table('parking_data').select('id').eq(
                         'parking_id', parking_id
                     ).eq(
@@ -838,11 +838,11 @@ def transfer_to_parking_data():
                     ).execute()
                     
                     if existing_check.data:
-                        print(f"🔄 Row {i+1}: DUPLICATE DETECTED (constraint match) - skipping completely")
+                        print(f"נ”„ Row {i+1}: DUPLICATE DETECTED (constraint match) - skipping completely")
                         skipped_duplicates += 1
                         continue
                     
-                    # רק אם לא קיים - הכנס חדש
+                    # ׳¨׳§ ׳׳ ׳׳ ׳§׳™׳™׳ - ׳”׳›׳ ׳¡ ׳—׳“׳©
                     result = supabase.table('parking_data').insert([transfer_row]).execute()
                     
                     if result.data:
@@ -850,40 +850,40 @@ def transfer_to_parking_data():
                         # Row inserted as new record
                     else:
                         failed_transfers += 1
-                        print(f"❌ Row {i+1}: Insert failed - no data returned")
+                        print(f"ג Row {i+1}: Insert failed - no data returned")
                         
                 except Exception as single_error:
-                    # טיפול בשגיאת constraint
+                    # ׳˜׳™׳₪׳•׳ ׳‘׳©׳’׳™׳׳× constraint
                     if "duplicate key value violates unique constraint" in str(single_error):
-                        print(f"🔄 Row {i+1}: DUPLICATE DETECTED (database constraint) - skipping")
+                        print(f"נ”„ Row {i+1}: DUPLICATE DETECTED (database constraint) - skipping")
                         skipped_duplicates += 1
                         continue
                     else:
                         failed_transfers += 1
-                        print(f"❌ Row {i+1}: Error during processing: {str(single_error)}")
+                        print(f"ג Row {i+1}: Error during processing: {str(single_error)}")
                         continue
                     
             except Exception as row_error:
                 failed_transfers += 1
-                print(f"❌ Row {i+1}: Error processing row: {str(row_error)}")
+                print(f"ג Row {i+1}: Error processing row: {str(row_error)}")
                 continue
         
-        # דוח סיכום מפורט
+        # ׳“׳•׳— ׳¡׳™׳›׳•׳ ׳׳₪׳•׳¨׳˜
         total_processed = successful_transfers + skipped_duplicates + failed_transfers
-        print(f"\n📊 Transfer Summary:")
+        print(f"\nנ“ Transfer Summary:")
         # Successfully transferred records
         # Skipped duplicates
         # Failed transfers
-        print(f"   📈 Total processed: {total_processed} out of {len(csv_result.data)} rows")
+        print(f"   נ“ˆ Total processed: {total_processed} out of {len(csv_result.data)} rows")
         
-        # מחיקת csv_import_shekels אחרי העברה
+        # ׳׳—׳™׳§׳× csv_import_shekels ׳׳—׳¨׳™ ׳”׳¢׳‘׳¨׳”
         if total_processed > 0:
             try:
-                print("🧹 Cleaning csv_import_shekels...")
+                print("נ§¹ Cleaning csv_import_shekels...")
                 delete_result = supabase.table('csv_import_shekels').delete().gt('id', 0).execute()
-                print("✅ csv_import_shekels cleaned successfully")
+                print("ג… csv_import_shekels cleaned successfully")
             except Exception as cleanup_error:
-                print(f"⚠️ Could not clean csv_import_shekels: {str(cleanup_error)}")
+                print(f"ג ן¸ Could not clean csv_import_shekels: {str(cleanup_error)}")
         
         return successful_transfers
             
@@ -892,27 +892,27 @@ def transfer_to_parking_data():
         return 0
 
 def process_single_email(mail, email_id):
-    """עיבוד מייל יחיד - עם שליחת מיילי הודעות מתוקן"""
-    sender = None  # נגדיר את המשתנה מלכתחילה
+    """׳¢׳™׳‘׳•׳“ ׳׳™׳™׳ ׳™׳—׳™׳“ - ׳¢׳ ׳©׳׳™׳—׳× ׳׳™׳™׳׳™ ׳”׳•׳“׳¢׳•׳× ׳׳×׳•׳§׳"""
+    sender = None  # ׳ ׳’׳“׳™׳¨ ׳׳× ׳”׳׳©׳×׳ ׳” ׳׳׳›׳×׳—׳™׳׳”
     
     try:
         _, msg_data = mail.fetch(email_id, '(RFC822)')
         
-        # בדיקה שיש נתונים
+        # ׳‘׳“׳™׳§׳” ׳©׳™׳© ׳ ׳×׳•׳ ׳™׳
         if not msg_data or len(msg_data) == 0:
             # No data for email
             return False
             
         email_body = msg_data[0][1]
         
-        # בדיקה שיש body
+        # ׳‘׳“׳™׳§׳” ׳©׳™׳© body
         if not email_body:
             # Empty email body
             return False
             
         email_message = email.message_from_bytes(email_body)
         
-        # קבלת פרטי השולח
+        # ׳§׳‘׳׳× ׳₪׳¨׳˜׳™ ׳”׳©׳•׳׳—
         sender = email_message.get('From', 'unknown@unknown.com')
         subject = email_message.get('Subject', 'No Subject') or 'No Subject'
         date = email_message.get('Date', 'No Date') or 'No Date'
@@ -921,18 +921,18 @@ def process_single_email(mail, email_id):
         print(f"   Subject: {subject}")
         print(f"   Date: {date}")
         
-        # בדיקה שהשולח תקין
+        # ׳‘׳“׳™׳§׳” ׳©׳”׳©׳•׳׳— ׳×׳§׳™׳
         if sender == 'unknown@unknown.com' or '@' not in sender:
-            print(f"❌ Invalid sender address: {sender}")
+            print(f"ג Invalid sender address: {sender}")
             return False
         
-        # בדיקת שולח מורשה
+        # ׳‘׳“׳™׳§׳× ׳©׳•׳׳— ׳׳•׳¨׳©׳”
         if not is_authorized_sender(sender):
-            print(f"🚫 UNAUTHORIZED SENDER: {sender}")
-            print(f"✅ Authorized senders: {AUTHORIZED_SENDERS}")
+            print(f"נ« UNAUTHORIZED SENDER: {sender}")
+            print(f"ג… Authorized senders: {AUTHORIZED_SENDERS}")
             # Skipping unauthorized sender
             
-            # 🆕 סימון המייל כדי לא לבדוק אותו שוב
+            # נ†• ׳¡׳™׳׳•׳ ׳”׳׳™׳™׳ ׳›׳“׳™ ׳׳ ׳׳‘׳“׳•׳§ ׳׳•׳×׳• ׳©׳•׳‘
             try:
                 # Marking unauthorized email
                 mail.store(email_id, '+FLAGS', '\\Seen \\Flagged')
@@ -941,36 +941,36 @@ def process_single_email(mail, email_id):
                 # Could not mark unauthorized email
                 pass
             
-            print(f"📝 UNAUTHORIZED ACCESS LOGGED: {sender} tried to send data files")
+            print(f"נ“ UNAUTHORIZED ACCESS LOGGED: {sender} tried to send data files")
             return False
         
-        print(f"✅ AUTHORIZED SENDER: {sender}")
+        print(f"ג… AUTHORIZED SENDER: {sender}")
         
         csv_files = download_csv_from_email(email_message)
         
         if not csv_files:
             # No CSV files found
-            # 🆕 שליחת מייל על חוסר קבצים
+            # נ†• ׳©׳׳™׳—׳× ׳׳™׳™׳ ׳¢׳ ׳—׳•׳¡׳¨ ׳§׳‘׳¦׳™׳
             send_error_notification(sender, 
-                "לא נמצאו קבצי CSV במייל. אנא ודא שצירפת קבצי נתונים תקינים.")
+                "׳׳ ׳ ׳׳¦׳׳• ׳§׳‘׳¦׳™ CSV ׳‘׳׳™׳™׳. ׳׳ ׳ ׳•׳“׳ ׳©׳¦׳™׳¨׳₪׳× ׳§׳‘׳¦׳™ ׳ ׳×׳•׳ ׳™׳ ׳×׳§׳™׳ ׳™׳.")
             return False
         
         all_converted_data = []
         processed_files = []
         
         for csv_file in csv_files:
-            print(f"\n🔄 Processing file: {csv_file['filename']}")
+            print(f"\nנ”„ Processing file: {csv_file['filename']}")
             
-            # פרסור CSV
+            # ׳₪׳¨׳¡׳•׳¨ CSV
             csv_rows = parse_csv_content(csv_file['data'])
             if csv_rows is None:
-                print(f"❌ Failed to parse file: {csv_file['filename']}")
+                print(f"ג Failed to parse file: {csv_file['filename']}")
                 continue
             
-            # המרה לפורמט שלנו
+            # ׳”׳׳¨׳” ׳׳₪׳•׳¨׳׳˜ ׳©׳׳ ׳•
             converted_data = convert_to_csv_import_format(csv_rows)
             if not converted_data:
-                print(f"❌ Failed to convert file: {csv_file['filename']}")
+                print(f"ג Failed to convert file: {csv_file['filename']}")
                 continue
             
             all_converted_data.extend(converted_data)
@@ -979,45 +979,45 @@ def process_single_email(mail, email_id):
                 'rows': len(converted_data)
             })
             
-            print(f"✅ File {csv_file['filename']}: {len(converted_data)} rows converted")
+            print(f"ג… File {csv_file['filename']}: {len(converted_data)} rows converted")
         
-        # בדיקה שיש נתונים תקינים
+        # ׳‘׳“׳™׳§׳” ׳©׳™׳© ׳ ׳×׳•׳ ׳™׳ ׳×׳§׳™׳ ׳™׳
         if not all_converted_data:
-            error_msg = "לא נמצאו נתונים תקינים בקבצים. אנא בדוק את פורמט הקבצים."
-            print(f"❌ {error_msg}")
+            error_msg = "׳׳ ׳ ׳׳¦׳׳• ׳ ׳×׳•׳ ׳™׳ ׳×׳§׳™׳ ׳™׳ ׳‘׳§׳‘׳¦׳™׳. ׳׳ ׳ ׳‘׳“׳•׳§ ׳׳× ׳₪׳•׳¨׳׳˜ ׳”׳§׳‘׳¦׳™׳."
+            print(f"ג {error_msg}")
             send_error_notification(sender, error_msg)
             return False
         
-        print(f"📊 Total converted data: {len(all_converted_data)} rows")
+        print(f"נ“ Total converted data: {len(all_converted_data)} rows")
         
-        # הכנסה לטבלת הביניים
+        # ׳”׳›׳ ׳¡׳” ׳׳˜׳‘׳׳× ׳”׳‘׳™׳ ׳™׳™׳
         inserted_count = insert_to_csv_import_shekels(all_converted_data)
         if inserted_count == 0:
-            error_msg = "שגיאה בהכנסת הנתונים למסד הנתונים."
-            print(f"❌ {error_msg}")
+            error_msg = "׳©׳’׳™׳׳” ׳‘׳”׳›׳ ׳¡׳× ׳”׳ ׳×׳•׳ ׳™׳ ׳׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳."
+            print(f"ג {error_msg}")
             send_error_notification(sender, error_msg)
             return False
         
-        print(f"✅ Inserted to csv_import_shekels: {inserted_count} rows")
+        print(f"ג… Inserted to csv_import_shekels: {inserted_count} rows")
         
-        # העברה לטבלה הסופית
+        # ׳”׳¢׳‘׳¨׳” ׳׳˜׳‘׳׳” ׳”׳¡׳•׳₪׳™׳×
         transferred_count = transfer_to_parking_data()
         
-        # 🆕 תמיד שליחת מייל הצלחה - גם אם הכל כפילויות
+        # נ†• ׳×׳׳™׳“ ׳©׳׳™׳—׳× ׳׳™׳™׳ ׳”׳¦׳׳—׳” - ׳’׳ ׳׳ ׳”׳›׳ ׳›׳₪׳™׳׳•׳™׳•׳×
         total_processed = len(all_converted_data)
         files_summary = ', '.join([f['name'] for f in processed_files])
         
         if transferred_count > 0:
-            success_msg = f"עובדו {transferred_count} רשומות חדשות מתוך {total_processed} רשומות כולל"
+            success_msg = f"׳¢׳•׳‘׳“׳• {transferred_count} ׳¨׳©׳•׳׳•׳× ׳—׳“׳©׳•׳× ׳׳×׳•׳ {total_processed} ׳¨׳©׳•׳׳•׳× ׳›׳•׳׳"
             # Email processed successfully
         else:
-            success_msg = f"כל {total_processed} הרשומות כבר קיימות במערכת (כפילויות)"
+            success_msg = f"׳›׳ {total_processed} ׳”׳¨׳©׳•׳׳•׳× ׳›׳‘׳¨ ׳§׳™׳™׳׳•׳× ׳‘׳׳¢׳¨׳›׳× (׳›׳₪׳™׳׳•׳™׳•׳×)"
             # Email processed successfully
         
-        # 🆕 שליחת מייל הצלחה עם פרטים מלאים
+        # נ†• ׳©׳׳™׳—׳× ׳׳™׳™׳ ׳”׳¦׳׳—׳” ׳¢׳ ׳₪׳¨׳˜׳™׳ ׳׳׳׳™׳
         send_success_notification(sender, processed_files, transferred_count, total_processed)
         
-# 🏷️ סימון המייל כמעובד במקום מחיקה
+# נ·ן¸ ׳¡׳™׳׳•׳ ׳”׳׳™׳™׳ ׳›׳׳¢׳•׳‘׳“ ׳‘׳׳§׳•׳ ׳׳—׳™׳§׳”
         try:
             # Marking email as processed
             mail.store(email_id, '+FLAGS', '\\Seen \\Flagged')
@@ -1025,48 +1025,48 @@ def process_single_email(mail, email_id):
             
         except Exception as mark_error:
             # Could not mark email
-            # לא מפסיקים את התהליך בגלל זה
+            # ׳׳ ׳׳₪׳¡׳™׳§׳™׳ ׳׳× ׳”׳×׳”׳׳™׳ ׳‘׳’׳׳ ׳–׳”
             pass
         
         return True
         
     except Exception as e:
-        error_msg = f"שגיאה טכנית בעיבוד המייל: {str(e)}"
+        error_msg = f"׳©׳’׳™׳׳” ׳˜׳›׳ ׳™׳× ׳‘׳¢׳™׳‘׳•׳“ ׳”׳׳™׳™׳: {str(e)}"
         # Error processing email
         
-        # 🆕 שליחת מייל שגיאה עם פרטים
+        # נ†• ׳©׳׳™׳—׳× ׳׳™׳™׳ ׳©׳’׳™׳׳” ׳¢׳ ׳₪׳¨׳˜׳™׳
         if sender and sender != 'unknown@unknown.com':
             send_error_notification(sender, error_msg)
         else:
-            print(f"❌ Could not send error notification - unknown sender")
+            print(f"ג Could not send error notification - unknown sender")
             
         return False
 
 def send_success_notification(sender_email, processed_files, new_rows, total_rows):
-    """שליחת התראת הצלחה - גרסה מתוקנת עם פרטים מלאים"""
+    """׳©׳׳™׳—׳× ׳”׳×׳¨׳׳× ׳”׳¦׳׳—׳” - ׳’׳¨׳¡׳” ׳׳×׳•׳§׳ ׳× ׳¢׳ ׳₪׳¨׳˜׳™׳ ׳׳׳׳™׳"""
     
-    # בדיקת מגבלה יומית
+    # ׳‘׳“׳™׳§׳× ׳׳’׳‘׳׳” ׳™׳•׳׳™׳×
     if not hasattr(send_success_notification, 'daily_count'):
         send_success_notification.daily_count = 0
         send_success_notification.last_reset = datetime.now().date()
     
-    # איפוס יומי
+    # ׳׳™׳₪׳•׳¡ ׳™׳•׳׳™
     if send_success_notification.last_reset != datetime.now().date():
         send_success_notification.daily_count = 0
         send_success_notification.last_reset = datetime.now().date()
     
-    # הגבלה ל-100 מיילי הצלחה ביום
+    # ׳”׳’׳‘׳׳” ׳-100 ׳׳™׳™׳׳™ ׳”׳¦׳׳—׳” ׳‘׳™׳•׳
     if send_success_notification.daily_count >= 100:
         files_summary = ', '.join([f['name'] for f in processed_files])
         # Daily email limit reached
         return
     
-    # בדיקת נתונים
+    # ׳‘׳“׳™׳§׳× ׳ ׳×׳•׳ ׳™׳
     gmail_user = os.environ.get('GMAIL_USERNAME')
     gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
     
     if not gmail_user or not gmail_password:
-        print(f"❌ Missing Gmail credentials for success notification")
+        print(f"ג Missing Gmail credentials for success notification")
         files_summary = ', '.join([f['name'] for f in processed_files])
         # Success logged
         return
@@ -1077,36 +1077,36 @@ def send_success_notification(sender_email, processed_files, new_rows, total_row
         msg = MIMEMultipart()
         msg['From'] = gmail_user
         msg['To'] = sender_email
-        msg['Subject'] = '✅ קבצי הנתונים עובדו בהצלחה - S&B Parking'
+        msg['Subject'] = 'ג… ׳§׳‘׳¦׳™ ׳”׳ ׳×׳•׳ ׳™׳ ׳¢׳•׳‘׳“׳• ׳‘׳”׳¦׳׳—׳” - S&B Parking'
         
-        files_list = '\n'.join([f"• {file['name']} - {file['rows']:,} שורות" for file in processed_files])
+        files_list = '\n'.join([f"ג€¢ {file['name']} - {file['rows']:,} ׳©׳•׳¨׳•׳×" for file in processed_files])
         
-        # 🆕 הודעה מפורטת יותר
+        # נ†• ׳”׳•׳“׳¢׳” ׳׳₪׳•׳¨׳˜׳× ׳™׳•׳×׳¨
         if new_rows > 0:
-            status_message = f"נוספו {new_rows:,} רשומות חדשות למסד הנתונים"
+            status_message = f"׳ ׳•׳¡׳₪׳• {new_rows:,} ׳¨׳©׳•׳׳•׳× ׳—׳“׳©׳•׳× ׳׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳"
             if new_rows < total_rows:
-                status_message += f" (מתוך {total_rows:,} רשומות כולל - יתר הרשומות כבר קיימות)"
+                status_message += f" (׳׳×׳•׳ {total_rows:,} ׳¨׳©׳•׳׳•׳× ׳›׳•׳׳ - ׳™׳×׳¨ ׳”׳¨׳©׳•׳׳•׳× ׳›׳‘׳¨ ׳§׳™׳™׳׳•׳×)"
         else:
-            status_message = f"כל {total_rows:,} הרשומות כבר קיימות במערכת (לא נוספו רשומות חדשות)"
+            status_message = f"׳›׳ {total_rows:,} ׳”׳¨׳©׳•׳׳•׳× ׳›׳‘׳¨ ׳§׳™׳™׳׳•׳× ׳‘׳׳¢׳¨׳›׳× (׳׳ ׳ ׳•׳¡׳₪׳• ׳¨׳©׳•׳׳•׳× ׳—׳“׳©׳•׳×)"
         
         body = f"""
-שלום,
+׳©׳׳•׳,
 
-קבצי הנתונים שלך עובדו בהצלחה במערכת S&B Parking:
+׳§׳‘׳¦׳™ ׳”׳ ׳×׳•׳ ׳™׳ ׳©׳׳ ׳¢׳•׳‘׳“׳• ׳‘׳”׳¦׳׳—׳” ׳‘׳׳¢׳¨׳›׳× S&B Parking:
 
-📁 קבצים שעובדו:
+נ“ ׳§׳‘׳¦׳™׳ ׳©׳¢׳•׳‘׳“׳•:
 {files_list}
 
-📊 תוצאות העיבוד:
+נ“ ׳×׳•׳¦׳׳•׳× ׳”׳¢׳™׳‘׳•׳“:
 {status_message}
 
-💡 הערה: אם הרשומות כבר קיימות, זה אומר שהנתונים כבר הועלו קודם לכן.
+נ’¡ ׳”׳¢׳¨׳”: ׳׳ ׳”׳¨׳©׳•׳׳•׳× ׳›׳‘׳¨ ׳§׳™׳™׳׳•׳×, ׳–׳” ׳׳•׳׳¨ ׳©׳”׳ ׳×׳•׳ ׳™׳ ׳›׳‘׳¨ ׳”׳•׳¢׳׳• ׳§׳•׳“׳ ׳׳›׳.
 
-🔍 הנתונים זמינים כעת בדשבורד לצפייה ודוחות.
+נ” ׳”׳ ׳×׳•׳ ׳™׳ ׳–׳׳™׳ ׳™׳ ׳›׳¢׳× ׳‘׳“׳©׳‘׳•׳¨׳“ ׳׳¦׳₪׳™׳™׳” ׳•׳“׳•׳—׳•׳×.
 
-בברכה,
-מערכת S&B Parking (דוח אוטומטי)
-נשלח מ: {gmail_user}
+׳‘׳‘׳¨׳›׳”,
+׳׳¢׳¨׳›׳× S&B Parking (׳“׳•׳— ׳׳•׳˜׳•׳׳˜׳™)
+׳ ׳©׳׳— ׳: {gmail_user}
         """
         
         msg.attach(MIMEText(body, 'plain', 'utf-8'))
@@ -1123,34 +1123,34 @@ def send_success_notification(sender_email, processed_files, new_rows, total_row
     except Exception as e:
         error_str = str(e)
         if "sending limit exceeded" in error_str.lower():
-            print(f"🚫 Gmail daily limit exceeded - switching to log-only mode")
+            print(f"נ« Gmail daily limit exceeded - switching to log-only mode")
             send_success_notification.daily_count = 99
         else:
-            print(f"❌ Failed to send success notification: {str(e)}")
+            print(f"ג Failed to send success notification: {str(e)}")
             files_summary = ', '.join([f['name'] for f in processed_files])
             # Success logged
 
 def send_error_notification(sender_email, error_message):
-    """שליחת התראת שגיאה - מושבת, רק לוג"""
+    """׳©׳׳™׳—׳× ׳”׳×׳¨׳׳× ׳©׳’׳™׳׳” - ׳׳•׳©׳‘׳×, ׳¨׳§ ׳׳•׳’"""
     
-    # בדיקה אם מיילי שגיאה מושבתים
+    # ׳‘׳“׳™׳§׳” ׳׳ ׳׳™׳™׳׳™ ׳©׳’׳™׳׳” ׳׳•׳©׳‘׳×׳™׳
     if ERROR_EMAILS_DISABLED:
         # Error email disabled
         # Error logged
         return
     
-    # אם לא מושבת, רק לוג (ללא שליחת מייל)
+    # ׳׳ ׳׳ ׳׳•׳©׳‘׳×, ׳¨׳§ ׳׳•׳’ (׳׳׳ ׳©׳׳™׳—׳× ׳׳™׳™׳)
     # Error logged
             
 def verify_email_system():
-    """בדיקת התקינות של מערכת המיילים"""
+    """׳‘׳“׳™׳§׳× ׳”׳×׳§׳™׳ ׳•׳× ׳©׳ ׳׳¢׳¨׳›׳× ׳”׳׳™׳™׳׳™׳"""
     if not EMAIL_MONITORING_AVAILABLE:
         # Email libraries not available
         return False
         
     # Verifying email system configuration
     
-    # בדיקת משתני סביבה
+    # ׳‘׳“׳™׳§׳× ׳׳©׳×׳ ׳™ ׳¡׳‘׳™׳‘׳”
     gmail_user = os.environ.get('GMAIL_USERNAME')
     gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
     
@@ -1158,7 +1158,7 @@ def verify_email_system():
         # Gmail credentials missing
         return False
     
-    # בדיקת חיבור IMAP (מהיר)
+    # ׳‘׳“׳™׳§׳× ׳—׳™׳‘׳•׳¨ IMAP (׳׳”׳™׳¨)
     try:
         mail = imaplib.IMAP4_SSL('imap.gmail.com', timeout=10)
         mail.login(gmail_user, gmail_password)
@@ -1170,7 +1170,7 @@ def verify_email_system():
         return False
 
 def start_email_monitoring_with_logs():
-    """הפעלת מעקב מיילים עם לוגים מפורטים - ללא כפילות"""
+    """׳”׳₪׳¢׳׳× ׳׳¢׳§׳‘ ׳׳™׳™׳׳™׳ ׳¢׳ ׳׳•׳’׳™׳ ׳׳₪׳•׳¨׳˜׳™׳ - ׳׳׳ ׳›׳₪׳™׳׳•׳×"""
     if not EMAIL_MONITORING_AVAILABLE:
         # Email monitoring not available
         return
@@ -1178,7 +1178,7 @@ def start_email_monitoring_with_logs():
     try:
         # Starting email monitoring system
         
-        # בדיקת תקינות המערכת
+        # ׳‘׳“׳™׳§׳× ׳×׳§׳™׳ ׳•׳× ׳”׳׳¢׳¨׳›׳×
         if not verify_email_system():
             # Email system verification failed
             return
@@ -1189,16 +1189,16 @@ def start_email_monitoring_with_logs():
             
             while True:
                 try:
-                    # בדיקת מיילים כל 5 דקות (300 שניות)
+                    # ׳‘׳“׳™׳§׳× ׳׳™׳™׳׳™׳ ׳›׳ 5 ׳“׳§׳•׳× (300 ׳©׳ ׳™׳•׳×)
                     with app.app_context():
                         # Email check triggered
                         check_for_new_emails()
                     
-                    # המתנה של 5 דקות
-                    time.sleep(150)  # 300 שניות = 5 דקות
+                    # ׳”׳׳×׳ ׳” ׳©׳ 5 ׳“׳§׳•׳×
+                    time.sleep(150)  # 300 ׳©׳ ׳™׳•׳× = 5 ׳“׳§׳•׳×
                     
                     check_count += 1
-                    if check_count % 6 == 0:  # כל 30 דקות (6 * 5 דקות)
+                    if check_count % 6 == 0:  # ׳›׳ 30 ׳“׳§׳•׳× (6 * 5 ׳“׳§׳•׳×)
                         # Email monitoring alive
                         pass
                         
@@ -1207,18 +1207,18 @@ def start_email_monitoring_with_logs():
                     break
                 except Exception as e:
                     # Email monitoring error - retrying
-                    time.sleep(300)  # 5 דקות המתנה לפני ניסיון חוזר
+                    time.sleep(300)  # 5 ׳“׳§׳•׳× ׳”׳׳×׳ ׳” ׳׳₪׳ ׳™ ׳ ׳™׳¡׳™׳•׳ ׳—׳•׳–׳¨
         
-        # הרצת הלולאה ברקע
+        # ׳”׳¨׳¦׳× ׳”׳׳•׳׳׳” ׳‘׳¨׳§׳¢
         monitor_thread = threading.Thread(target=monitoring_loop, daemon=True)
         monitor_thread.start()
         
         # Email monitoring started successfully
         
-        # בדיקה ראשונית מעוכבת למניעת כפילות
+        # ׳‘׳“׳™׳§׳” ׳¨׳׳©׳•׳ ׳™׳× ׳׳¢׳•׳›׳‘׳× ׳׳׳ ׳™׳¢׳× ׳›׳₪׳™׳׳•׳×
         # Running initial email check
         def delayed_initial_check():
-            time.sleep(15)  # המתנה של 15 שניות
+            time.sleep(15)  # ׳”׳׳×׳ ׳” ׳©׳ 15 ׳©׳ ׳™׳•׳×
             with app.app_context():
                 check_for_new_emails()
         threading.Thread(target=delayed_initial_check, daemon=True).start()
@@ -1228,16 +1228,16 @@ def start_email_monitoring_with_logs():
         pass
 
 def start_background_email_monitoring():
-    """נקודת כניסה להפעלת מעקב מיילים ברקע"""
+    """׳ ׳§׳•׳“׳× ׳›׳ ׳™׳¡׳” ׳׳”׳₪׳¢׳׳× ׳׳¢׳§׳‘ ׳׳™׳™׳׳™׳ ׳‘׳¨׳§׳¢"""
     if not EMAIL_MONITORING_AVAILABLE:
-        print("⚠️ Email monitoring not available - missing libraries")
+        print("ג ן¸ Email monitoring not available - missing libraries")
         return
         
     try:
         
         def delayed_start():
             time.sleep(5)
-            # Starting email monitoring  # 🆕 הוסף דיבוג
+            # Starting email monitoring  # נ†• ׳”׳•׳¡׳£ ׳“׳™׳‘׳•׳’
             start_email_monitoring_with_logs()
         
         startup_thread = threading.Thread(target=delayed_start, daemon=True)
@@ -1245,23 +1245,23 @@ def start_background_email_monitoring():
         
         
     except Exception as e:
-        print(f"❌ Background email monitoring initialization failed: {str(e)}")
+        print(f"ג Background email monitoring initialization failed: {str(e)}")
 
 def is_authorized_sender(sender_email):
-    """בדיקה אם השולח מורשה לשלוח קבצי נתונים"""
+    """׳‘׳“׳™׳§׳” ׳׳ ׳”׳©׳•׳׳— ׳׳•׳¨׳©׳” ׳׳©׳׳•׳— ׳§׳‘׳¦׳™ ׳ ׳×׳•׳ ׳™׳"""
     if not sender_email:
         return False
     
-    # ניקוי כתובת המייל מתגים נוספים
+    # ׳ ׳™׳§׳•׳™ ׳›׳×׳•׳‘׳× ׳”׳׳™׳™׳ ׳׳×׳’׳™׳ ׳ ׳•׳¡׳₪׳™׳
     sender_clean = sender_email.strip().lower()
     
-    # חילוץ כתובת המייל מפורמט "Name <email@domain.com>"
+    # ׳—׳™׳׳•׳¥ ׳›׳×׳•׳‘׳× ׳”׳׳™׳™׳ ׳׳₪׳•׳¨׳׳˜ "Name <email@domain.com>"
     if '<' in sender_clean and '>' in sender_clean:
         start = sender_clean.find('<') + 1
         end = sender_clean.find('>')
         sender_clean = sender_clean[start:end].strip()
     
-    # בדיקה מול רשימת השולחים המורשים
+    # ׳‘׳“׳™׳§׳” ׳׳•׳ ׳¨׳©׳™׳׳× ׳”׳©׳•׳׳—׳™׳ ׳”׳׳•׳¨׳©׳™׳
     for authorized in AUTHORIZED_SENDERS:
         if sender_clean == authorized.lower():
             return True
@@ -1269,16 +1269,16 @@ def is_authorized_sender(sender_email):
     return False
 
 def check_for_new_emails():
-    """בדיקת מיילים חדשים - תיקון תאריכים"""
+    """׳‘׳“׳™׳§׳× ׳׳™׳™׳׳™׳ ׳—׳“׳©׳™׳ - ׳×׳™׳§׳•׳ ׳×׳׳¨׳™׳›׳™׳"""
     global processed_email_ids, last_cache_reset
     
-    # 🆕 איפוס זיכרון אחת לשעה
+    # נ†• ׳׳™׳₪׳•׳¡ ׳–׳™׳›׳¨׳•׳ ׳׳—׳× ׳׳©׳¢׳”
     if last_cache_reset is None or (datetime.now() - last_cache_reset).seconds > 3600:
         processed_email_ids = []
         last_cache_reset = datetime.now()
         # Hourly cache reset completed
     
-    # ניקוי זיכרון אם יש יותר מדי
+    # ׳ ׳™׳§׳•׳™ ׳–׳™׳›׳¨׳•׳ ׳׳ ׳™׳© ׳™׳•׳×׳¨ ׳׳“׳™
     if len(processed_email_ids) > 50:
         processed_email_ids = processed_email_ids[-20:]
         # Email cache cleaned
@@ -1289,7 +1289,7 @@ def check_for_new_emails():
     
     # Email check started
     
-    # בדיקת משתני סביבה
+    # ׳‘׳“׳™׳§׳× ׳׳©׳×׳ ׳™ ׳¡׳‘׳™׳‘׳”
     gmail_user = os.environ.get('GMAIL_USERNAME')
     gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
     
@@ -1308,11 +1308,11 @@ def check_for_new_emails():
         # Selecting inbox
         mail.select('inbox')
         
-        # תיקון תאריכים - מחפש מהיומיים האחרונים
+        # ׳×׳™׳§׳•׳ ׳×׳׳¨׳™׳›׳™׳ - ׳׳—׳₪׳© ׳׳”׳™׳•׳׳™׳™׳ ׳”׳׳—׳¨׳•׳ ׳™׳
         today = datetime.now().strftime('%d-%b-%Y')
         yesterday = (datetime.now() - timedelta(days=1)).strftime('%d-%b-%Y')
         
-        # חיפוש מיילים מהיומיים האחרונים
+        # ׳—׳™׳₪׳•׳© ׳׳™׳™׳׳™׳ ׳׳”׳™׳•׳׳™׳™׳ ׳”׳׳—׳¨׳•׳ ׳™׳
         search_criteria = f'OR SINCE {yesterday} SINCE {today}'
         
         # Search criteria set
@@ -1339,21 +1339,21 @@ def check_for_new_emails():
             
             # Processing new email
             
-            # עיבוד המייל
+            # ׳¢׳™׳‘׳•׳“ ׳”׳׳™׳™׳
             success = process_single_email(mail, email_id)
             
-            # 🔧 תיקון: הוסף לרשימה רק אם הצליח!
+            # נ”§ ׳×׳™׳§׳•׳: ׳”׳•׳¡׳£ ׳׳¨׳©׳™׳׳” ׳¨׳§ ׳׳ ׳”׳¦׳׳™׳—!
             if success:
                 processed_email_ids.append(email_id_str)
                 # Email added to processed cache
             else:
-                # לא מוסיפים לרשימה - ננסה שוב בפעם הבאה
+                # ׳׳ ׳׳•׳¡׳™׳₪׳™׳ ׳׳¨׳©׳™׳׳” - ׳ ׳ ׳¡׳” ׳©׳•׳‘ ׳‘׳₪׳¢׳ ׳”׳‘׳׳”
                 # Email not added to cache - will retry
                 pass
             
             new_emails += 1
             
-            # ספירת הצלחות בלבד
+            # ׳¡׳₪׳™׳¨׳× ׳”׳¦׳׳—׳•׳× ׳‘׳׳‘׳“
             if success:
                 processed_successfully += 1
                 # Email processed successfully
@@ -1361,15 +1361,15 @@ def check_for_new_emails():
                 # Email rejected or failed
                 pass
             
-            # ניקוי cache אם יש יותר מדי מיילים
+            # ׳ ׳™׳§׳•׳™ cache ׳׳ ׳™׳© ׳™׳•׳×׳¨ ׳׳“׳™ ׳׳™׳™׳׳™׳
             if len(processed_email_ids) > PROCESSED_EMAILS_LIMIT:
                 processed_email_ids = processed_email_ids[-PROCESSED_EMAILS_LIMIT:]
                 # Cleaned processed emails cache
             
-            # המתנה קצרה בין מיילים
+            # ׳”׳׳×׳ ׳” ׳§׳¦׳¨׳” ׳‘׳™׳ ׳׳™׳™׳׳™׳
             time.sleep(2)
         
-        # סיכום מפורט
+        # ׳¡׳™׳›׳•׳ ׳׳₪׳•׳¨׳˜
         # Email check completed
         
     except Exception as e:
@@ -1386,64 +1386,64 @@ def check_for_new_emails():
         # Email check ended
 
 def keep_service_alive():
-    """פונקציה לשמירה על השירות ערני - גרסה מתוקנת"""
+    """׳₪׳•׳ ׳§׳¦׳™׳” ׳׳©׳׳™׳¨׳” ׳¢׳ ׳”׳©׳™׳¨׳•׳× ׳¢׳¨׳ ׳™ - ׳’׳¨׳¡׳” ׳׳×׳•׳§׳ ׳×"""
     def ping_self():
         # Keep-alive service started
         
-        # קבלת URL של השרת מהמשתנה שהגדרנו
+        # ׳§׳‘׳׳× URL ׳©׳ ׳”׳©׳¨׳× ׳׳”׳׳©׳×׳ ׳” ׳©׳”׳’׳“׳¨׳ ׳•
         app_url = os.environ.get('RENDER_EXTERNAL_URL', 'https://s-b-parking-reports.onrender.com')
         
         while True:
             try:
-                # שליחת בקשה לעצמנו כל 10 דקות
+                # ׳©׳׳™׳—׳× ׳‘׳§׳©׳” ׳׳¢׳¦׳׳ ׳• ׳›׳ 10 ׳“׳§׳•׳×
                 # Sending keep-alive ping
                 response = requests.get(f'{app_url}/ping', timeout=30000)
                 # Keep-alive ping successful
                 
             except requests.exceptions.RequestException as e:
                 # Keep-alive ping failed
-                # ממשיכים גם במקרה של שגיאה
+                # ׳׳׳©׳™׳›׳™׳ ׳’׳ ׳‘׳׳§׳¨׳” ׳©׳ ׳©׳’׳™׳׳”
                 pass
                 
             except Exception as e:
                 # Unexpected error in keep-alive
                 pass
             
-            # המתנה של 10 דקות (600 שניות)
+            # ׳”׳׳×׳ ׳” ׳©׳ 10 ׳“׳§׳•׳× (600 ׳©׳ ׳™׳•׳×)
             time.sleep(600)
     
-    # הרצת הפונקציה ברקע
+    # ׳”׳¨׳¦׳× ׳”׳₪׳•׳ ׳§׳¦׳™׳” ׳‘׳¨׳§׳¢
     ping_thread = threading.Thread(target=ping_self, daemon=True)
     ping_thread.start()
     # Keep-alive service initialized
 
 def validate_username(username):
     """
-    תיקוף שם משתמש - רק אותיות אנגלית, מספרים וקו תחתון
+    ׳×׳™׳§׳•׳£ ׳©׳ ׳׳©׳×׳׳© - ׳¨׳§ ׳׳•׳×׳™׳•׳× ׳׳ ׳’׳׳™׳×, ׳׳¡׳₪׳¨׳™׳ ׳•׳§׳• ׳×׳—׳×׳•׳
     """
     import re
     
     if not username or len(username.strip()) == 0:
-        return False, "יש להזין שם משתמש"
+        return False, "׳™׳© ׳׳”׳–׳™׳ ׳©׳ ׳׳©׳×׳׳©"
     
     username = username.strip()
     
-    # בדיקת אורך
+    # ׳‘׳“׳™׳§׳× ׳׳•׳¨׳
     if len(username) < 3:
-        return False, "שם משתמש חייב להיות לפחות 3 תווים"
+        return False, "׳©׳ ׳׳©׳×׳׳© ׳—׳™׳™׳‘ ׳׳”׳™׳•׳× ׳׳₪׳—׳•׳× 3 ׳×׳•׳•׳™׳"
     
     if len(username) > 20:
-        return False, "שם משתמש יכול להיות מקסימום 20 תווים"
+        return False, "׳©׳ ׳׳©׳×׳׳© ׳™׳›׳•׳ ׳׳”׳™׳•׳× ׳׳§׳¡׳™׳׳•׳ 20 ׳×׳•׳•׳™׳"
     
-    # בדיקה שיש רק אותיות אנגלית, מספרים וקו תחתון
+    # ׳‘׳“׳™׳§׳” ׳©׳™׳© ׳¨׳§ ׳׳•׳×׳™׳•׳× ׳׳ ׳’׳׳™׳×, ׳׳¡׳₪׳¨׳™׳ ׳•׳§׳• ׳×׳—׳×׳•׳
     if not re.match(r'^[a-zA-Z0-9_]+$', username):
-        return False, "שם משתמש יכול לכלול רק אותיות אנגלית, מספרים וקו תחתון (_)"
+        return False, "׳©׳ ׳׳©׳×׳׳© ׳™׳›׳•׳ ׳׳›׳׳•׳ ׳¨׳§ ׳׳•׳×׳™׳•׳× ׳׳ ׳’׳׳™׳×, ׳׳¡׳₪׳¨׳™׳ ׳•׳§׳• ׳×׳—׳×׳•׳ (_)"
     
-    # בדיקה שמתחיל באות
+    # ׳‘׳“׳™׳§׳” ׳©׳׳×׳—׳™׳ ׳‘׳׳•׳×
     if not username[0].isalpha():
-        return False, "שם משתמש חייב להתחיל באות אנגלית"
+        return False, "׳©׳ ׳׳©׳×׳׳© ׳—׳™׳™׳‘ ׳׳”׳×׳—׳™׳ ׳‘׳׳•׳× ׳׳ ׳’׳׳™׳×"
     
-    # רשימת שמות אסורים
+    # ׳¨׳©׳™׳׳× ׳©׳׳•׳× ׳׳¡׳•׳¨׳™׳
     forbidden_names = [
         'admin', 'administrator', 'root', 'user', 'test', 'guest', 'null', 'undefined',
         'api', 'www', 'mail', 'email', 'support', 'help', 'info', 'contact',
@@ -1451,13 +1451,13 @@ def validate_username(username):
     ]
     
     if username.lower() in forbidden_names:
-        return False, "שם משתמש זה אינו זמין"
+        return False, "׳©׳ ׳׳©׳×׳׳© ׳–׳” ׳׳™׳ ׳• ׳–׳׳™׳"
     
     return True, username
 
 @app.route('/api/test-email-system', methods=['GET'])
 def test_email_system():
-    """API לבדיקת מערכת המיילים"""
+    """API ׳׳‘׳“׳™׳§׳× ׳׳¢׳¨׳›׳× ׳”׳׳™׳™׳׳™׳"""
     try:
         if not EMAIL_MONITORING_AVAILABLE:
             return jsonify({
@@ -1465,9 +1465,9 @@ def test_email_system():
                 'message': 'Email system not available - missing libraries'
             })
             
-        print("🧪 Manual email system test initiated")
+        print("נ§× Manual email system test initiated")
         
-        # בדיקת תקינות
+        # ׳‘׳“׳™׳§׳× ׳×׳§׳™׳ ׳•׳×
         system_ok = verify_email_system()
         
         if system_ok:
@@ -1488,12 +1488,12 @@ def test_email_system():
             })
             
     except Exception as e:
-        print(f"❌ Email system test error: {str(e)}")
+        print(f"ג Email system test error: {str(e)}")
         return jsonify({
             'success': False, 
             'message': f'Test error: {str(e)}'
         })
-# ======================== נקודות קצה (Routes) ========================
+# ======================== ׳ ׳§׳•׳“׳•׳× ׳§׳¦׳” (Routes) ========================
 
 @app.route('/static/<path:filename>')
 def serve_static(filename):
@@ -1528,11 +1528,11 @@ def verify_page():
 
 @app.route('/dashboard')
 def dashboard():
-    """דף הדשבורד הראשי"""
+    """׳“׳£ ׳”׳“׳©׳‘׳•׳¨׳“ ׳”׳¨׳׳©׳™"""
     if 'user_email' not in session:
         return redirect(url_for('login_page'))
     
-    # בדיקה אם המשתמש הוא מנהל חברה
+    # ׳‘׳“׳™׳§׳” ׳׳ ׳”׳׳©׳×׳׳© ׳”׳•׳ ׳׳ ׳”׳ ׳—׳‘׳¨׳”
     try:
         user_result = supabase.table('user_parkings').select(
             'access_level, code_type'
@@ -1541,7 +1541,7 @@ def dashboard():
         if user_result.data:
             user_data = user_result.data[0]
             if user_data.get('access_level') == 'company_manager' or user_data.get('code_type') == 'company_manager':
-                # מנהל חברה - מפנים אותו לדף הנכון
+                # ׳׳ ׳”׳ ׳—׳‘׳¨׳” - ׳׳₪׳ ׳™׳ ׳׳•׳×׳• ׳׳“׳£ ׳”׳ ׳›׳•׳
                 return redirect(url_for('company_manager_page'))
     except Exception as e:
         print(f"Error checking user type: {str(e)}")
@@ -1550,23 +1550,23 @@ def dashboard():
 
 @app.route('/api/user-info', methods=['GET'])
 def get_user_info():
-    """קבלת נתוני המשתמש המחובר"""
+    """׳§׳‘׳׳× ׳ ׳×׳•׳ ׳™ ׳”׳׳©׳×׳׳© ׳”׳׳—׳•׳‘׳¨"""
     try:
         if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'}), 401
         
         if not supabase:
-            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+            return jsonify({'success': False, 'message': '׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳ ׳׳ ׳–׳׳™׳'})
         
         email = session['user_email']
         
-        # קבלת נתוני המשתמש
+        # ׳§׳‘׳׳× ׳ ׳×׳•׳ ׳™ ׳”׳׳©׳×׳׳©
         user_result = supabase.table('user_parkings').select(
             'username, email, role, project_number, parking_name, company_type, access_level'
         ).eq('email', email).execute()
         
         if not user_result.data:
-            return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
+            return jsonify({'success': False, 'message': '׳׳©׳×׳׳© ׳׳ ׳ ׳׳¦׳'})
         
         user_data = user_result.data[0]
         
@@ -1577,39 +1577,39 @@ def get_user_info():
         
     except Exception as e:
         # Error getting user info: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני משתמש'})
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳§׳‘׳׳× ׳ ׳×׳•׳ ׳™ ׳׳©׳×׳׳©'})
 
 @app.route('/api/user-parkings', methods=['GET'])
 def get_user_parkings():
-    """קבלת רשימת החניונים עבור מנהל קבוצה"""
+    """׳§׳‘׳׳× ׳¨׳©׳™׳׳× ׳”׳—׳ ׳™׳•׳ ׳™׳ ׳¢׳‘׳•׳¨ ׳׳ ׳”׳ ׳§׳‘׳•׳¦׳”"""
     try:
         if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'}), 401
         
         if not supabase:
-            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+            return jsonify({'success': False, 'message': '׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳ ׳׳ ׳–׳׳™׳'})
         
         email = session['user_email']
         
-        # בדיקת הרשאות משתמש
+        # ׳‘׳“׳™׳§׳× ׳”׳¨׳©׳׳•׳× ׳׳©׳×׳׳©
         user_result = supabase.table('user_parkings').select(
             'access_level, company_type'
         ).eq('email', email).execute()
         
         if not user_result.data:
-            return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
+            return jsonify({'success': False, 'message': '׳׳©׳×׳׳© ׳׳ ׳ ׳׳¦׳'})
         
         user_data = user_result.data[0]
         
         if user_data['access_level'] != 'group_manager' and user_data['access_level'] != 'group_access':
-            return jsonify({'success': False, 'message': 'אין הרשאה לצפייה בחניונים מרובים'})
+            return jsonify({'success': False, 'message': '׳׳™׳ ׳”׳¨׳©׳׳” ׳׳¦׳₪׳™׳™׳” ׳‘׳—׳ ׳™׳•׳ ׳™׳ ׳׳¨׳•׳‘׳™׳'})
         
-        # קבלת כל החניונים של החברה
+        # ׳§׳‘׳׳× ׳›׳ ׳”׳—׳ ׳™׳•׳ ׳™׳ ׳©׳ ׳”׳—׳‘׳¨׳”
         parkings_result = supabase.table('user_parkings').select(
             'project_number, parking_name'
         ).eq('company_type', user_data['company_type']).execute()
         
-        # הסרת כפילויות
+        # ׳”׳¡׳¨׳× ׳›׳₪׳™׳׳•׳™׳•׳×
         unique_parkings = {}
         for parking in parkings_result.data:
             if parking['project_number'] not in unique_parkings:
@@ -1624,70 +1624,70 @@ def get_user_parkings():
         
     except Exception as e:
         # Error getting user parkings: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה בקבלת רשימת חניונים'})
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳§׳‘׳׳× ׳¨׳©׳™׳׳× ׳—׳ ׳™׳•׳ ׳™׳'})
 
 @app.route('/api/parking-data', methods=['GET'])
 def get_parking_data():
-    """קבלת נתוני החניון לפי תאריכים והרשאות"""
+    """׳§׳‘׳׳× ׳ ׳×׳•׳ ׳™ ׳”׳—׳ ׳™׳•׳ ׳׳₪׳™ ׳×׳׳¨׳™׳›׳™׳ ׳•׳”׳¨׳©׳׳•׳×"""
     try:
         if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'}), 401
         
         if not supabase:
-            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+            return jsonify({'success': False, 'message': '׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳ ׳׳ ׳–׳׳™׳'})
         
-        # קבלת פרמטרים
+        # ׳§׳‘׳׳× ׳₪׳¨׳׳˜׳¨׳™׳
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
-        parking_id = request.args.get('parking_id')  # אופציונלי - למנהלי קבוצה
+        parking_id = request.args.get('parking_id')  # ׳׳•׳₪׳¦׳™׳•׳ ׳׳™ - ׳׳׳ ׳”׳׳™ ׳§׳‘׳•׳¦׳”
         
         if not start_date or not end_date:
-            return jsonify({'success': False, 'message': 'חסרים תאריכים'})
+            return jsonify({'success': False, 'message': '׳—׳¡׳¨׳™׳ ׳×׳׳¨׳™׳›׳™׳'})
         
-        # אימות תאריכים
+        # ׳׳™׳׳•׳× ׳×׳׳¨׳™׳›׳™׳
         is_valid_start, validated_start = validate_input(start_date, "general")
         is_valid_end, validated_end = validate_input(end_date, "general")
         
         if not is_valid_start or not is_valid_end:
-            return jsonify({'success': False, 'message': 'תאריכים לא תקינים'})
+            return jsonify({'success': False, 'message': '׳×׳׳¨׳™׳›׳™׳ ׳׳ ׳×׳§׳™׳ ׳™׳'})
         
         email = session['user_email']
         
-        # קבלת נתוני המשתמש
+        # ׳§׳‘׳׳× ׳ ׳×׳•׳ ׳™ ׳”׳׳©׳×׳׳©
         user_result = supabase.table('user_parkings').select(
             'access_level, project_number, company_type'
         ).eq('email', email).execute()
         
         if not user_result.data:
-            return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
+            return jsonify({'success': False, 'message': '׳׳©׳×׳׳© ׳׳ ׳ ׳׳¦׳'})
         
         user_data = user_result.data[0]
         
-        # בניית שאילתה בהתאם להרשאות
+        # ׳‘׳ ׳™׳™׳× ׳©׳׳™׳׳×׳” ׳‘׳”׳×׳׳ ׳׳”׳¨׳©׳׳•׳×
         query = supabase.table('parking_data').select('*')
         
-        # הגבלת תאריכים
+        # ׳”׳’׳‘׳׳× ׳×׳׳¨׳™׳›׳™׳
         query = query.gte('report_date', validated_start).lte('report_date', validated_end)
         
-        # הגבלת חניונים לפי הרשאות
+        # ׳”׳’׳‘׳׳× ׳—׳ ׳™׳•׳ ׳™׳ ׳׳₪׳™ ׳”׳¨׳©׳׳•׳×
         if user_data['access_level'] == 'single_parking':
-            # משתמש חניון בודד - רק החניון שלו
+            # ׳׳©׳×׳׳© ׳—׳ ׳™׳•׳ ׳‘׳•׳“׳“ - ׳¨׳§ ׳”׳—׳ ׳™׳•׳ ׳©׳׳•
             query = query.eq('project_number', user_data['project_number'])
             
         elif user_data['access_level'] == 'group_manager' or user_data['access_level'] == 'group_access':
-            # מנהל קבוצה או משתמש קבוצה
+            # ׳׳ ׳”׳ ׳§׳‘׳•׳¦׳” ׳׳• ׳׳©׳×׳׳© ׳§׳‘׳•׳¦׳”
             if parking_id:
-                # אימות שהחניון שייך לחברה שלו
+                # ׳׳™׳׳•׳× ׳©׳”׳—׳ ׳™׳•׳ ׳©׳™׳™׳ ׳׳—׳‘׳¨׳” ׳©׳׳•
                 parking_check = supabase.table('user_parkings').select('project_number').eq(
                     'project_number', parking_id
                 ).eq('company_type', user_data['company_type']).execute()
                 
                 if not parking_check.data:
-                    return jsonify({'success': False, 'message': 'אין הרשאה לחניון זה'})
+                    return jsonify({'success': False, 'message': '׳׳™׳ ׳”׳¨׳©׳׳” ׳׳—׳ ׳™׳•׳ ׳–׳”'})
                 
                 query = query.eq('project_number', parking_id)
             else:
-                # כל החניונים של החברה
+                # ׳›׳ ׳”׳—׳ ׳™׳•׳ ׳™׳ ׳©׳ ׳”׳—׳‘׳¨׳”
                 company_parkings = supabase.table('user_parkings').select('project_number').eq(
                     'company_type', user_data['company_type']
                 ).execute()
@@ -1699,22 +1699,22 @@ def get_parking_data():
                 else:
                     return jsonify({'success': True, 'data': []})
         elif user_data['access_level'] == 'company_manager':
-            # מנהל חברה - מפנים אותו לדף הנכון
+            # ׳׳ ׳”׳ ׳—׳‘׳¨׳” - ׳׳₪׳ ׳™׳ ׳׳•׳×׳• ׳׳“׳£ ׳”׳ ׳›׳•׳
             return jsonify({
                 'success': False, 
-                'message': 'מנהל חברה - יש להשתמש בדף ניהול חברה',
+                'message': '׳׳ ׳”׳ ׳—׳‘׳¨׳” - ׳™׳© ׳׳”׳©׳×׳׳© ׳‘׳“׳£ ׳ ׳™׳”׳•׳ ׳—׳‘׳¨׳”',
                 'redirect': '/company-manager'
             })
         else:
-            return jsonify({'success': False, 'message': 'רמת הרשאה לא מוכרת'})
+            return jsonify({'success': False, 'message': '׳¨׳׳× ׳”׳¨׳©׳׳” ׳׳ ׳׳•׳›׳¨׳×'})
         
-        # הגבלת כמות התוצאות (אבטחה)
+        # ׳”׳’׳‘׳׳× ׳›׳׳•׳× ׳”׳×׳•׳¦׳׳•׳× (׳׳‘׳˜׳—׳”)
         query = query.limit(10000)
         
-        # ביצוע השאילתה
+        # ׳‘׳™׳¦׳•׳¢ ׳”׳©׳׳™׳׳×׳”
         result = query.execute()
         
-        # קבלת מיפוי שמות החניונים מ-project_parking_mapping
+        # ׳§׳‘׳׳× ׳׳™׳₪׳•׳™ ׳©׳׳•׳× ׳”׳—׳ ׳™׳•׳ ׳™׳ ׳-project_parking_mapping
         parking_names_map = {}
         try:
             mapping_result = supabase.table('project_parking_mapping').select('project_number, parking_name').execute()
@@ -1723,34 +1723,34 @@ def get_parking_data():
         except Exception as e:
             print(f"Warning: Could not load parking names mapping: {str(e)}")
         
-        # עיבוד הנתונים
+        # ׳¢׳™׳‘׳•׳“ ׳”׳ ׳×׳•׳ ׳™׳
         processed_data = []
         for row in result.data:
-            # וידוא שכל השדות הנדרשים קיימים
+            # ׳•׳™׳“׳•׳ ׳©׳›׳ ׳”׳©׳“׳•׳× ׳”׳ ׳“׳¨׳©׳™׳ ׳§׳™׳™׳׳™׳
             processed_row = {
                 'id': row.get('id'),
                 'parking_id': row.get('parking_id'),
                 'report_date': row.get('report_date'),
                 'project_number': row.get('project_number'),
-                'parking_name': parking_names_map.get(row.get('project_number'), '') or row.get('parking_name', ''),  # שם חניון מהמיפוי
+                'parking_name': parking_names_map.get(row.get('project_number'), '') or row.get('parking_name', ''),  # ׳©׳ ׳—׳ ׳™׳•׳ ׳׳”׳׳™׳₪׳•׳™
                 'total_revenue_shekels': float(row.get('total_revenue_shekels', 0)),
                 'net_revenue_shekels': float(row.get('net_revenue_shekels', 0)),
                 's_cash_shekels': float(row.get('s_cash_shekels', 0)),
                 's_credit_shekels': float(row.get('s_credit_shekels', 0)),
                 's_pango_shekels': float(row.get('s_pango_shekels', 0)),
                 's_celo_shekels': float(row.get('s_celo_shekels', 0)),
-                's_encoder1': int(row.get('s_encoder1', 0)),  # הוסף מקודד 1
-                's_encoder2': int(row.get('s_encoder2', 0)),  # הוסף מקודד 2
-                's_encoder3': int(row.get('s_encoder3', 0)),  # הוסף מקודד 3
-                'sencodertot': int(row.get('sencodertot', 0)),  # הוסף סה"כ מקודדים
+                's_encoder1': int(row.get('s_encoder1', 0)),  # ׳”׳•׳¡׳£ ׳׳§׳•׳“׳“ 1
+                's_encoder2': int(row.get('s_encoder2', 0)),  # ׳”׳•׳¡׳£ ׳׳§׳•׳“׳“ 2
+                's_encoder3': int(row.get('s_encoder3', 0)),  # ׳”׳•׳¡׳£ ׳׳§׳•׳“׳“ 3
+                'sencodertot': int(row.get('sencodertot', 0)),  # ׳”׳•׳¡׳£ ׳¡׳”"׳› ׳׳§׳•׳“׳“׳™׳
                 't_entry_tot': int(row.get('t_entry_tot', 0)),
                 't_exit_tot': int(row.get('t_exit_tot', 0)),
                 't_exit_s': int(row.get('t_exit_s', 0)),
                 't_exit_p': int(row.get('t_exit_p', 0)),
-                't_entry_s': int(row.get('t_entry_s', 0)),  # מזדמנים
-                't_entry_p': int(row.get('t_entry_p', 0)),  # מנויים
-                't_entry_ap': int(row.get('t_entry_ap', 0)),  # אפליקציה
-                't_open_b': int(row.get('t_open_b', 0)),  # פתיחות מחסום
+                't_entry_s': int(row.get('t_entry_s', 0)),  # ׳׳–׳“׳׳ ׳™׳
+                't_entry_p': int(row.get('t_entry_p', 0)),  # ׳׳ ׳•׳™׳™׳
+                't_entry_ap': int(row.get('t_entry_ap', 0)),  # ׳׳₪׳׳™׳§׳¦׳™׳”
+                't_open_b': int(row.get('t_open_b', 0)),  # ׳₪׳×׳™׳—׳•׳× ׳׳—׳¡׳•׳
                 'ts_per1': int(row.get('ts_per1', 0)),
                 'ts_per2': int(row.get('ts_per2', 0)),
                 'ts_per3': int(row.get('ts_per3', 0)),
@@ -1780,30 +1780,30 @@ def get_parking_data():
         
     except Exception as e:
         # Error getting parking data: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני חניון'})
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳§׳‘׳׳× ׳ ׳×׳•׳ ׳™ ׳—׳ ׳™׳•׳'})
 
 @app.route('/api/check-emails-now', methods=['POST'])
 def manual_email_check():
-    """API לבדיקת מיילים ידנית"""
+    """API ׳׳‘׳“׳™׳§׳× ׳׳™׳™׳׳™׳ ׳™׳“׳ ׳™׳×"""
     try:
         if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'}), 401
         
         if not supabase:
-            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+            return jsonify({'success': False, 'message': '׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳ ׳׳ ׳–׳׳™׳'})
         
         if not EMAIL_MONITORING_AVAILABLE:
-            return jsonify({'success': False, 'message': 'מערכת מיילים לא זמינה'})
+            return jsonify({'success': False, 'message': '׳׳¢׳¨׳›׳× ׳׳™׳™׳׳™׳ ׳׳ ׳–׳׳™׳ ׳”'})
         
         email = session['user_email']
         user_result = supabase.table('user_parkings').select('role, access_level').eq('email', email).execute()
         
         if not user_result.data:
-            return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
+            return jsonify({'success': False, 'message': '׳׳©׳×׳׳© ׳׳ ׳ ׳׳¦׳'})
         
         user_data = user_result.data[0]
         if user_data.get('role') != 'admin' and user_data.get('access_level') != 'group_manager':
-            return jsonify({'success': False, 'message': 'אין הרשאה לבדיקת מיילים'})
+            return jsonify({'success': False, 'message': '׳׳™׳ ׳”׳¨׳©׳׳” ׳׳‘׳“׳™׳§׳× ׳׳™׳™׳׳™׳'})
         
         def test_check():
             with app.app_context():
@@ -1811,45 +1811,45 @@ def manual_email_check():
         
         threading.Thread(target=test_check, daemon=True).start()
         
-        return jsonify({'success': True, 'message': 'בדיקת מיילים החלה ברקע'})
+        return jsonify({'success': True, 'message': '׳‘׳“׳™׳§׳× ׳׳™׳™׳׳™׳ ׳”׳—׳׳” ׳‘׳¨׳§׳¢'})
         
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/forgot-password')
 def forgot_password_page():
-    """דף איפוס סיסמה"""
+    """׳“׳£ ׳׳™׳₪׳•׳¡ ׳¡׳™׳¡׳׳”"""
     return render_template('forgot-password.html')
 
 @app.route('/api/forgot-password', methods=['POST'])
 def forgot_password():
-    """בקשה לאיפוס סיסמה - שליחת קוד למייל"""
+    """׳‘׳§׳©׳” ׳׳׳™׳₪׳•׳¡ ׳¡׳™׳¡׳׳” - ׳©׳׳™׳—׳× ׳§׳•׳“ ׳׳׳™׳™׳"""
     try:
         if not supabase:
-            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+            return jsonify({'success': False, 'message': '׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳ ׳׳ ׳–׳׳™׳'})
         
         data = request.get_json()
         email = data.get('email', '').strip()
         
-        # אימות מייל
+        # ׳׳™׳׳•׳× ׳׳™׳™׳
         is_valid_email, validated_email = validate_input(email, "email")
         if not is_valid_email:
-            return jsonify({'success': False, 'message': 'כתובת מייל לא תקינה'})
+            return jsonify({'success': False, 'message': '׳›׳×׳•׳‘׳× ׳׳™׳™׳ ׳׳ ׳×׳§׳™׳ ׳”'})
         
-        print(f"🔄 Password reset request for: {validated_email}")
+        print(f"נ”„ Password reset request for: {validated_email}")
         
-        # בדיקה שהמייל קיים במערכת
+        # ׳‘׳“׳™׳§׳” ׳©׳”׳׳™׳™׳ ׳§׳™׳™׳ ׳‘׳׳¢׳¨׳›׳×
         user_result = supabase.table('user_parkings').select('username, email').eq('email', validated_email).execute()
         
         if not user_result.data:
-            return jsonify({'success': False, 'message': 'כתובת מייל לא נמצאה במערכת'})
+            return jsonify({'success': False, 'message': '׳›׳×׳•׳‘׳× ׳׳™׳™׳ ׳׳ ׳ ׳׳¦׳׳” ׳‘׳׳¢׳¨׳›׳×'})
         
         user = user_result.data[0]
         
-        # יצירת קוד אימות
+        # ׳™׳¦׳™׳¨׳× ׳§׳•׳“ ׳׳™׳׳•׳×
         reset_code = generate_verification_code()
         
-        # שמירת הקוד בזיכרון זמני
+        # ׳©׳׳™׳¨׳× ׳”׳§׳•׳“ ׳‘׳–׳™׳›׳¨׳•׳ ׳–׳׳ ׳™
         password_reset_codes[validated_email] = {
             'code': reset_code,
             'timestamp': time.time(),
@@ -1858,123 +1858,123 @@ def forgot_password():
         }
         
         
-        # שליחת מייל
+        # ׳©׳׳™׳—׳× ׳׳™׳™׳
         email_sent = send_password_reset_verification_email(validated_email, reset_code, user['username'])
         
         if email_sent:
             return jsonify({
                 'success': True,
-                'message': 'קוד אימות נשלח לכתובת המייל שלך'
+                'message': '׳§׳•׳“ ׳׳™׳׳•׳× ׳ ׳©׳׳— ׳׳›׳×׳•׳‘׳× ׳”׳׳™׳™׳ ׳©׳׳'
             })
         else:
             return jsonify({
-                'success': True,  # נחזיר הצלחה גם אם המייל נכשל
-                'message': 'קוד אימות נוצר (בדוק לוגים)'
+                'success': True,  # ׳ ׳—׳–׳™׳¨ ׳”׳¦׳׳—׳” ׳’׳ ׳׳ ׳”׳׳™׳™׳ ׳ ׳›׳©׳
+                'message': '׳§׳•׳“ ׳׳™׳׳•׳× ׳ ׳•׳¦׳¨ (׳‘׳“׳•׳§ ׳׳•׳’׳™׳)'
             })
             
     except Exception as e:
-        print(f"❌ Forgot password error: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
+        print(f"ג Forgot password error: {str(e)}")
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳׳¢׳¨׳›׳×'})
 
 @app.route('/api/verify-reset-code', methods=['POST'])
 def verify_reset_code():
-    """אימות קוד איפוס סיסמה"""
+    """׳׳™׳׳•׳× ׳§׳•׳“ ׳׳™׳₪׳•׳¡ ׳¡׳™׳¡׳׳”"""
     try:
         data = request.get_json()
         email = data.get('email', '').strip()
         code = data.get('code', '').strip()
         
-        # אימות קלט
+        # ׳׳™׳׳•׳× ׳§׳׳˜
         is_valid_email, validated_email = validate_input(email, "email")
         is_valid_code, validated_code = validate_input(code, "verification_code")
         
         if not is_valid_email or not is_valid_code:
-            return jsonify({'success': False, 'message': 'נתונים לא תקינים'})
+            return jsonify({'success': False, 'message': '׳ ׳×׳•׳ ׳™׳ ׳׳ ׳×׳§׳™׳ ׳™׳'})
         
-        print(f"🔍 Verifying reset code for: {validated_email}")
+        print(f"נ” Verifying reset code for: {validated_email}")
         
-        # ניקוי קודים ישנים
+        # ׳ ׳™׳§׳•׳™ ׳§׳•׳“׳™׳ ׳™׳©׳ ׳™׳
         clean_expired_reset_codes()
         
-        # בדיקה שהקוד קיים
+        # ׳‘׳“׳™׳§׳” ׳©׳”׳§׳•׳“ ׳§׳™׳™׳
         if validated_email not in password_reset_codes:
-            return jsonify({'success': False, 'message': 'קוד לא נמצא או פג תוקף'})
+            return jsonify({'success': False, 'message': '׳§׳•׳“ ׳׳ ׳ ׳׳¦׳ ׳׳• ׳₪׳’ ׳×׳•׳§׳£'})
         
         reset_data = password_reset_codes[validated_email]
         
-        # בדיקת תוקף (10 דקות)
-        if time.time() - reset_data['timestamp'] > 600:  # 10 דקות
+        # ׳‘׳“׳™׳§׳× ׳×׳•׳§׳£ (10 ׳“׳§׳•׳×)
+        if time.time() - reset_data['timestamp'] > 600:  # 10 ׳“׳§׳•׳×
             del password_reset_codes[validated_email]
-            return jsonify({'success': False, 'message': 'הקוד פג תוקף'})
+            return jsonify({'success': False, 'message': '׳”׳§׳•׳“ ׳₪׳’ ׳×׳•׳§׳£'})
         
-        # בדיקת ניסיונות (מקסימום 3)
+        # ׳‘׳“׳™׳§׳× ׳ ׳™׳¡׳™׳•׳ ׳•׳× (׳׳§׳¡׳™׳׳•׳ 3)
         if reset_data['attempts'] >= 3:
             del password_reset_codes[validated_email]
-            return jsonify({'success': False, 'message': 'חרגת ממספר הניסיונות המותר'})
+            return jsonify({'success': False, 'message': '׳—׳¨׳’׳× ׳׳׳¡׳₪׳¨ ׳”׳ ׳™׳¡׳™׳•׳ ׳•׳× ׳”׳׳•׳×׳¨'})
         
-        # בדיקת הקוד
+        # ׳‘׳“׳™׳§׳× ׳”׳§׳•׳“
         if reset_data['code'] != validated_code:
             reset_data['attempts'] += 1
-            return jsonify({'success': False, 'message': 'קוד שגוי'})
+            return jsonify({'success': False, 'message': '׳§׳•׳“ ׳©׳’׳•׳™'})
         
-        # יצירת טוקן לאיפוס
+        # ׳™׳¦׳™׳¨׳× ׳˜׳•׳§׳ ׳׳׳™׳₪׳•׳¡
         import secrets
         reset_token = secrets.token_urlsafe(32)
         reset_data['token'] = reset_token
         reset_data['verified'] = True
         
-        print(f"✅ Reset code verified for: {validated_email}")
+        print(f"ג… Reset code verified for: {validated_email}")
         
         return jsonify({
             'success': True,
             'token': reset_token,
-            'message': 'קוד אומת בהצלחה'
+            'message': '׳§׳•׳“ ׳׳•׳׳× ׳‘׳”׳¦׳׳—׳”'
         })
         
     except Exception as e:
-        print(f"❌ Verify reset code error: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
+        print(f"ג Verify reset code error: {str(e)}")
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳׳¢׳¨׳›׳×'})
 
 @app.route('/api/reset-password', methods=['POST'])
 def reset_password():
-    """עדכון סיסמה חדשה"""
+    """׳¢׳“׳›׳•׳ ׳¡׳™׳¡׳׳” ׳—׳“׳©׳”"""
     try:
         if not supabase:
-            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+            return jsonify({'success': False, 'message': '׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳ ׳׳ ׳–׳׳™׳'})
         
         data = request.get_json()
         email = data.get('email', '').strip()
         token = data.get('token', '').strip()
         new_password = data.get('newPassword', '').strip()
         
-        # אימות קלט
+        # ׳׳™׳׳•׳× ׳§׳׳˜
         is_valid_email, validated_email = validate_input(email, "email")
         if not is_valid_email or not token or not new_password:
-            return jsonify({'success': False, 'message': 'נתונים לא תקינים'})
+            return jsonify({'success': False, 'message': '׳ ׳×׳•׳ ׳™׳ ׳׳ ׳×׳§׳™׳ ׳™׳'})
         
         if len(new_password) < 6:
-            return jsonify({'success': False, 'message': 'הסיסמה חייבת להיות לפחות 6 תווים'})
+            return jsonify({'success': False, 'message': '׳”׳¡׳™׳¡׳׳” ׳—׳™׳™׳‘׳× ׳׳”׳™׳•׳× ׳׳₪׳—׳•׳× 6 ׳×׳•׳•׳™׳'})
         
-        print(f"🔄 Resetting password for: {validated_email}")
+        print(f"נ”„ Resetting password for: {validated_email}")
         
-        # בדיקת הטוקן
+        # ׳‘׳“׳™׳§׳× ׳”׳˜׳•׳§׳
         if validated_email not in password_reset_codes:
-            return jsonify({'success': False, 'message': 'טוקן לא תקין או פג תוקף'})
+            return jsonify({'success': False, 'message': '׳˜׳•׳§׳ ׳׳ ׳×׳§׳™׳ ׳׳• ׳₪׳’ ׳×׳•׳§׳£'})
         
         reset_data = password_reset_codes[validated_email]
         
         if not reset_data.get('verified') or reset_data.get('token') != token:
-            return jsonify({'success': False, 'message': 'טוקן לא תקין'})
+            return jsonify({'success': False, 'message': '׳˜׳•׳§׳ ׳׳ ׳×׳§׳™׳'})
         
-        # בדיקת תוקף (30 דקות מתחילת התהליך)
-        if time.time() - reset_data['timestamp'] > 1800:  # 30 דקות
+        # ׳‘׳“׳™׳§׳× ׳×׳•׳§׳£ (30 ׳“׳§׳•׳× ׳׳×׳—׳™׳׳× ׳”׳×׳”׳׳™׳)
+        if time.time() - reset_data['timestamp'] > 1800:  # 30 ׳“׳§׳•׳×
             del password_reset_codes[validated_email]
-            return jsonify({'success': False, 'message': 'הטוקן פג תוקף'})
+            return jsonify({'success': False, 'message': '׳”׳˜׳•׳§׳ ׳₪׳’ ׳×׳•׳§׳£'})
         
-        # הצפנת הסיסמה החדשה
+        # ׳”׳¦׳₪׳ ׳× ׳”׳¡׳™׳¡׳׳” ׳”׳—׳“׳©׳”
         password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt(rounds=6, prefix=b'2a')).decode('utf-8')
         
-        # עדכון הסיסמה בבסיס הנתונים
+        # ׳¢׳“׳›׳•׳ ׳”׳¡׳™׳¡׳׳” ׳‘׳‘׳¡׳™׳¡ ׳”׳ ׳×׳•׳ ׳™׳
         current_time = datetime.now(timezone.utc).isoformat()
         
         update_result = supabase.table('user_parkings').update({
@@ -1985,25 +1985,25 @@ def reset_password():
         }).eq('email', validated_email).execute()
         
         if update_result.data:
-            # מחיקת הקוד מהזיכרון
+            # ׳׳—׳™׳§׳× ׳”׳§׳•׳“ ׳׳”׳–׳™׳›׳¨׳•׳
             del password_reset_codes[validated_email]
             
-            print(f"✅ Password reset successfully for: {validated_email}")
+            print(f"ג… Password reset successfully for: {validated_email}")
             
             return jsonify({
                 'success': True,
-                'message': 'הסיסמה עודכנה בהצלחה'
+                'message': '׳”׳¡׳™׳¡׳׳” ׳¢׳•׳“׳›׳ ׳” ׳‘׳”׳¦׳׳—׳”'
             })
         else:
-            return jsonify({'success': False, 'message': 'שגיאה בעדכון הסיסמה'})
+            return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳¢׳“׳›׳•׳ ׳”׳¡׳™׳¡׳׳”'})
         
     except Exception as e:
-        print(f"❌ Reset password error: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
+        print(f"ג Reset password error: {str(e)}")
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳׳¢׳¨׳›׳×'})
 
-# הוסף גם פונקציה לבדיקת תקפות תאריך
+# ׳”׳•׳¡׳£ ׳’׳ ׳₪׳•׳ ׳§׳¦׳™׳” ׳׳‘׳“׳™׳§׳× ׳×׳§׳₪׳•׳× ׳×׳׳¨׳™׳
 def validate_date_format(date_string):
-    """בדיקת תקפות פורמט תאריך YYYY-MM-DD"""
+    """׳‘׳“׳™׳§׳× ׳×׳§׳₪׳•׳× ׳₪׳•׳¨׳׳˜ ׳×׳׳¨׳™׳ YYYY-MM-DD"""
     try:
         datetime.strptime(date_string, '%Y-%m-%d')
         return True
@@ -2014,26 +2014,26 @@ def validate_date_format(date_string):
 def login():
     try:
         if not supabase:
-            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+            return jsonify({'success': False, 'message': '׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳ ׳׳ ׳–׳׳™׳'})
             
         data = request.get_json()
         username = data.get('username', '').strip()
         password = data.get('password', '').strip()
         
-        # אימות קלט
+        # ׳׳™׳׳•׳× ׳§׳׳˜
         is_valid_username, validated_username = validate_input(username, "username")
         is_valid_password, validated_password = validate_input(password, "password")
         
         if not is_valid_username:
-            print(f"🚨 Invalid username attempt: {username}")
-            return jsonify({'success': False, 'message': 'שם משתמש לא תקין'})
+            print(f"נ¨ Invalid username attempt: {username}")
+            return jsonify({'success': False, 'message': '׳©׳ ׳׳©׳×׳׳© ׳׳ ׳×׳§׳™׳'})
         
         if not is_valid_password:
-            print(f"🚨 Invalid password attempt from user: {validated_username}")
-            return jsonify({'success': False, 'message': 'סיסמה לא תקינה'})
+            print(f"נ¨ Invalid password attempt from user: {validated_username}")
+            return jsonify({'success': False, 'message': '׳¡׳™׳¡׳׳” ׳׳ ׳×׳§׳™׳ ׳”'})
         
         
-# קריאה לפונקציה עם טיפול פשוט  
+# ׳§׳¨׳™׳׳” ׳׳₪׳•׳ ׳§׳¦׳™׳” ׳¢׳ ׳˜׳™׳₪׳•׳ ׳₪׳©׳•׳˜  
         try:
             result = supabase.rpc('user_login', {
                 'p_username': validated_username,
@@ -2042,15 +2042,15 @@ def login():
             auth_result = result.data
             
         except Exception as rpc_error:
-            # ניקח את התוצאה מהשגיאה
+            # ׳ ׳™׳§׳— ׳׳× ׳”׳×׳•׳¦׳׳” ׳׳”׳©׳’׳™׳׳”
             if hasattr(rpc_error, 'args') and rpc_error.args:
                 auth_result = rpc_error.args[0]
                 
-                # בדיקת סוג הנתונים
+                # ׳‘׳“׳™׳§׳× ׳¡׳•׳’ ׳”׳ ׳×׳•׳ ׳™׳
                 if isinstance(auth_result, dict):
                     pass
                 elif isinstance(auth_result, str):
-                    # זה כנראה string שנראה כמו dict - ננסה eval
+                    # ׳–׳” ׳›׳ ׳¨׳׳” string ׳©׳ ׳¨׳׳” ׳›׳׳• dict - ׳ ׳ ׳¡׳” eval
                     try:
                         import ast
                         auth_result = ast.literal_eval(auth_result)
@@ -2059,21 +2059,21 @@ def login():
                             import json
                             auth_result = json.loads(auth_result)
                         except:
-                            print("🔍 Could not parse - treating as error message")
+                            print("נ” Could not parse - treating as error message")
                             return jsonify({'success': False, 'message': auth_result})
                 else:
-                    print(f"🔍 Unknown type: {type(auth_result)}")
+                    print(f"נ” Unknown type: {type(auth_result)}")
                     raise rpc_error
             else:
                 raise rpc_error
         
         
-        # עיבוד התוצאה
+        # ׳¢׳™׳‘׳•׳“ ׳”׳×׳•׳¦׳׳”
         if auth_result and auth_result.get('success'):
-            # בדיקה אם נדרש לשנות סיסמה
+            # ׳‘׳“׳™׳§׳” ׳׳ ׳ ׳“׳¨׳© ׳׳©׳ ׳•׳× ׳¡׳™׳¡׳׳”
             if auth_result.get('require_password_change'):
                 session['change_password_user'] = validated_username
-                print("🔍 Redirecting to password change")
+                print("נ” Redirecting to password change")
                 return jsonify({
                     'success': True,
                     'require_password_change': True,
@@ -2081,64 +2081,64 @@ def login():
                     'redirect': '/change-password'
                 })
             
-            # התחברות רגילה - קבלת האימייל
+            # ׳”׳×׳—׳‘׳¨׳•׳× ׳¨׳’׳™׳׳” - ׳§׳‘׳׳× ׳”׳׳™׳׳™׳™׳
             user_result = supabase.table('user_parkings').select('email').eq('username', validated_username).execute()
             
             if user_result.data and len(user_result.data) > 0:
                 email = user_result.data[0]['email']
                 
-                # יצירת קוד אימות חדש
+                # ׳™׳¦׳™׳¨׳× ׳§׳•׳“ ׳׳™׳׳•׳× ׳—׳“׳©
                 verification_code = generate_verification_code()
                 
-                # שמירה במסד נתונים
+                # ׳©׳׳™׳¨׳” ׳‘׳׳¡׳“ ׳ ׳×׳•׳ ׳™׳
                 if store_verification_code(email, verification_code):
-                    # שליחת מייל
+                    # ׳©׳׳™׳—׳× ׳׳™׳™׳
                     email_sent = send_verification_email(email, verification_code)
                     
-                    # שמירה ב-session
+                    # ׳©׳׳™׳¨׳” ׳‘-session
                     session['pending_email'] = email
                     return jsonify({'success': True, 'redirect': '/verify'})
                 else:
-                    return jsonify({'success': False, 'message': 'שגיאה בשמירת הקוד'})
+                    return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳©׳׳™׳¨׳× ׳”׳§׳•׳“'})
             else:
-                return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
+                return jsonify({'success': False, 'message': '׳׳©׳×׳׳© ׳׳ ׳ ׳׳¦׳'})
         else:
-            error_msg = auth_result.get('message', 'שם משתמש או סיסמה שגויים') if auth_result else 'שגיאה בהתחברות'
-            print(f"❌ Authentication failed: {error_msg}")
+            error_msg = auth_result.get('message', '׳©׳ ׳׳©׳×׳׳© ׳׳• ׳¡׳™׳¡׳׳” ׳©׳’׳•׳™׳™׳') if auth_result else '׳©׳’׳™׳׳” ׳‘׳”׳×׳—׳‘׳¨׳•׳×'
+            print(f"ג Authentication failed: {error_msg}")
             return jsonify({'success': False, 'message': error_msg})
             
     except Exception as e:
-        print(f"❌ OUTER EXCEPTION: {type(e)}")
-        print(f"❌ OUTER EXCEPTION MESSAGE: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
+        print(f"ג OUTER EXCEPTION: {type(e)}")
+        print(f"ג OUTER EXCEPTION MESSAGE: {str(e)}")
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳׳¢׳¨׳›׳×'})
 
 @app.route('/api/verify-code', methods=['POST'])
 def verify_code():
     try:
         if not supabase:
-            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+            return jsonify({'success': False, 'message': '׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳ ׳׳ ׳–׳׳™׳'})
             
         data = request.get_json()
         code = data.get('code', '').strip()
         email = session.get('pending_email')
         
-        # אימות קוד
+        # ׳׳™׳׳•׳× ׳§׳•׳“
         is_valid_code, validated_code = validate_input(code, "verification_code")
         if not is_valid_code:
-            print(f"🚨 Invalid verification code format: {code}")
-            return jsonify({'success': False, 'message': 'קוד לא תקין'})
+            print(f"נ¨ Invalid verification code format: {code}")
+            return jsonify({'success': False, 'message': '׳§׳•׳“ ׳׳ ׳×׳§׳™׳'})
         
         if not email:
-            print(f"🚨 No pending email in session")
-            return jsonify({'success': False, 'message': 'אין בקשה לאימות'})
+            print(f"נ¨ No pending email in session")
+            return jsonify({'success': False, 'message': '׳׳™׳ ׳‘׳§׳©׳” ׳׳׳™׳׳•׳×'})
         
         
-        # בדיקת הקוד מהמסד נתונים
+        # ׳‘׳“׳™׳§׳× ׳”׳§׳•׳“ ׳׳”׳׳¡׳“ ׳ ׳×׳•׳ ׳™׳
         if verify_code_from_database(email, validated_code):
             session['user_email'] = email
             session.pop('pending_email', None)
             
-            # 🆕 קבלת נתוני המשתמש לקביעת ההפניה
+            # נ†• ׳§׳‘׳׳× ׳ ׳×׳•׳ ׳™ ׳”׳׳©׳×׳׳© ׳׳§׳‘׳™׳¢׳× ׳”׳”׳₪׳ ׳™׳”
             try:
                 user_result = supabase.table('user_parkings').select(
                     'code_type, access_level, role'
@@ -2148,7 +2148,7 @@ def verify_code():
                     user_data = user_result.data[0]
                     # Use central redirect logic
                     redirect_url = get_user_redirect_url(email)
-                    print(f"🔍 User {email} redirected to: {redirect_url}")
+                    print(f"נ” User {email} redirected to: {redirect_url}")
 
                     return jsonify({
                         'success': True, 
@@ -2156,24 +2156,24 @@ def verify_code():
                         'user_type': user_data.get('code_type', '')
                     })
                 else:
-                    print(f"⚠️ User data not found, redirecting to dashboard")
+                    print(f"ג ן¸ User data not found, redirecting to dashboard")
                     return jsonify({'success': True, 'redirect': '/dashboard'})
                     
             except Exception as e:
                 # Error getting user data: {str(e)}")
-                # במקרה של שגיאה, נפנה לדשבורד רגיל
+                # ׳‘׳׳§׳¨׳” ׳©׳ ׳©׳’׳™׳׳”, ׳ ׳₪׳ ׳” ׳׳“׳©׳‘׳•׳¨׳“ ׳¨׳’׳™׳
                 return jsonify({'success': True, 'redirect': '/dashboard'})
         else:
-            print(f"❌ FAILED - Invalid or expired code")
-            return jsonify({'success': False, 'message': 'קוד שגוי או פג תוקף'})
+            print(f"ג FAILED - Invalid or expired code")
+            return jsonify({'success': False, 'message': '׳§׳•׳“ ׳©׳’׳•׳™ ׳׳• ׳₪׳’ ׳×׳•׳§׳£'})
             
     except Exception as e:
-        print(f"❌ Verify error: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
+        print(f"ג Verify error: {str(e)}")
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳׳¢׳¨׳›׳×'})
 
-# 🆕 הוסף גם פונקציה לבדיקת הרשאות מוקדמת (אופציונלית)
+# נ†• ׳”׳•׳¡׳£ ׳’׳ ׳₪׳•׳ ׳§׳¦׳™׳” ׳׳‘׳“׳™׳§׳× ׳”׳¨׳©׳׳•׳× ׳׳•׳§׳“׳׳× (׳׳•׳₪׳¦׳™׳•׳ ׳׳™׳×)
 def get_user_redirect_url(email):
-    """קבלת URL להפניה לפי סוג המשתמש"""
+    """׳§׳‘׳׳× URL ׳׳”׳₪׳ ׳™׳” ׳׳₪׳™ ׳¡׳•׳’ ׳”׳׳©׳×׳׳©"""
     try:
         if not supabase:
             return '/dashboard'
@@ -2234,7 +2234,7 @@ def ping():
 
 @app.route('/status')
 def status():
-    """בדיקת סטטוס מפורטת"""
+    """׳‘׳“׳™׳§׳× ׳¡׳˜׳˜׳•׳¡ ׳׳₪׳•׳¨׳˜׳×"""
     try:
         return jsonify({
             'service': 'S&B Parking Reports',
@@ -2255,7 +2255,7 @@ def status():
 
 @app.route('/health')
 def health_check():
-    """נקודת קצה לבדיקת תקינות השירות"""
+    """׳ ׳§׳•׳“׳× ׳§׳¦׳” ׳׳‘׳“׳™׳§׳× ׳×׳§׳™׳ ׳•׳× ׳”׳©׳™׳¨׳•׳×"""
     try:
         current_time = datetime.now().isoformat()
         
@@ -2283,41 +2283,41 @@ def not_found(error):
 def internal_error(error):
     return jsonify({'error': 'Internal server error'}), 500
 
-# Route לדף שינוי סיסמה
+# Route ׳׳“׳£ ׳©׳™׳ ׳•׳™ ׳¡׳™׳¡׳׳”
 @app.route('/change-password')
 def change_password_page():
     if 'change_password_user' not in session:
         return redirect(url_for('login_page'))
     return render_template('change-password.html')
 
-# API לשינוי סיסמה
+# API ׳׳©׳™׳ ׳•׳™ ׳¡׳™׳¡׳׳”
 @app.route('/api/change-password', methods=['POST'])
 def change_password():
     try:
         if not supabase:
-            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+            return jsonify({'success': False, 'message': '׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳ ׳׳ ׳–׳׳™׳'})
         
         if 'change_password_user' not in session:
-            return jsonify({'success': False, 'message': 'אין הרשאה לשינוי סיסמה'})
+            return jsonify({'success': False, 'message': '׳׳™׳ ׳”׳¨׳©׳׳” ׳׳©׳™׳ ׳•׳™ ׳¡׳™׳¡׳׳”'})
         
         data = request.get_json()
         old_password = data.get('old_password', '').strip()
         new_password = data.get('new_password', '').strip()
         confirm_password = data.get('confirm_password', '').strip()
         
-        # אימות קלט
+        # ׳׳™׳׳•׳× ׳§׳׳˜
         if not old_password or not new_password or not confirm_password:
-            return jsonify({'success': False, 'message': 'יש למלא את כל השדות'})
+            return jsonify({'success': False, 'message': '׳™׳© ׳׳׳׳ ׳׳× ׳›׳ ׳”׳©׳“׳•׳×'})
         
         if new_password != confirm_password:
-            return jsonify({'success': False, 'message': 'סיסמאות לא תואמות'})
+            return jsonify({'success': False, 'message': '׳¡׳™׳¡׳׳׳•׳× ׳׳ ׳×׳•׳׳׳•׳×'})
         
         if len(new_password) < 6:
-            return jsonify({'success': False, 'message': 'סיסמה חייבת להיות לפחות 6 תווים'})
+            return jsonify({'success': False, 'message': '׳¡׳™׳¡׳׳” ׳—׳™׳™׳‘׳× ׳׳”׳™׳•׳× ׳׳₪׳—׳•׳× 6 ׳×׳•׳•׳™׳'})
         
         username = session['change_password_user']
         
-# שינוי הסיסמה עם טיפול בAPIError
+# ׳©׳™׳ ׳•׳™ ׳”׳¡׳™׳¡׳׳” ׳¢׳ ׳˜׳™׳₪׳•׳ ׳‘APIError
         try:
             result = supabase.rpc('change_user_password', {
                 'p_username': username,
@@ -2326,7 +2326,7 @@ def change_password():
             }).execute()
             change_result = result.data
         except Exception as rpc_error:
-            # טיפול באותה בעיה
+            # ׳˜׳™׳₪׳•׳ ׳‘׳׳•׳×׳” ׳‘׳¢׳™׳”
             if hasattr(rpc_error, 'args') and rpc_error.args:
                 try:
                     import ast
@@ -2337,31 +2337,31 @@ def change_password():
                 raise rpc_error
         
         if change_result and change_result.get('success'):
-            # מחיקת המשתמש מהסשן וחזרה להתחברות
+            # ׳׳—׳™׳§׳× ׳”׳׳©׳×׳׳© ׳׳”׳¡׳©׳ ׳•׳—׳–׳¨׳” ׳׳”׳×׳—׳‘׳¨׳•׳×
             session.pop('change_password_user', None)
             return jsonify({
                 'success': True,
-                'message': 'סיסמה שונתה בהצלחה. אנא התחבר מחדש',
+                'message': '׳¡׳™׳¡׳׳” ׳©׳•׳ ׳×׳” ׳‘׳”׳¦׳׳—׳”. ׳׳ ׳ ׳”׳×׳—׳‘׳¨ ׳׳—׳“׳©',
                 'redirect': '/login'
             })
         else:
-            error_msg = result.data.get('message', 'שגיאה בשינוי סיסמה') if result.data else 'שגיאה בשינוי סיסמה'
+            error_msg = result.data.get('message', '׳©׳’׳™׳׳” ׳‘׳©׳™׳ ׳•׳™ ׳¡׳™׳¡׳׳”') if result.data else '׳©׳’׳™׳׳” ׳‘׳©׳™׳ ׳•׳™ ׳¡׳™׳¡׳׳”'
             return jsonify({'success': False, 'message': error_msg})
         
     except Exception as e:
-        print(f"❌ Change password error: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
+        print(f"ג Change password error: {str(e)}")
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳׳¢׳¨׳›׳×'})
 
-# API ליצירת משתמש חדש (למאסטר)
+# API ׳׳™׳¦׳™׳¨׳× ׳׳©׳×׳׳© ׳—׳“׳© (׳׳׳׳¡׳˜׳¨)
 @app.route('/api/create-user', methods=['POST'])
 def create_user():
     try:
         if not supabase:
-            return jsonify({'success': False, 'message': 'מסד הנתונים לא זמין'})
+            return jsonify({'success': False, 'message': '׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳ ׳׳ ׳–׳׳™׳'})
         
-        # בדיקת הרשאות - כרגע נחזור לזה אחר כך
+        # ׳‘׳“׳™׳§׳× ׳”׳¨׳©׳׳•׳× - ׳›׳¨׳’׳¢ ׳ ׳—׳–׳•׳¨ ׳׳–׳” ׳׳—׳¨ ׳›׳
         if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'})
+            return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'})
         
         data = request.get_json()
         username = data.get('username', '').strip()
@@ -2370,11 +2370,11 @@ def create_user():
         code_type = data.get('code_type', 'dashboard').strip()
         company_list = data.get('company_list', '').strip() or None
         
-        # אימות קלט בסיסי
+        # ׳׳™׳׳•׳× ׳§׳׳˜ ׳‘׳¡׳™׳¡׳™
         if not username or not email or not project_number:
-            return jsonify({'success': False, 'message': 'יש למלא את כל השדות הנדרשים'})
+            return jsonify({'success': False, 'message': '׳™׳© ׳׳׳׳ ׳׳× ׳›׳ ׳”׳©׳“׳•׳× ׳”׳ ׳“׳¨׳©׳™׳'})
         
-        # יצירת המשתמש
+        # ׳™׳¦׳™׳¨׳× ׳”׳׳©׳×׳׳©
         result = supabase.rpc('create_user_with_temp_password', {
             'p_username': username,
             'p_email': email,
@@ -2385,7 +2385,7 @@ def create_user():
         }).execute()
         
         if result.data and result.data.get('success'):
-            # שליחת מייל למשתמש החדש
+            # ׳©׳׳™׳—׳× ׳׳™׳™׳ ׳׳׳©׳×׳׳© ׳”׳—׳“׳©
             user_data = result.data
             send_new_user_email(
                 user_data.get('email'),
@@ -2396,7 +2396,7 @@ def create_user():
             
             return jsonify({
                 'success': True,
-                'message': f'משתמש נוצר בהצלחה. מייל נשלח ל-{email}',
+                'message': f'׳׳©׳×׳׳© ׳ ׳•׳¦׳¨ ׳‘׳”׳¦׳׳—׳”. ׳׳™׳™׳ ׳ ׳©׳׳— ׳-{email}',
                 'user_data': {
                     'username': username,
                     'email': email,
@@ -2404,19 +2404,19 @@ def create_user():
                 }
             })
         else:
-            error_msg = result.data.get('message', 'שגיאה ביצירת משתמש') if result.data else 'שגיאה ביצירת משתמש'
+            error_msg = result.data.get('message', '׳©׳’׳™׳׳” ׳‘׳™׳¦׳™׳¨׳× ׳׳©׳×׳׳©') if result.data else '׳©׳’׳™׳׳” ׳‘׳™׳¦׳™׳¨׳× ׳׳©׳×׳׳©'
             return jsonify({'success': False, 'message': error_msg})
         
     except Exception as e:
-        print(f"❌ Create user error: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
+        print(f"ג Create user error: {str(e)}")
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳׳¢׳¨׳›׳×'})
 
 def send_new_user_email(email, username, temp_password, login_url):
-    """שליחת מייל למשתמש חדש עם פרטי התחברות"""
+    """׳©׳׳™׳—׳× ׳׳™׳™׳ ׳׳׳©׳×׳׳© ׳—׳“׳© ׳¢׳ ׳₪׳¨׳˜׳™ ׳”׳×׳—׳‘׳¨׳•׳×"""
     
     if not mail:
-        print(f"❌ Mail system not available")
-        print(f"📱 NEW USER DETAILS for {email}:")
+        print(f"ג Mail system not available")
+        print(f"נ“± NEW USER DETAILS for {email}:")
         print(f"   Username: {username}")
         print(f"   Password: {temp_password}")
         print(f"   URL: {login_url}")
@@ -2425,45 +2425,45 @@ def send_new_user_email(email, username, temp_password, login_url):
     try:
         
         msg = Message(
-            subject='חשבון חדש - S&B Parking',
+            subject='׳—׳©׳‘׳•׳ ׳—׳“׳© - S&B Parking',
             recipients=[email],
             html=f"""
             <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">
-                <h2 style="color: #667eea;">שיידט את בכמן ישראל</h2>
-                <h3>חשבון חדש נוצר עבורך במערכת דוחות החניות</h3>
+                <h2 style="color: #667eea;">׳©׳™׳™׳“׳˜ ׳׳× ׳‘׳›׳׳ ׳™׳©׳¨׳׳</h2>
+                <h3>׳—׳©׳‘׳•׳ ׳—׳“׳© ׳ ׳•׳¦׳¨ ׳¢׳‘׳•׳¨׳ ׳‘׳׳¢׳¨׳›׳× ׳“׳•׳—׳•׳× ׳”׳—׳ ׳™׳•׳×</h3>
                 
                 <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <p><strong>שם משתמש:</strong> {username}</p>
-                    <p><strong>סיסמה זמנית:</strong> <span style="font-family: monospace; background: #e9ecef; padding: 2px 6px;">{temp_password}</span></p>
-                    <p><strong>קישור להתחברות:</strong></p>
+                    <p><strong>׳©׳ ׳׳©׳×׳׳©:</strong> {username}</p>
+                    <p><strong>׳¡׳™׳¡׳׳” ׳–׳׳ ׳™׳×:</strong> <span style="font-family: monospace; background: #e9ecef; padding: 2px 6px;">{temp_password}</span></p>
+                    <p><strong>׳§׳™׳©׳•׳¨ ׳׳”׳×׳—׳‘׳¨׳•׳×:</strong></p>
                     <a href="{login_url}" style="color: #667eea; text-decoration: none; font-weight: bold;">{login_url}</a>
                 </div>
                 
                 <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                    <p style="margin: 0; color: #856404;"><strong>חשוב:</strong></p>
+                    <p style="margin: 0; color: #856404;"><strong>׳—׳©׳•׳‘:</strong></p>
                     <p style="margin: 5px 0 0 0; color: #856404;">
-                        • הסיסמה הזמנית תפוג ב-01/01/2025<br>
-                        • בכניסה הראשונה תתבקש לשנות את הסיסמה<br>
-                        • לאחר שינוי הסיסמה תוכל להתחבר למערכת
+                        ג€¢ ׳”׳¡׳™׳¡׳׳” ׳”׳–׳׳ ׳™׳× ׳×׳₪׳•׳’ ׳‘-01/01/2025<br>
+                        ג€¢ ׳‘׳›׳ ׳™׳¡׳” ׳”׳¨׳׳©׳•׳ ׳” ׳×׳×׳‘׳§׳© ׳׳©׳ ׳•׳× ׳׳× ׳”׳¡׳™׳¡׳׳”<br>
+                        ג€¢ ׳׳׳—׳¨ ׳©׳™׳ ׳•׳™ ׳”׳¡׳™׳¡׳׳” ׳×׳•׳›׳ ׳׳”׳×׳—׳‘׳¨ ׳׳׳¢׳¨׳›׳×
                     </p>
                 </div>
                 
-                <p>אם יש לך שאלות, צור קשר עם מנהל המערכת.</p>
+                <p>׳׳ ׳™׳© ׳׳ ׳©׳׳׳•׳×, ׳¦׳•׳¨ ׳§׳©׳¨ ׳¢׳ ׳׳ ׳”׳ ׳”׳׳¢׳¨׳›׳×.</p>
                 
                 <hr>
-                <p style="color: #666; font-size: 12px;">S&B Parking - מערכת דוחות חניות</p>
+                <p style="color: #666; font-size: 12px;">S&B Parking - ׳׳¢׳¨׳›׳× ׳“׳•׳—׳•׳× ׳—׳ ׳™׳•׳×</p>
             </div>
             """,
             sender=app.config['MAIL_USERNAME']
         )
         
         mail.send(msg)
-        print(f"✅ New user email sent successfully to {email}")
+        print(f"ג… New user email sent successfully to {email}")
         return True
         
     except Exception as e:
-        print(f"❌ New user email error: {str(e)}")
-        print(f"📱 BACKUP - NEW USER DETAILS for {email}:")
+        print(f"ג New user email error: {str(e)}")
+        print(f"נ“± BACKUP - NEW USER DETAILS for {email}:")
         print(f"   Username: {username}")
         print(f"   Password: {temp_password}")
         print(f"   URL: {login_url}")
@@ -2471,15 +2471,15 @@ def send_new_user_email(email, username, temp_password, login_url):
 
 @app.route('/master-users')
 def master_users_page():
-    """דף ניהול משתמשים למאסטר"""
+    """׳“׳£ ׳ ׳™׳”׳•׳ ׳׳©׳×׳׳©׳™׳ ׳׳׳׳¡׳˜׳¨"""
     if 'user_email' not in session:
         return redirect(url_for('login_page'))
     
-    # בדיקת הרשאות מאסטר
+    # ׳‘׳“׳™׳§׳× ׳”׳¨׳©׳׳•׳× ׳׳׳¡׳˜׳¨
     try:
         user_result = supabase.table('user_parkings').select('code_type, access_level').eq('email', session['user_email']).execute()
         if not user_result.data or user_result.data[0].get('code_type') != 'master':
-            print(f"⚠️ Unauthorized access attempt to master-users by {session['user_email']}")
+            print(f"ג ן¸ Unauthorized access attempt to master-users by {session['user_email']}")
             return redirect(url_for('dashboard'))
     except Exception as e:
         # Error checking master permissions: {str(e)}")
@@ -2489,15 +2489,15 @@ def master_users_page():
 
 @app.route('/parking-manager-users')
 def parking_manager_users_page():
-    """דף ניהול משתמשים למנהל חניון"""
+    """׳“׳£ ׳ ׳™׳”׳•׳ ׳׳©׳×׳׳©׳™׳ ׳׳׳ ׳”׳ ׳—׳ ׳™׳•׳"""
     if 'user_email' not in session:
         return redirect(url_for('login_page'))
     
-    # בדיקת הרשאות מנהל חניון
+    # ׳‘׳“׳™׳§׳× ׳”׳¨׳©׳׳•׳× ׳׳ ׳”׳ ׳—׳ ׳™׳•׳
     try:
         user_result = supabase.table('user_parkings').select('code_type, project_number, access_level').eq('email', session['user_email']).execute()
         if not user_result.data or user_result.data[0].get('code_type') not in ['parking_manager', 'parking_manager_prox']:
-            print(f"⚠️ Unauthorized access attempt to parking-manager-users by {session['user_email']}")
+            print(f"ג ן¸ Unauthorized access attempt to parking-manager-users by {session['user_email']}")
             return redirect(url_for('dashboard'))
     except Exception as e:
         # Error checking parking manager permissions: {str(e)}")
@@ -2515,7 +2515,7 @@ def dashboard_v2_page():
     try:
         user_result = supabase.table('user_parkings').select('code_type').eq('email', session['user_email']).execute()
         if not user_result.data:
-            print(f"⚠️ Unauthorized access attempt to dashboard-v2 by {session['user_email']}")
+            print(f"ג ן¸ Unauthorized access attempt to dashboard-v2 by {session['user_email']}")
             return redirect(url_for('dashboard'))
             
         code_type = user_result.data[0].get('code_type', '')
@@ -2523,7 +2523,7 @@ def dashboard_v2_page():
         
         # Allow normalized matches
         if code_type_clean not in ['dashboard_v2', 'dashboardv2'] and code_type != 'master':
-            print(f"⚠️ Unauthorized access attempt to dashboard-v2 by {session['user_email']} (code_type: {code_type})")
+            print(f"ג ן¸ Unauthorized access attempt to dashboard-v2 by {session['user_email']} (code_type: {code_type})")
             return redirect(url_for('dashboard'))
             
     except Exception as e:
@@ -2543,14 +2543,14 @@ def dashboard_v3_page():
     try:
         user_result = supabase.table('user_parkings').select('code_type').eq('email', session['user_email']).execute()
         if not user_result.data:
-            print(f"⚠️ Unauthorized access attempt to dashboard-v3 by {session['user_email']}")
+            print(f"ג ן¸ Unauthorized access attempt to dashboard-v3 by {session['user_email']}")
             return redirect(url_for('dashboard'))
             
         code_type = user_result.data[0].get('code_type', '')
         code_type_clean = str(code_type).strip().lower().replace(' ', '_').replace('-', '_')
 
         if code_type_clean not in ['dashboard_v3', 'dashboardv3'] and code_type != 'master':
-            print(f"⚠️ Unauthorized access attempt to dashboard-v3 by {session['user_email']} (code_type: {code_type})")
+            print(f"ג ן¸ Unauthorized access attempt to dashboard-v3 by {session['user_email']} (code_type: {code_type})")
             return redirect(url_for('dashboard'))
             
     except Exception as e:
@@ -2562,7 +2562,7 @@ def dashboard_v3_page():
 
 @app.route('/parking-manager-users-part')
 def parking_manager_users_part_page():
-    """דף ניהול משתמשים לחניון ספציפי (ניהול חלקי)"""
+    """׳“׳£ ׳ ׳™׳”׳•׳ ׳׳©׳×׳׳©׳™׳ ׳׳—׳ ׳™׳•׳ ׳¡׳₪׳¦׳™׳₪׳™ (׳ ׳™׳”׳•׳ ׳—׳׳§׳™)"""
     if 'user_email' not in session:
         return redirect(url_for('login_page'))
     
@@ -2571,7 +2571,7 @@ def parking_manager_users_part_page():
     try:
         user_result = supabase.table('user_parkings').select('code_type, company_list, counting').eq('email', session['user_email']).execute()
         if not user_result.data:
-            print(f"⚠️ Unauthorized access attempt to parking-manager-users-part by {session['user_email']}")
+            print(f"ג ן¸ Unauthorized access attempt to parking-manager-users-part by {session['user_email']}")
             return redirect(url_for('dashboard'))
             
         user_data = user_result.data[0]
@@ -2582,7 +2582,7 @@ def parking_manager_users_part_page():
         
         # Allow 'parking_manager_part' AND 'parking_manager_partial' for legacy support
         if code_type_lower not in ['parking_manager_part', 'parking_manager_partial'] and code_type_lower != 'master':
-             print(f"⚠️ Unauthorized access attempt to parking-manager-users-part by {session['user_email']} (code_type: {code_type})")
+             print(f"ג ן¸ Unauthorized access attempt to parking-manager-users-part by {session['user_email']} (code_type: {code_type})")
              return redirect(url_for('dashboard'))
 
     except Exception as e:
@@ -2593,20 +2593,20 @@ def parking_manager_users_part_page():
 
 @app.route('/parking-tour')
 def parking_tour_page():
-    """דף חיפוש מנויים למשתמשי Parking_tour"""
+    """׳“׳£ ׳—׳™׳₪׳•׳© ׳׳ ׳•׳™׳™׳ ׳׳׳©׳×׳׳©׳™ Parking_tour"""
     if 'user_email' not in session:
         return redirect(url_for('login_page'))
     
-    # בדיקת הרשאות Parking_tour
+    # ׳‘׳“׳™׳§׳× ׳”׳¨׳©׳׳•׳× Parking_tour
     try:
         user_result = supabase.table('user_parkings').select('code_type, project_number, parking_name, access_level').eq('email', session['user_email']).execute()
         if not user_result.data:
-            print(f"⚠️ No user data found for {session['user_email']}")
+            print(f"ג ן¸ No user data found for {session['user_email']}")
             return redirect(url_for('dashboard'))
         
         code_type = user_result.data[0].get('code_type', '')
         if code_type != 'Parking_tour' and code_type != 'parking_tour':
-            print(f"⚠️ Unauthorized access attempt to parking-tour by {session['user_email']} (code_type: {code_type})")
+            print(f"ג ן¸ Unauthorized access attempt to parking-tour by {session['user_email']} (code_type: {code_type})")
             return redirect(url_for('dashboard'))
     except Exception as e:
         print(f"Error checking parking tour permissions: {str(e)}")
@@ -2616,26 +2616,26 @@ def parking_tour_page():
 
 @app.route('/mobile-parking-controller')
 def mobile_parking_controller_page():
-    """דף בקרת חניון למובייל - Mobile Parking Controller"""
+    """׳“׳£ ׳‘׳§׳¨׳× ׳—׳ ׳™׳•׳ ׳׳׳•׳‘׳™׳™׳ - Mobile Parking Controller"""
     if 'user_email' not in session:
         return redirect(url_for('login_page'))
     
-    # בדיקת הרשאות - רק למשתמשים עם קוד mobile_controller
+    # ׳‘׳“׳™׳§׳× ׳”׳¨׳©׳׳•׳× - ׳¨׳§ ׳׳׳©׳×׳׳©׳™׳ ׳¢׳ ׳§׳•׳“ mobile_controller
     try:
         user_result = supabase.table('user_parkings').select(
             'code_type, project_number, parking_name, access_level, permissions'
         ).eq('email', session['user_email']).execute()
         
         if not user_result.data:
-            print(f"⚠️ No user data found for {session['user_email']}")
+            print(f"ג ן¸ No user data found for {session['user_email']}")
             return redirect(url_for('dashboard'))
         
         user_data = user_result.data[0]
         code_type = user_data.get('code_type', '')
         
-        # בדיקה שהמשתמש הוא mobile_controller
+        # ׳‘׳“׳™׳§׳” ׳©׳”׳׳©׳×׳׳© ׳”׳•׳ mobile_controller
         if code_type.lower() != 'mobile_controller':
-            print(f"⚠️ Unauthorized access attempt to mobile-parking-controller by {session['user_email']} (code_type: {code_type})")
+            print(f"ג ן¸ Unauthorized access attempt to mobile-parking-controller by {session['user_email']} (code_type: {code_type})")
             return redirect(url_for('dashboard'))
         
     except Exception as e:
@@ -2644,90 +2644,90 @@ def mobile_parking_controller_page():
     
     return render_template('mobile_parking_controller.html')
 
-# ========== API לחיפוש מנויים - Parking Tour ==========
+# ========== API ׳׳—׳™׳₪׳•׳© ׳׳ ׳•׳™׳™׳ - Parking Tour ==========
 
 @app.route('/api/parking-tour/search', methods=['POST'])
 def parking_tour_search():
-    """חיפוש מנוי לפי לוחית רישוי"""
+    """׳—׳™׳₪׳•׳© ׳׳ ׳•׳™ ׳׳₪׳™ ׳׳•׳—׳™׳× ׳¨׳™׳©׳•׳™"""
     print("="*50)
-    print("🔍 PARKING TOUR SEARCH CALLED!")
+    print("נ” PARKING TOUR SEARCH CALLED!")
     print("="*50)
     
     try:
         if 'user_email' not in session:
-            print("❌ NO USER IN SESSION")
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            print("ג NO USER IN SESSION")
+            return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'}), 401
         
-        print(f"✅ User: {session['user_email']}")
+        print(f"ג… User: {session['user_email']}")
         
-        # בדיקת הרשאות - מבוטלת זמנית לצורך בדיקה
-        # TODO: להחזיר בדיקת הרשאות אחרי הבדיקות
+        # ׳‘׳“׳™׳§׳× ׳”׳¨׳©׳׳•׳× - ׳׳‘׳•׳˜׳׳× ׳–׳׳ ׳™׳× ׳׳¦׳•׳¨׳ ׳‘׳“׳™׳§׳”
+        # TODO: ׳׳”׳—׳–׳™׳¨ ׳‘׳“׳™׳§׳× ׳”׳¨׳©׳׳•׳× ׳׳—׳¨׳™ ׳”׳‘׳“׳™׳§׳•׳×
         
         # user_result = supabase.table('user_parkings').select(
         #     'code_type, project_number, parking_name'
         # ).eq('email', session['user_email']).execute()
         
         # if not user_result.data:
-        #     return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+        #     return jsonify({'success': False, 'message': '׳׳™׳ ׳”׳¨׳©׳׳”'}), 403
             
         # code_type = user_result.data[0].get('code_type', '')
         # if code_type != 'Parking_tour' and code_type != 'parking_tour':
-        #     return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+        #     return jsonify({'success': False, 'message': '׳׳™׳ ׳”׳¨׳©׳׳”'}), 403
         
-        # לצורך בדיקה - נשתמש ב-parking_id מהבקשה
+        # ׳׳¦׳•׳¨׳ ׳‘׳“׳™׳§׳” - ׳ ׳©׳×׳׳© ׳‘-parking_id ׳׳”׳‘׳§׳©׳”
         # user_data = user_result.data[0]
         # user_parking_id = user_data.get('project_number')
-        user_parking_id = None  # ביטלנו זמנית את הבדיקה
+        user_parking_id = None  # ׳‘׳™׳˜׳׳ ׳• ׳–׳׳ ׳™׳× ׳׳× ׳”׳‘׳“׳™׳§׳”
         
-        # קבלת נתונים מהבקשה
+        # ׳§׳‘׳׳× ׳ ׳×׳•׳ ׳™׳ ׳׳”׳‘׳§׳©׳”
         data = request.get_json()
-        print(f"📦 Request data: {data}")
+        print(f"נ“¦ Request data: {data}")
         
         license_plate = data.get('license_plate', '').strip()
-        parking_id = data.get('parking_id')  # לצורך בדיקה, נשתמש רק במה שנשלח
+        parking_id = data.get('parking_id')  # ׳׳¦׳•׳¨׳ ׳‘׳“׳™׳§׳”, ׳ ׳©׳×׳׳© ׳¨׳§ ׳‘׳׳” ׳©׳ ׳©׳׳—
         
         if not license_plate:
-            return jsonify({'success': False, 'message': 'יש להזין לוחית רישוי'})
+            return jsonify({'success': False, 'message': '׳™׳© ׳׳”׳–׳™׳ ׳׳•׳—׳™׳× ׳¨׳™׳©׳•׳™'})
         
-        # ניקוי לוחית רישוי - הסרת רווחים ומקפים
+        # ׳ ׳™׳§׳•׳™ ׳׳•׳—׳™׳× ׳¨׳™׳©׳•׳™ - ׳”׳¡׳¨׳× ׳¨׳•׳•׳—׳™׳ ׳•׳׳§׳₪׳™׳
         clean_plate = license_plate.replace(' ', '').replace('-', '')
         
-        print(f"🔍 Searching for license plate: {clean_plate} in parking: {parking_id}")
+        print(f"נ” Searching for license plate: {clean_plate} in parking: {parking_id}")
         
-        # בדיקת דמו - החזרת תוצאה לדוגמה
-        if clean_plate == "23320601":  # הלוחית שניסית
+        # ׳‘׳“׳™׳§׳× ׳“׳׳• - ׳”׳—׳–׳¨׳× ׳×׳•׳¦׳׳” ׳׳“׳•׳’׳׳”
+        if clean_plate == "23320601":  # ׳”׳׳•׳—׳™׳× ׳©׳ ׳™׳¡׳™׳×
             demo_result = [{
                 'id': '123',
-                'firstName': 'ישראל',
-                'lastName': 'ישראלי',
+                'firstName': '׳™׳©׳¨׳׳',
+                'lastName': '׳™׳©׳¨׳׳׳™',
                 'lpn1': '2-33-20601',
                 'contractId': '1001',
-                'companyName': 'חברה לדוגמה',
+                'companyName': '׳—׳‘׳¨׳” ׳׳“׳•׳’׳׳”',
                 'validFrom': '2024-01-01',
                 'validUntil': '2025-12-31'
             }]
-            print("✅ DEMO MODE - Returning test result")
+            print("ג… DEMO MODE - Returning test result")
             return jsonify({
                 'success': True,
                 'data': demo_result,
                 'total': 1,
-                'message': 'מצב הדגמה'
+                'message': '׳׳¦׳‘ ׳”׳“׳’׳׳”'
             })
         
-        # נבדוק אם יש חניון
+        # ׳ ׳‘׳“׳•׳§ ׳׳ ׳™׳© ׳—׳ ׳™׳•׳
         if not parking_id:
-            print(f"❌ No parking_id provided")
+            print(f"ג No parking_id provided")
             return jsonify({
                 'success': False,
-                'message': 'לא נבחר חניון'
+                'message': '׳׳ ׳ ׳‘׳—׳¨ ׳—׳ ׳™׳•׳'
             })
         
-        # קבלת נתוני החיבור לשרת החניון
-        ip_address = '192.117.0.122'  # ברירת מחדל
-        port = 8240  # ברירת מחדל
+        # ׳§׳‘׳׳× ׳ ׳×׳•׳ ׳™ ׳”׳—׳™׳‘׳•׳¨ ׳׳©׳¨׳× ׳”׳—׳ ׳™׳•׳
+        ip_address = '192.117.0.122'  # ׳‘׳¨׳™׳¨׳× ׳׳—׳“׳
+        port = 8240  # ׳‘׳¨׳™׳¨׳× ׳׳—׳“׳
         
         try:
-            # בדיקה אם יש מיפוי לחניון
+            # ׳‘׳“׳™׳§׳” ׳׳ ׳™׳© ׳׳™׳₪׳•׳™ ׳׳—׳ ׳™׳•׳
             if parking_id:
                 parking_mapping = supabase.table('project_parking_mapping').select(
                     'parking_id, ip_address, port'
@@ -2738,19 +2738,19 @@ def parking_tour_search():
                     ip_address = parking_data.get('ip_address') or ip_address
                     port = parking_data.get('port') or port
                 else:
-                    print(f"⚠️ No parking mapping found for parking {parking_id}, using defaults")
+                    print(f"ג ן¸ No parking mapping found for parking {parking_id}, using defaults")
         except Exception as e:
             print(f"Error getting parking data: {str(e)}, using defaults")
         
-        print(f"🔌 Using direct server connection...")
+        print(f"נ” Using direct server connection...")
         
-        # בניית URL ישירות לשרת החניון
+        # ׳‘׳ ׳™׳™׳× URL ׳™׳©׳™׳¨׳•׳× ׳׳©׳¨׳× ׳”׳—׳ ׳™׳•׳
         protocol = "https"
         url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/consumers?lpn={clean_plate}"
         
-        print(f"📤 Direct URL: {url}")
+        print(f"נ“₪ Direct URL: {url}")
         
-        # הכנת headers עם Basic Auth
+        # ׳”׳›׳ ׳× headers ׳¢׳ Basic Auth
         auth_string = base64.b64encode(b'2022:2022').decode('ascii')
         headers = {
             'Authorization': f'Basic {auth_string}',
@@ -2759,51 +2759,51 @@ def parking_tour_search():
         }
         
         try:
-            # קריאה ישירה לשרת
-            print(f"🌐 Making direct request to parking server...")
+            # ׳§׳¨׳™׳׳” ׳™׳©׳™׳¨׳” ׳׳©׳¨׳×
+            print(f"נ Making direct request to parking server...")
             
-            # ביטול אזהרות SSL
+            # ׳‘׳™׳˜׳•׳ ׳׳–׳”׳¨׳•׳× SSL
             import urllib3
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
             
             response = requests.get(url, headers=headers, verify=False, timeout=30)
             
-            print(f"📡 Response status: {response.status_code}")
-            print(f"📄 Response headers: {dict(response.headers)}")
+            print(f"נ“¡ Response status: {response.status_code}")
+            print(f"נ“„ Response headers: {dict(response.headers)}")
             
             if response.status_code != 200:
-                print(f"❌ Server returned {response.status_code}")
-                print(f"📄 Error response: {response.text[:500]}")
+                print(f"ג Server returned {response.status_code}")
+                print(f"נ“„ Error response: {response.text[:500]}")
                 return jsonify({
                     'success': False,
-                    'message': 'שגיאה בחיפוש במערכת החניון'
+                    'message': '׳©׳’׳™׳׳” ׳‘׳—׳™׳₪׳•׳© ׳‘׳׳¢׳¨׳›׳× ׳”׳—׳ ׳™׳•׳'
                 })
             
-            # עיבוד התשובה
+            # ׳¢׳™׳‘׳•׳“ ׳”׳×׳©׳•׳‘׳”
             content_type = response.headers.get('content-type', '')
-            print(f"📄 Content-Type: {content_type}")
-            print(f"📄 Response body (first 1000 chars): {response.text[:1000]}")
+            print(f"נ“„ Content-Type: {content_type}")
+            print(f"נ“„ Response body (first 1000 chars): {response.text[:1000]}")
             
             consumers_data = []
             
             if 'xml' in content_type or response.text.startswith('<?xml'):
-                print(f"📋 Parsing XML response...")
+                print(f"נ“‹ Parsing XML response...")
                 import xml.etree.ElementTree as ET
                 
                 try:
                     root = ET.fromstring(response.text)
-                    print(f"📋 Root element: {root.tag}")
+                    print(f"נ“‹ Root element: {root.tag}")
                     
                     # Option 1: consumers/consumer structure
                     consumers_elem = root.find('.//consumers')
                     if consumers_elem is not None:
-                        print(f"📋 Found consumers element")
+                        print(f"נ“‹ Found consumers element")
                         for consumer_elem in consumers_elem.findall('consumer'):
                             consumer_data = {}
                             for child in consumer_elem:
                                 consumer_data[child.tag] = child.text
                             consumers_data.append(consumer_data)
-                            print(f"📋 Consumer found: {consumer_data}")
+                            print(f"נ“‹ Consumer found: {consumer_data}")
                     
                     # Option 2: Direct consumer elements
                     if not consumers_data:
@@ -2812,7 +2812,7 @@ def parking_tour_search():
                             for child in consumer_elem:
                                 consumer_data[child.tag] = child.text
                             consumers_data.append(consumer_data)
-                            print(f"📋 Consumer found (direct): {consumer_data}")
+                            print(f"נ“‹ Consumer found (direct): {consumer_data}")
                     
                     # Option 3: Root is consumer
                     if not consumers_data and root.tag == 'consumer':
@@ -2820,17 +2820,17 @@ def parking_tour_search():
                         for child in root:
                             consumer_data[child.tag] = child.text
                         consumers_data = [consumer_data]
-                        print(f"📋 Consumer found (root): {consumer_data}")
+                        print(f"נ“‹ Consumer found (root): {consumer_data}")
                 
                 except ET.ParseError as e:
-                    print(f"❌ XML Parse error: {str(e)}")
+                    print(f"ג XML Parse error: {str(e)}")
                     return jsonify({
                         'success': False,
-                        'message': 'שגיאה בפענוח תשובת השרת'
+                        'message': '׳©׳’׳™׳׳” ׳‘׳₪׳¢׳ ׳•׳— ׳×׳©׳•׳‘׳× ׳”׳©׳¨׳×'
                     })
             else:
                 # Try JSON
-                print(f"📋 Trying to parse as JSON...")
+                print(f"נ“‹ Trying to parse as JSON...")
                 try:
                     json_data = response.json()
                     if isinstance(json_data, list):
@@ -2842,37 +2842,37 @@ def parking_tour_search():
                             consumers_data = [json_data['consumer']]
                         else:
                             consumers_data = [json_data]
-                    print(f"📋 Parsed JSON successfully: {len(consumers_data)} consumers")
+                    print(f"נ“‹ Parsed JSON successfully: {len(consumers_data)} consumers")
                 except:
-                    print(f"❌ Failed to parse as JSON")
+                    print(f"ג Failed to parse as JSON")
                     return jsonify({
                         'success': False,
-                        'message': 'שגיאה בפענוח תשובת השרת'
+                        'message': '׳©׳’׳™׳׳” ׳‘׳₪׳¢׳ ׳•׳— ׳×׳©׳•׳‘׳× ׳”׳©׳¨׳×'
                     })
             
             result = {'success': True, 'data': consumers_data}
-            print(f"✅ Search completed successfully! Found {len(consumers_data)} consumers")
+            print(f"ג… Search completed successfully! Found {len(consumers_data)} consumers")
                 
         except requests.exceptions.RequestException as e:
-            print(f"❌ Request error: {str(e)}")
+            print(f"ג Request error: {str(e)}")
             return jsonify({
                 'success': False,
-                'message': f'שגיאה בחיבור לשרת החניון'
+                'message': f'׳©׳’׳™׳׳” ׳‘׳—׳™׳‘׳•׳¨ ׳׳©׳¨׳× ׳”׳—׳ ׳™׳•׳'
             })
         except Exception as e:
-            print(f"❌ Unexpected error: {str(e)}")
+            print(f"ג Unexpected error: {str(e)}")
             import traceback
             print(traceback.format_exc())
             return jsonify({
                 'success': False,
-                'message': 'שגיאה בחיפוש במערכת החניון'
+                'message': '׳©׳’׳™׳׳” ׳‘׳—׳™׳₪׳•׳© ׳‘׳׳¢׳¨׳›׳× ׳”׳—׳ ׳™׳•׳'
             })
         
-        # עיבוד התוצאות מה-proxy
+        # ׳¢׳™׳‘׳•׳“ ׳”׳×׳•׳¦׳׳•׳× ׳׳”-proxy
         consumers_data = result.get('data', {})
         consumers = []
         
-        # ה-proxy כבר עשה את הפענוח של XML/JSON
+        # ׳”-proxy ׳›׳‘׳¨ ׳¢׳©׳” ׳׳× ׳”׳₪׳¢׳ ׳•׳— ׳©׳ XML/JSON
         if isinstance(consumers_data, list):
             consumers = consumers_data
         elif isinstance(consumers_data, dict):
@@ -2883,23 +2883,23 @@ def parking_tour_search():
                 consumer_list = consumers_data['consumer']
                 consumers = consumer_list if isinstance(consumer_list, list) else [consumer_list]
             else:
-                # אולי זה consumer בודד
+                # ׳׳•׳׳™ ׳–׳” consumer ׳‘׳•׳“׳“
                 consumers = [consumers_data]
         
-        # עיבוד התוצאות
+        # ׳¢׳™׳‘׳•׳“ ׳”׳×׳•׳¦׳׳•׳×
         found_subscribers = []
         
-        print(f"📊 Found {len(consumers)} consumers with lpn={clean_plate}")
+        print(f"נ“ Found {len(consumers)} consumers with lpn={clean_plate}")
         
-        # עיבוד כל מנוי שנמצא
+        # ׳¢׳™׳‘׳•׳“ ׳›׳ ׳׳ ׳•׳™ ׳©׳ ׳׳¦׳
         for consumer in consumers:
             if not consumer:
                 continue
-            # קבלת פרטי המנוי
+            # ׳§׳‘׳׳× ׳₪׳¨׳˜׳™ ׳”׳׳ ׳•׳™
             contract_id = consumer.get('contractId') or consumer.get('contractid') or consumer.get('contract')
-            company_name = consumer.get('companyName') or consumer.get('contractName') or 'לא ידוע'
+            company_name = consumer.get('companyName') or consumer.get('contractName') or '׳׳ ׳™׳“׳•׳¢'
             
-            # בניית אובייקט המנוי
+            # ׳‘׳ ׳™׳™׳× ׳׳•׳‘׳™׳™׳§׳˜ ׳”׳׳ ׳•׳™
             subscriber_data = {
                 'id': consumer.get('id') or consumer.get('subscriberNum'),
                 'subscriberNum': consumer.get('subscriberNum') or consumer.get('id'),
@@ -2922,7 +2922,7 @@ def parking_tour_search():
             }
             found_subscribers.append(subscriber_data)
         
-        print(f"✅ Returning {len(found_subscribers)} subscribers")
+        print(f"ג… Returning {len(found_subscribers)} subscribers")
         
         return jsonify({
             'success': True,
@@ -2932,31 +2932,31 @@ def parking_tour_search():
         
     except Exception as e:
         error_details = f"Error in parking tour search: {str(e)}"
-        print(f"❌ {error_details}")
+        print(f"ג {error_details}")
         import traceback
         print(traceback.format_exc())
         return jsonify({
             'success': False, 
-            'message': f'שגיאה: {str(e)}',
+            'message': f'׳©׳’׳™׳׳”: {str(e)}',
             'error_type': type(e).__name__,
             'details': error_details
         })
 
-# ========== API למאסטר ==========
+# ========== API ׳׳׳׳¡׳˜׳¨ ==========
 
 @app.route('/api/master/get-all-users', methods=['GET'])
 def master_get_all_users():
-    """קבלת כל המשתמשים - למאסטר בלבד"""
+    """׳§׳‘׳׳× ׳›׳ ׳”׳׳©׳×׳׳©׳™׳ - ׳׳׳׳¡׳˜׳¨ ׳‘׳׳‘׳“"""
     try:
         if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'}), 401
         
-        # בדיקת הרשאות מאסטר
+        # ׳‘׳“׳™׳§׳× ׳”׳¨׳©׳׳•׳× ׳׳׳¡׳˜׳¨
         user_result = supabase.table('user_parkings').select('code_type').eq('email', session['user_email']).execute()
         if not user_result.data or user_result.data[0].get('code_type') != 'master':
-            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+            return jsonify({'success': False, 'message': '׳׳™׳ ׳”׳¨׳©׳׳”'}), 403
         
-        # קבלת כל המשתמשים
+        # ׳§׳‘׳׳× ׳›׳ ׳”׳׳©׳×׳׳©׳™׳
         users_result = supabase.table('user_parkings').select(
             'user_id, username, email, role, project_number, parking_name, company_type, access_level, code_type, created_at, password_changed_at, is_temp_password'
         ).order('created_at', desc=True).execute()
@@ -2968,19 +2968,19 @@ def master_get_all_users():
         
     except Exception as e:
         # Error getting all users: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה בקבלת רשימת משתמשים'})
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳§׳‘׳׳× ׳¨׳©׳™׳׳× ׳׳©׳×׳׳©׳™׳'})
 
 @app.route('/api/master/create-user', methods=['POST'])
 def master_create_user():
-    """יצירת משתמש חדש - למאסטר בלבד - עם user_id ידני"""
+    """׳™׳¦׳™׳¨׳× ׳׳©׳×׳׳© ׳—׳“׳© - ׳׳׳׳¡׳˜׳¨ ׳‘׳׳‘׳“ - ׳¢׳ user_id ׳™׳“׳ ׳™"""
     try:
         if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'}), 401
         
-        # בדיקת הרשאות מאסטר
+        # ׳‘׳“׳™׳§׳× ׳”׳¨׳©׳׳•׳× ׳׳׳¡׳˜׳¨
         user_result = supabase.table('user_parkings').select('code_type').eq('email', session['user_email']).execute()
         if not user_result.data or user_result.data[0].get('code_type') != 'master':
-            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+            return jsonify({'success': False, 'message': '׳׳™׳ ׳”׳¨׳©׳׳”'}), 403
         
         data = request.get_json()
         username = data.get('username', '').strip()
@@ -2995,36 +2995,36 @@ def master_create_user():
         
         if company_list:
             if not re.match(r'^[0-9\-]+$', company_list):
-                return jsonify({'success': False, 'message': 'רשימת מספרי חברות יכולה לכלול רק מספרים ומקפים'})
+                return jsonify({'success': False, 'message': '׳¨׳©׳™׳׳× ׳׳¡׳₪׳¨׳™ ׳—׳‘׳¨׳•׳× ׳™׳›׳•׳׳” ׳׳›׳׳•׳ ׳¨׳§ ׳׳¡׳₪׳¨׳™׳ ׳•׳׳§׳₪׳™׳'})
     
         if '--' in company_list or company_list.startswith('-') or company_list.endswith('-'):
-                return jsonify({'success': False, 'message': 'פורמט רשימת מספרי חברות לא תקין'})
+                return jsonify({'success': False, 'message': '׳₪׳•׳¨׳׳˜ ׳¨׳©׳™׳׳× ׳׳¡׳₪׳¨׳™ ׳—׳‘׳¨׳•׳× ׳׳ ׳×׳§׳™׳'})
 
-        print(f"🆕 Creating new user: {username} ({email})")
+        print(f"נ†• Creating new user: {username} ({email})")
         
-        # אימות קלט בסיסי
+        # ׳׳™׳׳•׳× ׳§׳׳˜ ׳‘׳¡׳™׳¡׳™
         if not username or not email:
-            return jsonify({'success': False, 'message': 'יש למלא שם משתמש ואימייל'})
+            return jsonify({'success': False, 'message': '׳™׳© ׳׳׳׳ ׳©׳ ׳׳©׳×׳׳© ׳•׳׳™׳׳™׳™׳'})
 
-        # תיקוף שם משתמש
+        # ׳×׳™׳§׳•׳£ ׳©׳ ׳׳©׳×׳׳©
         is_valid_username, username_or_error = validate_username(username)
         if not is_valid_username:
             return jsonify({'success': False, 'message': username_or_error})
         
-        # בדיקה אם המשתמש כבר קיים
+        # ׳‘׳“׳™׳§׳” ׳׳ ׳”׳׳©׳×׳׳© ׳›׳‘׳¨ ׳§׳™׳™׳
         existing_username = supabase.table('user_parkings').select('username').eq('username', username).execute()
         existing_email = supabase.table('user_parkings').select('email').eq('email', validated_email).execute()
         
         if existing_username.data:
-            return jsonify({'success': False, 'message': f'שם משתמש "{username}" כבר קיים במערכת'})
+            return jsonify({'success': False, 'message': f'׳©׳ ׳׳©׳×׳׳© "{username}" ׳›׳‘׳¨ ׳§׳™׳™׳ ׳‘׳׳¢׳¨׳›׳×'})
         
         if existing_email.data:
-            return jsonify({'success': False, 'message': f'כתובת אימייל "{validated_email}" כבר קיימת במערכת'})
+            return jsonify({'success': False, 'message': f'׳›׳×׳•׳‘׳× ׳׳™׳׳™׳™׳ "{validated_email}" ׳›׳‘׳¨ ׳§׳™׳™׳׳× ׳‘׳׳¢׳¨׳›׳×'})
         
-        # יצירת hash לסיסמה
+        # ׳™׳¦׳™׳¨׳× hash ׳׳¡׳™׳¡׳׳”
         password_hash = bcrypt.hashpw('Dd123456'.encode('utf-8'), bcrypt.gensalt(rounds=6, prefix=b'2a')).decode('utf-8')
         
-        # קבלת user_id הבא
+        # ׳§׳‘׳׳× user_id ׳”׳‘׳
         try:
             max_user_result = supabase.table('user_parkings').select('user_id').order('user_id', desc=True).limit(1).execute()
             
@@ -3033,15 +3033,15 @@ def master_create_user():
             else:
                 next_user_id = 1
             
-            print(f"🆔 Next user_id will be: {next_user_id}")
+            print(f"נ†” Next user_id will be: {next_user_id}")
             
         except Exception as e:
             # Error getting max user_id: {str(e)}")
             import random
             next_user_id = random.randint(1000, 9999)
-            print(f"🎲 Using random user_id: {next_user_id}")
+            print(f"נ² Using random user_id: {next_user_id}")
         
-        # הכנת הנתונים להוספה
+        # ׳”׳›׳ ׳× ׳”׳ ׳×׳•׳ ׳™׳ ׳׳”׳•׳¡׳₪׳”
         current_time = datetime.now(timezone.utc).isoformat()
         
         new_user_data = {
@@ -3051,8 +3051,8 @@ def master_create_user():
             'password_hash': password_hash,
             'role': role,
             'project_number': int(project_number) if project_number else 0,
-            'parking_name': parking_name if parking_name else 'לא צוין',
-            'company_type': company_type if company_type else 'לא צוין',
+            'parking_name': parking_name if parking_name else '׳׳ ׳¦׳•׳™׳',
+            'company_type': company_type if company_type else '׳׳ ׳¦׳•׳™׳',
             'access_level': access_level,
             'code_type': code_type,
             'created_at': current_time,
@@ -3065,15 +3065,15 @@ def master_create_user():
             'company_list': company_list if company_list else None
         }
         
-        print(f"💾 Inserting user data with user_id {next_user_id}")
+        print(f"נ’¾ Inserting user data with user_id {next_user_id}")
         
-        # הוספת המשתמש למסד הנתונים
+        # ׳”׳•׳¡׳₪׳× ׳”׳׳©׳×׳׳© ׳׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳
         result = supabase.table('user_parkings').insert(new_user_data).execute()
         
         if result.data:
-            print(f"✅ User created successfully: {username} (ID: {next_user_id})")
+            print(f"ג… User created successfully: {username} (ID: {next_user_id})")
             
-            # שליחת מייל למשתמש החדש
+            # ׳©׳׳™׳—׳× ׳׳™׳™׳ ׳׳׳©׳×׳׳© ׳”׳—׳“׳©
             email_sent = send_new_user_welcome_email(
                 validated_email,
                 username,
@@ -3082,9 +3082,9 @@ def master_create_user():
             )
             
             if email_sent:
-                message = f'משתמש {username} נוצר בהצלחה! מייל נשלח ל-{validated_email}'
+                message = f'׳׳©׳×׳׳© {username} ׳ ׳•׳¦׳¨ ׳‘׳”׳¦׳׳—׳”! ׳׳™׳™׳ ׳ ׳©׳׳— ׳-{validated_email}'
             else:
-                message = f'משתמש {username} נוצר בהצלחה, אך לא ניתן לשלוח מייל. הסיסמה הראשונית: Dd123456'
+                message = f'׳׳©׳×׳׳© {username} ׳ ׳•׳¦׳¨ ׳‘׳”׳¦׳׳—׳”, ׳׳ ׳׳ ׳ ׳™׳×׳ ׳׳©׳׳•׳— ׳׳™׳™׳. ׳”׳¡׳™׳¡׳׳” ׳”׳¨׳׳©׳•׳ ׳™׳×: Dd123456'
             
             return jsonify({
                 'success': True,
@@ -3097,34 +3097,34 @@ def master_create_user():
                 }
             })
         else:
-            print(f"❌ Failed to insert user to database")
-            return jsonify({'success': False, 'message': 'שגיאה ביצירת המשתמש במסד הנתונים'})
+            print(f"ג Failed to insert user to database")
+            return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳™׳¦׳™׳¨׳× ׳”׳׳©׳×׳׳© ׳‘׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳'})
         
     except Exception as e:
-        print(f"❌ Master create user error: {str(e)}")
-        return jsonify({'success': False, 'message': f'שגיאה במערכת: {str(e)}'})
+        print(f"ג Master create user error: {str(e)}")
+        return jsonify({'success': False, 'message': f'׳©׳’׳™׳׳” ׳‘׳׳¢׳¨׳›׳×: {str(e)}'})
 
 
 @app.route('/api/parking-manager/create-user', methods=['POST'])
 def parking_manager_create_user():
-   """יצירת קוד מנהל חברה - למנהל חניון בלבד - רק לחניון שלו"""
+   """׳™׳¦׳™׳¨׳× ׳§׳•׳“ ׳׳ ׳”׳ ׳—׳‘׳¨׳” - ׳׳׳ ׳”׳ ׳—׳ ׳™׳•׳ ׳‘׳׳‘׳“ - ׳¨׳§ ׳׳—׳ ׳™׳•׳ ׳©׳׳•"""
    try:
        if 'user_email' not in session:
-           return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+           return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'}), 401
        
-       # בדיקת הרשאות מנהל חניון
+       # ׳‘׳“׳™׳§׳× ׳”׳¨׳©׳׳•׳× ׳׳ ׳”׳ ׳—׳ ׳™׳•׳
        manager_result = supabase.table('user_parkings').select(
            'code_type, project_number, parking_name, company_type, counting, user_id'
        ).eq('email', session['user_email']).execute()
        if not manager_result.data:
-            return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
+            return jsonify({'success': False, 'message': '׳׳™׳ ׳”׳¨׳©׳׳” - ׳ ׳“׳¨׳© ׳§׳•׳“ ׳׳ ׳”׳ ׳—׳ ׳™׳•׳'}), 403
             
        manager_data = manager_result.data[0]
        manager_user_id = manager_data.get('user_id')
        code_type = str(manager_data.get('code_type', '')).strip().lower()
         
        if code_type not in ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master', 'parking_manager_prox']:
-            return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
+            return jsonify({'success': False, 'message': '׳׳™׳ ׳”׳¨׳©׳׳” - ׳ ׳“׳¨׳© ׳§׳•׳“ ׳׳ ׳”׳ ׳—׳ ׳™׳•׳'}), 403
        
        data = request.get_json()
        username = data.get('username', '').strip() if data.get('username') else ''
@@ -3133,26 +3133,26 @@ def parking_manager_create_user():
        company_list = data.get('company_list', '').strip() if data.get('company_list') else ''
        access_level = data.get('access_level', 'single_parking').strip() if data.get('access_level') else 'single_parking'
        
-       print(f"🅿️ Parking manager creating COMPANY MANAGER for parking: {manager_data['project_number']} ({manager_data['parking_name']})")
+       print(f"נ…¿ן¸ Parking manager creating COMPANY MANAGER for parking: {manager_data['project_number']} ({manager_data['parking_name']})")
        
-       # אימות קלט בסיסי
+       # ׳׳™׳׳•׳× ׳§׳׳˜ ׳‘׳¡׳™׳¡׳™
        if not username or not email:
-           return jsonify({'success': False, 'message': 'יש למלא שם משתמש ואימייל'})
+           return jsonify({'success': False, 'message': '׳™׳© ׳׳׳׳ ׳©׳ ׳׳©׳×׳׳© ׳•׳׳™׳׳™׳™׳'})
 
-       # תיקוף שם משתמש
+       # ׳×׳™׳§׳•׳£ ׳©׳ ׳׳©׳×׳׳©
        is_valid_username, username_or_error = validate_username(username)
        if not is_valid_username:
            return jsonify({'success': False, 'message': username_or_error})
        
-       # אימות אימייל
+       # ׳׳™׳׳•׳× ׳׳™׳׳™׳™׳
        is_valid_email, validated_email = validate_input(email, "email")
        if not is_valid_email:
-           return jsonify({'success': False, 'message': 'כתובת אימייל לא תקינה'})
+           return jsonify({'success': False, 'message': '׳›׳×׳•׳‘׳× ׳׳™׳׳™׳™׳ ׳׳ ׳×׳§׳™׳ ׳”'})
 
         # Validation: Check counting limit
        new_counting = int(data.get('counting', 0) or 0)
        if new_counting < 0:
-            return jsonify({'success': False, 'message': 'כמות רכבים לא יכולה להיות שלילית'})
+            return jsonify({'success': False, 'message': '׳›׳׳•׳× ׳¨׳›׳‘׳™׳ ׳׳ ׳™׳›׳•׳׳” ׳׳”׳™׳•׳× ׳©׳׳™׳׳™׳×'})
 
        manager_limit = manager_data.get('counting', 0) or 0
        if manager_limit > 0: # Only check if manager has a limit
@@ -3163,22 +3163,22 @@ def parking_manager_create_user():
             current_usage = sum([(u.get('counting', 0) or 0) for u in usage_result.data if u.get('user_id') != manager_user_id])
             
             if current_usage + new_counting > manager_limit:
-                 return jsonify({'success': False, 'message': f'חריגה מכמות הרכבים הכוללת. נותר להקצאה: {manager_limit - current_usage}'})
+                 return jsonify({'success': False, 'message': f'׳—׳¨׳™׳’׳” ׳׳›׳׳•׳× ׳”׳¨׳›׳‘׳™׳ ׳”׳›׳•׳׳׳×. ׳ ׳•׳×׳¨ ׳׳”׳§׳¦׳׳”: {manager_limit - current_usage}'})
        
-       # בדיקה אם המשתמש כבר קיים
+       # ׳‘׳“׳™׳§׳” ׳׳ ׳”׳׳©׳×׳׳© ׳›׳‘׳¨ ׳§׳™׳™׳
        existing_username = supabase.table('user_parkings').select('username').eq('username', username).execute()
        existing_email = supabase.table('user_parkings').select('email').eq('email', validated_email).execute()
        
        if existing_username.data:
-           return jsonify({'success': False, 'message': f'שם משתמש "{username}" כבר קיים במערכת'})
+           return jsonify({'success': False, 'message': f'׳©׳ ׳׳©׳×׳׳© "{username}" ׳›׳‘׳¨ ׳§׳™׳™׳ ׳‘׳׳¢׳¨׳›׳×'})
        
        if existing_email.data:
-           return jsonify({'success': False, 'message': f'כתובת אימייל "{validated_email}" כבר קיימת במערכת'})
+           return jsonify({'success': False, 'message': f'׳›׳×׳•׳‘׳× ׳׳™׳׳™׳™׳ "{validated_email}" ׳›׳‘׳¨ ׳§׳™׳™׳׳× ׳‘׳׳¢׳¨׳›׳×'})
        
-       # יצירת hash לסיסמה
+       # ׳™׳¦׳™׳¨׳× hash ׳׳¡׳™׳¡׳׳”
        password_hash = bcrypt.hashpw('Dd123456'.encode('utf-8'), bcrypt.gensalt(rounds=6, prefix=b'2a')).decode('utf-8')
        
-       # קבלת user_id הבא
+       # ׳§׳‘׳׳× user_id ׳”׳‘׳
        try:
            max_user_result = supabase.table('user_parkings').select('user_id').order('user_id', desc=True).limit(1).execute()
            
@@ -3187,15 +3187,15 @@ def parking_manager_create_user():
            else:
                next_user_id = 1
            
-           print(f"🆔 Next user_id will be: {next_user_id}")
+           print(f"נ†” Next user_id will be: {next_user_id}")
            
        except Exception as e:
            # Error getting max user_id: {str(e)}")
            import random
            next_user_id = random.randint(1000, 9999)
-           print(f"🎲 Using random user_id: {next_user_id}")
+           print(f"נ² Using random user_id: {next_user_id}")
        
-       # הכנת הנתונים להוספה - 🔒 יוצר רק קוד מנהל חברה לחניון הספציפי
+       # ׳”׳›׳ ׳× ׳”׳ ׳×׳•׳ ׳™׳ ׳׳”׳•׳¡׳₪׳” - נ”’ ׳™׳•׳¦׳¨ ׳¨׳§ ׳§׳•׳“ ׳׳ ׳”׳ ׳—׳‘׳¨׳” ׳׳—׳ ׳™׳•׳ ׳”׳¡׳₪׳¦׳™׳₪׳™
        current_time = datetime.now(timezone.utc).isoformat()
        
        new_user_data = {
@@ -3204,11 +3204,11 @@ def parking_manager_create_user():
            'email': validated_email,
            'password_hash': password_hash,
            'role': 'user',
-           'project_number': manager_data['project_number'],  # 🔒 חובה - רק החניון של המנהל
-           'parking_name': manager_data['parking_name'],      # 🔒 חובה - רק החניון של המנהל
-           'company_type': manager_data['company_type'],      # 🔒 חובה - רק החברה של המנהל
-           'access_level': 'company_manager',                 # 🔒 חובה - תמיד מנהל חברה
-           'code_type': 'company_manager',                    # 🔒 חובה - תמיד קוד מנהל חברה
+           'project_number': manager_data['project_number'],  # נ”’ ׳—׳•׳‘׳” - ׳¨׳§ ׳”׳—׳ ׳™׳•׳ ׳©׳ ׳”׳׳ ׳”׳
+           'parking_name': manager_data['parking_name'],      # נ”’ ׳—׳•׳‘׳” - ׳¨׳§ ׳”׳—׳ ׳™׳•׳ ׳©׳ ׳”׳׳ ׳”׳
+           'company_type': manager_data['company_type'],      # נ”’ ׳—׳•׳‘׳” - ׳¨׳§ ׳”׳—׳‘׳¨׳” ׳©׳ ׳”׳׳ ׳”׳
+           'access_level': 'company_manager',                 # נ”’ ׳—׳•׳‘׳” - ׳×׳׳™׳“ ׳׳ ׳”׳ ׳—׳‘׳¨׳”
+           'code_type': 'company_manager',                    # נ”’ ׳—׳•׳‘׳” - ׳×׳׳™׳“ ׳§׳•׳“ ׳׳ ׳”׳ ׳—׳‘׳¨׳”
            'created_at': current_time,
            'updated_at': current_time,
            'password_changed_at': current_time,
@@ -3221,50 +3221,50 @@ def parking_manager_create_user():
            'counting': new_counting
        }
        
-       print(f"💾 Creating COMPANY MANAGER user for parking: {manager_data['project_number']} ({manager_data['parking_name']})")
+       print(f"נ’¾ Creating COMPANY MANAGER user for parking: {manager_data['project_number']} ({manager_data['parking_name']})")
        
-       # הוספת המשתמש למסד הנתונים
+       # ׳”׳•׳¡׳₪׳× ׳”׳׳©׳×׳׳© ׳׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳
        result = supabase.table('user_parkings').insert(new_user_data).execute()
        
        if result.data:
-           print(f"✅ Company manager created successfully: {username} (ID: {next_user_id}) - FOR PARKING: {manager_data['project_number']} ({manager_data['parking_name']})")
+           print(f"ג… Company manager created successfully: {username} (ID: {next_user_id}) - FOR PARKING: {manager_data['project_number']} ({manager_data['parking_name']})")
            
-           # שליחת מייל למשתמש החדש
+           # ׳©׳׳™׳—׳× ׳׳™׳™׳ ׳׳׳©׳×׳׳© ׳”׳—׳“׳©
            email_sent = send_new_user_welcome_email(
                validated_email,
                username,
                'Dd123456',
                'https://s-b-parking-reports.onrender.com'
            )
-            # Sync counting to parking system if applicable
-            parking_sync_status = ""
-            try:
-                # Use company_list as contract ID if valid (single company)
-                target_contract = company_list if company_list and company_list.strip().isdigit() else None
-                
-                print(f"🔄 DEBUG SYNC: Code Type: '{code_type}', Target Contract: '{target_contract}', Counting: {new_user_data.get('counting')}")
-                
-                # Only sync for parking_manager_prox users
-                if target_contract and int(new_user_data.get('counting', 0)) >= 0:
-                    if code_type == 'parking_manager_prox':
-                        print(f"🔄 Auto-syncing contract {target_contract} with counting {new_user_data.get('counting')}...")
-                        success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_user_data.get('counting'))
-                        if success:
-                            parking_sync_status = " ועודכן במערכת החניון."
-                        else:
-                            print(f"⚠️ Sync failed: {msg}")
-                            parking_sync_status = f" (נכשל עדכון בחניון: {msg})"
-                    else:
-                        print(f"ℹ️ Skipping sync: User type '{code_type}' is not 'parking_manager_prox'")
-                else:
-                    print("ℹ️ Skipping sync: No valid contract or counting value")
+           # Sync counting to parking system if applicable
+           parking_sync_status = ""
+           try:
+               # Use company_list as contract ID if valid (single company)
+               target_contract = company_list if company_list and company_list.strip().isdigit() else None
+               
+               print(f"נ”„ DEBUG SYNC: Code Type: '{code_type}', Target Contract: '{target_contract}', Counting: {new_user_data.get('counting')}")
+               
+               # Only sync for parking_manager_prox users
+               if target_contract and int(new_user_data.get('counting', 0)) >= 0:
+                   if code_type == 'parking_manager_prox':
+                       print(f"נ”„ Auto-syncing contract {target_contract} with counting {new_user_data.get('counting')}...")
+                       success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_user_data.get('counting'))
+                       if success:
+                           parking_sync_status = " ׳•׳¢׳•׳“׳›׳ ׳‘׳׳¢׳¨׳›׳× ׳”׳—׳ ׳™׳•׳."
+                       else:
+                           print(f"ג ן¸ Sync failed: {msg}")
+                           parking_sync_status = f" (׳ ׳›׳©׳ ׳¢׳“׳›׳•׳ ׳‘׳—׳ ׳™׳•׳: {msg})"
+                   else:
+                       print(f"ג„¹ן¸ Skipping sync: User type '{code_type}' is not 'parking_manager_prox'")
+               else:
+                   print("ג„¹ן¸ Skipping sync: No valid contract or counting value")
             except Exception as e:
-                print(f"❌ Sync exception: {e}")
+                print(f"ג Sync exception: {e}")
 
            if email_sent:
-               message = f'מנהל חברה {username} נוצר בהצלחה עבור חניון {manager_data["parking_name"]}! מייל נשלח ל-{validated_email}{parking_sync_status}'
+               message = f'׳׳ ׳”׳ ׳—׳‘׳¨׳” {username} ׳ ׳•׳¦׳¨ ׳‘׳”׳¦׳׳—׳” ׳¢׳‘׳•׳¨ ׳—׳ ׳™׳•׳ {manager_data["parking_name"]}! ׳׳™׳™׳ ׳ ׳©׳׳— ׳-{validated_email}{parking_sync_status}'
            else:
-               message = f'מנהל חברה {username} נוצר בהצלחה עבור חניון {manager_data["parking_name"]}, אך לא ניתן לשלוח מייל. הסיסמה הראשונית: Dd123456{parking_sync_status}'
+               message = f'׳׳ ׳”׳ ׳—׳‘׳¨׳” {username} ׳ ׳•׳¦׳¨ ׳‘׳”׳¦׳׳—׳” ׳¢׳‘׳•׳¨ ׳—׳ ׳™׳•׳ {manager_data["parking_name"]}, ׳׳ ׳׳ ׳ ׳™׳×׳ ׳׳©׳׳•׳— ׳׳™׳™׳. ׳”׳¡׳™׳¡׳׳” ׳”׳¨׳׳©׳•׳ ׳™׳×: Dd123456{parking_sync_status}'
            
            return jsonify({
                'success': True,
@@ -3280,91 +3280,91 @@ def parking_manager_create_user():
                }
            })
        else:
-           print(f"❌ Failed to insert company manager to database")
-           return jsonify({'success': False, 'message': 'שגיאה ביצירת המנהל במסד הנתונים'})
+           print(f"ג Failed to insert company manager to database")
+           return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳™׳¦׳™׳¨׳× ׳”׳׳ ׳”׳ ׳‘׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳'})
        
    except Exception as e:
-       print(f"❌ Parking manager create company manager error: {str(e)}")
-       return jsonify({'success': False, 'message': f'שגיאה במערכת: {str(e)}'})
+       print(f"ג Parking manager create company manager error: {str(e)}")
+       return jsonify({'success': False, 'message': f'׳©׳’׳™׳׳” ׳‘׳׳¢׳¨׳›׳×: {str(e)}'})
 
 @app.route('/api/parking-manager/update-user', methods=['POST'])
 def parking_manager_update_user():
-    """עדכון קוד מנהל חברה - למנהל חניון בלבד - רק לחניון שלו"""
+    """׳¢׳“׳›׳•׳ ׳§׳•׳“ ׳׳ ׳”׳ ׳—׳‘׳¨׳” - ׳׳׳ ׳”׳ ׳—׳ ׳™׳•׳ ׳‘׳׳‘׳“ - ׳¨׳§ ׳׳—׳ ׳™׳•׳ ׳©׳׳•"""
     try:
         if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'}), 401
         
-        # בדיקת הרשאות מנהל חניון
+        # ׳‘׳“׳™׳§׳× ׳”׳¨׳©׳׳•׳× ׳׳ ׳”׳ ׳—׳ ׳™׳•׳
         manager_result = supabase.table('user_parkings').select(
             'code_type, project_number, parking_name, company_type, counting, user_id'
         ).eq('email', session['user_email']).execute()
         
         if not manager_result.data:
-            return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
+            return jsonify({'success': False, 'message': '׳׳™׳ ׳”׳¨׳©׳׳” - ׳ ׳“׳¨׳© ׳§׳•׳“ ׳׳ ׳”׳ ׳—׳ ׳™׳•׳'}), 403
             
         manager_data = manager_result.data[0]
         code_type = str(manager_data.get('code_type', '')).strip().lower()
         
         if code_type not in ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master', 'parking_manager_prox']:
-            return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
+            return jsonify({'success': False, 'message': '׳׳™׳ ׳”׳¨׳©׳׳” - ׳ ׳“׳¨׳© ׳§׳•׳“ ׳׳ ׳”׳ ׳—׳ ׳™׳•׳'}), 403
         
         data = request.get_json()
         user_id = data.get('user_id')
         username = data.get('username', '').strip()
         email = data.get('email', '').strip()
         permissions = data.get('permissions', 'B2').strip()  # Default to 'B2' if not provided
-        company_list = data.get('company_list', '').strip()  # וידוא קליטת company_list
+        company_list = data.get('company_list', '').strip()  # ׳•׳™׳“׳•׳ ׳§׳׳™׳˜׳× company_list
         access_level = data.get('access_level', 'single_parking').strip()
         
-        print(f"🅿️ Parking manager updating user ID {user_id} for parking: {manager_data['project_number']} ({manager_data['parking_name']})")
-        print(f"🏢 Company list received: '{company_list}'")
+        print(f"נ…¿ן¸ Parking manager updating user ID {user_id} for parking: {manager_data['project_number']} ({manager_data['parking_name']})")
+        print(f"נ¢ Company list received: '{company_list}'")
         
-        # אימות קלט בסיסי
+        # ׳׳™׳׳•׳× ׳§׳׳˜ ׳‘׳¡׳™׳¡׳™
         if not user_id:
-            return jsonify({'success': False, 'message': 'חסר מזהה משתמש'})
+            return jsonify({'success': False, 'message': '׳—׳¡׳¨ ׳׳–׳”׳” ׳׳©׳×׳׳©'})
             
         if not username or not email:
-            return jsonify({'success': False, 'message': 'יש למלא שם משתמש ואימייל'})
+            return jsonify({'success': False, 'message': '׳™׳© ׳׳׳׳ ׳©׳ ׳׳©׳×׳׳© ׳•׳׳™׳׳™׳™׳'})
 
-        # וידוא שהמשתמש שמעדכנים שייך לחניון של המנהל
+        # ׳•׳™׳“׳•׳ ׳©׳”׳׳©׳×׳׳© ׳©׳׳¢׳“׳›׳ ׳™׳ ׳©׳™׳™׳ ׳׳—׳ ׳™׳•׳ ׳©׳ ׳”׳׳ ׳”׳
         user_check = supabase.table('user_parkings').select(
             'user_id, username, email, project_number, code_type'
         ).eq('user_id', user_id).eq('project_number', manager_data['project_number']).execute()
         
         if not user_check.data:
-            return jsonify({'success': False, 'message': 'משתמש לא נמצא או אין הרשאה לעדכן אותו'})
+            return jsonify({'success': False, 'message': '׳׳©׳×׳׳© ׳׳ ׳ ׳׳¦׳ ׳׳• ׳׳™׳ ׳”׳¨׳©׳׳” ׳׳¢׳“׳›׳ ׳׳•׳×׳•'})
         
         current_user = user_check.data[0]
         
-        # וידוא שמעדכנים רק company_manager (לא parking_manager)
+        # ׳•׳™׳“׳•׳ ׳©׳׳¢׳“׳›׳ ׳™׳ ׳¨׳§ company_manager (׳׳ parking_manager)
         if current_user.get('code_type') == 'parking_manager':
-            return jsonify({'success': False, 'message': 'לא ניתן לערוך מנהל חניון'})
+            return jsonify({'success': False, 'message': '׳׳ ׳ ׳™׳×׳ ׳׳¢׳¨׳•׳ ׳׳ ׳”׳ ׳—׳ ׳™׳•׳'})
 
-        # תיקוף שם משתמש (רק אם השתנה)
+        # ׳×׳™׳§׳•׳£ ׳©׳ ׳׳©׳×׳׳© (׳¨׳§ ׳׳ ׳”׳©׳×׳ ׳”)
         if username != current_user['username']:
             is_valid_username, username_or_error = validate_username(username)
             if not is_valid_username:
                 return jsonify({'success': False, 'message': username_or_error})
             
-            # בדיקה אם שם המשתמש החדש כבר קיים
+            # ׳‘׳“׳™׳§׳” ׳׳ ׳©׳ ׳”׳׳©׳×׳׳© ׳”׳—׳“׳© ׳›׳‘׳¨ ׳§׳™׳™׳
             existing_username = supabase.table('user_parkings').select('username').eq('username', username).neq('user_id', user_id).execute()
             if existing_username.data:
-                return jsonify({'success': False, 'message': f'שם משתמש "{username}" כבר קיים במערכת'})
+                return jsonify({'success': False, 'message': f'׳©׳ ׳׳©׳×׳׳© "{username}" ׳›׳‘׳¨ ׳§׳™׳™׳ ׳‘׳׳¢׳¨׳›׳×'})
         
-        # אימות אימייל (רק אם השתנה)
+        # ׳׳™׳׳•׳× ׳׳™׳׳™׳™׳ (׳¨׳§ ׳׳ ׳”׳©׳×׳ ׳”)
         if email != current_user['email']:
             is_valid_email, validated_email = validate_input(email, "email")
             if not is_valid_email:
-                return jsonify({'success': False, 'message': 'כתובת אימייל לא תקינה'})
+                return jsonify({'success': False, 'message': '׳›׳×׳•׳‘׳× ׳׳™׳׳™׳™׳ ׳׳ ׳×׳§׳™׳ ׳”'})
             
-            # בדיקה אם האימייל החדש כבר קיים
+            # ׳‘׳“׳™׳§׳” ׳׳ ׳”׳׳™׳׳™׳™׳ ׳”׳—׳“׳© ׳›׳‘׳¨ ׳§׳™׳™׳
             existing_email = supabase.table('user_parkings').select('email').eq('email', validated_email).neq('user_id', user_id).execute()
             if existing_email.data:
-                return jsonify({'success': False, 'message': f'כתובת אימייל "{validated_email}" כבר קיימת במערכת'})
+                return jsonify({'success': False, 'message': f'׳›׳×׳•׳‘׳× ׳׳™׳׳™׳™׳ "{validated_email}" ׳›׳‘׳¨ ׳§׳™׳™׳׳× ׳‘׳׳¢׳¨׳›׳×'})
         else:
             validated_email = email
 
-        # וידוא שB תמיד כלול בהרשאות
+        # ׳•׳™׳“׳•׳ ׳©B ׳×׳׳™׳“ ׳›׳׳•׳ ׳‘׳”׳¨׳©׳׳•׳×
         if 'B' not in permissions:
             permissions = 'B' + permissions
 
@@ -3373,7 +3373,7 @@ def parking_manager_update_user():
         manager_limit = int(manager_data.get('counting', 0) or 0)
         
         if new_counting < 0:
-             return jsonify({'success': False, 'message': 'כמות רכבים לא יכולה להיות שלילית'})
+             return jsonify({'success': False, 'message': '׳›׳׳•׳× ׳¨׳›׳‘׳™׳ ׳׳ ׳™׳›׳•׳׳” ׳׳”׳™׳•׳× ׳©׳׳™׳׳™׳×'})
 
         if manager_limit > 0:
             # Get current usage - Fetch ALL and filter in Python to ensure safe exclusion
@@ -3388,9 +3388,9 @@ def parking_manager_update_user():
                                  if int(u.get('user_id')) != target_user_id and u.get('user_id') != manager_user_id])
             
             if current_usage + new_counting > manager_limit:
-                 return jsonify({'success': False, 'message': f'חריגה מכמות הרכבים הכוללת. נותר להקצאה: {manager_limit - current_usage}'})
+                 return jsonify({'success': False, 'message': f'׳—׳¨׳™׳’׳” ׳׳›׳׳•׳× ׳”׳¨׳›׳‘׳™׳ ׳”׳›׳•׳׳׳×. ׳ ׳•׳×׳¨ ׳׳”׳§׳¦׳׳”: {manager_limit - current_usage}'})
         
-        # הכנת הנתונים לעדכון
+        # ׳”׳›׳ ׳× ׳”׳ ׳×׳•׳ ׳™׳ ׳׳¢׳“׳›׳•׳
         current_time = datetime.now(timezone.utc).isoformat()
         
         update_data = {
@@ -3403,14 +3403,14 @@ def parking_manager_update_user():
             'updated_at': current_time
         }
         
-        print(f"💾 Updating user {user_id} in parking: {manager_data['project_number']} ({manager_data['parking_name']})")
-        print(f"📝 Update data: {update_data}")
+        print(f"נ’¾ Updating user {user_id} in parking: {manager_data['project_number']} ({manager_data['parking_name']})")
+        print(f"נ“ Update data: {update_data}")
         
-        # עדכון המשתמש במסד הנתונים
+        # ׳¢׳“׳›׳•׳ ׳”׳׳©׳×׳׳© ׳‘׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳
         result = supabase.table('user_parkings').update(update_data).eq('user_id', user_id).eq('project_number', manager_data['project_number']).execute()
         
         if result.data:
-            print(f"✅ User updated successfully: {username} (ID: {user_id}) - FOR PARKING: {manager_data['project_number']} ({manager_data['parking_name']})")
+            print(f"ג… User updated successfully: {username} (ID: {user_id}) - FOR PARKING: {manager_data['project_number']} ({manager_data['parking_name']})")
             
             # Sync counting to parking system if applicable
             parking_sync_status = ""
@@ -3419,28 +3419,28 @@ def parking_manager_update_user():
                 final_company_list = company_list if company_list else current_user.get('company_list')
                 target_contract = str(final_company_list).strip() if final_company_list and str(final_company_list).strip().isdigit() else None
                 
-                print(f"🔄 DEBUG SYNC UPDATE: Code Type: '{code_type}', Target Contract: '{target_contract}', Counting: {new_counting}")
+                print(f"נ”„ DEBUG SYNC UPDATE: Code Type: '{code_type}', Target Contract: '{target_contract}', Counting: {new_counting}")
 
                 # Only sync for parking_manager_prox users
                 if target_contract and new_counting >= 0:
                     if code_type == 'parking_manager_prox':
-                        print(f"🔄 Auto-syncing contract {target_contract} with counting {new_counting}...")
+                        print(f"נ”„ Auto-syncing contract {target_contract} with counting {new_counting}...")
                         success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_counting)
                         if success:
-                            parking_sync_status = " ועודכן במערכת החניון."
+                            parking_sync_status = " ׳•׳¢׳•׳“׳›׳ ׳‘׳׳¢׳¨׳›׳× ׳”׳—׳ ׳™׳•׳."
                         else:
-                            print(f"⚠️ Sync failed: {msg}")
-                            parking_sync_status = f" (נכשל עדכון בחניון: {msg})"
+                            print(f"ג ן¸ Sync failed: {msg}")
+                            parking_sync_status = f" (׳ ׳›׳©׳ ׳¢׳“׳›׳•׳ ׳‘׳—׳ ׳™׳•׳: {msg})"
                     else:
-                         print(f"ℹ️ Skipping sync: User type '{code_type}' is not 'parking_manager_prox'")
+                         print(f"ג„¹ן¸ Skipping sync: User type '{code_type}' is not 'parking_manager_prox'")
                 else:
-                    print("ℹ️ Skipping sync: No valid contract or counting value")
+                    print("ג„¹ן¸ Skipping sync: No valid contract or counting value")
             except Exception as e:
-                print(f"❌ Sync exception: {e}")
+                print(f"ג Sync exception: {e}")
 
             return jsonify({
                 'success': True,
-                'message': f'המשתמש {username} עודכן בהצלחה עבור חניון {manager_data["parking_name"]}!{parking_sync_status}',
+                'message': f'׳”׳׳©׳×׳׳© {username} ׳¢׳•׳“׳›׳ ׳‘׳”׳¦׳׳—׳” ׳¢׳‘׳•׳¨ ׳—׳ ׳™׳•׳ {manager_data["parking_name"]}!{parking_sync_status}',
                 'user_data': {
                     'user_id': user_id,
                     'username': username,
@@ -3451,32 +3451,32 @@ def parking_manager_update_user():
                 }
             })
         else:
-            print(f"❌ Failed to update user in database")
-            return jsonify({'success': False, 'message': 'שגיאה בעדכון המשתמש במסד הנתונים'})
+            print(f"ג Failed to update user in database")
+            return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳¢׳“׳›׳•׳ ׳”׳׳©׳×׳׳© ׳‘׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳'})
         
     except Exception as e:
-        print(f"❌ Parking manager update user error: {str(e)}")
-        return jsonify({'success': False, 'message': f'שגיאה במערכת: {str(e)}'})
+        print(f"ג Parking manager update user error: {str(e)}")
+        return jsonify({'success': False, 'message': f'׳©׳’׳™׳׳” ׳‘׳׳¢׳¨׳›׳×: {str(e)}'})
 
 @app.route('/api/master/reset-password', methods=['POST'])
 def master_reset_password():
-    """איפוס סיסמה - למאסטר בלבד"""
+    """׳׳™׳₪׳•׳¡ ׳¡׳™׳¡׳׳” - ׳׳׳׳¡׳˜׳¨ ׳‘׳׳‘׳“"""
     try:
         if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'}), 401
         
-        # בדיקת הרשאות מאסטר
+        # ׳‘׳“׳™׳§׳× ׳”׳¨׳©׳׳•׳× ׳׳׳¡׳˜׳¨
         user_result = supabase.table('user_parkings').select('code_type').eq('email', session['user_email']).execute()
         if not user_result.data or user_result.data[0].get('code_type') != 'master':
-            return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+            return jsonify({'success': False, 'message': '׳׳™׳ ׳”׳¨׳©׳׳”'}), 403
         
         data = request.get_json()
         target_username = data.get('username', '').strip()
         
         if not target_username:
-            return jsonify({'success': False, 'message': 'יש לציין שם משתמש'})
+            return jsonify({'success': False, 'message': '׳™׳© ׳׳¦׳™׳™׳ ׳©׳ ׳׳©׳×׳׳©'})
         
-        # איפוס הסיסמה ל-Dd123456
+        # ׳׳™׳₪׳•׳¡ ׳”׳¡׳™׳¡׳׳” ׳-Dd123456
         try:
             result = supabase.rpc('master_reset_password', {
                 'p_username': target_username,
@@ -3484,7 +3484,7 @@ def master_reset_password():
                 'p_reset_by': session['user_email']
             }).execute()
         except Exception as rpc_error:
-            # טיפול בAPIError
+            # ׳˜׳™׳₪׳•׳ ׳‘APIError
             if hasattr(rpc_error, 'args') and rpc_error.args:
                 try:
                     import ast
@@ -3497,7 +3497,7 @@ def master_reset_password():
             result_data = result.data
         
         if result_data and result_data.get('success'):
-            # קבלת כתובת המייל של המשתמש
+            # ׳§׳‘׳׳× ׳›׳×׳•׳‘׳× ׳”׳׳™׳™׳ ׳©׳ ׳”׳׳©׳×׳׳©
             user_info = supabase.table('user_parkings').select('email').eq('username', target_username).execute()
             if user_info.data:
                 user_email = user_info.data[0]['email']
@@ -3505,30 +3505,30 @@ def master_reset_password():
             
             return jsonify({
                 'success': True,
-                'message': f'סיסמה אופסה בהצלחה עבור {target_username}'
+                'message': f'׳¡׳™׳¡׳׳” ׳׳•׳₪׳¡׳” ׳‘׳”׳¦׳׳—׳” ׳¢׳‘׳•׳¨ {target_username}'
             })
         else:
-            error_msg = result_data.get('message', 'שגיאה באיפוס סיסמה') if result_data else 'שגיאה באיפוס סיסמה'
+            error_msg = result_data.get('message', '׳©׳’׳™׳׳” ׳‘׳׳™׳₪׳•׳¡ ׳¡׳™׳¡׳׳”') if result_data else '׳©׳’׳™׳׳” ׳‘׳׳™׳₪׳•׳¡ ׳¡׳™׳¡׳׳”'
             return jsonify({'success': False, 'message': error_msg})
         
     except Exception as e:
-        print(f"❌ Master reset password error: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה במערכת'})
+        print(f"ג Master reset password error: {str(e)}")
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳׳¢׳¨׳›׳×'})
 
 @app.route('/company-manager')
 def company_manager_page():
-    """דף ניהול חברה למנהל חברה"""
+    """׳“׳£ ׳ ׳™׳”׳•׳ ׳—׳‘׳¨׳” ׳׳׳ ׳”׳ ׳—׳‘׳¨׳”"""
     if 'user_email' not in session:
         return redirect(url_for('login_page'))
     
-    # בדיקת הרשאות מנהל חברה
+    # ׳‘׳“׳™׳§׳× ׳”׳¨׳©׳׳•׳× ׳׳ ׳”׳ ׳—׳‘׳¨׳”
     try:
         user_result = supabase.table('user_parkings').select(
             'code_type, access_level, permissions, company_list, project_number'
         ).eq('email', session['user_email']).execute()
         
         if not user_result.data:
-            print(f"⚠️ User not found: {session['user_email']}")
+            print(f"ג ן¸ User not found: {session['user_email']}")
             return redirect(url_for('dashboard'))
         
         user_data = user_result.data[0]
@@ -3538,22 +3538,22 @@ def company_manager_page():
         company_list = user_data.get('company_list', '')
         project_number = user_data.get('project_number')
         
-        # בדיקה שזה מנהל חברה
+        # ׳‘׳“׳™׳§׳” ׳©׳–׳” ׳׳ ׳”׳ ׳—׳‘׳¨׳”
         if code_type != 'company_manager' and access_level != 'company_manager':
-            print(f"⚠️ Unauthorized access attempt to company-manager by {session['user_email']}")
+            print(f"ג ן¸ Unauthorized access attempt to company-manager by {session['user_email']}")
             return redirect(url_for('dashboard'))
         
-        # בדיקת הרשאות - מאפשרים כניסה לכל מנהל חברה
-        # ההרשאות יקבעו אילו כפתורים יהיו זמינים
+        # ׳‘׳“׳™׳§׳× ׳”׳¨׳©׳׳•׳× - ׳׳׳₪׳©׳¨׳™׳ ׳›׳ ׳™׳¡׳” ׳׳›׳ ׳׳ ׳”׳ ׳—׳‘׳¨׳”
+        # ׳”׳”׳¨׳©׳׳•׳× ׳™׳§׳‘׳¢׳• ׳׳™׳׳• ׳›׳₪׳×׳•׳¨׳™׳ ׳™׳”׳™׳• ׳–׳׳™׳ ׳™׳
         valid_permissions = ['G', 'N', 'P', 'R', 'B', 'T', '1', '2', '3']
         has_valid_permission = any(perm in permissions for perm in valid_permissions) or permissions == 'B' or permissions == ''
         
-        # אם אין הרשאות בכלל או הרשאות לא תקינות
+        # ׳׳ ׳׳™׳ ׳”׳¨׳©׳׳•׳× ׳‘׳›׳׳ ׳׳• ׳”׳¨׳©׳׳•׳× ׳׳ ׳×׳§׳™׳ ׳•׳×
         if not has_valid_permission and permissions not in ['', 'B']:
-            print(f"⚠️ Invalid permissions for {session['user_email']}: {permissions}")
+            print(f"ג ן¸ Invalid permissions for {session['user_email']}: {permissions}")
             return redirect(url_for('dashboard'))
         
-        # שמירת נתונים ב-session לשימוש ב-API
+        # ׳©׳׳™׳¨׳× ׳ ׳×׳•׳ ׳™׳ ׳‘-session ׳׳©׳™׳׳•׳© ׳‘-API
         session['user_permissions'] = permissions
         session['user_company_list'] = company_list
         session['user_project_number'] = project_number
@@ -3580,7 +3580,7 @@ def get_parking_connection_details(project_number):
     Mirrors logic from company_manager_proxy.
     """
     if not supabase:
-        print("❌ Supabase not initialized")
+        print("ג Supabase not initialized")
         return None
 
     try:
@@ -3620,7 +3620,7 @@ def get_parking_connection_details(project_number):
                                  'description': server_data.get('name')
                              }
             except Exception as e:
-                print(f"❌ Error searching fallback tables for parking {project_number}: {str(e)}")
+                print(f"ג Error searching fallback tables for parking {project_number}: {str(e)}")
                 return None
         else:
              data = parking_result.data[0]
@@ -3631,7 +3631,7 @@ def get_parking_connection_details(project_number):
              }
              
     except Exception as e:
-        print(f"❌ Error getting parking connection details: {str(e)}")
+        print(f"ג Error getting parking connection details: {str(e)}")
         return None
     
     return None
@@ -3641,18 +3641,18 @@ def update_parking_contract_counting(project_number, contract_id, counting_value
     Updates the parking system contract with the new counting limit via XML PUT request.
     Using verified structure from local testing.
     """
-    print(f"🔄 Attempting to update parking system: Project={project_number}, Contract={contract_id}, Counting={counting_value}")
+    print(f"נ”„ Attempting to update parking system: Project={project_number}, Contract={contract_id}, Counting={counting_value}")
     
     connection = get_parking_connection_details(project_number)
     if not connection:
-        print(f"❌ Could not find connection details for parking {project_number}")
+        print(f"ג Could not find connection details for parking {project_number}")
         return False, "Connection details not found"
         
     ip_address = connection['ip_address']
     port = connection['port']
     
     if not ip_address:
-         print(f"❌ Missing IP address for parking {project_number}")
+         print(f"ג Missing IP address for parking {project_number}")
          return False, "Missing IP address"
 
     # Construct URL
@@ -3676,7 +3676,7 @@ def update_parking_contract_counting(project_number, contract_id, counting_value
 </contractDetail>'''
     
     try:
-        print(f"📤 Sending XML to {url}:\n{xml_str}")
+        print(f"נ“₪ Sending XML to {url}:\n{xml_str}")
         
         # Headers
         auth_string = base64.b64encode(b'2022:2022').decode('ascii')
@@ -3688,27 +3688,27 @@ def update_parking_contract_counting(project_number, contract_id, counting_value
         # Send Request
         response = requests.put(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=30)
         
-        print(f"📥 Parking System Response: Code={response.status_code}, Body={response.text[:200]}")
+        print(f"נ“¥ Parking System Response: Code={response.status_code}, Body={response.text[:200]}")
         
         if response.status_code in [200, 201]:
-             print("✅ Parking system update successful")
+             print("ג… Parking system update successful")
              return True, "Updated successfully"
         else:
-             print(f"❌ Parking system update failed: {response.status_code}")
+             print(f"ג Parking system update failed: {response.status_code}")
              return False, f"HTTP {response.status_code}"
 
     except Exception as e:
-        print(f"❌ Exception sending update to parking system: {str(e)}")
+        print(f"ג Exception sending update to parking system: {str(e)}")
         return False, str(e)
 
 @app.route('/api/get-current-user', methods=['GET'])
 def get_current_user():
-    """קבלת פרטי המשתמש המחובר"""
+    """׳§׳‘׳׳× ׳₪׳¨׳˜׳™ ׳”׳׳©׳×׳׳© ׳”׳׳—׳•׳‘׳¨"""
     try:
         if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'}), 401
         
-        # קבלת נתוני המשתמש
+        # ׳§׳‘׳׳× ׳ ׳×׳•׳ ׳™ ׳”׳׳©׳×׳׳©
         user_result = supabase.table('user_parkings').select(
             'username, email, parking_name, company_type'
         ).eq('email', session['user_email']).execute()
@@ -3734,28 +3734,28 @@ def get_current_user():
             })
     except Exception as e:
         # Error getting current user: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני משתמש'}), 500
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳§׳‘׳׳× ׳ ׳×׳•׳ ׳™ ׳׳©׳×׳׳©'}), 500
 
 @app.route('/api/company-manager/get-parkings', methods=['GET'])
 def company_manager_get_parkings():
-    """קבלת רשימת חניונים עבור מנהל חברה"""
+    """׳§׳‘׳׳× ׳¨׳©׳™׳׳× ׳—׳ ׳™׳•׳ ׳™׳ ׳¢׳‘׳•׳¨ ׳׳ ׳”׳ ׳—׳‘׳¨׳”"""
     try:
         # Get parkings API called
         
         if 'user_email' not in session:
             # No user in session
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'}), 401
         
         # User authenticated
         
-        # קבלת נתוני המשתמש
+        # ׳§׳‘׳׳× ׳ ׳×׳•׳ ׳™ ׳”׳׳©׳×׳׳©
         user_result = supabase.table('user_parkings').select(
             'project_number, company_list, access_level, permissions'
         ).eq('email', session['user_email']).execute()
         
         if not user_result.data:
             # User not found in DB
-            return jsonify({'success': False, 'message': 'משתמש לא נמצא'}), 404
+            return jsonify({'success': False, 'message': '׳׳©׳×׳׳© ׳׳ ׳ ׳׳¦׳'}), 404
         
         user_data = user_result.data[0]
         company_list = user_data.get('company_list', '')
@@ -3763,24 +3763,24 @@ def company_manager_get_parkings():
         
         # User data loaded
         
-        # בדיקת הרשאות - מאפשרים גישה לכל מנהל חברה עם הרשאות תקינות
+        # ׳‘׳“׳™׳§׳× ׳”׳¨׳©׳׳•׳× - ׳׳׳₪׳©׳¨׳™׳ ׳’׳™׳©׳” ׳׳›׳ ׳׳ ׳”׳ ׳—׳‘׳¨׳” ׳¢׳ ׳”׳¨׳©׳׳•׳× ׳×׳§׳™׳ ׳•׳×
         valid_permissions = ['G', 'N', 'P', 'R', 'B']
         has_valid_permission = any(perm in permissions for perm in valid_permissions) or permissions == 'B' or permissions == ''
         
         if not has_valid_permission and permissions not in ['', 'B']:
             # Invalid permissions
-            return jsonify({'success': False, 'message': 'הרשאות לא תקינות'}), 403
+            return jsonify({'success': False, 'message': '׳”׳¨׳©׳׳•׳× ׳׳ ׳×׳§׳™׳ ׳•׳×'}), 403
         
-        # לא צריך לפענח את company_list כאן - זה חברות בתוך החניון, לא חניונים
-        # company_list משמש למטרות אחרות (חברות בתוך החניון)
+        # ׳׳ ׳¦׳¨׳™׳ ׳׳₪׳¢׳ ׳— ׳׳× company_list ׳›׳׳ - ׳–׳” ׳—׳‘׳¨׳•׳× ׳‘׳×׳•׳ ׳”׳—׳ ׳™׳•׳, ׳׳ ׳—׳ ׳™׳•׳ ׳™׳
+        # company_list ׳׳©׳׳© ׳׳׳˜׳¨׳•׳× ׳׳—׳¨׳•׳× (׳—׳‘׳¨׳•׳× ׳‘׳×׳•׳ ׳”׳—׳ ׳™׳•׳)
         
-        # קבלת project_number של המשתמש
+        # ׳§׳‘׳׳× project_number ׳©׳ ׳”׳׳©׳×׳׳©
         user_project_number = user_data.get('project_number')
         access_level = user_data.get('access_level', '')
         
         # Access control check
         
-        # חיפוש חניונים בטבלת parkings
+        # ׳—׳™׳₪׳•׳© ׳—׳ ׳™׳•׳ ׳™׳ ׳‘׳˜׳‘׳׳× parkings
         # Fetching parkings from DB
         parkings_result = supabase.table('parkings').select(
             'id, name, location, description, ip_address, port, is_active'
@@ -3798,13 +3798,13 @@ def company_manager_get_parkings():
                 parking_number = parking.get('description', 0)
                 # Parsed parking number
                 
-                # לוגיקה מתוקנת: בדיקה אם למשתמש יש גישה לחניון
+                # ׳׳•׳’׳™׳§׳” ׳׳×׳•׳§׳ ׳×: ׳‘׳“׳™׳§׳” ׳׳ ׳׳׳©׳×׳׳© ׳™׳© ׳’׳™׳©׳” ׳׳—׳ ׳™׳•׳
                 has_access = False
                 
-                # אופציה 1: זה החניון של המשתמש - השוואה גמישה של טיפוסים
+                # ׳׳•׳₪׳¦׳™׳” 1: ׳–׳” ׳”׳—׳ ׳™׳•׳ ׳©׳ ׳”׳׳©׳×׳׳© - ׳”׳©׳•׳•׳׳” ׳’׳׳™׳©׳” ׳©׳ ׳˜׳™׳₪׳•׳¡׳™׳
                 # Checking access
                 
-                # המרה לאותו טיפוס לצורך השוואה
+                # ׳”׳׳¨׳” ׳׳׳•׳×׳• ׳˜׳™׳₪׳•׳¡ ׳׳¦׳•׳¨׳ ׳”׳©׳•׳•׳׳”
                 try:
                     user_proj_str = str(user_project_number) if user_project_number else ""
                     parking_num_str = str(parking_number) if parking_number else ""
@@ -3812,7 +3812,7 @@ def company_manager_get_parkings():
                     if user_proj_str and parking_num_str and user_proj_str == parking_num_str:
                         # Match! User's parking
                         has_access = True
-                    # אופציה 2: למשתמש יש גישת מאסטר בלבד  
+                    # ׳׳•׳₪׳¦׳™׳” 2: ׳׳׳©׳×׳׳© ׳™׳© ׳’׳™׳©׳× ׳׳׳¡׳˜׳¨ ׳‘׳׳‘׳“  
                     elif access_level == 'master':
                         # Access via MASTER role
                         has_access = True
@@ -3851,42 +3851,42 @@ def company_manager_get_parkings():
         
     except Exception as e:
         # Error getting parkings: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה בטעינת חניונים'}), 500
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳˜׳¢׳™׳ ׳× ׳—׳ ׳™׳•׳ ׳™׳'}), 500
 
 
 @app.route('/api/company-manager/get-subscribers', methods=['GET'])
 def company_manager_get_subscribers():
-    """קבלת רשימת מנויים מחניון ספציפי"""
+    """׳§׳‘׳׳× ׳¨׳©׳™׳׳× ׳׳ ׳•׳™׳™׳ ׳׳—׳ ׳™׳•׳ ׳¡׳₪׳¦׳™׳₪׳™"""
     try:
         if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'}), 401
         
         parking_id = request.args.get('parking_id')
         if not parking_id:
-            return jsonify({'success': False, 'message': 'חסר מזהה חניון'}), 400
+            return jsonify({'success': False, 'message': '׳—׳¡׳¨ ׳׳–׳”׳” ׳—׳ ׳™׳•׳'}), 400
         
-        # קבלת נתוני המשתמש
+        # ׳§׳‘׳׳× ׳ ׳×׳•׳ ׳™ ׳”׳׳©׳×׳׳©
         user_permissions = session.get('user_permissions', '')
         company_list = session.get('user_company_list', '')
         
-        # בדיקת הרשאות - מאפשרים גישה לכל מנהל חברה עם הרשאות תקינות
+        # ׳‘׳“׳™׳§׳× ׳”׳¨׳©׳׳•׳× - ׳׳׳₪׳©׳¨׳™׳ ׳’׳™׳©׳” ׳׳›׳ ׳׳ ׳”׳ ׳—׳‘׳¨׳” ׳¢׳ ׳”׳¨׳©׳׳•׳× ׳×׳§׳™׳ ׳•׳×
         valid_permissions = ['G', 'N', 'P', 'R', 'B']
         has_valid_permission = any(perm in user_permissions for perm in valid_permissions) or user_permissions == 'B' or user_permissions == ''
         
         if not has_valid_permission and user_permissions not in ['', 'B']:
-            return jsonify({'success': False, 'message': 'הרשאות לא תקינות'}), 403
+            return jsonify({'success': False, 'message': '׳”׳¨׳©׳׳•׳× ׳׳ ׳×׳§׳™׳ ׳•׳×'}), 403
         
-        # קבלת נתוני החניון כולל IP ופורט
+        # ׳§׳‘׳׳× ׳ ׳×׳•׳ ׳™ ׳”׳—׳ ׳™׳•׳ ׳›׳•׳׳ IP ׳•׳₪׳•׳¨׳˜
         parking_result = supabase.table('parkings').select(
             'name, ip_address, port, description'
         ).eq('id', parking_id).execute()
         
         if not parking_result.data:
-            return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
+            return jsonify({'success': False, 'message': '׳—׳ ׳™׳•׳ ׳׳ ׳ ׳׳¦׳'}), 404
         
         parking_data = parking_result.data[0]
         
-        # בדיקה אם החניון ברשימת החברות המורשות
+        # ׳‘׳“׳™׳§׳” ׳׳ ׳”׳—׳ ׳™׳•׳ ׳‘׳¨׳©׳™׳׳× ׳”׳—׳‘׳¨׳•׳× ׳”׳׳•׳¨׳©׳•׳×
         if company_list:
             allowed_companies = []
             parts = company_list.split(',')
@@ -3907,53 +3907,53 @@ def company_manager_get_subscribers():
             try:
                 parking_number = int(parking_data.get('description', 0))
                 if allowed_companies and parking_number not in allowed_companies:
-                    return jsonify({'success': False, 'message': 'אין הרשאה לחניון זה'}), 403
+                    return jsonify({'success': False, 'message': '׳׳™׳ ׳”׳¨׳©׳׳” ׳׳—׳ ׳™׳•׳ ׳–׳”'}), 403
             except:
                 pass
         
-        # יצירת URL לקריאה לשרת החניון
+        # ׳™׳¦׳™׳¨׳× URL ׳׳§׳¨׳™׳׳” ׳׳©׳¨׳× ׳”׳—׳ ׳™׳•׳
         ip_address = parking_data.get('ip_address')
         port = parking_data.get('port', 443)
         
         if not ip_address:
-            return jsonify({'success': False, 'message': 'חסרים נתוני חיבור לחניון'}), 500
+            return jsonify({'success': False, 'message': '׳—׳¡׳¨׳™׳ ׳ ׳×׳•׳ ׳™ ׳—׳™׳‘׳•׳¨ ׳׳—׳ ׳™׳•׳'}), 500
         
-        # כאן צריך לבצע קריאה לשרת החניון
-        # לעת עתה מחזירים דוגמה
+        # ׳›׳׳ ׳¦׳¨׳™׳ ׳׳‘׳¦׳¢ ׳§׳¨׳™׳׳” ׳׳©׳¨׳× ׳”׳—׳ ׳™׳•׳
+        # ׳׳¢׳× ׳¢׳×׳” ׳׳—׳–׳™׳¨׳™׳ ׳“׳•׳’׳׳”
         return jsonify({
             'success': True,
             'parking_name': parking_data['name'],
             'parking_api_url': f"https://{ip_address}:{port}",
-            'subscribers': [],  # יתמלא מהקריאה לשרת החניון
-            'message': 'נדרש חיבור לשרת החניון'
+            'subscribers': [],  # ׳™׳×׳׳׳ ׳׳”׳§׳¨׳™׳׳” ׳׳©׳¨׳× ׳”׳—׳ ׳™׳•׳
+            'message': '׳ ׳“׳¨׳© ׳—׳™׳‘׳•׳¨ ׳׳©׳¨׳× ׳”׳—׳ ׳™׳•׳'
         })
         
     except Exception as e:
         # Error getting subscribers: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה בטעינת מנויים'}), 500
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳˜׳¢׳™׳ ׳× ׳׳ ׳•׳™׳™׳'}), 500
 
 
 @app.route('/api/company-manager/search-vehicle', methods=['GET'])
 def company_manager_search_vehicle():
-    """חיפוש רכב והחזרת פרטי מנוי ושם חברה"""
+    """׳—׳™׳₪׳•׳© ׳¨׳›׳‘ ׳•׳”׳—׳–׳¨׳× ׳₪׳¨׳˜׳™ ׳׳ ׳•׳™ ׳•׳©׳ ׳—׳‘׳¨׳”"""
     try:
         if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'}), 401
             
         parking_id = request.args.get('parking_id')
         lpn = request.args.get('lpn')
-        contract_id = request.args.get('contract_id') # אופציונלי, לחיפוש בחברה ספציפית
+        contract_id = request.args.get('contract_id') # ׳׳•׳₪׳¦׳™׳•׳ ׳׳™, ׳׳—׳™׳₪׳•׳© ׳‘׳—׳‘׳¨׳” ׳¡׳₪׳¦׳™׳₪׳™׳×
         
         if not parking_id or not lpn:
-             return jsonify({'success': False, 'message': 'חסרים נתונים לחיפוש'}), 400
+             return jsonify({'success': False, 'message': '׳—׳¡׳¨׳™׳ ׳ ׳×׳•׳ ׳™׳ ׳׳—׳™׳₪׳•׳©'}), 400
 
-        # קבלת פרטי חיבור לחניון
-        # נשתמש בפונקציית העזר כדי לתמוך בחיפוש לפי מספר פרויקט (description)
-        # וגם בטבלאות מיפוי
+        # ׳§׳‘׳׳× ׳₪׳¨׳˜׳™ ׳—׳™׳‘׳•׳¨ ׳׳—׳ ׳™׳•׳
+        # ׳ ׳©׳×׳׳© ׳‘׳₪׳•׳ ׳§׳¦׳™׳™׳× ׳”׳¢׳–׳¨ ׳›׳“׳™ ׳׳×׳׳•׳ ׳‘׳—׳™׳₪׳•׳© ׳׳₪׳™ ׳׳¡׳₪׳¨ ׳₪׳¨׳•׳™׳§׳˜ (description)
+        # ׳•׳’׳ ׳‘׳˜׳‘׳׳׳•׳× ׳׳™׳₪׳•׳™
         connection_details = get_parking_connection_details(parking_id)
         
         if not connection_details:
-             # ננסה גם כ-ID רגיל למקרה שזה כן ID
+             # ׳ ׳ ׳¡׳” ׳’׳ ׳›-ID ׳¨׳’׳™׳ ׳׳׳§׳¨׳” ׳©׳–׳” ׳›׳ ID
              try:
                  parking_result = supabase.table('parkings').select(
                     'ip_address, port, description'
@@ -3970,13 +3970,13 @@ def company_manager_search_vehicle():
                  pass
         
         if not connection_details:
-            return jsonify({'success': False, 'message': 'חניון לא נמצא או חסרים פרטי התחברות'}), 404
+            return jsonify({'success': False, 'message': '׳—׳ ׳™׳•׳ ׳׳ ׳ ׳׳¦׳ ׳׳• ׳—׳¡׳¨׳™׳ ׳₪׳¨׳˜׳™ ׳”׳×׳—׳‘׳¨׳•׳×'}), 404
             
         ip_address = connection_details.get('ip_address')
         port = connection_details.get('port', 443)
         
         if not ip_address:
-             return jsonify({'success': False, 'message': 'חסרים נתוני חיבור לחניון'}), 500
+             return jsonify({'success': False, 'message': '׳—׳¡׳¨׳™׳ ׳ ׳×׳•׳ ׳™ ׳—׳™׳‘׳•׳¨ ׳׳—׳ ׳™׳•׳'}), 500
 
         auth_string = base64.b64encode(b'2022:2022').decode('ascii')
         headers = {
@@ -3985,81 +3985,81 @@ def company_manager_search_vehicle():
              'Accept': 'application/xml'
         }
         
-        # 1. חיפוש המנוי
-        # נשתמש בנתיב שעבד: /consumers?contractId=2&lpn=...
-        # אם לא סופק contract_id, ננסה לחפש ללא הפרמטר
+        # 1. ׳—׳™׳₪׳•׳© ׳”׳׳ ׳•׳™
+        # ׳ ׳©׳×׳׳© ׳‘׳ ׳×׳™׳‘ ׳©׳¢׳‘׳“: /consumers?contractId=2&lpn=...
+        # ׳׳ ׳׳ ׳¡׳•׳₪׳§ contract_id, ׳ ׳ ׳¡׳” ׳׳—׳₪׳© ׳׳׳ ׳”׳₪׳¨׳׳˜׳¨
         
-        search_contract_id = contract_id if contract_id else '1000' # ברירת מחדל
+        search_contract_id = contract_id if contract_id else '1000' # ׳‘׳¨׳™׳¨׳× ׳׳—׳“׳
         
         search_url = f"https://{ip_address}:{port}/CustomerMediaWebService/consumers"
         params = {'lpn': lpn}
         if contract_id:
             params['contractId'] = contract_id
             
-        # ביטול אימות SSL כי זה לרוב Self-Signed בחניונים
+        # ׳‘׳™׳˜׳•׳ ׳׳™׳׳•׳× SSL ׳›׳™ ׳–׳” ׳׳¨׳•׳‘ Self-Signed ׳‘׳—׳ ׳™׳•׳ ׳™׳
         response = requests.get(search_url, params=params, headers=headers, verify=False, timeout=30)
         
         if response.status_code == 204:
-            return jsonify({'success': True, 'found': False, 'message': 'לא נמצא רכב בחניון'}), 200
+            return jsonify({'success': True, 'found': False, 'message': '׳׳ ׳ ׳׳¦׳ ׳¨׳›׳‘ ׳‘׳—׳ ׳™׳•׳'}), 200
             
         if response.status_code != 200:
-             return jsonify({'success': False, 'message': f'שגיאה בחיפוש: {response.status_code}'}), 500
+             return jsonify({'success': False, 'message': f'׳©׳’׳™׳׳” ׳‘׳—׳™׳₪׳•׳©: {response.status_code}'}), 500
              
-        # אם הגענו לפה, נמצא מנוי. נפרסר את ה-XML
-        # נשתמש ב-ElementTree פשוט
+        # ׳׳ ׳”׳’׳¢׳ ׳• ׳׳₪׳”, ׳ ׳׳¦׳ ׳׳ ׳•׳™. ׳ ׳₪׳¨׳¡׳¨ ׳׳× ׳”-XML
+        # ׳ ׳©׳×׳׳© ׳‘-ElementTree ׳₪׳©׳•׳˜
         import xml.etree.ElementTree as ET
         try:
             root = ET.fromstring(response.content)
         except Exception:
-             # אם נכשל, ננסה להחזיר כפי שהוא
+             # ׳׳ ׳ ׳›׳©׳, ׳ ׳ ׳¡׳” ׳׳”׳—׳–׳™׳¨ ׳›׳₪׳™ ׳©׳”׳•׳
              return jsonify({'success': True, 'found': True, 'raw_data': response.text})
              
-        # נחלץ את ה-contractId וה-consumerId מהתשובה
+        # ׳ ׳—׳׳¥ ׳׳× ׳”-contractId ׳•׳”-consumerId ׳׳”׳×׳©׳•׳‘׳”
         found_contract_id = None
         found_consumer_id = None
         
-        # חיפוש חכם יותר
-        # בדרך כלל התשובה היא רשימה של consumers או consumer בודד
-        # נחפש contractId ו-id בתוך Consumer
+        # ׳—׳™׳₪׳•׳© ׳—׳›׳ ׳™׳•׳×׳¨
+        # ׳‘׳“׳¨׳ ׳›׳׳ ׳”׳×׳©׳•׳‘׳” ׳”׳™׳ ׳¨׳©׳™׳׳” ׳©׳ consumers ׳׳• consumer ׳‘׳•׳“׳“
+        # ׳ ׳—׳₪׳© contractId ׳•-id ׳‘׳×׳•׳ Consumer
         
         for elem in root.iter():
-            # חיפוש contractId
+            # ׳—׳™׳₪׳•׳© contractId
             if (elem.tag.endswith('contractId') or elem.tag.endswith('contractid')) and not found_contract_id:
                 found_contract_id = elem.text
             
-            # חיפוש consumerId - בדרך כלל זה ה-id הישיר של ה-Consumer
-            # או שנחפש תגית id שנמצאת תחת consumer
+            # ׳—׳™׳₪׳•׳© consumerId - ׳‘׳“׳¨׳ ׳›׳׳ ׳–׳” ׳”-id ׳”׳™׳©׳™׳¨ ׳©׳ ׳”-Consumer
+            # ׳׳• ׳©׳ ׳—׳₪׳© ׳×׳’׳™׳× id ׳©׳ ׳׳¦׳׳× ׳×׳—׳× consumer
             if elem.tag.endswith('consumer'):
                 for child in elem:
                     if child.tag.endswith('id') and not found_consumer_id:
                         found_consumer_id = child.text
                         
-            # אם מצאנו את שניהם אפשר לעצור (אם זה יחיד)
+            # ׳׳ ׳׳¦׳׳ ׳• ׳׳× ׳©׳ ׳™׳”׳ ׳׳₪׳©׳¨ ׳׳¢׳¦׳•׳¨ (׳׳ ׳–׳” ׳™׳—׳™׳“)
             if found_contract_id and found_consumer_id:
                 break
                 
-        # אם לא מצאנו בסריקה רגילה, ננסה חיפוש שטוח
+        # ׳׳ ׳׳ ׳׳¦׳׳ ׳• ׳‘׳¡׳¨׳™׳§׳” ׳¨׳’׳™׳׳”, ׳ ׳ ׳¡׳” ׳—׳™׳₪׳•׳© ׳©׳˜׳•׳—
         if not found_consumer_id:
-            # ננסה למצוא סתם id
+            # ׳ ׳ ׳¡׳” ׳׳׳¦׳•׳ ׳¡׳×׳ id
             for elem in root.iter():
-                if elem.tag.endswith('id') and elem.text and elem.text.isdigit() and len(elem.text) < 10: # מניחים שזה ID קצר
+                if elem.tag.endswith('id') and elem.text and elem.text.isdigit() and len(elem.text) < 10: # ׳׳ ׳™׳—׳™׳ ׳©׳–׳” ID ׳§׳¦׳¨
                     found_consumer_id = elem.text
                     break
         
         if not found_contract_id and contract_id:
             found_contract_id = contract_id
             
-        company_name = "לא ידוע"
+        company_name = "׳׳ ׳™׳“׳•׳¢"
         
-        # 2. שליפת שם החברה
+        # 2. ׳©׳׳™׳₪׳× ׳©׳ ׳”׳—׳‘׳¨׳”
         if found_contract_id:
-            # קריאה לפרטי החוזה
+            # ׳§׳¨׳™׳׳” ׳׳₪׳¨׳˜׳™ ׳”׳—׳•׳–׳”
             contract_url = f"https://{ip_address}:{port}/CustomerMediaWebService/contracts/{found_contract_id}"
             try:
                 contract_response = requests.get(contract_url, headers=headers, verify=False, timeout=10)
                 if contract_response.status_code == 200:
                     c_root = ET.fromstring(contract_response.content)
-                    # נחפש את השם
+                    # ׳ ׳—׳₪׳© ׳׳× ׳”׳©׳
                     for elem in c_root.iter():
                         if 'name' in elem.tag:
                             company_name = elem.text
@@ -4067,13 +4067,13 @@ def company_manager_search_vehicle():
             except Exception as e:
                 print(f"Error fetching contract details: {e}")
 
-        # 3. שליפת פרטים מלאים (Detailed Info)
-        # המשתמש ציין שחסרים פרטים וצריך לבצע קריאה ל-detail
-        final_xml_response = response.text # ברירת מחדל - התשובה המקורית
+        # 3. ׳©׳׳™׳₪׳× ׳₪׳¨׳˜׳™׳ ׳׳׳׳™׳ (Detailed Info)
+        # ׳”׳׳©׳×׳׳© ׳¦׳™׳™׳ ׳©׳—׳¡׳¨׳™׳ ׳₪׳¨׳˜׳™׳ ׳•׳¦׳¨׳™׳ ׳׳‘׳¦׳¢ ׳§׳¨׳™׳׳” ׳-detail
+        final_xml_response = response.text # ׳‘׳¨׳™׳¨׳× ׳׳—׳“׳ - ׳”׳×׳©׳•׳‘׳” ׳”׳׳§׳•׳¨׳™׳×
         
         if found_contract_id and found_consumer_id:
             try:
-                # הנתיב לפרטים מלאים: /consumers/{contractId},{consumerId}/detail
+                # ׳”׳ ׳×׳™׳‘ ׳׳₪׳¨׳˜׳™׳ ׳׳׳׳™׳: /consumers/{contractId},{consumerId}/detail
                 detail_url = f"https://{ip_address}:{port}/CustomerMediaWebService/consumers/{found_contract_id},{found_consumer_id}/detail"
                 print(f"Fetching full details from: {detail_url}")
                 
@@ -4083,7 +4083,7 @@ def company_manager_search_vehicle():
             except Exception as e:
                 print(f"Error fetching full consumer details: {e}")
                 
-        # בניית התשובה המועשרת
+        # ׳‘׳ ׳™׳™׳× ׳”׳×׳©׳•׳‘׳” ׳”׳׳•׳¢׳©׳¨׳×
         return jsonify({
             'success': True,
             'found': True,
@@ -4096,12 +4096,12 @@ def company_manager_search_vehicle():
         
     except Exception as e:
         print(f"Search vehicle error: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה בחיפוש רכב'}), 500
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳—׳™׳₪׳•׳© ׳¨׳›׳‘'}), 500
 
 
 @app.route('/api/status', methods=['GET'])
 def api_status():
-    """בדיקת סטטוס המערכת"""
+    """׳‘׳“׳™׳§׳× ׳¡׳˜׳˜׳•׳¡ ׳”׳׳¢׳¨׳›׳×"""
     return jsonify({
         'success': True,
         'version': '2.0.8',  # Direct proxy in app.py
@@ -4125,7 +4125,7 @@ def test_proxy():
 
 @app.route('/api/company-manager/proxy', methods=['POST', 'OPTIONS', 'GET'])
 def company_manager_proxy():
-    """Proxy לקריאות API לשרתי החניונים"""
+    """Proxy ׳׳§׳¨׳™׳׳•׳× API ׳׳©׳¨׳×׳™ ׳”׳—׳ ׳™׳•׳ ׳™׳"""
     
     # Debug log removed for production
     
@@ -4150,35 +4150,35 @@ def company_manager_proxy():
     try:
         # Proxy request received
         
-        # בדיקה אם אנחנו במצב פיתוח מקומי
+        # ׳‘׳“׳™׳§׳” ׳׳ ׳׳ ׳—׳ ׳• ׳‘׳׳¦׳‘ ׳₪׳™׳×׳•׳— ׳׳§׳•׳׳™
         is_local_dev = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
         
         # Get request data first
         data = request.get_json()
         if not data:
             # No JSON data in request
-            return jsonify({'success': False, 'message': 'חסרים נתונים'}), 400
+            return jsonify({'success': False, 'message': '׳—׳¡׳¨׳™׳ ׳ ׳×׳•׳ ׳™׳'}), 400
             
         # Check for internal session data (for internal API calls)
         internal_session = None
         if data and '_internal_session' in data:
             internal_session = data.pop('_internal_session')
             if internal_session:
-                print(f"📱 Internal session received: {internal_session.get('user_email')}")
+                print(f"נ“± Internal session received: {internal_session.get('user_email')}")
         
         if 'user_email' not in session and not internal_session:
             if is_local_dev:
-                # במצב פיתוח - דלג על בדיקת login
+                # ׳‘׳׳¦׳‘ ׳₪׳™׳×׳•׳— - ׳“׳׳’ ׳¢׳ ׳‘׳“׳™׳§׳× login
                 # LOCAL DEV MODE - Skipping login check
-                session['user_email'] = 'test@local.dev'  # משתמש דמה לבדיקות
+                session['user_email'] = 'test@local.dev'  # ׳׳©׳×׳׳© ׳“׳׳” ׳׳‘׳“׳™׳§׳•׳×
             else:
                 # User not logged in
-                return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+                return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'}), 401
         
         # Use internal session if provided
         if internal_session:
             current_user_email = internal_session.get('user_email')
-            print(f"📱 Using internal session for user: {current_user_email}")
+            print(f"נ“± Using internal session for user: {current_user_email}")
         else:
             current_user_email = session.get('user_email')
             
@@ -4194,9 +4194,9 @@ def company_manager_proxy():
             parking_id = '1'  # Default to parking 1
         
         if not parking_id or not endpoint or parking_id == 'null' or parking_id == 'undefined':
-            return jsonify({'success': False, 'message': 'חסרים פרמטרים'}), 400
+            return jsonify({'success': False, 'message': '׳—׳¡׳¨׳™׳ ׳₪׳¨׳׳˜׳¨׳™׳'}), 400
         
-        # קבלת נתוני החניון
+        # ׳§׳‘׳׳× ׳ ׳×׳•׳ ׳™ ׳”׳—׳ ׳™׳•׳
         # Convert parking_id to string to handle numeric IDs
         parking_num = str(parking_id)
         
@@ -4251,49 +4251,49 @@ def company_manager_proxy():
                             }
                             parking_result = {'data': [parking_data]}
                         else:
-                            return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
+                            return jsonify({'success': False, 'message': '׳—׳ ׳™׳•׳ ׳׳ ׳ ׳׳¦׳'}), 404
                     else:
-                        return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
+                        return jsonify({'success': False, 'message': '׳—׳ ׳™׳•׳ ׳׳ ׳ ׳׳¦׳'}), 404
             except Exception as e:
-                print(f"❌ Error searching fallback tables: {str(e)}")
-                return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
+                print(f"ג Error searching fallback tables: {str(e)}")
+                return jsonify({'success': False, 'message': '׳—׳ ׳™׳•׳ ׳׳ ׳ ׳׳¦׳'}), 404
         else:
             parking_data = parking_result.data[0]
             
         ip_address = parking_data.get('ip_address')
         port = parking_data.get('port', 443)
         
-        # תמיד השתמש בנתונים מהבסיס נתונים
+        # ׳×׳׳™׳“ ׳”׳©׳×׳׳© ׳‘׳ ׳×׳•׳ ׳™׳ ׳׳”׳‘׳¡׳™׳¡ ׳ ׳×׳•׳ ׳™׳
         # Always use data from database
         
-        # וודא שיש כתובת נכונה
+        # ׳•׳•׳“׳ ׳©׳™׳© ׳›׳×׳•׳‘׳× ׳ ׳›׳•׳ ׳”
         if not ip_address or ip_address == 'None':
-            # אם אין בdatabase
-            return jsonify({'success': False, 'message': 'חסרה כתובת IP לחניון'}), 404
+            # ׳׳ ׳׳™׳ ׳‘database
+            return jsonify({'success': False, 'message': '׳—׳¡׳¨׳” ׳›׳×׳•׳‘׳× IP ׳׳—׳ ׳™׳•׳'}), 404
         
-        # וודא שהפורט נכון
+        # ׳•׳•׳“׳ ׳©׳”׳₪׳•׳¨׳˜ ׳ ׳›׳•׳
         if not port or port == 0:
-            # אם אין פורט, השתמש בברירת מחדל
+            # ׳׳ ׳׳™׳ ׳₪׳•׳¨׳˜, ׳”׳©׳×׳׳© ׳‘׳‘׳¨׳™׳¨׳× ׳׳—׳“׳
             port = 443  # Default port
             # Using default port
         
         if not ip_address:
-            return jsonify({'success': False, 'message': 'חסרים נתוני חיבור'}), 500
+            return jsonify({'success': False, 'message': '׳—׳¡׳¨׳™׳ ׳ ׳×׳•׳ ׳™ ׳—׳™׳‘׳•׳¨'}), 500
         
 
-        # בניית URL - עם פורט ברירת מחדל אם לא נמצא
+        # ׳‘׳ ׳™׳™׳× URL - ׳¢׳ ׳₪׳•׳¨׳˜ ׳‘׳¨׳™׳¨׳× ׳׳—׳“׳ ׳׳ ׳׳ ׳ ׳׳¦׳
         if port is None or port == 0:
-            port = 443  # פורט ברירת מחדל
+            port = 443  # ׳₪׳•׳¨׳˜ ׳‘׳¨׳™׳¨׳× ׳׳—׳“׳
             # Using default port
     
-        # השתמש תמיד ב-HTTPS לשרתי החניון
+        # ׳”׳©׳×׳׳© ׳×׳׳™׳“ ׳‘-HTTPS ׳׳©׳¨׳×׳™ ׳”׳—׳ ׳™׳•׳
         protocol = "https"
         # Using HTTPS protocol
         
-        # בניית URL - תיקון לפי מה שעובד!
+        # ׳‘׳ ׳™׳™׳× URL - ׳×׳™׳§׳•׳ ׳׳₪׳™ ׳׳” ׳©׳¢׳•׳‘׳“!
         if endpoint == 'contracts' or endpoint == 'GetContractsList':
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts"
-            method = 'GET'  # תמיד GET לחברות
+            method = 'GET'  # ׳×׳׳™׳“ GET ׳׳—׳‘׳¨׳•׳×
         elif 'contracts/' in endpoint and '/consumers' in endpoint:
             # Handle contracts/{contractId}/consumers endpoint
             # Remove CustomerMediaWebService prefix if it exists
@@ -4303,11 +4303,11 @@ def company_manager_proxy():
             # Don't override method for POST requests!
             # method = 'GET'
         elif 'consumers' in endpoint.lower() and '/detail' not in endpoint:
-            # בדיקה אם יש query parameters ב-endpoint
+            # ׳‘׳“׳™׳§׳” ׳׳ ׳™׳© query parameters ׳‘-endpoint
             if '?' in endpoint:
-                # יש query parameters - להשתמש ב-endpoint כמו שהוא
+                # ׳™׳© query parameters - ׳׳”׳©׳×׳׳© ׳‘-endpoint ׳›׳׳• ׳©׳”׳•׳
                 url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
-                print(f"🔍 Using consumers endpoint with query params: {endpoint}")
+                print(f"נ” Using consumers endpoint with query params: {endpoint}")
             else:
                 # Check if we have a contractId in payload to filter by
                 contract_id = payload.get('contractId') if payload else None
@@ -4322,7 +4322,7 @@ def company_manager_proxy():
                     # Getting all consumers - performance warning
             
             # Consumers endpoint - filtered by contract
-            method = 'GET'  # תמיד GET למנויים
+            method = 'GET'  # ׳×׳׳™׳“ GET ׳׳׳ ׳•׳™׳™׳
         elif endpoint.startswith('consumers/'):
             # Alternative format: consumers/{contractId} or consumers/{contractId},{consumerId}
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
@@ -4366,30 +4366,30 @@ def company_manager_proxy():
             # Commands use PUT, queries use GET
             if '/command/' in endpoint:
                 method = 'PUT'
-                print(f"📱 Device Control Command: {endpoint}")
+                print(f"נ“± Device Control Command: {endpoint}")
             else:
                 method = 'GET'
         elif 'CustomerMediaWebService' in endpoint:
-            # אם כבר יש CustomerMediaWebService ב-endpoint
+            # ׳׳ ׳›׳‘׳¨ ׳™׳© CustomerMediaWebService ׳‘-endpoint
             url = f"{protocol}://{ip_address}:{port}/{endpoint}"
         else:
-            # אחרת, נסה עם /api
+            # ׳׳—׳¨׳×, ׳ ׳¡׳” ׳¢׳ /api
             url = f"{protocol}://{ip_address}:{port}/api/{endpoint}"
         
         # Proxy Request
         
-        # הכנת headers
+        # ׳”׳›׳ ׳× headers
         headers = {'Content-Type': 'application/json'}
         
-        # Basic Auth - תמיד לשרת החניון
+        # Basic Auth - ׳×׳׳™׳“ ׳׳©׳¨׳× ׳”׳—׳ ׳™׳•׳
         if 'CustomerMediaWebService' in endpoint or 'contracts' in endpoint or 'consumer' in endpoint or 'usageprofiles' in endpoint or 'DeviceControlWebService' in endpoint:
-            # TODO: החלף עם ה-credentials הנכונים!
+            # TODO: ׳”׳—׳׳£ ׳¢׳ ׳”-credentials ׳”׳ ׳›׳•׳ ׳™׳!
             auth_string = base64.b64encode(b'2022:2022').decode('ascii')
             headers['Authorization'] = f'Basic {auth_string}'
             # Added Basic Auth
         
         try:
-            # timeout מוגבר ל-30 שניות ב-production
+            # timeout ׳׳•׳’׳‘׳¨ ׳-30 ׳©׳ ׳™׳•׳× ׳‘-production
             # For device control endpoints, use even longer timeout
             if 'DeviceControlWebService' in endpoint:
                 timeout_seconds = 45 if not is_local_dev else 30
@@ -4397,7 +4397,7 @@ def company_manager_proxy():
                 timeout_seconds = 30 if not is_local_dev else 25
             # Attempting connection
             
-            # ביצוע הקריאה - פשוט כמו שהיה
+            # ׳‘׳™׳¦׳•׳¢ ׳”׳§׳¨׳™׳׳” - ׳₪׳©׳•׳˜ ׳›׳׳• ׳©׳”׳™׳”
             # Executing request
             if method == 'GET':
                 response = requests.get(url, headers=headers, verify=False, timeout=timeout_seconds)
@@ -4464,10 +4464,10 @@ def company_manager_proxy():
                     
                     # Convert to XML string
                     xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
-                    print(f"   📝 Sending XML for consumer creation (POST to {url}):")
+                    print(f"   נ“ Sending XML for consumer creation (POST to {url}):")
                     print(f"   Consumer ID: {payload.get('consumer', {}).get('id', 'NEW')}")
-                    print(f"   📄 Full XML being sent:\n{xml_str}")
-                    print(f"   📏 XML length: {len(xml_str)} characters")
+                    print(f"   נ“„ Full XML being sent:\n{xml_str}")
+                    print(f"   נ“ XML length: {len(xml_str)} characters")
                     
                     # Send as XML
                     headers['Content-Type'] = 'application/xml'
@@ -4535,8 +4535,8 @@ def company_manager_proxy():
                     
                     # Convert to XML string
                     xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
-                    print(f"   📝 Sending XML for update (PUT to {url}):")
-                    print(f"   📅 Dates in consumer: xValidFrom={payload.get('consumer', {}).get('xValidFrom')}, xValidUntil={payload.get('consumer', {}).get('xValidUntil')}")
+                    print(f"   נ“ Sending XML for update (PUT to {url}):")
+                    print(f"   נ“… Dates in consumer: xValidFrom={payload.get('consumer', {}).get('xValidFrom')}, xValidUntil={payload.get('consumer', {}).get('xValidUntil')}")
                     
                     headers['Content-Type'] = 'application/xml'
                     response = requests.put(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
@@ -4562,7 +4562,7 @@ def company_manager_proxy():
                         counting_elem.text = str(payload['counting'])
                         
                     xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
-                    print(f"   📝 Sending XML for Contract Update (PUT to {url}):\n{xml_str}")
+                    print(f"   נ“ Sending XML for Contract Update (PUT to {url}):\n{xml_str}")
                     
                     headers['Content-Type'] = 'application/xml'
                     response = requests.put(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
@@ -4572,18 +4572,18 @@ def company_manager_proxy():
             elif method == 'DELETE':
                 response = requests.delete(url, headers=headers, verify=False, timeout=timeout_seconds)
             else:
-                return jsonify({'success': False, 'message': 'שיטה לא נתמכת'}), 400
+                return jsonify({'success': False, 'message': '׳©׳™׳˜׳” ׳׳ ׳ ׳×׳׳›׳×'}), 400
             
             # Response received
             
-            # החזרת התוצאה
+            # ׳”׳—׳–׳¨׳× ׳”׳×׳•׳¦׳׳”
             if response.status_code in [200, 201]:
-                # בדוק אם התגובה היא XML או JSON
+                # ׳‘׳“׳•׳§ ׳׳ ׳”׳×׳’׳•׳‘׳” ׳”׳™׳ XML ׳׳• JSON
                 content_type = response.headers.get('content-type', '')
                 # Checking content type
                 
                 if 'xml' in content_type.lower() or response.text.startswith('<?xml'):
-                    # פרש XML לJSON
+                    # ׳₪׳¨׳© XML ׳JSON
                     # Got XML response, parsing
                     # XML PARSER - checking endpoint type
                     
@@ -4601,7 +4601,7 @@ def company_manager_proxy():
                         
                         # Handle Device Control Web Service responses
                         if 'DeviceControlWebService' in endpoint:
-                            print(f"   📱 Parsing Device Control response for endpoint: {endpoint}")
+                            print(f"   נ“± Parsing Device Control response for endpoint: {endpoint}")
                             
                             if 'geometry' in endpoint:
                                 # Parse geometry response
@@ -4613,7 +4613,7 @@ def company_manager_proxy():
                                     cell_num = cell_comp.find('number')
                                     if cell_num is not None:
                                         cell_computers.append(cell_num.text)
-                                        print(f"   📱 Found cell computer: {cell_num.text}")
+                                        print(f"   נ“± Found cell computer: {cell_num.text}")
                                 
                                 # Find all field-device elements recursively
                                 for device in root.findall('.//field-device'):
@@ -4685,7 +4685,7 @@ def company_manager_proxy():
                                             'cellComputers': cell_computers  # Store for command use
                                         })
                                 
-                                print(f"   ✅ Found {len(devices)} devices in geometry")
+                                print(f"   ג… Found {len(devices)} devices in geometry")
                                 
                                 # Store cell computers in session for command use
                                 if cell_computers and internal_session:
@@ -4724,7 +4724,7 @@ def company_manager_proxy():
                                         }
                                         events.append(event_info)
                                 
-                                print(f"   ✅ Found {len(events)} events")
+                                print(f"   ג… Found {len(events)} events")
                                 return jsonify({'success': True, 'data': events})
                             
                             elif 'version' in endpoint:
@@ -4735,12 +4735,12 @@ def company_manager_proxy():
                             
                             elif 'command' in endpoint:
                                 # Parse command response
-                                print(f"   📱 Parsing command response")
+                                print(f"   נ“± Parsing command response")
                                 status_elem = root.find('.//status')
                                 if status_elem is not None:
                                     status_code = int(status_elem.text)
                                     success = status_code == 0
-                                    print(f"   📱 Command response status: {status_code} ({'Success' if success else 'Failed'})")
+                                    print(f"   נ“± Command response status: {status_code} ({'Success' if success else 'Failed'})")
                                     return jsonify({
                                         'success': success,
                                         'status': status_code,
@@ -4752,7 +4752,7 @@ def company_manager_proxy():
                         
                         elif not is_detail_endpoint and ('contracts' in endpoint or 'contract' in endpoint.lower()):
                             contracts = []
-                            # חפש contract elements בכל namespaces
+                            # ׳—׳₪׳© contract elements ׳‘׳›׳ namespaces
                             for contract in root.findall('.//{http://gsph.sub.com/cust/types}contract'):
                                 contract_data = {}
                                 for child in contract:
@@ -4842,7 +4842,7 @@ def company_manager_proxy():
                             elif payload and 'contractId' in payload:
                                 # Only filter if we got ALL consumers (old behavior)
                                 contract_id = str(payload['contractId'])
-                                print(f"   🔍 Got ALL consumers - need to filter for contract ID: {contract_id}")
+                                print(f"   נ” Got ALL consumers - need to filter for contract ID: {contract_id}")
                                 
                                 # Filter consumers by contractId
                                 filtered = []
@@ -4866,10 +4866,10 @@ def company_manager_proxy():
                                             break
                                 
                                 if filtered:
-                                    print(f"   ✅ Filtered to {len(filtered)} consumers for contract {contract_id}")
+                                    print(f"   ג… Filtered to {len(filtered)} consumers for contract {contract_id}")
                                     consumers = filtered
                                 else:
-                                    print(f"   ⚠️ No consumers found for contract {contract_id} after filtering")
+                                    print(f"   ג ן¸ No consumers found for contract {contract_id} after filtering")
                                     consumers = []
                             
                             # Minimal logging for performance
@@ -4923,7 +4923,7 @@ def company_manager_proxy():
                                 pass
                                 
                             except Exception as e:
-                                print(f"   ❌ Error parsing consumer detail XML: {e}")
+                                print(f"   ג Error parsing consumer detail XML: {e}")
                                 consumer_detail = {'error': str(e)}
                             
                             return jsonify({'success': True, 'data': consumer_detail})
@@ -5113,25 +5113,25 @@ def company_manager_proxy():
                                 print(f"   XML (first 1000 chars): {response.text[:1000]}")
                                 # Return default profiles if none found
                                 profiles = [
-                                    {"id": "0", "name": "רגיל"},
-                                    {"id": "1", "name": "כול החניונים"},
-                                    {"id": "2", "name": "חניון ראשי"},
+                                    {"id": "0", "name": "׳¨׳’׳™׳"},
+                                    {"id": "1", "name": "׳›׳•׳ ׳”׳—׳ ׳™׳•׳ ׳™׳"},
+                                    {"id": "2", "name": "׳—׳ ׳™׳•׳ ׳¨׳׳©׳™"},
                                     {"id": "3", "name": "VIP"},
-                                    {"id": "4", "name": "נכה"},
-                                    {"id": "5", "name": "-2 חניון"}
+                                    {"id": "4", "name": "׳ ׳›׳”"},
+                                    {"id": "5", "name": "-2 ׳—׳ ׳™׳•׳"}
                                 ]
                             
                             return jsonify({'success': True, 'data': profiles})
                         else:
-                            # החזר כ-raw XML אם לא מזהים את הסוג
+                            # ׳”׳—׳–׳¨ ׳›-raw XML ׳׳ ׳׳ ׳׳–׳”׳™׳ ׳׳× ׳”׳¡׳•׳’
                             # Unknown XML type, returning raw
                             return jsonify({'success': True, 'raw': response.text})
                             
                     except Exception as e:
-                        print(f"   ❌ XML parse error: {e}")
+                        print(f"   ג XML parse error: {e}")
                         return jsonify({'success': True, 'raw': response.text})
                 else:
-                    # נסה לפרש כ-JSON
+                    # ׳ ׳¡׳” ׳׳₪׳¨׳© ׳›-JSON
                     try:
                         data = response.json() if response.text else {}
                         # Got JSON data from parking server
@@ -5197,14 +5197,14 @@ def company_manager_proxy():
                         
                         # Add appropriate message based on method
                         if method == 'PUT':
-                            result['message'] = 'הנתונים עודכנו בהצלחה בשרת החניון'
+                            result['message'] = '׳”׳ ׳×׳•׳ ׳™׳ ׳¢׳•׳“׳›׳ ׳• ׳‘׳”׳¦׳׳—׳” ׳‘׳©׳¨׳× ׳”׳—׳ ׳™׳•׳'
                         elif method == 'POST':
-                            result['message'] = 'הנתונים נשמרו בהצלחה בשרת החניון'
+                            result['message'] = '׳”׳ ׳×׳•׳ ׳™׳ ׳ ׳©׳׳¨׳• ׳‘׳”׳¦׳׳—׳” ׳‘׳©׳¨׳× ׳”׳—׳ ׳™׳•׳'
                             # For consumer creation, check if we got a created ID
                             if 'contracts' in endpoint and 'consumers' in endpoint:
-                                print(f"   🆕 Consumer creation response status: {response.status_code}")
-                                print(f"   🆕 Consumer creation response: {response.text[:1000]}")
-                                print(f"   🆕 Response content-type: {response.headers.get('content-type', 'unknown')}")
+                                print(f"   נ†• Consumer creation response status: {response.status_code}")
+                                print(f"   נ†• Consumer creation response: {response.text[:1000]}")
+                                print(f"   נ†• Response content-type: {response.headers.get('content-type', 'unknown')}")
                                 # Try to extract ID from response if exists
                                 try:
                                     import xml.etree.ElementTree as ET
@@ -5220,53 +5220,53 @@ def company_manager_proxy():
                                                 id_elem = consumer_elem.find('.//id')
                                             if id_elem is not None and id_elem.text:
                                                 result['data'] = {'id': id_elem.text}
-                                                print(f"   🆕 New consumer ID from server: {id_elem.text}")
+                                                print(f"   נ†• New consumer ID from server: {id_elem.text}")
                                             else:
-                                                print(f"   ⚠️ No ID found in consumer element")
+                                                print(f"   ג ן¸ No ID found in consumer element")
                                         else:
-                                            print(f"   ⚠️ No consumer element found in response")
+                                            print(f"   ג ן¸ No consumer element found in response")
                                     else:
-                                        print(f"   ⚠️ Response is not XML")
+                                        print(f"   ג ן¸ Response is not XML")
                                 except Exception as e:
-                                    print(f"   ❌ Error parsing creation response: {str(e)}")
+                                    print(f"   ג Error parsing creation response: {str(e)}")
                         
                         return jsonify(result)
                     except Exception as e:
                         # Error parsing JSON
-                        # אם זה לא JSON, החזר את הטקסט
+                        # ׳׳ ׳–׳” ׳׳ JSON, ׳”׳—׳–׳¨ ׳׳× ׳”׳˜׳§׳¡׳˜
                         return jsonify({
                             'success': True,
                             'data': {'raw': response.text}
                         })
             else:
-                print(f"   ❌ Error from parking server: {response.status_code}")
-                print(f"   📝 Error details: {response.text[:500]}")
+                print(f"   ג Error from parking server: {response.status_code}")
+                print(f"   נ“ Error details: {response.text[:500]}")
                 return jsonify({
                     'success': False,
-                    'message': f'שגיאה בקריאה לשרת החניון: {response.status_code}'
+                    'message': f'׳©׳’׳™׳׳” ׳‘׳§׳¨׳™׳׳” ׳׳©׳¨׳× ׳”׳—׳ ׳™׳•׳: {response.status_code}'
                 }), response.status_code
                 
         except requests.exceptions.Timeout:
             return jsonify({
                 'success': False, 
-                'error': 'זמן ההמתנה לשרת החניון פג',
+                'error': '׳–׳׳ ׳”׳”׳׳×׳ ׳” ׳׳©׳¨׳× ׳”׳—׳ ׳™׳•׳ ׳₪׳’',
                 'timeout': timeout_seconds,
                 'server': f"{ip_address}:{port}"
             }), 504
         except requests.exceptions.ConnectionError as e:
             error_msg = str(e)
             
-            # בדוק אם זה בעיית SSL
+            # ׳‘׳“׳•׳§ ׳׳ ׳–׳” ׳‘׳¢׳™׳™׳× SSL
             if 'SSL' in error_msg or 'certificate' in error_msg.lower():
                 try:
-                    # נסה שוב עם SSL מושבת לגמרי
+                    # ׳ ׳¡׳” ׳©׳•׳‘ ׳¢׳ SSL ׳׳•׳©׳‘׳× ׳׳’׳׳¨׳™
                     import ssl
                     import urllib3
                     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
                     
                     response = requests.get(url, headers=headers, verify=False, timeout=10)
                     if response.status_code == 200:
-                        print(f"   ✅ Worked without SSL verification!")
+                        print(f"   ג… Worked without SSL verification!")
                         data = response.json() if response.text else {}
                         return jsonify({'success': True, 'data': data})
                 except:
@@ -5274,7 +5274,7 @@ def company_manager_proxy():
             
             return jsonify({
                 'success': False, 
-                'error': 'לא ניתן להתחבר לשרת החניון',
+                'error': '׳׳ ׳ ׳™׳×׳ ׳׳”׳×׳—׳‘׳¨ ׳׳©׳¨׳× ׳”׳—׳ ׳™׳•׳',
                 'details': error_msg[:200],
                 'server': f"{ip_address}:{port}"
             }), 503
@@ -5286,42 +5286,42 @@ def company_manager_proxy():
             }), 500
             
     except Exception as e:
-        print(f"❌ General proxy error: {str(e)}")
-        return jsonify({'success': False, 'error': 'שגיאה כללית במערכת'}), 500
+        print(f"ג General proxy error: {str(e)}")
+        return jsonify({'success': False, 'error': '׳©׳’׳™׳׳” ׳›׳׳׳™׳× ׳‘׳׳¢׳¨׳›׳×'}), 500
 
-# ========== API למנהל חניון ==========
+# ========== API ׳׳׳ ׳”׳ ׳—׳ ׳™׳•׳ ==========
 @app.route('/api/parking-manager/get-parking-info', methods=['GET'])
 def parking_manager_get_info():
-    """קבלת נתוני החניון של המנהל - תומך גם במנהל חלקי"""
+    """׳§׳‘׳׳× ׳ ׳×׳•׳ ׳™ ׳”׳—׳ ׳™׳•׳ ׳©׳ ׳”׳׳ ׳”׳ - ׳×׳•׳׳ ׳’׳ ׳‘׳׳ ׳”׳ ׳—׳׳§׳™"""
     try:
         if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'}), 401
         
-        # בדיקת הרשאות מנהל חניון
+        # ׳‘׳“׳™׳§׳× ׳”׳¨׳©׳׳•׳× ׳׳ ׳”׳ ׳—׳ ׳™׳•׳
         user_result = supabase.table('user_parkings').select(
             'user_id, code_type, project_number, parking_name, company_type, company_list, counting'
         ).eq('email', session['user_email']).execute()
         
         if not user_result.data:
-            return jsonify({'success': False, 'message': 'משתמש לא נמצא'}), 403
+            return jsonify({'success': False, 'message': '׳׳©׳×׳׳© ׳׳ ׳ ׳׳¦׳'}), 403
 
         user_data = user_result.data[0]
         code_type = user_data.get('code_type', '')
         code_type_lower = str(code_type).strip().lower()
         
-        # הרשאות: מנהל חניון מלא, מנהל חניון חלקי, או מאסטר או פרוקס
+        # ׳”׳¨׳©׳׳•׳×: ׳׳ ׳”׳ ׳—׳ ׳™׳•׳ ׳׳׳, ׳׳ ׳”׳ ׳—׳ ׳™׳•׳ ׳—׳׳§׳™, ׳׳• ׳׳׳¡׳˜׳¨ ׳׳• ׳₪׳¨׳•׳§׳¡
         allowed_roles = ['parking_manager', 'parking_manager_part', 'parking_manager_partial', 'master', 'parking_manager_prox']
         if code_type_lower not in allowed_roles:
-            return jsonify({'success': False, 'message': 'אין הרשאה - נדרש קוד מנהל חניון'}), 403
+            return jsonify({'success': False, 'message': '׳׳™׳ ׳”׳¨׳©׳׳” - ׳ ׳“׳¨׳© ׳§׳•׳“ ׳׳ ׳”׳ ׳—׳ ׳™׳•׳'}), 403
         
-        # קבלת משתמשי החניון
+        # ׳§׳‘׳׳× ׳׳©׳×׳׳©׳™ ׳”׳—׳ ׳™׳•׳
         parking_users = supabase.table('user_parkings').select(
              'user_id, username, email, company_list, permissions, role, access_level, created_at, is_temp_password, counting'
         ).eq('project_number', user_data['project_number']).order('created_at', desc=True).execute()
         
         users_list = parking_users.data
         
-        # אם זה מנהל חלקי - סינון המשתמשים
+        # ׳׳ ׳–׳” ׳׳ ׳”׳ ׳—׳׳§׳™ - ׳¡׳™׳ ׳•׳ ׳”׳׳©׳×׳׳©׳™׳
         if code_type_lower in ['parking_manager_part', 'parking_manager_partial']:
             manager_allowed = user_data.get('company_list', '')
             filtered_users = []
@@ -5346,20 +5346,20 @@ def parking_manager_get_info():
 
             manager_set = parse_ranges(manager_allowed)
             
-            # אם למנהל אין הגדרת חברות, אולי הוא לא רואה כלום או רואה הכל? נניח ריק = כלום
+            # ׳׳ ׳׳׳ ׳”׳ ׳׳™׳ ׳”׳’׳“׳¨׳× ׳—׳‘׳¨׳•׳×, ׳׳•׳׳™ ׳”׳•׳ ׳׳ ׳¨׳•׳׳” ׳›׳׳•׳ ׳׳• ׳¨׳•׳׳” ׳”׳›׳? ׳ ׳ ׳™׳— ׳¨׳™׳§ = ׳›׳׳•׳
             if manager_set: 
                 for u in users_list:
                     u_companies = u.get('company_list', '')
-                    # אם למשתמש אין חברה מוגדרת, האם להראות? נניח שלא
+                    # ׳׳ ׳׳׳©׳×׳׳© ׳׳™׳ ׳—׳‘׳¨׳” ׳׳•׳’׳“׳¨׳×, ׳”׳׳ ׳׳”׳¨׳׳•׳×? ׳ ׳ ׳™׳— ׳©׳׳
                     if not u_companies: continue
                     
                     u_set = parse_ranges(u_companies)
-                    # בדיקה: האם כל החברות של המשתמש מוכלות בטווח המנהל? 
-                    # או מספיק חיתוך? המשתמש ביקש: "המשתמש אמור לראות רק משתמשים שיש להם חברות בטווח"
-                    # נניח חיתוך (overlap) מספיק כדי לראות את המשתמש
-                    # אבל כדי למנוע זליגת מידע, אם משתמש שייך ל-100 ו-200, ומנהל אחראי רק על 100,
-                    # הוא יראה את המשתמש. האם הוא יכול לערוך אותו ולראות את 200? כן. 
-                    # זה גבולי אבל מקובל במערכות פשוטות. נלך על חיתוך.
+                    # ׳‘׳“׳™׳§׳”: ׳”׳׳ ׳›׳ ׳”׳—׳‘׳¨׳•׳× ׳©׳ ׳”׳׳©׳×׳׳© ׳׳•׳›׳׳•׳× ׳‘׳˜׳•׳•׳— ׳”׳׳ ׳”׳? 
+                    # ׳׳• ׳׳¡׳₪׳™׳§ ׳—׳™׳×׳•׳? ׳”׳׳©׳×׳׳© ׳‘׳™׳§׳©: "׳”׳׳©׳×׳׳© ׳׳׳•׳¨ ׳׳¨׳׳•׳× ׳¨׳§ ׳׳©׳×׳׳©׳™׳ ׳©׳™׳© ׳׳”׳ ׳—׳‘׳¨׳•׳× ׳‘׳˜׳•׳•׳—"
+                    # ׳ ׳ ׳™׳— ׳—׳™׳×׳•׳ (overlap) ׳׳¡׳₪׳™׳§ ׳›׳“׳™ ׳׳¨׳׳•׳× ׳׳× ׳”׳׳©׳×׳׳©
+                    # ׳׳‘׳ ׳›׳“׳™ ׳׳׳ ׳•׳¢ ׳–׳׳™׳’׳× ׳׳™׳“׳¢, ׳׳ ׳׳©׳×׳׳© ׳©׳™׳™׳ ׳-100 ׳•-200, ׳•׳׳ ׳”׳ ׳׳—׳¨׳׳™ ׳¨׳§ ׳¢׳ 100,
+                    # ׳”׳•׳ ׳™׳¨׳׳” ׳׳× ׳”׳׳©׳×׳׳©. ׳”׳׳ ׳”׳•׳ ׳™׳›׳•׳ ׳׳¢׳¨׳•׳ ׳׳•׳×׳• ׳•׳׳¨׳׳•׳× ׳׳× 200? ׳›׳. 
+                    # ׳–׳” ׳’׳‘׳•׳׳™ ׳׳‘׳ ׳׳§׳•׳‘׳ ׳‘׳׳¢׳¨׳›׳•׳× ׳₪׳©׳•׳˜׳•׳×. ׳ ׳׳ ׳¢׳ ׳—׳™׳×׳•׳.
                     if not u_set.isdisjoint(manager_set):
                         filtered_users.append(u)
             
@@ -5379,7 +5379,7 @@ def parking_manager_get_info():
         
     except Exception as e:
         # Error getting parking manager info: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה בקבלת נתוני חניון'})
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳§׳‘׳׳× ׳ ׳×׳•׳ ׳™ ׳—׳ ׳™׳•׳'})
 
 
 
@@ -5408,7 +5408,7 @@ def mobile_controller_devices():
     """Get list of devices allowed for the user."""
     try:
         if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'}), 401
             
         data = request.json
         # parking_id from request or user session?
@@ -5418,14 +5418,14 @@ def mobile_controller_devices():
         # Get user data to check permissions
         user_result = supabase.table('user_parkings').select('*').eq('email', user_email).execute()
         if not user_result.data:
-             return jsonify({'success': False, 'message': 'משתמש לא נמצא'}), 404
+             return jsonify({'success': False, 'message': '׳׳©׳×׳׳© ׳׳ ׳ ׳׳¦׳'}), 404
              
         user_data = user_result.data[0]
         role = user_data.get('role')
         
         # Check permission (mobile_controller or manager)
         if role != 'mobile_controller' and role not in ['parking_manager', 'master']:
-             return jsonify({'success': False, 'message': 'אין הרשאה'}), 403
+             return jsonify({'success': False, 'message': '׳׳™׳ ׳”׳¨׳©׳׳”'}), 403
              
         allowed_devices_str = user_data.get('company_list', '') # In this role, company_list = devices
         allowed_devices = parse_device_ranges(allowed_devices_str)
@@ -5482,7 +5482,7 @@ def mobile_controller_devices():
             
             devices_list.append({
                 'number': dev_num,
-                'name': f'מכשיר {dev_num}',
+                'name': f'׳׳›׳©׳™׳¨ {dev_num}',
                 'type': d_type,
                 'status': 'unknown', # Or 'connected' if we assume so
                 'barrier': 'closed', 
@@ -5493,14 +5493,14 @@ def mobile_controller_devices():
         
     except Exception as e:
         print(f"Mobile devices error: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה בטעינת מכשירים'}), 500
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳˜׳¢׳™׳ ׳× ׳׳›׳©׳™׳¨׳™׳'}), 500
 
 @app.route('/api/mobile-controller/command', methods=['POST'])
 def mobile_controller_command():
     """Execute command on a device."""
     try:
         if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'}), 401
             
         data = request.json
         device_num = int(data.get('devices', [0])[0]) # Legacy array format
@@ -5515,7 +5515,7 @@ def mobile_controller_command():
         
         allowed_devices = parse_device_ranges(user_data.get('company_list', ''))
         if device_num not in allowed_devices and user_data['role'] == 'mobile_controller':
-             return jsonify({'success': False, 'message': 'אין הרשאה למכשיר זה'}), 403
+             return jsonify({'success': False, 'message': '׳׳™׳ ׳”׳¨׳©׳׳” ׳׳׳›׳©׳™׳¨ ׳–׳”'}), 403
              
         # Send command to parking server
         project_number = user_data.get('project_number')
@@ -5551,15 +5551,15 @@ def mobile_controller_command():
             try:
                 print(f"Sending command {command_code} to device {device_num} at {url}")
                 # requests.post(...) # Uncomment when real
-                return jsonify({'success': True, 'message': 'פקודה נשלחה (סימולציה)'})
+                return jsonify({'success': True, 'message': '׳₪׳§׳•׳“׳” ׳ ׳©׳׳—׳” (׳¡׳™׳׳•׳׳¦׳™׳”)'})
             except Exception as e:
-                 return jsonify({'success': False, 'message': f'שגיאה בשליחה: {str(e)}'}), 500
+                 return jsonify({'success': False, 'message': f'׳©׳’׳™׳׳” ׳‘׳©׳׳™׳—׳”: {str(e)}'}), 500
                  
-        return jsonify({'success': False, 'message': 'אין חיבור לחניון'}), 500
+        return jsonify({'success': False, 'message': '׳׳™׳ ׳—׳™׳‘׳•׳¨ ׳׳—׳ ׳™׳•׳'}), 500
 
     except Exception as e:
         print(f"Command error: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה בביצוע פקודה'}), 500
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳‘׳™׳¦׳•׳¢ ׳₪׳§׳•׳“׳”'}), 500
 
 @app.route('/api/mobile-controller/device-status', methods=['POST'])
 def mobile_controller_device_status():
@@ -5573,14 +5573,14 @@ def mobile_controller_events():
     return jsonify({'success': True, 'events': []})
 
 
-# ========== פונקציות מיילים ==========
+# ========== ׳₪׳•׳ ׳§׳¦׳™׳•׳× ׳׳™׳™׳׳™׳ ==========
 
 def send_new_user_welcome_email(email, username, password, login_url):
-    """שליחת מייל ברוכים הבאים למשתמש חדש"""
+    """׳©׳׳™׳—׳× ׳׳™׳™׳ ׳‘׳¨׳•׳›׳™׳ ׳”׳‘׳׳™׳ ׳׳׳©׳×׳׳© ׳—׳“׳©"""
     
     if not mail:
-        print(f"❌ Mail system not available")
-        print(f"📱 NEW USER DETAILS for {email}:")
+        print(f"ג Mail system not available")
+        print(f"נ“± NEW USER DETAILS for {email}:")
         print(f"   Username: {username}")
         print(f"   Password: {password}")
         print(f"   URL: {login_url}")
@@ -5589,36 +5589,36 @@ def send_new_user_welcome_email(email, username, password, login_url):
     try:
         
         msg = Message(
-            subject='ברוכים הבאים למערכת S&B Parking',
+            subject='׳‘׳¨׳•׳›׳™׳ ׳”׳‘׳׳™׳ ׳׳׳¢׳¨׳›׳× S&B Parking',
             recipients=[email],
             html=f"""
             <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">
-                <h2 style="color: #667eea;">ברוכים הבאים למערכת S&B Parking</h2>
-                <h3>חשבון חדש נוצר עבורך במערכת דוחות החניות</h3>
+                <h2 style="color: #667eea;">׳‘׳¨׳•׳›׳™׳ ׳”׳‘׳׳™׳ ׳׳׳¢׳¨׳›׳× S&B Parking</h2>
+                <h3>׳—׳©׳‘׳•׳ ׳—׳“׳© ׳ ׳•׳¦׳¨ ׳¢׳‘׳•׳¨׳ ׳‘׳׳¢׳¨׳›׳× ׳“׳•׳—׳•׳× ׳”׳—׳ ׳™׳•׳×</h3>
                 
                 <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <p><strong>שם משתמש:</strong> {username}</p>
-                    <p><strong>סיסמה ראשונית:</strong> <span style="font-family: monospace; background: #e9ecef; padding: 2px 6px; color: #d63384; font-weight: bold;">Dd123456</span></p>
-                    <p><strong>קישור להתחברות:</strong></p>
+                    <p><strong>׳©׳ ׳׳©׳×׳׳©:</strong> {username}</p>
+                    <p><strong>׳¡׳™׳¡׳׳” ׳¨׳׳©׳•׳ ׳™׳×:</strong> <span style="font-family: monospace; background: #e9ecef; padding: 2px 6px; color: #d63384; font-weight: bold;">Dd123456</span></p>
+                    <p><strong>׳§׳™׳©׳•׳¨ ׳׳”׳×׳—׳‘׳¨׳•׳×:</strong></p>
                     <a href="{login_url}" style="color: #667eea; text-decoration: none; font-weight: bold;">{login_url}</a>
                 </div>
                 
                 <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                    <p style="margin: 0; color: #856404;"><strong>חשוב - הוראות בטיחות:</strong></p>
+                    <p style="margin: 0; color: #856404;"><strong>׳—׳©׳•׳‘ - ׳”׳•׳¨׳׳•׳× ׳‘׳˜׳™׳—׳•׳×:</strong></p>
                     <p style="margin: 5px 0 0 0; color: #856404;">
-                        • בכניסה הראשונה תתבקש לשנות את הסיסמה<br>
-                        • אנא שנה את הסיסמה לסיסמה אישית וחזקה<br>
-                        • שמור על פרטי ההתחברות שלך במקום בטוח<br>
-                        • אל תשתף את פרטי ההתחברות עם אחרים
+                        ג€¢ ׳‘׳›׳ ׳™׳¡׳” ׳”׳¨׳׳©׳•׳ ׳” ׳×׳×׳‘׳§׳© ׳׳©׳ ׳•׳× ׳׳× ׳”׳¡׳™׳¡׳׳”<br>
+                        ג€¢ ׳׳ ׳ ׳©׳ ׳” ׳׳× ׳”׳¡׳™׳¡׳׳” ׳׳¡׳™׳¡׳׳” ׳׳™׳©׳™׳× ׳•׳—׳–׳§׳”<br>
+                        ג€¢ ׳©׳׳•׳¨ ׳¢׳ ׳₪׳¨׳˜׳™ ׳”׳”׳×׳—׳‘׳¨׳•׳× ׳©׳׳ ׳‘׳׳§׳•׳ ׳‘׳˜׳•׳—<br>
+                        ג€¢ ׳׳ ׳×׳©׳×׳£ ׳׳× ׳₪׳¨׳˜׳™ ׳”׳”׳×׳—׳‘׳¨׳•׳× ׳¢׳ ׳׳—׳¨׳™׳
                     </p>
                 </div>
                 
-                <p>אם יש לך שאלות או בעיות בהתחברות, צור קשר עם מנהל המערכת.</p>
+                <p>׳׳ ׳™׳© ׳׳ ׳©׳׳׳•׳× ׳׳• ׳‘׳¢׳™׳•׳× ׳‘׳”׳×׳—׳‘׳¨׳•׳×, ׳¦׳•׳¨ ׳§׳©׳¨ ׳¢׳ ׳׳ ׳”׳ ׳”׳׳¢׳¨׳›׳×.</p>
                 
                 <hr>
                 <p style="color: #666; font-size: 12px;">
-                    S&B Parking - מערכת ניהול דוחות חניות<br>
-                    מייל אוטומטי - אנא אל תענה למייל זה
+                    S&B Parking - ׳׳¢׳¨׳›׳× ׳ ׳™׳”׳•׳ ׳“׳•׳—׳•׳× ׳—׳ ׳™׳•׳×<br>
+                    ׳׳™׳™׳ ׳׳•׳˜׳•׳׳˜׳™ - ׳׳ ׳ ׳׳ ׳×׳¢׳ ׳” ׳׳׳™׳™׳ ׳–׳”
                 </p>
             </div>
             """,
@@ -5626,57 +5626,57 @@ def send_new_user_welcome_email(email, username, password, login_url):
         )
         
         mail.send(msg)
-        print(f"✅ Welcome email sent successfully to {email}")
+        print(f"ג… Welcome email sent successfully to {email}")
         return True
         
     except Exception as e:
-        print(f"❌ Welcome email error: {str(e)}")
-        print(f"📱 BACKUP - NEW USER DETAILS for {email}:")
+        print(f"ג Welcome email error: {str(e)}")
+        print(f"נ“± BACKUP - NEW USER DETAILS for {email}:")
         print(f"   Username: {username}")
         print(f"   Password: {password}")
         print(f"   URL: {login_url}")
         return False
 
 def send_password_reset_email(email, username, new_password):
-    """שליחת מייל על איפוס סיסמה"""
+    """׳©׳׳™׳—׳× ׳׳™׳™׳ ׳¢׳ ׳׳™׳₪׳•׳¡ ׳¡׳™׳¡׳׳”"""
     
     if not mail:
-        print(f"❌ Mail system not available")
-        print(f"📱 PASSWORD RESET for {username}: {new_password}")
+        print(f"ג Mail system not available")
+        print(f"נ“± PASSWORD RESET for {username}: {new_password}")
         return False
     
     try:
         
         msg = Message(
-            subject='איפוס סיסמה - S&B Parking',
+            subject='׳׳™׳₪׳•׳¡ ׳¡׳™׳¡׳׳” - S&B Parking',
             recipients=[email],
             html=f"""
             <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">
-                <h2 style="color: #667eea;">איפוס סיסמה - S&B Parking</h2>
-                <h3>הסיסמה שלך אופסה על ידי מנהל המערכת</h3>
+                <h2 style="color: #667eea;">׳׳™׳₪׳•׳¡ ׳¡׳™׳¡׳׳” - S&B Parking</h2>
+                <h3>׳”׳¡׳™׳¡׳׳” ׳©׳׳ ׳׳•׳₪׳¡׳” ׳¢׳ ׳™׳“׳™ ׳׳ ׳”׳ ׳”׳׳¢׳¨׳›׳×</h3>
                 
                 <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <p><strong>שם משתמש:</strong> {username}</p>
-                    <p><strong>סיסמה חדשה:</strong> <span style="font-family: monospace; background: #e9ecef; padding: 2px 6px; color: #d63384; font-weight: bold;">Dd123456</span></p>
-                    <p><strong>קישור להתחברות:</strong></p>
+                    <p><strong>׳©׳ ׳׳©׳×׳׳©:</strong> {username}</p>
+                    <p><strong>׳¡׳™׳¡׳׳” ׳—׳“׳©׳”:</strong> <span style="font-family: monospace; background: #e9ecef; padding: 2px 6px; color: #d63384; font-weight: bold;">Dd123456</span></p>
+                    <p><strong>׳§׳™׳©׳•׳¨ ׳׳”׳×׳—׳‘׳¨׳•׳×:</strong></p>
                     <a href="https://s-b-parking-reports.onrender.com" style="color: #667eea; text-decoration: none; font-weight: bold;">https://s-b-parking-reports.onrender.com</a>
                 </div>
                 
                 <div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                    <p style="margin: 0; color: #721c24;"><strong>חשוב:</strong></p>
+                    <p style="margin: 0; color: #721c24;"><strong>׳—׳©׳•׳‘:</strong></p>
                     <p style="margin: 5px 0 0 0; color: #721c24;">
-                        • בכניסה הבאה תתבקש לשנות את הסיסמה<br>
-                        • שנה את הסיסמה מיד לסיסמה אישית וחזקה<br>
-                        • אל תשתף את הסיסמה עם אחרים
+                        ג€¢ ׳‘׳›׳ ׳™׳¡׳” ׳”׳‘׳׳” ׳×׳×׳‘׳§׳© ׳׳©׳ ׳•׳× ׳׳× ׳”׳¡׳™׳¡׳׳”<br>
+                        ג€¢ ׳©׳ ׳” ׳׳× ׳”׳¡׳™׳¡׳׳” ׳׳™׳“ ׳׳¡׳™׳¡׳׳” ׳׳™׳©׳™׳× ׳•׳—׳–׳§׳”<br>
+                        ג€¢ ׳׳ ׳×׳©׳×׳£ ׳׳× ׳”׳¡׳™׳¡׳׳” ׳¢׳ ׳׳—׳¨׳™׳
                     </p>
                 </div>
                 
-                <p>אם לא ביקשת איפוס סיסמה, צור קשר עם מנהל המערכת מיד.</p>
+                <p>׳׳ ׳׳ ׳‘׳™׳§׳©׳× ׳׳™׳₪׳•׳¡ ׳¡׳™׳¡׳׳”, ׳¦׳•׳¨ ׳§׳©׳¨ ׳¢׳ ׳׳ ׳”׳ ׳”׳׳¢׳¨׳›׳× ׳׳™׳“.</p>
                 
                 <hr>
                 <p style="color: #666; font-size: 12px;">
-                    S&B Parking - מערכת ניהול דוחות חניות<br>
-                    מייל אוטומטי - אנא אל תענה למייל זה
+                    S&B Parking - ׳׳¢׳¨׳›׳× ׳ ׳™׳”׳•׳ ׳“׳•׳—׳•׳× ׳—׳ ׳™׳•׳×<br>
+                    ׳׳™׳™׳ ׳׳•׳˜׳•׳׳˜׳™ - ׳׳ ׳ ׳׳ ׳×׳¢׳ ׳” ׳׳׳™׳™׳ ׳–׳”
                 </p>
             </div>
             """,
@@ -5684,90 +5684,90 @@ def send_password_reset_email(email, username, new_password):
         )
         
         mail.send(msg)
-        print(f"✅ Password reset email sent successfully to {email}")
+        print(f"ג… Password reset email sent successfully to {email}")
         return True
         
     except Exception as e:
-        print(f"❌ Password reset email error: {str(e)}")
-        print(f"📱 BACKUP - PASSWORD RESET for {username}: {new_password}")
+        print(f"ג Password reset email error: {str(e)}")
+        print(f"נ“± BACKUP - PASSWORD RESET for {username}: {new_password}")
         return False 
 
 def clean_expired_reset_codes():
-    """ניקוי קודים שפגו תוקף - איפוס סיסמה"""
+    """׳ ׳™׳§׳•׳™ ׳§׳•׳“׳™׳ ׳©׳₪׳’׳• ׳×׳•׳§׳£ - ׳׳™׳₪׳•׳¡ ׳¡׳™׳¡׳׳”"""
     current_time = time.time()
     expired_emails = []
     
     for email, data in password_reset_codes.items():
-        if current_time - data['timestamp'] > 1800:  # 30 דקות
+        if current_time - data['timestamp'] > 1800:  # 30 ׳“׳§׳•׳×
             expired_emails.append(email)
     
     for email in expired_emails:
         del password_reset_codes[email]
 
 def send_password_reset_verification_email(email, code, username):
-    """שליחת מייל עם קוד איפוס סיסמה"""
+    """׳©׳׳™׳—׳× ׳׳™׳™׳ ׳¢׳ ׳§׳•׳“ ׳׳™׳₪׳•׳¡ ׳¡׳™׳¡׳׳”"""
     
     if not mail:
-        print(f"❌ Mail system not available")
-        print(f"📱 RESET CODE for {email}: {code}")
+        print(f"ג Mail system not available")
+        print(f"נ“± RESET CODE for {email}: {code}")
         return False
     
     try:
         
         msg = Message(
-            subject='איפוס סיסמה - S&B Parking',
+            subject='׳׳™׳₪׳•׳¡ ׳¡׳™׳¡׳׳” - S&B Parking',
             recipients=[email],
             html=f"""
             <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">
-                <h2 style="color: #667eea;">שיידט את בכמן ישראל</h2>
-                <h3>בקשה לאיפוס סיסמה</h3>
+                <h2 style="color: #667eea;">׳©׳™׳™׳“׳˜ ׳׳× ׳‘׳›׳׳ ׳™׳©׳¨׳׳</h2>
+                <h3>׳‘׳§׳©׳” ׳׳׳™׳₪׳•׳¡ ׳¡׳™׳¡׳׳”</h3>
                 
-                <p>שלום {username},</p>
-                <p>קיבלנו בקשה לאיפוס הסיסמה שלך במערכת S&B Parking.</p>
+                <p>׳©׳׳•׳ {username},</p>
+                <p>׳§׳™׳‘׳׳ ׳• ׳‘׳§׳©׳” ׳׳׳™׳₪׳•׳¡ ׳”׳¡׳™׳¡׳׳” ׳©׳׳ ׳‘׳׳¢׳¨׳›׳× S&B Parking.</p>
                 
                 <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-                    <p><strong>קוד האימות שלך:</strong></p>
+                    <p><strong>׳§׳•׳“ ׳”׳׳™׳׳•׳× ׳©׳׳:</strong></p>
                     <span style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px; background: #e9ecef; padding: 15px; border-radius: 8px; display: inline-block;">{code}</span>
                 </div>
                 
                 <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                    <p style="margin: 0; color: #856404;"><strong>חשוב:</strong></p>
+                    <p style="margin: 0; color: #856404;"><strong>׳—׳©׳•׳‘:</strong></p>
                     <p style="margin: 5px 0 0 0; color: #856404;">
-                        • הקוד תקף ל-10 דקות בלבד<br>
-                        • השתמש בקוד זה רק אם אתה ביקשת איפוס סיסמה<br>
-                        • אם לא ביקשת איפוס, התעלם מהודעה זו
+                        ג€¢ ׳”׳§׳•׳“ ׳×׳§׳£ ׳-10 ׳“׳§׳•׳× ׳‘׳׳‘׳“<br>
+                        ג€¢ ׳”׳©׳×׳׳© ׳‘׳§׳•׳“ ׳–׳” ׳¨׳§ ׳׳ ׳׳×׳” ׳‘׳™׳§׳©׳× ׳׳™׳₪׳•׳¡ ׳¡׳™׳¡׳׳”<br>
+                        ג€¢ ׳׳ ׳׳ ׳‘׳™׳§׳©׳× ׳׳™׳₪׳•׳¡, ׳”׳×׳¢׳׳ ׳׳”׳•׳“׳¢׳” ׳–׳•
                     </p>
                 </div>
                 
-                <p>לאחר הזנת הקוד תוכל לבחור סיסמה חדשה.</p>
+                <p>׳׳׳—׳¨ ׳”׳–׳ ׳× ׳”׳§׳•׳“ ׳×׳•׳›׳ ׳׳‘׳—׳•׳¨ ׳¡׳™׳¡׳׳” ׳—׳“׳©׳”.</p>
                 
                 <hr>
-                <p style="color: #666; font-size: 12px;">S&B Parking - מערכת דוחות חניות</p>
+                <p style="color: #666; font-size: 12px;">S&B Parking - ׳׳¢׳¨׳›׳× ׳“׳•׳—׳•׳× ׳—׳ ׳™׳•׳×</p>
             </div>
             """,
             sender=app.config['MAIL_USERNAME']
         )
         
         mail.send(msg)
-        print(f"✅ Password reset email sent successfully to {email}")
+        print(f"ג… Password reset email sent successfully to {email}")
         return True
         
     except Exception as e:
-        print(f"❌ Password reset email error: {str(e)}")
-        print(f"📱 BACKUP CODE for {email}: {code}")
+        print(f"ג Password reset email error: {str(e)}")
+        print(f"נ“± BACKUP CODE for {email}: {code}")
         return False
 
-# ניקוי אוטומטי של קודים ישנים
+# ׳ ׳™׳§׳•׳™ ׳׳•׳˜׳•׳׳˜׳™ ׳©׳ ׳§׳•׳“׳™׳ ׳™׳©׳ ׳™׳
 def auto_cleanup_reset_codes():
-    """ניקוי אוטומטי של קודי איפוס שפגו תוקף"""
+    """׳ ׳™׳§׳•׳™ ׳׳•׳˜׳•׳׳˜׳™ ׳©׳ ׳§׳•׳“׳™ ׳׳™׳₪׳•׳¡ ׳©׳₪׳’׳• ׳×׳•׳§׳£"""
     def cleanup_loop():
         while True:
             try:
-                time.sleep(900)  # 15 דקות
+                time.sleep(900)  # 15 ׳“׳§׳•׳×
                 clean_expired_reset_codes()
-                print(f"🧹 Reset codes cleanup completed")
+                print(f"נ§¹ Reset codes cleanup completed")
             except Exception as e:
-                print(f"⚠️ Cleanup error: {str(e)}")
+                print(f"ג ן¸ Cleanup error: {str(e)}")
     
     cleanup_thread = threading.Thread(target=cleanup_loop, daemon=True)
     cleanup_thread.start()
@@ -5776,24 +5776,24 @@ auto_cleanup_reset_codes()
 
 @app.route('/api/debug/why-no-access', methods=['GET'])
 def debug_why_no_access():
-    """למה המשתמש לא מקבל גישה לחניון שלו?"""
+    """׳׳׳” ׳”׳׳©׳×׳׳© ׳׳ ׳׳§׳‘׳ ׳’׳™׳©׳” ׳׳—׳ ׳™׳•׳ ׳©׳׳•?"""
     try:
         if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'})
+            return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'})
         
-        # קבלת נתוני המשתמש
+        # ׳§׳‘׳׳× ׳ ׳×׳•׳ ׳™ ׳”׳׳©׳×׳׳©
         user_result = supabase.table('user_parkings').select(
             'project_number, company_list, access_level, permissions'
         ).eq('email', session['user_email']).execute()
         
         if not user_result.data:
-            return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
+            return jsonify({'success': False, 'message': '׳׳©׳×׳׳© ׳׳ ׳ ׳׳¦׳'})
         
         user_data = user_result.data[0]
         user_project = user_data.get('project_number')
         company_list = user_data.get('company_list', '')
         
-        # קבלת נתוני החניון הספציפי
+        # ׳§׳‘׳׳× ׳ ׳×׳•׳ ׳™ ׳”׳—׳ ׳™׳•׳ ׳”׳¡׳₪׳¦׳™׳₪׳™
         parking_result = supabase.table('parkings').select('*').eq('description', str(user_project)).execute()
         
         debug_info = {
@@ -5823,7 +5823,7 @@ def debug_why_no_access():
                 'is_active': parking.get('is_active')
             }
             
-            # בדיקת השוואה
+            # ׳‘׳“׳™׳§׳× ׳”׳©׳•׳•׳׳”
             user_str = str(user_project)
             parking_str = str(parking['description'])
             debug_info['comparison'] = {
@@ -5834,7 +5834,7 @@ def debug_why_no_access():
                 'parking_length': len(parking_str)
             }
             
-            # בדיקת company_list
+            # ׳‘׳“׳™׳§׳× company_list
             if company_list:
                 allowed_companies = []
                 for part in company_list.split(','):
@@ -5866,24 +5866,24 @@ def debug_why_no_access():
 
 @app.route('/api/company-manager/send-guest-email', methods=['POST'])
 def send_guest_email():
-    """שליחת מייל לאורח עם פרטי החניה"""
+    """׳©׳׳™׳—׳× ׳׳™׳™׳ ׳׳׳•׳¨׳— ׳¢׳ ׳₪׳¨׳˜׳™ ׳”׳—׳ ׳™׳”"""
     try:
         if 'user_email' not in session:
-            return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+            return jsonify({'success': False, 'message': '׳׳ ׳׳—׳•׳‘׳¨'}), 401
         
         data = request.get_json()
         guest_email = data.get('email')
-        guest_name = data.get('name', 'אורח')
+        guest_name = data.get('name', '׳׳•׳¨׳—')
         valid_from = data.get('validFrom')
         valid_until = data.get('validUntil')
-        parking_name = data.get('parkingName', 'החניון')
+        parking_name = data.get('parkingName', '׳”׳—׳ ׳™׳•׳')
         company_name = data.get('companyName', '')
         vehicle_number = data.get('vehicleNumber', '')
         
         # Validate email
         is_valid, validated_email = validate_input(guest_email, "email")
         if not is_valid:
-            return jsonify({'success': False, 'message': 'כתובת מייל לא תקינה'})
+            return jsonify({'success': False, 'message': '׳›׳×׳•׳‘׳× ׳׳™׳™׳ ׳׳ ׳×׳§׳™׳ ׳”'})
         
         # Send email
         if mail:
@@ -5893,66 +5893,66 @@ def send_guest_email():
                 gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
                 
                 if not gmail_user or not gmail_password:
-                    print(f"❌ Missing Gmail credentials")
-                    return jsonify({'success': False, 'message': 'חסרים פרטי Gmail'})
+                    print(f"ג Missing Gmail credentials")
+                    return jsonify({'success': False, 'message': '׳—׳¡׳¨׳™׳ ׳₪׳¨׳˜׳™ Gmail'})
                 
                 msg = MIMEMultipart('alternative')
                 msg['From'] = gmail_user
                 msg['To'] = validated_email
-                msg['Subject'] = f'הזמנה לחניה - {parking_name}'
+                msg['Subject'] = f'׳”׳–׳׳ ׳” ׳׳—׳ ׳™׳” - {parking_name}'
                 
                 # Create HTML content
                 html_body = f"""
                 <div dir="rtl" style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto;">
-                    <h2 style="color: #2c3e50;">שלום {guest_name},</h2>
+                    <h2 style="color: #2c3e50;">׳©׳׳•׳ {guest_name},</h2>
                     
                     <p style="font-size: 16px; line-height: 1.6;">
-                        הרשאת החניה שלך אושרה בהצלחה!
+                        ׳”׳¨׳©׳׳× ׳”׳—׳ ׳™׳” ׳©׳׳ ׳׳•׳©׳¨׳” ׳‘׳”׳¦׳׳—׳”!
                     </p>
                     
                     <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                        <h3 style="color: #28a745; margin-top: 0;">פרטי החניה:</h3>
+                        <h3 style="color: #28a745; margin-top: 0;">׳₪׳¨׳˜׳™ ׳”׳—׳ ׳™׳”:</h3>
                         <ul style="list-style: none; padding: 0;">
-                            <li style="margin: 10px 0;"><strong>חניון:</strong> {parking_name}</li>
-                            <li style="margin: 10px 0;"><strong>לחברה:</strong> {company_name}</li>
-                            <li style="margin: 10px 0;"><strong>מספר רכב:</strong> {vehicle_number if vehicle_number else "לא צוין"}</li>
-                            <li style="margin: 10px 0;"><strong>תאריך תחילה:</strong> {valid_from}</li>
-                            <li style="margin: 10px 0;"><strong>תאריך סיום:</strong> {valid_until}</li>
+                            <li style="margin: 10px 0;"><strong>׳—׳ ׳™׳•׳:</strong> {parking_name}</li>
+                            <li style="margin: 10px 0;"><strong>׳׳—׳‘׳¨׳”:</strong> {company_name}</li>
+                            <li style="margin: 10px 0;"><strong>׳׳¡׳₪׳¨ ׳¨׳›׳‘:</strong> {vehicle_number if vehicle_number else "׳׳ ׳¦׳•׳™׳"}</li>
+                            <li style="margin: 10px 0;"><strong>׳×׳׳¨׳™׳ ׳×׳—׳™׳׳”:</strong> {valid_from}</li>
+                            <li style="margin: 10px 0;"><strong>׳×׳׳¨׳™׳ ׳¡׳™׳•׳:</strong> {valid_until}</li>
                         </ul>
                     </div>
                     
                     <p style="font-size: 16px; color: #6c757d;">
-                        נא להציג הרשאה זו בכניסה לחניון במידת הצורך.<br>
-	             החניה במקומות המסומנים לחברה בלבד
+                        ׳ ׳ ׳׳”׳¦׳™׳’ ׳”׳¨׳©׳׳” ׳–׳• ׳‘׳›׳ ׳™׳¡׳” ׳׳—׳ ׳™׳•׳ ׳‘׳׳™׳“׳× ׳”׳¦׳•׳¨׳.<br>
+	             ׳”׳—׳ ׳™׳” ׳‘׳׳§׳•׳׳•׳× ׳”׳׳¡׳•׳׳ ׳™׳ ׳׳—׳‘׳¨׳” ׳‘׳׳‘׳“
                     </p>
                     
                     <hr style="margin: 30px 0; border: none; border-top: 1px solid #dee2e6;">
                     
                     <p style="font-size: 12px; color: #6c757d; text-align: center;">
                         S&B Parking Management System<br>
-                        זוהי הודעה אוטומטית, אין להשיב למייל זה.
+                        ׳–׳•׳”׳™ ׳”׳•׳“׳¢׳” ׳׳•׳˜׳•׳׳˜׳™׳×, ׳׳™׳ ׳׳”׳©׳™׳‘ ׳׳׳™׳™׳ ׳–׳”.
                     </p>
                 </div>
                 """
                 
                 # Create plain text version
                 text_body = f"""
-                שלום {guest_name},
+                ׳©׳׳•׳ {guest_name},
 
-                הרשאת החניה שלך אושרה בהצלחה!
+                ׳”׳¨׳©׳׳× ׳”׳—׳ ׳™׳” ׳©׳׳ ׳׳•׳©׳¨׳” ׳‘׳”׳¦׳׳—׳”!
 
-                פרטי החניה:
-                - חניון: {parking_name}
-                - לחברה: {company_name}
-                - מספר רכב: {vehicle_number if vehicle_number else "לא צוין"}
-                - תאריך תחילה: {valid_from}
-                - תאריך סיום: {valid_until}
+                ׳₪׳¨׳˜׳™ ׳”׳—׳ ׳™׳”:
+                - ׳—׳ ׳™׳•׳: {parking_name}
+                - ׳׳—׳‘׳¨׳”: {company_name}
+                - ׳׳¡׳₪׳¨ ׳¨׳›׳‘: {vehicle_number if vehicle_number else "׳׳ ׳¦׳•׳™׳"}
+                - ׳×׳׳¨׳™׳ ׳×׳—׳™׳׳”: {valid_from}
+                - ׳×׳׳¨׳™׳ ׳¡׳™׳•׳: {valid_until}
 
-                נא להציג הרשאה זו בכניסה לחניון במידת הצורך.
+                ׳ ׳ ׳׳”׳¦׳™׳’ ׳”׳¨׳©׳׳” ׳–׳• ׳‘׳›׳ ׳™׳¡׳” ׳׳—׳ ׳™׳•׳ ׳‘׳׳™׳“׳× ׳”׳¦׳•׳¨׳.
 
                 ---
                 S&B Parking Management System
-                זוהי הודעה אוטומטית, אין להשיב למייל זה.
+                ׳–׳•׳”׳™ ׳”׳•׳“׳¢׳” ׳׳•׳˜׳•׳׳˜׳™׳×, ׳׳™׳ ׳׳”׳©׳™׳‘ ׳׳׳™׳™׳ ׳–׳”.
                 """
                 
                 part1 = MIMEText(text_body, 'plain', 'utf-8')
@@ -5968,23 +5968,23 @@ def send_guest_email():
                 server.send_message(msg)
                 server.quit()
                 
-                print(f"✅ Guest email sent to {validated_email}")
-                return jsonify({'success': True, 'message': 'מייל נשלח בהצלחה'})
+                print(f"ג… Guest email sent to {validated_email}")
+                return jsonify({'success': True, 'message': '׳׳™׳™׳ ׳ ׳©׳׳— ׳‘׳”׳¦׳׳—׳”'})
                 
             except Exception as e:
-                print(f"❌ Failed to send guest email: {str(e)}")
-                return jsonify({'success': False, 'message': 'שגיאה בשליחת מייל'})
+                print(f"ג Failed to send guest email: {str(e)}")
+                return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳©׳׳™׳—׳× ׳׳™׳™׳'})
         else:
-            print(f"⚠️ Mail system not available")
-            return jsonify({'success': False, 'message': 'מערכת המייל לא זמינה'})
+            print(f"ג ן¸ Mail system not available")
+            return jsonify({'success': False, 'message': '׳׳¢׳¨׳›׳× ׳”׳׳™׳™׳ ׳׳ ׳–׳׳™׳ ׳”'})
             
     except Exception as e:
         # Error in send_guest_email: {str(e)}")
-        return jsonify({'success': False, 'message': 'שגיאה בשליחת מייל'})
+        return jsonify({'success': False, 'message': '׳©׳’׳™׳׳” ׳‘׳©׳׳™׳—׳× ׳׳™׳™׳'})
 
 @app.route('/api/company-manager/consumer-detail', methods=['POST'])
 def get_consumer_detail():
-    """קבלת פרטי מנוי בודד - לטעינת hover"""
+    """׳§׳‘׳׳× ׳₪׳¨׳˜׳™ ׳׳ ׳•׳™ ׳‘׳•׳“׳“ - ׳׳˜׳¢׳™׳ ׳× hover"""
     try:
         data = request.get_json()
         parking_id = data.get('parking_id')
@@ -6024,7 +6024,7 @@ def get_consumer_detail():
 
 @app.route('/api/test-render-connection', methods=['GET'])
 def test_render_connection():
-    """בדיקת חיבור לשרת החניון מ-Render"""
+    """׳‘׳“׳™׳§׳× ׳—׳™׳‘׳•׳¨ ׳׳©׳¨׳× ׳”׳—׳ ׳™׳•׳ ׳-Render"""
     # Testing connection from Render
     
     import base64
@@ -6033,7 +6033,7 @@ def test_render_connection():
     # Disable SSL warnings properly
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     
-    # בדוק איפה אנחנו רצים
+    # ׳‘׳“׳•׳§ ׳׳™׳₪׳” ׳׳ ׳—׳ ׳• ׳¨׳¦׳™׳
     is_local = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
     
     if is_local:
@@ -6051,7 +6051,7 @@ def test_render_connection():
     
     results = []
     
-    # בדוק endpoints
+    # ׳‘׳“׳•׳§ endpoints
     endpoints = [
         'CustomerMediaWebService/contracts',
         'CustomerMediaWebService/consumers'
@@ -6059,17 +6059,17 @@ def test_render_connection():
     
     for endpoint in endpoints:
         url = f"https://{server}:{port}/{endpoint}"
-        print(f"\n🔗 Testing: {url}")
+        print(f"\nנ”— Testing: {url}")
         
         try:
             response = requests.get(url, headers=headers, verify=False, timeout=15)
-            print(f"   ✅ Status: {response.status_code}")
+            print(f"   ג… Status: {response.status_code}")
             
             if response.status_code == 200:
                 try:
                     data = response.json()
                     count = len(data) if isinstance(data, list) else 1
-                    print(f"   📊 Got {count} items")
+                    print(f"   נ“ Got {count} items")
                     results.append({
                         'endpoint': endpoint,
                         'status': 200,
@@ -6091,7 +6091,7 @@ def test_render_connection():
                 })
                 
         except requests.exceptions.Timeout:
-            print(f"   ⏱️ TIMEOUT")
+            print(f"   ג±ן¸ TIMEOUT")
             results.append({
                 'endpoint': endpoint,
                 'error': 'timeout',
@@ -6104,7 +6104,7 @@ def test_render_connection():
                 'success': False
             })
         except Exception as e:
-            print(f"   ❌ ERROR: {str(e)[:100]}")
+            print(f"   ג ERROR: {str(e)[:100]}")
             results.append({
                 'endpoint': endpoint,
                 'error': str(e)[:100],
@@ -6126,11 +6126,11 @@ def test_render_connection():
 
 @app.route('/api/test-direct-parking', methods=['GET'])
 def test_direct_parking_no_login():
-    """בדיקה ישירה לחניון בלי login - רק לבדיקות!"""
+    """׳‘׳“׳™׳§׳” ׳™׳©׳™׳¨׳” ׳׳—׳ ׳™׳•׳ ׳‘׳׳™ login - ׳¨׳§ ׳׳‘׳“׳™׳§׳•׳×!"""
     try:
         import base64
         
-        # חיבור ישיר לשרת המקומי
+        # ׳—׳™׳‘׳•׳¨ ׳™׳©׳™׳¨ ׳׳©׳¨׳× ׳”׳׳§׳•׳׳™
         ip = "10.35.240.100"
         port = 8443
         
@@ -6143,7 +6143,7 @@ def test_direct_parking_no_login():
         
         results = {}
         
-        # בדוק contracts
+        # ׳‘׳“׳•׳§ contracts
         try:
             url = f"https://{ip}:{port}/CustomerMediaWebService/contracts"
             response = requests.get(url, headers=headers, verify=False, timeout=10)
@@ -6155,7 +6155,7 @@ def test_direct_parking_no_login():
                     results['contracts'] = {
                         'success': True,
                         'count': len(contracts),
-                        'data': contracts[:5]  # רק 5 הראשונים
+                        'data': contracts[:5]  # ׳¨׳§ 5 ׳”׳¨׳׳©׳•׳ ׳™׳
                     }
                 else:
                     results['contracts'] = {'success': False, 'message': 'No contracts found'}
@@ -6164,7 +6164,7 @@ def test_direct_parking_no_login():
         except Exception as e:
             results['contracts'] = {'success': False, 'error': str(e)}
         
-        # בדוק consumers
+        # ׳‘׳“׳•׳§ consumers
         try:
             url = f"https://{ip}:{port}/CustomerMediaWebService/consumers"
             response = requests.get(url, headers=headers, verify=False, timeout=10)
@@ -6176,7 +6176,7 @@ def test_direct_parking_no_login():
                     results['consumers'] = {
                         'success': True,
                         'count': len(consumers),
-                        'data': consumers[:5]  # רק 5 הראשונים
+                        'data': consumers[:5]  # ׳¨׳§ 5 ׳”׳¨׳׳©׳•׳ ׳™׳
                     }
                 else:
                     results['consumers'] = {'success': False, 'message': 'No consumers found'}
@@ -6197,12 +6197,12 @@ def test_direct_parking_no_login():
 
 @app.route('/api/test-parking-connection', methods=['GET'])
 def test_parking_connection():
-    """בדיקה ידנית של חיבור לשרת החניון"""
+    """׳‘׳“׳™׳§׳” ׳™׳“׳ ׳™׳× ׳©׳ ׳—׳™׳‘׳•׳¨ ׳׳©׳¨׳× ׳”׳—׳ ׳™׳•׳"""
     try:
         ip = "192.117.0.122"
         port = 8240
         
-        # בדיקות שונות
+        # ׳‘׳“׳™׳§׳•׳× ׳©׳•׳ ׳•׳×
         urls_to_test = [
             f"https://{ip}:{port}",
             f"http://{ip}:{port}",
@@ -6216,7 +6216,7 @@ def test_parking_connection():
         
         for url in urls_to_test:
             try:
-                print(f"🔗 Testing: {url}")
+                print(f"נ”— Testing: {url}")
                 response = requests.get(url, timeout=10, verify=False)
                 results.append({
                     'url': url,
@@ -6232,7 +6232,7 @@ def test_parking_connection():
                     'success': False,
                     'error': str(e)
                 })
-                print(f"❌ Failed: {url} - {str(e)}")
+                print(f"ג Failed: {url} - {str(e)}")
         
         return jsonify({
             'success': True,
@@ -6248,12 +6248,12 @@ def test_parking_connection():
 
 @app.route('/api/test-parking-endpoints', methods=['GET'])
 def test_parking_endpoints():
-    """בדיקת endpoints ספציפיים של שרת החניון"""
+    """׳‘׳“׳™׳§׳× endpoints ׳¡׳₪׳¦׳™׳₪׳™׳™׳ ׳©׳ ׳©׳¨׳× ׳”׳—׳ ׳™׳•׳"""
     try:
         ip = "192.117.0.122"
         port = 8240
         
-        # נתיבים נפוצים לשרתי חניונים
+        # ׳ ׳×׳™׳‘׳™׳ ׳ ׳₪׳•׳¦׳™׳ ׳׳©׳¨׳×׳™ ׳—׳ ׳™׳•׳ ׳™׳
         endpoints_to_test = [
             "",  # root
             "api/status",
@@ -6275,7 +6275,7 @@ def test_parking_endpoints():
             url = f"{base_url}/{endpoint}" if endpoint else base_url
             
             try:
-                print(f"🔗 Testing endpoint: {url}")
+                print(f"נ”— Testing endpoint: {url}")
                 response = requests.get(url, timeout=10, verify=False)
                 results.append({
                     'endpoint': endpoint or "root",
@@ -6314,7 +6314,7 @@ def test_parking_endpoints():
 
 @app.route('/api/test-parking-auth', methods=['GET'])
 def test_parking_auth():
-    """בדיקה עם Basic Auth"""
+    """׳‘׳“׳™׳§׳” ׳¢׳ Basic Auth"""
     try:
         ip = "192.117.0.122"
         port = 8240
@@ -6365,12 +6365,12 @@ def test_parking_auth():
 
 @app.route('/api/test-scheidt-endpoints', methods=['GET'])
 def test_scheidt_endpoints():
-    """בדיקת endpoints של מערכת Scheidt & Bachmann"""
+    """׳‘׳“׳™׳§׳× endpoints ׳©׳ ׳׳¢׳¨׳›׳× Scheidt & Bachmann"""
     try:
         ip = "192.117.0.122"
         port = 8240
         
-        # endpoints נפוצים במערכות Scheidt & Bachmann
+        # endpoints ׳ ׳₪׳•׳¦׳™׳ ׳‘׳׳¢׳¨׳›׳•׳× Scheidt & Bachmann
         scheidt_endpoints = [
             "CustomerMediaWebService",
             "CustomerMediaWebService/GetContractsList",
@@ -6446,12 +6446,12 @@ def test_scheidt_endpoints():
 
 @app.route('/api/test-manager-auth', methods=['GET'])
 def test_manager_auth():
-    """בדיקת manager endpoint עם credentials שונים"""
+    """׳‘׳“׳™׳§׳× manager endpoint ׳¢׳ credentials ׳©׳•׳ ׳™׳"""
     try:
         ip = "192.117.0.122"
         port = 8240
         
-        # credentials שונים לנסות
+        # credentials ׳©׳•׳ ׳™׳ ׳׳ ׳¡׳•׳×
         auth_combinations = [
             ('admin', 'admin'),
             ('manager', 'manager'), 
@@ -6509,12 +6509,12 @@ def test_manager_auth():
 
 @app.route('/api/find-working-endpoint', methods=['GET'])
 def find_working_endpoint():
-    """מחפש את ה-endpoint הנכון של שרת החניון"""
+    """׳׳—׳₪׳© ׳׳× ׳”-endpoint ׳”׳ ׳›׳•׳ ׳©׳ ׳©׳¨׳× ׳”׳—׳ ׳™׳•׳"""
     try:
         ip = "192.117.0.122"
         port = 8240
         
-        # רשימה של כל האפשרויות
+        # ׳¨׳©׳™׳׳” ׳©׳ ׳›׳ ׳”׳׳₪׳©׳¨׳•׳™׳•׳×
         possible_endpoints = [
             # SOAP/WSDL
             "CustomerMediaWebService.asmx",
@@ -6602,12 +6602,12 @@ def find_working_endpoint():
 
 @app.route('/api/test-manager-paths', methods=['GET'])
 def test_manager_paths():
-    """בדיקת נתיבים תחת manager"""
+    """׳‘׳“׳™׳§׳× ׳ ׳×׳™׳‘׳™׳ ׳×׳—׳× manager"""
     try:
         ip = "192.117.0.122"
         port = 8240
         
-        # Auth עם 2022:2022
+        # Auth ׳¢׳ 2022:2022
         auth_string = base64.b64encode(b'2022:2022').decode('ascii')
         headers = {
             'Authorization': f'Basic {auth_string}',
@@ -6668,7 +6668,7 @@ def test_manager_paths():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
-# הפעלה אוטומטית כשהאפליקציה מתחילה
+# ׳”׳₪׳¢׳׳” ׳׳•׳˜׳•׳׳˜׳™׳× ׳›׳©׳”׳׳₪׳׳™׳§׳¦׳™׳” ׳׳×׳—׳™׳׳”
 if __name__ == '__main__':
     # Pre-flight email system check
     
