@@ -2989,6 +2989,7 @@ def master_create_user():
         code_type = data.get('code_type', 'dashboard').strip()
         role = data.get('role', 'user').strip()
         access_level = data.get('access_level', 'single_parking').strip()
+        phone_number = data.get('phone_number', '').strip() if data.get('phone_number') else ''
         company_type = data.get('company_type', '').strip()
         parking_name = data.get('parking_name', '').strip()
         company_list = data.get('company_list', '').strip()
@@ -3107,6 +3108,19 @@ def master_create_user():
 
 
 @app.route('/api/parking-manager/create-user', methods=['POST'])
+
+def clean_phone_number(phone):
+    if not phone:
+        return None
+    cleaned = ''.join(filter(str.isdigit, str(phone)))
+    if not cleaned:
+        return None
+    if cleaned.startswith('0'):
+        cleaned = '972' + cleaned[1:]
+    elif len(cleaned) == 9 and not cleaned.startswith('972'):
+        cleaned = '972' + cleaned
+    return cleaned
+
 def parking_manager_create_user():
    """יצירת קוד מנהל חברה - למנהל חניון בלבד - רק לחניון שלו"""
    try:
@@ -3133,6 +3147,7 @@ def parking_manager_create_user():
        permissions = data.get('permissions', 'B2').strip() if data.get('permissions') else 'B2'
        company_list = data.get('company_list', '').strip() if data.get('company_list') else ''
        access_level = data.get('access_level', 'single_parking').strip() if data.get('access_level') else 'single_parking'
+       phone_number = data.get('phone_number', '').strip() if data.get('phone_number') else ''
        
        print(f"🅿️ Parking manager creating COMPANY MANAGER for parking: {manager_data['project_number']} ({manager_data['parking_name']})")
        
@@ -3218,6 +3233,8 @@ def parking_manager_create_user():
            'code_expires_at': None,
            'password_expires_at': None,
            'company_list': company_list if company_list else None,
+            'phone_number': clean_phone_number(phone_number),
+           'phone_number': clean_phone_number(phone_number),
            'permissions': permissions,  # Store user permissions
            'counting': new_counting
        }
@@ -5300,12 +5317,12 @@ def parking_manager_get_info():
         
         # קבלת משתמשי החניון
         parking_users = supabase.table('user_parkings').select(
-             'user_id, username, email, company_list, permissions, role, access_level, created_at, is_temp_password, counting'
+             'user_id, username, email, company_list, permissions, role, access_level, created_at, is_temp_password, counting, phone_number'
         ).eq('project_number', user_data['project_number']).order('created_at', desc=True).execute()
         
         # קבלת משתמשי החניון
         parking_users = supabase.table('user_parkings').select(
-             'user_id, username, email, company_list, permissions, role, access_level, created_at, is_temp_password, counting'
+             'user_id, username, email, company_list, permissions, role, access_level, created_at, is_temp_password, counting, phone_number'
         ).eq('project_number', user_data['project_number']).order('created_at', desc=True).execute()
         
         users_list = parking_users.data
