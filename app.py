@@ -3324,6 +3324,7 @@ def parking_manager_update_user():
         permissions = data.get('permissions', 'B2').strip()  # Default to 'B2' if not provided
         company_list = data.get('company_list', '').strip()  # וידוא קליטת company_list
         access_level = data.get('access_level', 'single_parking').strip()
+        phone_number = data.get('phone_number', '').strip() if data.get('phone_number') else ''
         
         print(f"🅿️ Parking manager updating user ID {user_id} for parking: {manager_data['project_number']} ({manager_data['parking_name']})")
         print(f"🏢 Company list received: '{company_list}'")
