@@ -3409,7 +3409,8 @@ def parking_manager_update_user():
             'company_list': company_list if company_list else None,
             'access_level': access_level,
             'counting': new_counting,
-            'updated_at': current_time
+            'updated_at': current_time,
+            'phone_number': clean_phone_number(phone_number)
         }
         
         print(f"💾 Updating user {user_id} in parking: {manager_data['project_number']} ({manager_data['parking_name']})")
