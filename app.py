@@ -3080,7 +3080,8 @@ def master_create_user():
                 'Dd123456',
                 'https://s-b-parking-reports.onrender.com'
             )
-            
+            # Sync counting to parking system if applicable
+            parking_sync_status = ""
             if email_sent:
                 message = f'משתמש {username} נוצר בהצלחה! מייל נשלח ל-{validated_email}'
             else:
