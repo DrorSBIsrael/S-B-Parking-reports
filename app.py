@@ -3242,7 +3242,7 @@ def parking_manager_create_user():
            try:
                # Use company_list as contract ID if valid (single company)
                target_contract = company_list if company_list and company_list.strip().isdigit() else None
-               if target_contract and int(new_user_data.get('counting', 0)) >= 0:
+               if target_contract and int(new_user_data.get('counting', 0)) > 0:
                    print(f"🔄 Auto-syncing contract {target_contract} with counting {new_user_data.get('counting')}...")
                    success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_user_data.get('counting'))
                    if success:
@@ -3411,7 +3411,7 @@ def parking_manager_update_user():
                 final_company_list = company_list if company_list else current_user.get('company_list')
                 target_contract = str(final_company_list).strip() if final_company_list and str(final_company_list).strip().isdigit() else None
                 
-                if target_contract and new_counting >= 0:
+                if target_contract and new_counting > 0:
                      print(f"🔄 Auto-syncing contract {target_contract} with counting {new_counting}...")
                      success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_counting)
                      if success:
