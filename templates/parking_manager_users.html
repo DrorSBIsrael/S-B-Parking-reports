@@ -417,6 +417,11 @@
                     </div>
 
                     <div class="form-group">
+                        <label for="phoneNumber">מספר נייד (לאפליקציה)</label>
+                        <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="לדוגמא: 050-1234567">
+                    </div>
+
+                    <div class="form-group">
                         <label for="companyList">רשימת מספרי חברות</label>
                         <input type="text" id="companyList" name="companyList" placeholder="לדוגמא: 100,2-5">
                         <small style="color: #6c757d; font-size: 12px;">
@@ -504,6 +509,7 @@
                             <tr>
                                 <th>שם משתמש</th>
                                 <th>אימייל</th>
+                                <th>נייד</th>
                                 <th>חברה</th>
                                 <th>תפקיד</th>
                                 <th>רמת גישה</th>
@@ -541,6 +547,11 @@
                     <div class="form-group">
                         <label for="editEmail">כתובת אימייל *</label>
                         <input type="email" id="editEmail" name="email" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editPhoneNumber">מספר נייד (לאפליקציה)</label>
+                        <input type="tel" id="editPhoneNumber" name="phoneNumber" placeholder="לדוגמא 050-1234567">
                     </div>
 
                     <div class="form-group">
@@ -711,6 +722,7 @@
                 row.innerHTML = `
                     <td><strong>${user.username}</strong></td>
                     <td>${user.email}</td>
+                    <td>${user.phone_number || '-'}</td>
                     <td>${companyList}</td>
                     <td>${user.role || 'משתמש'}</td>
                     <td>${user.access_level || 'גישה בסיסית'}</td>
@@ -819,6 +831,7 @@
             const userData = {
                 username: formData.get('username'),
                 email: formData.get('email'),
+                phone_number: formData.get('phoneNumber'),
                 access_level: formData.get('accessLevel'),
                 company_list: formData.get('companyList'), // ✅ תיקון שליחת company_list
                 counting: formData.get('counting'),
@@ -883,6 +896,7 @@
                 user_id: formData.get('userId') || '',
                 username: formData.get('username') || '',
                 email: formData.get('email') || '',
+                phone_number: formData.get('phoneNumber') || '',
                 access_level: formData.get('accessLevel') || 'single_parking',
                 company_list: formData.get('companyList') || '',
                 counting: formData.get('counting'),
