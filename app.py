@@ -3,6 +3,8 @@ import flask
 from flask_mail import Mail, Message
 from supabase.client import create_client, Client
 from dotenv import load_dotenv
+import whatsapp_service
+import random
 import os
 import random
 import string
@@ -6677,6 +6679,109 @@ def test_manager_paths():
         return jsonify({'success': False, 'error': str(e)})
 
 # הפעלה אוטומטית כשהאפליקציה מתחילה
+
+# ========== MOBILE APP API ==========
+
+@app.route('/api/mobile/login', methods=['POST'])
+def mobile_login():
+    try:
+        data = request.get_json()
+        phone_number = data.get('phone_number')
+        
+        if not phone_number:
+            return jsonify({'success': False, 'message': 'נא להזין מספר טלפון'})
+            
+        # שימוש בפונקציית clean_phone_number שכבר הוספנו לנקות את המספר
+        clean_phone = clean_phone_number(phone_number)
+        
+        if not clean_phone:
+            return jsonify({'success': False, 'message': 'מספר טלפון לא תקין'})
+            
+        print(f"📱 Mobile login attempt for phone: {clean_phone}")
+        
+        # בדוק אם המשתמש קיים במסד הנתונים
+        user_result = supabase.table('user_parkings').select('*').eq('phone_number', clean_phone).execute()
+        
+        if not user_result.data:
+            return jsonify({'success': False, 'message': 'מספר הטלפון לא רשום במערכת, פנה למנהל חניון'})
+            
+        user = user_result.data[0]
+        
+        # יצר קוד 6 ספרות
+        import random
+        from datetime import datetime, timedelta, timezone
+        
+        otp_code = str(random.randint(100000, 999999))
+        expires_at = (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat()
+        
+        # Update user with OTP
+        supabase.table('user_parkings').update({
+            'mobile_otp': otp_code,
+            'otp_expires_at': expires_at
+        }).eq('user_id', user['user_id']).execute()
+        
+        # שליחת הקוד בוואטסאפ
+        import whatsapp_service
+        success, msg = whatsapp_service.send_whatsapp_otp(clean_phone, otp_code)
+        
+        if success:
+            return jsonify({'success': True, 'message': 'קוד אימות נשלח לוואטסאפ שלך', 'phone_number': clean_phone})
+        else:
+            return jsonify({'success': False, 'message': f'שגיאה בשליחת ווטסאפ: {msg}'})
+            
+    except Exception as e:
+        print(f"❌ Error in mobile_login: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': 'שגיאת שרת'})
+
+@app.route('/api/mobile/verify', methods=['POST'])
+def mobile_verify():
+    try:
+        data = request.get_json()
+        phone_number = data.get('phone_number')
+        otp_code = data.get('otp_code')
+        
+        if not phone_number or not otp_code:
+            return jsonify({'success': False, 'message': 'נא להזין מספר טלפון וקוד'})
+            
+        clean_phone = clean_phone_number(phone_number)
+        
+        # בדוק במסד
+        user_result = supabase.table('user_parkings').select('*').eq('phone_number', clean_phone).execute()
+        
+        if not user_result.data:
+            return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
+            
+        user = user_result.data[0]
+        
+        if not user.get('mobile_otp') or str(user.get('mobile_otp')) != str(otp_code):
+            return jsonify({'success': False, 'message': 'קוד אימות שגוי'})
+            
+        # צור session לאפליקציה (token)
+        # מכיוון שלפלאסק שלנו יש session מבוסס עוגיות, לנייד כדאי להחזיר JSON עם הנתונים
+        
+        return jsonify({
+            'success': True, 
+            'message': 'התחברת בהצלחה!',
+            'user': {
+                'user_id': user.get('user_id'),
+                'username': user.get('username'),
+                'email': user.get('email'),
+                'role': user.get('role'),
+                'code_type': user.get('code_type'),
+                'permissions': user.get('permissions'),
+                'project_number': user.get('project_number'),
+                'parking_name': user.get('parking_name'),
+                'company_list': user.get('company_list')
+            }
+        })
+        
+    except Exception as e:
+        print(f"❌ Error in mobile_verify: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאת שרת'})
+
+
 if __name__ == '__main__':
     # Pre-flight email system check
     
