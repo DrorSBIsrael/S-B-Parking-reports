@@ -6807,11 +6807,37 @@ def mobile_get_subscribers():
         ip_address = connection_details.get('ip_address')
         port = connection_details.get('port', 443)
         
+        # Получаем company_list пользователя из БД, чтобы мы могли отфильтровать абонентов
+        user_id = data.get('user_id')
+        company_list_str = ""
+        if user_id:
+            try:
+                user_res = supabase.table('parking_manager_users').select('company_list').eq('id', user_id).execute()
+                if user_res.data:
+                    company_list_str = user_res.data[0].get('company_list') or ""
+            except Exception as e:
+                print(f"Failed to fetch user company_list: {e}")
+
+        allowed_companies = []
+        if company_list_str:
+            parts = company_list_str.split(',')
+            for part in parts:
+                part = part.strip()
+                if '-' in part:
+                    try:
+                        start, end = part.split('-')
+                        allowed_companies.extend(range(int(start), int(end) + 1))
+                    except: pass
+                else:
+                    try: allowed_companies.append(int(part))
+                    except: pass
+
         url = f"https://{ip_address}:{port}/CustomerMediaWebService/consumers"
         
         import base64
         import requests
         import urllib3
+        import xml.etree.ElementTree as ET
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         
         auth_string = base64.b64encode(b'2022:2022').decode('ascii')
@@ -6820,7 +6846,7 @@ def mobile_get_subscribers():
             'Accept': 'application/json' # נבקש JSON לנוחות
         }
         
-        print(f"📱 API Mobile fetching from: {url}")
+        print(f"📱 API Mobile fetching from: {url} for user_id={user_id} with allowed_companies={allowed_companies}")
         
         response = requests.get(url, headers=headers, verify=False, timeout=15)
         
@@ -6829,8 +6855,34 @@ def mobile_get_subscribers():
             try:
                 res_json = response.json()
             except:
-                res_json = {"raw": response.text}
-                
+                try:
+                    root = ET.fromstring(response.text)
+                    consumers_list = []
+                    # במערכת שיידט לעיתים התגית היא consumer תחת consumers
+                    for cons in root.findall('.//consumer'):
+                        item = {}
+                        for child in cons:
+                            item[child.tag] = child.text
+                        if item:
+                            consumers_list.append(item)
+                    res_json = {'consumers': {'consumer': consumers_list}}
+                except Exception as ex:
+                    print("XML parsing failed string:", ex)
+                    res_json = {"raw": response.text}
+            
+            # Filter the subscribers if allowed_companies list is not empty
+            if allowed_companies and isinstance(res_json, dict) and 'consumers' in res_json and 'consumer' in res_json['consumers']:
+                filtered_consumers = []
+                for sub in res_json['consumers']['consumer']:
+                    try:
+                        # Sometimes field is companyNum, sometimes contractId, sometimes contractName is a number
+                        c_id = int(sub.get('contractId') or sub.get('companyNum') or -1)
+                        if c_id in allowed_companies:
+                            filtered_consumers.append(sub)
+                    except:
+                        pass
+                res_json['consumers']['consumer'] = filtered_consumers
+
             return jsonify({
                 'success': True,
                 'data': res_json
