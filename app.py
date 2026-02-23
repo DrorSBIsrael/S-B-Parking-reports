@@ -6782,6 +6782,66 @@ def mobile_verify():
         return jsonify({'success': False, 'message': 'שגיאת שרת'})
 
 
+@app.route('/api/mobile/get-subscribers', methods=['POST'])
+def mobile_get_subscribers():
+    try:
+        data = request.get_json()
+        project_number = data.get('project_number')
+        
+        if not project_number:
+            return jsonify({'success': False, 'message': 'חסר מספר פרויקט'})
+            
+        connection_details = get_parking_connection_details(project_number)
+        
+        if not connection_details:
+             try:
+                 parking_result = supabase.table('parkings').select('ip_address, port, description').eq('id', project_number).execute()
+                 if parking_result.data:
+                     data_p = parking_result.data[0]
+                     connection_details = {'ip_address': data_p.get('ip_address'), 'port': data_p.get('port', 443)}
+             except: pass
+             
+        if not connection_details or not connection_details.get('ip_address'):
+            return jsonify({'success': False, 'message': 'לא נמצא חניון'})
+            
+        ip_address = connection_details.get('ip_address')
+        port = connection_details.get('port', 443)
+        
+        url = f"https://{ip_address}:{port}/CustomerMediaWebService/consumers"
+        
+        import base64
+        import requests
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        
+        auth_string = base64.b64encode(b'2022:2022').decode('ascii')
+        headers = {
+            'Authorization': f'Basic {auth_string}',
+            'Accept': 'application/json' # נבקש JSON לנוחות
+        }
+        
+        print(f"📱 API Mobile fetching from: {url}")
+        
+        response = requests.get(url, headers=headers, verify=False, timeout=15)
+        
+        if response.status_code == 200:
+            # ננסה להמיר JSON אם אפשר
+            try:
+                res_json = response.json()
+            except:
+                res_json = {"raw": response.text}
+                
+            return jsonify({
+                'success': True,
+                'data': res_json
+            })
+        else:
+            return jsonify({'success': False, 'message': f'Server returned {response.status_code}'})
+            
+    except Exception as e:
+        print(f"❌ Error in mobile_get_subscribers: {str(e)}")
+        return jsonify({'success': False, 'message': 'שגיאת התחברות לשרת החניון'})
+
 if __name__ == '__main__':
     # Pre-flight email system check
     
