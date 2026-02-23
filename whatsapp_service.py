@@ -26,9 +26,8 @@ def send_whatsapp_otp(phone_number, otp_code):
     url = f"https://api.green-api.com/waInstance{GREEN_API_ID}/sendMessage/{GREEN_API_TOKEN}"
     
     message = (
-        f"שלום! 👋\n\n"
-        f"קוד ההתחברות שלך לאפליקציית ניהול החניונים הוא:\n"
-        f"*{otp_code}*\n\n"
+        f"שלום! קוד ההתחברות שלך הוא: *{otp_code}*\n\n"
+        f"לאפליקציית ניהול חניונים של שיידט את בכמן.\n"
         f"הקוד בתוקף ל-5 דקות."
     )
     
