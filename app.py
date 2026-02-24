@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response, send_from_directory
+﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response, send_from_directory
 import flask
 from flask_mail import Mail, Message
 from supabase.client import create_client, Client
@@ -6881,14 +6881,20 @@ def mobile_get_subscribers():
                 root = ET.fromstring(response.text)
                 
                 def xml_to_dict(element):
-                    if len(element) == 0 and not element.attrib:
-                        return element.text or ""
                     res = {}
                     if element.attrib:
                         for k, v in element.attrib.items():
                             k_clean = k.split('}')[-1] if '}' in k else k
                             res[k_clean] = v
                             res[f"@{k_clean}"] = v
+                            
+                    if len(element) == 0:
+                        if not element.attrib:
+                            return element.text or ""
+                        else:
+                            if element.text and element.text.strip():
+                                return element.text.strip()
+                                
                     for child in element:
                         child_tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
                         child_val = xml_to_dict(child)
@@ -6898,8 +6904,10 @@ def mobile_get_subscribers():
                             res[child_tag].append(child_val)
                         else:
                             res[child_tag] = child_val
-                    if element.text and element.text.strip():
+                            
+                    if element.text and element.text.strip() and len(element) > 0:
                         res['#text'] = element.text.strip()
+                        
                     return res
 
                 consumers_list = []
