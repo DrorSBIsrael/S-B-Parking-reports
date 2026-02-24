@@ -6824,20 +6824,27 @@ def mobile_get_subscribers():
         ip_address = connection_details.get('ip_address')
         port = connection_details.get('port', 443)
         # Extract company list from request or DB
-        company_list_str = data.get('company_list') or ""
+        company_list_str = data.get('company_list')
         user_id = data.get('user_id')
+        user_permissions = ""
         
-        if not company_list_str and user_id:
+        if user_id:
             try:
-                user_res = supabase.table('user_parkings').select('company_list').eq('user_id', user_id).execute()
+                user_res = supabase.table('user_parkings').select('company_list, permissions').eq('user_id', user_id).execute()
                 if user_res.data:
-                    company_list_str = user_res.data[0].get('company_list') or ""
+                    if company_list_str is None:
+                        company_list_str = user_res.data[0].get('company_list') or ""
+                    user_permissions = user_res.data[0].get('permissions') or ""
             except Exception as e:
-                print(f"Failed to fetch user company_list: {e}")
+                print(f"Failed to fetch user permissions: {e}")
+        else:
+            company_list_str = company_list_str or ""
+
+        is_admin = 'B' in user_permissions.upper()
 
         allowed_companies = []
         if company_list_str:
-            parts = company_list_str.split(',')
+            parts = str(company_list_str).split(',')
             for part in parts:
                 part = part.strip()
                 if '-' in part:
@@ -6860,63 +6867,64 @@ def mobile_get_subscribers():
         auth_string = base64.b64encode(b'2022:2022').decode('ascii')
         headers = {
             'Authorization': f'Basic {auth_string}',
-            'Accept': 'application/json' # נבקש JSON לנוחות
+            # אנו לא שולחים Accept: application/json בכדי לאלץ את שרת החניון להחזיר XML צפוי
+            'Accept': 'application/xml, text/xml'
         }
         
-        print(f"📱 API Mobile fetching from: {url} for user_id={user_id} with allowed_companies={allowed_companies}")
+        print(f"📱 API Mobile fetching from: {url} for user_id={user_id}, admin={is_admin}")
         
         response = requests.get(url, headers=headers, verify=False, timeout=15)
         
         if response.status_code == 200:
-            # ננסה להמיר JSON אם אפשר
+            # מפענחים אך ורק מה-XML על מנת לשלוט במבנה ולמנוע שדות ריקים או משובשים מה-JSON הדיפולטיבי של שיידט
             try:
-                res_json = response.json()
-            except:
-                try:
-                    root = ET.fromstring(response.text)
-                    
-                    def xml_to_dict(element):
-                        tag_name = element.tag.split('}')[-1] if '}' in element.tag else element.tag
-                        if len(element) == 0:
-                            return element.text
-                        res = {}
-                        for child in element:
-                            child_tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
-                            child_val = xml_to_dict(child)
-                            if child_tag in res:
-                                if not isinstance(res[child_tag], list):
-                                    res[child_tag] = [res[child_tag]]
-                                res[child_tag].append(child_val)
-                            else:
-                                res[child_tag] = child_val
-                        return res
+                root = ET.fromstring(response.text)
+                
+                def xml_to_dict(element):
+                    tag_name = element.tag.split('}')[-1] if '}' in element.tag else element.tag
+                    if len(element) == 0:
+                        return element.text or ""
+                    res = {}
+                    for child in element:
+                        child_tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+                        child_val = xml_to_dict(child)
+                        if child_tag in res:
+                            if not isinstance(res[child_tag], list):
+                                res[child_tag] = [res[child_tag]]
+                            res[child_tag].append(child_val)
+                        else:
+                            res[child_tag] = child_val
+                    return res
 
-                    consumers_list = []
-                    # נעבור על כל החבורה בעזרת הפונקציה לניקוי namespaces ומניעת איבוד אלמנטים פנימיים
-                    for cons in root.iter():
-                        tag_name = cons.tag.split('}')[-1] if '}' in cons.tag else cons.tag
-                        if tag_name == 'consumer':
-                            consumers_list.append(xml_to_dict(cons))
-                    
-                    res_json = {'consumers': {'consumer': consumers_list}}
-                except Exception as ex:
-                    import traceback
-                    print("XML parsing failed string:", ex)
-                    traceback.print_exc()
-                    res_json = {"raw": response.text}
-            
-            # Filter the subscribers if allowed_companies list is not empty
-            if allowed_companies and isinstance(res_json, dict) and 'consumers' in res_json and 'consumer' in res_json['consumers']:
+                consumers_list = []
+                for cons in root.iter():
+                    tag_name = cons.tag.split('}')[-1] if '}' in cons.tag else cons.tag
+                    if tag_name == 'consumer':
+                        consumers_list.append(xml_to_dict(cons))
+                
+                res_json = {'consumers': {'consumer': consumers_list}}
+            except Exception as ex:
+                import traceback
+                print("XML parsing failed string:", ex)
+                traceback.print_exc()
+                res_json = {"raw": response.text}
+        
+            if not is_admin and isinstance(res_json, dict) and 'consumers' in res_json and 'consumer' in res_json['consumers']:
                 filtered_consumers = []
                 for sub in res_json['consumers']['consumer']:
                     try:
-                        # Sometimes field is companyNum, sometimes contractId, sometimes contractName is a number
-                        c_id = int(sub.get('contractId') or sub.get('companyNum') or -1)
-                        if c_id in allowed_companies:
+                        c_id = sub.get('contractId') or sub.get('companyNum') or ""
+                        if isinstance(c_id, dict):
+                            c_id = c_id.get('#text', list(c_id.values())[0] if c_id else -1)
+                        c_id = int(c_id) if c_id else -1
+                        if allowed_companies and c_id in allowed_companies:
                             filtered_consumers.append(sub)
                     except:
                         pass
                 res_json['consumers']['consumer'] = filtered_consumers
+            elif not is_admin and not allowed_companies:
+                 if isinstance(res_json, dict) and 'consumers' in res_json:
+                     res_json['consumers']['consumer'] = []
 
             return jsonify({
                 'success': True,
