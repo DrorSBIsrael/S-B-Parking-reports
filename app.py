@@ -6881,10 +6881,14 @@ def mobile_get_subscribers():
                 root = ET.fromstring(response.text)
                 
                 def xml_to_dict(element):
-                    tag_name = element.tag.split('}')[-1] if '}' in element.tag else element.tag
-                    if len(element) == 0:
+                    if len(element) == 0 and not element.attrib:
                         return element.text or ""
                     res = {}
+                    if element.attrib:
+                        for k, v in element.attrib.items():
+                            k_clean = k.split('}')[-1] if '}' in k else k
+                            res[k_clean] = v
+                            res[f"@{k_clean}"] = v
                     for child in element:
                         child_tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
                         child_val = xml_to_dict(child)
@@ -6894,6 +6898,8 @@ def mobile_get_subscribers():
                             res[child_tag].append(child_val)
                         else:
                             res[child_tag] = child_val
+                    if element.text and element.text.strip():
+                        res['#text'] = element.text.strip()
                     return res
 
                 consumers_list = []
