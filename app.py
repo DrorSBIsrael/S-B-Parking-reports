@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response, send_from_directory
+﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response, send_from_directory
 import flask
 from flask_mail import Mail, Message
 from supabase.client import create_client, Client
@@ -6857,6 +6857,8 @@ def mobile_get_subscribers():
                     except: pass
 
         url = f"https://{ip_address}:{port}/CustomerMediaWebService/consumers"
+        if len(allowed_companies) == 1:
+            url += f"?contractId={allowed_companies[0]}"
         
         import base64
         import requests
@@ -6923,15 +6925,17 @@ def mobile_get_subscribers():
                 traceback.print_exc()
                 res_json = {"raw": response.text}
         
-            if not is_admin and isinstance(res_json, dict) and 'consumers' in res_json and 'consumer' in res_json['consumers']:
+            # We apply filtering if there are explicit allowed_companies, regardless of admin status
+            # If no allowed_companies AND user is admin, we return all (though it might be huge)
+            if allowed_companies and isinstance(res_json, dict) and 'consumers' in res_json and 'consumer' in res_json['consumers']:
                 filtered_consumers = []
                 for sub in res_json['consumers']['consumer']:
                     try:
-                        c_id = sub.get('contractId') or sub.get('companyNum') or ""
+                        c_id = sub.get('contractId') or sub.get('contractid') or sub.get('companyNum') or ""
                         if isinstance(c_id, dict):
                             c_id = c_id.get('#text', list(c_id.values())[0] if c_id else -1)
                         c_id = int(c_id) if c_id else -1
-                        if allowed_companies and c_id in allowed_companies:
+                        if c_id in allowed_companies:
                             filtered_consumers.append(sub)
                     except:
                         pass
@@ -6939,6 +6943,50 @@ def mobile_get_subscribers():
             elif not is_admin and not allowed_companies:
                  if isinstance(res_json, dict) and 'consumers' in res_json:
                      res_json['consumers']['consumer'] = []
+
+            # Fetch details for small lists so names actually show up in mobile app
+            if isinstance(res_json, dict) and 'consumers' in res_json and 'consumer' in res_json['consumers']:
+                final_list = res_json['consumers']['consumer']
+                if 0 < len(final_list) <= 150:
+                    import concurrent.futures
+                    def fetch_detail(sub):
+                        try:
+                            c_id = sub.get('contractId') or sub.get('contractid') or sub.get('companyNum') or ""
+                            s_id = sub.get('id') or sub.get('subscriberNum') or ""
+                            if not c_id or not s_id: return sub
+                            
+                            detail_url = f"https://{ip_address}:{port}/CustomerMediaWebService/consumers/{c_id},{s_id}/detail"
+                            detail_resp = requests.get(detail_url, headers=headers, verify=False, timeout=3)
+                            if detail_resp.status_code == 200:
+                                d_root = ET.fromstring(detail_resp.text)
+                                d_dict = xml_to_dict(d_root)
+                                
+                                person = d_dict.get('person') or {}
+                                ident = d_dict.get('identification') or {}
+                                
+                                fname = person.get('firstName') or d_dict.get('firstName') or sub.get('firstName')
+                                lname = person.get('surname') or d_dict.get('surname') or sub.get('lastName')
+                                tagNum = ident.get('cardno') or sub.get('tagNum')
+                                
+                                if isinstance(fname, dict): fname = ""
+                                if isinstance(lname, dict): lname = ""
+                                if isinstance(tagNum, dict): tagNum = ""
+                                
+                                sub['firstName'] = fname
+                                sub['lastName'] = lname
+                                sub['tagNum'] = tagNum
+                                
+                                # try to extract plates
+                                lpn1 = d_dict.get('lpn1') or sub.get('lpn1')
+                                if isinstance(lpn1, dict) and not lpn1.get('plate'): lpn1 = ""
+                                if lpn1: sub['lpn1'] = lpn1
+                        except: pass
+                        return sub
+
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+                        final_list = list(executor.map(fetch_detail, final_list))
+                        
+                res_json['consumers']['consumer'] = final_list
 
             return jsonify({
                 'success': True,
