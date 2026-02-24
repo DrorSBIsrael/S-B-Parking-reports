@@ -6712,7 +6712,7 @@ def mobile_login():
         from datetime import datetime, timedelta, timezone
         
         otp_code = str(random.randint(100000, 999999))
-        expires_at = (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat()
+        expires_at = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()
         
         # Update user with OTP
         supabase.table('user_parkings').update({
@@ -6757,6 +6757,23 @@ def mobile_verify():
         
         if not user.get('mobile_otp') or str(user.get('mobile_otp')) != str(otp_code):
             return jsonify({'success': False, 'message': 'קוד אימות שגוי'})
+            
+        import datetime
+        from datetime import timezone
+        otp_expiry = user.get('otp_expires_at')
+        if otp_expiry:
+            try:
+                expiry_dt = datetime.datetime.fromisoformat(otp_expiry.replace('Z', '+00:00'))
+                if datetime.datetime.now(timezone.utc) > expiry_dt:
+                    return jsonify({'success': False, 'message': 'קוד אימות פג תוקף (עברו 5 דקות)'})
+            except Exception as e:
+                print(f"Error parsing OTP expiry: {e}")
+                
+        # Clear the OTP after successful use
+        supabase.table('user_parkings').update({
+            'mobile_otp': None,
+            'otp_expires_at': None
+        }).eq('user_id', user.get('user_id')).execute()
             
         # צור session לאפליקציה (token)
         # מכיוון שלפלאסק שלנו יש session מבוסס עוגיות, לנייד כדאי להחזיר JSON עם הנתונים
@@ -6812,7 +6829,7 @@ def mobile_get_subscribers():
         
         if not company_list_str and user_id:
             try:
-                user_res = supabase.table('parking_manager_users').select('company_list').eq('id', user_id).execute()
+                user_res = supabase.table('user_parkings').select('company_list').eq('user_id', user_id).execute()
                 if user_res.data:
                     company_list_str = user_res.data[0].get('company_list') or ""
             except Exception as e:
@@ -6857,20 +6874,35 @@ def mobile_get_subscribers():
             except:
                 try:
                     root = ET.fromstring(response.text)
+                    
+                    def xml_to_dict(element):
+                        tag_name = element.tag.split('}')[-1] if '}' in element.tag else element.tag
+                        if len(element) == 0:
+                            return element.text
+                        res = {}
+                        for child in element:
+                            child_tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+                            child_val = xml_to_dict(child)
+                            if child_tag in res:
+                                if not isinstance(res[child_tag], list):
+                                    res[child_tag] = [res[child_tag]]
+                                res[child_tag].append(child_val)
+                            else:
+                                res[child_tag] = child_val
+                        return res
+
                     consumers_list = []
-                    # נעבור על כל האלמנטים, תוך התעלמות מניימספייסים 
+                    # נעבור על כל החבורה בעזרת הפונקציה לניקוי namespaces ומניעת איבוד אלמנטים פנימיים
                     for cons in root.iter():
                         tag_name = cons.tag.split('}')[-1] if '}' in cons.tag else cons.tag
                         if tag_name == 'consumer':
-                            item = {}
-                            for child in cons:
-                                child_tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
-                                item[child_tag] = child.text
-                            if item:
-                                consumers_list.append(item)
+                            consumers_list.append(xml_to_dict(cons))
+                    
                     res_json = {'consumers': {'consumer': consumers_list}}
                 except Exception as ex:
+                    import traceback
                     print("XML parsing failed string:", ex)
+                    traceback.print_exc()
                     res_json = {"raw": response.text}
             
             # Filter the subscribers if allowed_companies list is not empty
