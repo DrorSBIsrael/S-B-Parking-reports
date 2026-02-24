@@ -411,7 +411,7 @@ def parse_csv_content(csv_content):
         first_line = csv_content.split('\n')[0]
         # Check first line
         
-        # ⚠️ בדיקת תקינות CSV - אם זה קובץ SQL או לא תקין
+        #  בדיקת תקינות CSV - אם זה קובץ SQL או לא תקין
         if any(sql_keyword in first_line.lower() for sql_keyword in ['connect', 'insert', 'select', 'values', 'create']):
             # Invalid file: SQL detected, not CSV
             return None
@@ -458,18 +458,18 @@ def parse_csv_content(csv_content):
         return None
         
     except Exception as e:
-        print(f"❌ General error in CSV parsing: {e}")
+        print(f" General error in CSV parsing: {e}")
         return None
 
 def convert_to_csv_import_format(csv_rows):
     """המרה לפורמט csv_import_shekels - עם תמיכה בשורות מרובות"""
     converted_rows = []
     
-    print(f"🔄 Processing {len(csv_rows)} rows from CSV...")
+    print(f" Processing {len(csv_rows)} rows from CSV...")
     
     for index, row in enumerate(csv_rows):
         try:
-            print(f"📝 Processing row {index + 1}/{len(csv_rows)}...")
+            print(f" Processing row {index + 1}/{len(csv_rows)}...")
             
             # המרת תאריך
             date_str = str(row.get('TTCRET', '')).strip()
@@ -563,7 +563,7 @@ def convert_to_csv_import_format(csv_rows):
             
             converted_rows.append(converted_row)
             
-            print(f"✅ Row {index+1}: project {converted_row['project_number']}, cash: {cash_shekels} shekels, text: '{ctext_value}'")
+            print(f" Row {index+1}: project {converted_row['project_number']}, cash: {cash_shekels} shekels, text: '{ctext_value}'")
             
         except Exception as e:
             # Error converting row {index+1}: {str(e)}")
@@ -580,15 +580,15 @@ def insert_to_csv_import_shekels(converted_data):
         return 0
         
     try:
-        print(f"🔄 Preparing to insert {len(converted_data)} rows to csv_import_shekels")
+        print(f" Preparing to insert {len(converted_data)} rows to csv_import_shekels")
         
         # מחיקת נתונים ישנים מהטבלה
         try:
             print("🧹 Clearing old data from csv_import_shekels...")
             delete_result = supabase.table('csv_import_shekels').delete().gt('id', 0).execute()
-            print("✅ Old data cleared successfully")
+            print(" Old data cleared successfully")
         except Exception as e:
-            print(f"⚠️ Could not clear old data: {str(e)}")
+            print(f" Could not clear old data: {str(e)}")
             # ממשיכים גם אם המחיקה נכשלה
         
         # ניקוי הנתונים - הסרת שדות שלא צריכים ווידוא תקינות
@@ -669,10 +669,10 @@ def insert_to_csv_import_shekels(converted_data):
                 continue
         
         if not cleaned_data:
-            print("❌ No valid data after cleaning")
+            print(" No valid data after cleaning")
             return 0
             
-        print(f"✅ Cleaned {len(cleaned_data)} rows successfully")
+        print(f" Cleaned {len(cleaned_data)} rows successfully")
         
         # הכנסת הנתונים בקבוצות
         batch_size = 200
@@ -683,41 +683,41 @@ def insert_to_csv_import_shekels(converted_data):
             batch_num = i // batch_size + 1
             
             try:
-                print(f"🔄 Inserting batch {batch_num}: {len(batch)} rows")
+                print(f" Inserting batch {batch_num}: {len(batch)} rows")
                 
                 result = supabase.table('csv_import_shekels').insert(batch).execute()
                 
                 if result.data:
                     batch_count = len(result.data)
                     total_inserted += batch_count
-                    print(f"✅ Batch {batch_num} inserted successfully: {batch_count} rows")
+                    print(f" Batch {batch_num} inserted successfully: {batch_count} rows")
                 else:
-                    print(f"⚠️ Batch {batch_num} returned no data")
+                    print(f" Batch {batch_num} returned no data")
                     
             except Exception as batch_error:
                 # Error in batch {batch_num}: {str(batch_error)}")
                 
                 # אם הקבוצה נכשלה, ננסה שורה אחת בכל פעם
-                print(f"🔄 Trying individual rows for batch {batch_num}...")
+                print(f" Trying individual rows for batch {batch_num}...")
                 for j, single_row in enumerate(batch):
                     try:
                         single_result = supabase.table('csv_import_shekels').insert([single_row]).execute()
                         if single_result.data:
                             total_inserted += 1
                             if j % 10 == 0:  # הדפסה כל 10 שורות
-                                print(f"   ✅ Row {i+j+1} inserted")
+                                print(f"    Row {i+j+1} inserted")
                     except Exception as single_error:
-                        print(f"   ❌ Row {i+j+1} failed: {str(single_error)}")
+                        print(f"    Row {i+j+1} failed: {str(single_error)}")
                         # בדיקה אם זו שגיאת מבנה חמורה
                         if "column" in str(single_error).lower() and "does not exist" in str(single_error).lower():
                             print(f"   🚨 CRITICAL: Column structure error - stopping batch")
                             break
         
-        print(f"✅ Total inserted to csv_import_shekels: {total_inserted} rows out of {len(converted_data)}")
+        print(f" Total inserted to csv_import_shekels: {total_inserted} rows out of {len(converted_data)}")
         return total_inserted
         
     except Exception as e:
-        print(f"❌ General error inserting to csv_import_shekels: {str(e)}")
+        print(f" General error inserting to csv_import_shekels: {str(e)}")
         return 0
 
 def transfer_to_parking_data():
@@ -727,13 +727,13 @@ def transfer_to_parking_data():
         return 0
         
     try:
-        print("🔄 Starting transfer from csv_import_shekels to parking_data...")
+        print(" Starting transfer from csv_import_shekels to parking_data...")
         
         # קבלת כל הנתונים מטבלת הביניים
         csv_result = supabase.table('csv_import_shekels').select('*').execute()
         
         if not csv_result.data:
-            print("⚠️ No data in csv_import_shekels to transfer")
+            print(" No data in csv_import_shekels to transfer")
             return 0
         
         # Found rows in csv_import_shekels
@@ -765,7 +765,7 @@ def transfer_to_parking_data():
                 s_shift_id = int(row.get('s_shift_id', 0))
                 
                 if project_number <= 0:
-                    print(f"⚠️ Row {i+1}: Skipping - invalid project_number")
+                    print(f" Row {i+1}: Skipping - invalid project_number")
                     failed_transfers += 1
                     continue
                 
@@ -828,7 +828,7 @@ def transfer_to_parking_data():
                 
                 # 🆕 בדיקה משופרת עם 3 שדות מזהים (במקום 5)
                 try:
-                    print(f"🔄 Checking row {i+1}/{len(csv_result.data)}: project {project_number}, date {report_date}, text: '{ctext_value}'")
+                    print(f" Checking row {i+1}/{len(csv_result.data)}: project {project_number}, date {report_date}, text: '{ctext_value}'")
                     
                     # בדיקה עם שילוב שדות - כמו constraint במסד הנתונים
                     existing_check = supabase.table('parking_data').select('id').eq(
@@ -840,7 +840,7 @@ def transfer_to_parking_data():
                     ).execute()
                     
                     if existing_check.data:
-                        print(f"🔄 Row {i+1}: DUPLICATE DETECTED (constraint match) - skipping completely")
+                        print(f" Row {i+1}: DUPLICATE DETECTED (constraint match) - skipping completely")
                         skipped_duplicates += 1
                         continue
                     
@@ -852,27 +852,27 @@ def transfer_to_parking_data():
                         # Row inserted as new record
                     else:
                         failed_transfers += 1
-                        print(f"❌ Row {i+1}: Insert failed - no data returned")
+                        print(f" Row {i+1}: Insert failed - no data returned")
                         
                 except Exception as single_error:
                     # טיפול בשגיאת constraint
                     if "duplicate key value violates unique constraint" in str(single_error):
-                        print(f"🔄 Row {i+1}: DUPLICATE DETECTED (database constraint) - skipping")
+                        print(f" Row {i+1}: DUPLICATE DETECTED (database constraint) - skipping")
                         skipped_duplicates += 1
                         continue
                     else:
                         failed_transfers += 1
-                        print(f"❌ Row {i+1}: Error during processing: {str(single_error)}")
+                        print(f" Row {i+1}: Error during processing: {str(single_error)}")
                         continue
                     
             except Exception as row_error:
                 failed_transfers += 1
-                print(f"❌ Row {i+1}: Error processing row: {str(row_error)}")
+                print(f" Row {i+1}: Error processing row: {str(row_error)}")
                 continue
         
         # דוח סיכום מפורט
         total_processed = successful_transfers + skipped_duplicates + failed_transfers
-        print(f"\n📊 Transfer Summary:")
+        print(f"\n Transfer Summary:")
         # Successfully transferred records
         # Skipped duplicates
         # Failed transfers
@@ -883,9 +883,9 @@ def transfer_to_parking_data():
             try:
                 print("🧹 Cleaning csv_import_shekels...")
                 delete_result = supabase.table('csv_import_shekels').delete().gt('id', 0).execute()
-                print("✅ csv_import_shekels cleaned successfully")
+                print(" csv_import_shekels cleaned successfully")
             except Exception as cleanup_error:
-                print(f"⚠️ Could not clean csv_import_shekels: {str(cleanup_error)}")
+                print(f" Could not clean csv_import_shekels: {str(cleanup_error)}")
         
         return successful_transfers
             
@@ -925,13 +925,13 @@ def process_single_email(mail, email_id):
         
         # בדיקה שהשולח תקין
         if sender == 'unknown@unknown.com' or '@' not in sender:
-            print(f"❌ Invalid sender address: {sender}")
+            print(f" Invalid sender address: {sender}")
             return False
         
         # בדיקת שולח מורשה
         if not is_authorized_sender(sender):
             print(f"🚫 UNAUTHORIZED SENDER: {sender}")
-            print(f"✅ Authorized senders: {AUTHORIZED_SENDERS}")
+            print(f" Authorized senders: {AUTHORIZED_SENDERS}")
             # Skipping unauthorized sender
             
             # 🆕 סימון המייל כדי לא לבדוק אותו שוב
@@ -943,10 +943,10 @@ def process_single_email(mail, email_id):
                 # Could not mark unauthorized email
                 pass
             
-            print(f"📝 UNAUTHORIZED ACCESS LOGGED: {sender} tried to send data files")
+            print(f" UNAUTHORIZED ACCESS LOGGED: {sender} tried to send data files")
             return False
         
-        print(f"✅ AUTHORIZED SENDER: {sender}")
+        print(f" AUTHORIZED SENDER: {sender}")
         
         csv_files = download_csv_from_email(email_message)
         
@@ -961,18 +961,18 @@ def process_single_email(mail, email_id):
         processed_files = []
         
         for csv_file in csv_files:
-            print(f"\n🔄 Processing file: {csv_file['filename']}")
+            print(f"\n Processing file: {csv_file['filename']}")
             
             # פרסור CSV
             csv_rows = parse_csv_content(csv_file['data'])
             if csv_rows is None:
-                print(f"❌ Failed to parse file: {csv_file['filename']}")
+                print(f" Failed to parse file: {csv_file['filename']}")
                 continue
             
             # המרה לפורמט שלנו
             converted_data = convert_to_csv_import_format(csv_rows)
             if not converted_data:
-                print(f"❌ Failed to convert file: {csv_file['filename']}")
+                print(f" Failed to convert file: {csv_file['filename']}")
                 continue
             
             all_converted_data.extend(converted_data)
@@ -981,26 +981,26 @@ def process_single_email(mail, email_id):
                 'rows': len(converted_data)
             })
             
-            print(f"✅ File {csv_file['filename']}: {len(converted_data)} rows converted")
+            print(f" File {csv_file['filename']}: {len(converted_data)} rows converted")
         
         # בדיקה שיש נתונים תקינים
         if not all_converted_data:
             error_msg = "לא נמצאו נתונים תקינים בקבצים. אנא בדוק את פורמט הקבצים."
-            print(f"❌ {error_msg}")
+            print(f" {error_msg}")
             send_error_notification(sender, error_msg)
             return False
         
-        print(f"📊 Total converted data: {len(all_converted_data)} rows")
+        print(f" Total converted data: {len(all_converted_data)} rows")
         
         # הכנסה לטבלת הביניים
         inserted_count = insert_to_csv_import_shekels(all_converted_data)
         if inserted_count == 0:
             error_msg = "שגיאה בהכנסת הנתונים למסד הנתונים."
-            print(f"❌ {error_msg}")
+            print(f" {error_msg}")
             send_error_notification(sender, error_msg)
             return False
         
-        print(f"✅ Inserted to csv_import_shekels: {inserted_count} rows")
+        print(f" Inserted to csv_import_shekels: {inserted_count} rows")
         
         # העברה לטבלה הסופית
         transferred_count = transfer_to_parking_data()
@@ -1040,7 +1040,7 @@ def process_single_email(mail, email_id):
         if sender and sender != 'unknown@unknown.com':
             send_error_notification(sender, error_msg)
         else:
-            print(f"❌ Could not send error notification - unknown sender")
+            print(f" Could not send error notification - unknown sender")
             
         return False
 
@@ -1068,7 +1068,7 @@ def send_success_notification(sender_email, processed_files, new_rows, total_row
     gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
     
     if not gmail_user or not gmail_password:
-        print(f"❌ Missing Gmail credentials for success notification")
+        print(f" Missing Gmail credentials for success notification")
         files_summary = ', '.join([f['name'] for f in processed_files])
         # Success logged
         return
@@ -1079,7 +1079,7 @@ def send_success_notification(sender_email, processed_files, new_rows, total_row
         msg = MIMEMultipart()
         msg['From'] = gmail_user
         msg['To'] = sender_email
-        msg['Subject'] = '✅ קבצי הנתונים עובדו בהצלחה - S&B Parking'
+        msg['Subject'] = ' קבצי הנתונים עובדו בהצלחה - S&B Parking'
         
         files_list = '\n'.join([f"• {file['name']} - {file['rows']:,} שורות" for file in processed_files])
         
@@ -1096,15 +1096,15 @@ def send_success_notification(sender_email, processed_files, new_rows, total_row
 
 קבצי הנתונים שלך עובדו בהצלחה במערכת S&B Parking:
 
-📁 קבצים שעובדו:
+ קבצים שעובדו:
 {files_list}
 
-📊 תוצאות העיבוד:
+ תוצאות העיבוד:
 {status_message}
 
 💡 הערה: אם הרשומות כבר קיימות, זה אומר שהנתונים כבר הועלו קודם לכן.
 
-🔍 הנתונים זמינים כעת בדשבורד לצפייה ודוחות.
+ הנתונים זמינים כעת בדשבורד לצפייה ודוחות.
 
 בברכה,
 מערכת S&B Parking (דוח אוטומטי)
@@ -1128,7 +1128,7 @@ def send_success_notification(sender_email, processed_files, new_rows, total_row
             print(f"🚫 Gmail daily limit exceeded - switching to log-only mode")
             send_success_notification.daily_count = 99
         else:
-            print(f"❌ Failed to send success notification: {str(e)}")
+            print(f" Failed to send success notification: {str(e)}")
             files_summary = ', '.join([f['name'] for f in processed_files])
             # Success logged
 
@@ -1232,7 +1232,7 @@ def start_email_monitoring_with_logs():
 def start_background_email_monitoring():
     """נקודת כניסה להפעלת מעקב מיילים ברקע"""
     if not EMAIL_MONITORING_AVAILABLE:
-        print("⚠️ Email monitoring not available - missing libraries")
+        print(" Email monitoring not available - missing libraries")
         return
         
     try:
@@ -1247,7 +1247,7 @@ def start_background_email_monitoring():
         
         
     except Exception as e:
-        print(f"❌ Background email monitoring initialization failed: {str(e)}")
+        print(f" Background email monitoring initialization failed: {str(e)}")
 
 def is_authorized_sender(sender_email):
     """בדיקה אם השולח מורשה לשלוח קבצי נתונים"""
@@ -1344,7 +1344,7 @@ def check_for_new_emails():
             # עיבוד המייל
             success = process_single_email(mail, email_id)
             
-            # 🔧 תיקון: הוסף לרשימה רק אם הצליח!
+            #  תיקון: הוסף לרשימה רק אם הצליח!
             if success:
                 processed_email_ids.append(email_id_str)
                 # Email added to processed cache
@@ -1490,7 +1490,7 @@ def test_email_system():
             })
             
     except Exception as e:
-        print(f"❌ Email system test error: {str(e)}")
+        print(f" Email system test error: {str(e)}")
         return jsonify({
             'success': False, 
             'message': f'Test error: {str(e)}'
@@ -1838,7 +1838,7 @@ def forgot_password():
         if not is_valid_email:
             return jsonify({'success': False, 'message': 'כתובת מייל לא תקינה'})
         
-        print(f"🔄 Password reset request for: {validated_email}")
+        print(f" Password reset request for: {validated_email}")
         
         # בדיקה שהמייל קיים במערכת
         user_result = supabase.table('user_parkings').select('username, email').eq('email', validated_email).execute()
@@ -1875,7 +1875,7 @@ def forgot_password():
             })
             
     except Exception as e:
-        print(f"❌ Forgot password error: {str(e)}")
+        print(f" Forgot password error: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה במערכת'})
 
 @app.route('/api/verify-reset-code', methods=['POST'])
@@ -1893,7 +1893,7 @@ def verify_reset_code():
         if not is_valid_email or not is_valid_code:
             return jsonify({'success': False, 'message': 'נתונים לא תקינים'})
         
-        print(f"🔍 Verifying reset code for: {validated_email}")
+        print(f" Verifying reset code for: {validated_email}")
         
         # ניקוי קודים ישנים
         clean_expired_reset_codes()
@@ -1925,7 +1925,7 @@ def verify_reset_code():
         reset_data['token'] = reset_token
         reset_data['verified'] = True
         
-        print(f"✅ Reset code verified for: {validated_email}")
+        print(f" Reset code verified for: {validated_email}")
         
         return jsonify({
             'success': True,
@@ -1934,7 +1934,7 @@ def verify_reset_code():
         })
         
     except Exception as e:
-        print(f"❌ Verify reset code error: {str(e)}")
+        print(f" Verify reset code error: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה במערכת'})
 
 @app.route('/api/reset-password', methods=['POST'])
@@ -1957,7 +1957,7 @@ def reset_password():
         if len(new_password) < 6:
             return jsonify({'success': False, 'message': 'הסיסמה חייבת להיות לפחות 6 תווים'})
         
-        print(f"🔄 Resetting password for: {validated_email}")
+        print(f" Resetting password for: {validated_email}")
         
         # בדיקת הטוקן
         if validated_email not in password_reset_codes:
@@ -1990,7 +1990,7 @@ def reset_password():
             # מחיקת הקוד מהזיכרון
             del password_reset_codes[validated_email]
             
-            print(f"✅ Password reset successfully for: {validated_email}")
+            print(f" Password reset successfully for: {validated_email}")
             
             return jsonify({
                 'success': True,
@@ -2000,7 +2000,7 @@ def reset_password():
             return jsonify({'success': False, 'message': 'שגיאה בעדכון הסיסמה'})
         
     except Exception as e:
-        print(f"❌ Reset password error: {str(e)}")
+        print(f" Reset password error: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה במערכת'})
 
 # הוסף גם פונקציה לבדיקת תקפות תאריך
@@ -2061,10 +2061,10 @@ def login():
                             import json
                             auth_result = json.loads(auth_result)
                         except:
-                            print("🔍 Could not parse - treating as error message")
+                            print(" Could not parse - treating as error message")
                             return jsonify({'success': False, 'message': auth_result})
                 else:
-                    print(f"🔍 Unknown type: {type(auth_result)}")
+                    print(f" Unknown type: {type(auth_result)}")
                     raise rpc_error
             else:
                 raise rpc_error
@@ -2075,7 +2075,7 @@ def login():
             # בדיקה אם נדרש לשנות סיסמה
             if auth_result.get('require_password_change'):
                 session['change_password_user'] = validated_username
-                print("🔍 Redirecting to password change")
+                print(" Redirecting to password change")
                 return jsonify({
                     'success': True,
                     'require_password_change': True,
@@ -2106,12 +2106,12 @@ def login():
                 return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
         else:
             error_msg = auth_result.get('message', 'שם משתמש או סיסמה שגויים') if auth_result else 'שגיאה בהתחברות'
-            print(f"❌ Authentication failed: {error_msg}")
+            print(f" Authentication failed: {error_msg}")
             return jsonify({'success': False, 'message': error_msg})
             
     except Exception as e:
-        print(f"❌ OUTER EXCEPTION: {type(e)}")
-        print(f"❌ OUTER EXCEPTION MESSAGE: {str(e)}")
+        print(f" OUTER EXCEPTION: {type(e)}")
+        print(f" OUTER EXCEPTION MESSAGE: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה במערכת'})
 
 @app.route('/api/verify-code', methods=['POST'])
@@ -2150,7 +2150,7 @@ def verify_code():
                     user_data = user_result.data[0]
                     # Use central redirect logic
                     redirect_url = get_user_redirect_url(email)
-                    print(f"🔍 User {email} redirected to: {redirect_url}")
+                    print(f" User {email} redirected to: {redirect_url}")
 
                     return jsonify({
                         'success': True, 
@@ -2158,7 +2158,7 @@ def verify_code():
                         'user_type': user_data.get('code_type', '')
                     })
                 else:
-                    print(f"⚠️ User data not found, redirecting to dashboard")
+                    print(f" User data not found, redirecting to dashboard")
                     return jsonify({'success': True, 'redirect': '/dashboard'})
                     
             except Exception as e:
@@ -2166,11 +2166,11 @@ def verify_code():
                 # במקרה של שגיאה, נפנה לדשבורד רגיל
                 return jsonify({'success': True, 'redirect': '/dashboard'})
         else:
-            print(f"❌ FAILED - Invalid or expired code")
+            print(f" FAILED - Invalid or expired code")
             return jsonify({'success': False, 'message': 'קוד שגוי או פג תוקף'})
             
     except Exception as e:
-        print(f"❌ Verify error: {str(e)}")
+        print(f" Verify error: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה במערכת'})
 
 # 🆕 הוסף גם פונקציה לבדיקת הרשאות מוקדמת (אופציונלית)
@@ -2351,7 +2351,7 @@ def change_password():
             return jsonify({'success': False, 'message': error_msg})
         
     except Exception as e:
-        print(f"❌ Change password error: {str(e)}")
+        print(f" Change password error: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה במערכת'})
 
 # API ליצירת משתמש חדש (למאסטר)
@@ -2410,15 +2410,15 @@ def create_user():
             return jsonify({'success': False, 'message': error_msg})
         
     except Exception as e:
-        print(f"❌ Create user error: {str(e)}")
+        print(f" Create user error: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה במערכת'})
 
 def send_new_user_email(email, username, temp_password, login_url):
     """שליחת מייל למשתמש חדש עם פרטי התחברות"""
     
     if not mail:
-        print(f"❌ Mail system not available")
-        print(f"📱 NEW USER DETAILS for {email}:")
+        print(f" Mail system not available")
+        print(f" NEW USER DETAILS for {email}:")
         print(f"   Username: {username}")
         print(f"   Password: {temp_password}")
         print(f"   URL: {login_url}")
@@ -2460,12 +2460,12 @@ def send_new_user_email(email, username, temp_password, login_url):
         )
         
         mail.send(msg)
-        print(f"✅ New user email sent successfully to {email}")
+        print(f" New user email sent successfully to {email}")
         return True
         
     except Exception as e:
-        print(f"❌ New user email error: {str(e)}")
-        print(f"📱 BACKUP - NEW USER DETAILS for {email}:")
+        print(f" New user email error: {str(e)}")
+        print(f" BACKUP - NEW USER DETAILS for {email}:")
         print(f"   Username: {username}")
         print(f"   Password: {temp_password}")
         print(f"   URL: {login_url}")
@@ -2481,7 +2481,7 @@ def master_users_page():
     try:
         user_result = supabase.table('user_parkings').select('code_type, access_level').eq('email', session['user_email']).execute()
         if not user_result.data or user_result.data[0].get('code_type') != 'master':
-            print(f"⚠️ Unauthorized access attempt to master-users by {session['user_email']}")
+            print(f" Unauthorized access attempt to master-users by {session['user_email']}")
             return redirect(url_for('dashboard'))
     except Exception as e:
         # Error checking master permissions: {str(e)}")
@@ -2499,7 +2499,7 @@ def parking_manager_users_page():
     try:
         user_result = supabase.table('user_parkings').select('code_type, project_number, access_level').eq('email', session['user_email']).execute()
         if not user_result.data or user_result.data[0].get('code_type') != 'parking_manager':
-            print(f"⚠️ Unauthorized access attempt to parking-manager-users by {session['user_email']}")
+            print(f" Unauthorized access attempt to parking-manager-users by {session['user_email']}")
             return redirect(url_for('dashboard'))
     except Exception as e:
         # Error checking parking manager permissions: {str(e)}")
@@ -2517,7 +2517,7 @@ def dashboard_v2_page():
     try:
         user_result = supabase.table('user_parkings').select('code_type').eq('email', session['user_email']).execute()
         if not user_result.data:
-            print(f"⚠️ Unauthorized access attempt to dashboard-v2 by {session['user_email']}")
+            print(f" Unauthorized access attempt to dashboard-v2 by {session['user_email']}")
             return redirect(url_for('dashboard'))
             
         code_type = user_result.data[0].get('code_type', '')
@@ -2525,7 +2525,7 @@ def dashboard_v2_page():
         
         # Allow normalized matches
         if code_type_clean not in ['dashboard_v2', 'dashboardv2'] and code_type != 'master':
-            print(f"⚠️ Unauthorized access attempt to dashboard-v2 by {session['user_email']} (code_type: {code_type})")
+            print(f" Unauthorized access attempt to dashboard-v2 by {session['user_email']} (code_type: {code_type})")
             return redirect(url_for('dashboard'))
             
     except Exception as e:
@@ -2545,14 +2545,14 @@ def dashboard_v3_page():
     try:
         user_result = supabase.table('user_parkings').select('code_type').eq('email', session['user_email']).execute()
         if not user_result.data:
-            print(f"⚠️ Unauthorized access attempt to dashboard-v3 by {session['user_email']}")
+            print(f" Unauthorized access attempt to dashboard-v3 by {session['user_email']}")
             return redirect(url_for('dashboard'))
             
         code_type = user_result.data[0].get('code_type', '')
         code_type_clean = str(code_type).strip().lower().replace(' ', '_').replace('-', '_')
 
         if code_type_clean not in ['dashboard_v3', 'dashboardv3'] and code_type != 'master':
-            print(f"⚠️ Unauthorized access attempt to dashboard-v3 by {session['user_email']} (code_type: {code_type})")
+            print(f" Unauthorized access attempt to dashboard-v3 by {session['user_email']} (code_type: {code_type})")
             return redirect(url_for('dashboard'))
             
     except Exception as e:
@@ -2573,7 +2573,7 @@ def parking_manager_users_part_page():
     try:
         user_result = supabase.table('user_parkings').select('code_type, company_list, counting').eq('email', session['user_email']).execute()
         if not user_result.data:
-            print(f"⚠️ Unauthorized access attempt to parking-manager-users-part by {session['user_email']}")
+            print(f" Unauthorized access attempt to parking-manager-users-part by {session['user_email']}")
             return redirect(url_for('dashboard'))
             
         user_data = user_result.data[0]
@@ -2584,7 +2584,7 @@ def parking_manager_users_part_page():
         
         # Allow 'parking_manager_part' AND 'parking_manager_partial' for legacy support
         if code_type_lower not in ['parking_manager_part', 'parking_manager_partial'] and code_type_lower != 'master':
-             print(f"⚠️ Unauthorized access attempt to parking-manager-users-part by {session['user_email']} (code_type: {code_type})")
+             print(f" Unauthorized access attempt to parking-manager-users-part by {session['user_email']} (code_type: {code_type})")
              return redirect(url_for('dashboard'))
 
     except Exception as e:
@@ -2603,12 +2603,12 @@ def parking_tour_page():
     try:
         user_result = supabase.table('user_parkings').select('code_type, project_number, parking_name, access_level').eq('email', session['user_email']).execute()
         if not user_result.data:
-            print(f"⚠️ No user data found for {session['user_email']}")
+            print(f" No user data found for {session['user_email']}")
             return redirect(url_for('dashboard'))
         
         code_type = user_result.data[0].get('code_type', '')
         if code_type != 'Parking_tour' and code_type != 'parking_tour':
-            print(f"⚠️ Unauthorized access attempt to parking-tour by {session['user_email']} (code_type: {code_type})")
+            print(f" Unauthorized access attempt to parking-tour by {session['user_email']} (code_type: {code_type})")
             return redirect(url_for('dashboard'))
     except Exception as e:
         print(f"Error checking parking tour permissions: {str(e)}")
@@ -2629,7 +2629,7 @@ def mobile_parking_controller_page():
         ).eq('email', session['user_email']).execute()
         
         if not user_result.data:
-            print(f"⚠️ No user data found for {session['user_email']}")
+            print(f" No user data found for {session['user_email']}")
             return redirect(url_for('dashboard'))
         
         user_data = user_result.data[0]
@@ -2637,7 +2637,7 @@ def mobile_parking_controller_page():
         
         # בדיקה שהמשתמש הוא mobile_controller
         if code_type.lower() != 'mobile_controller':
-            print(f"⚠️ Unauthorized access attempt to mobile-parking-controller by {session['user_email']} (code_type: {code_type})")
+            print(f" Unauthorized access attempt to mobile-parking-controller by {session['user_email']} (code_type: {code_type})")
             return redirect(url_for('dashboard'))
         
     except Exception as e:
@@ -2652,15 +2652,15 @@ def mobile_parking_controller_page():
 def parking_tour_search():
     """חיפוש מנוי לפי לוחית רישוי"""
     print("="*50)
-    print("🔍 PARKING TOUR SEARCH CALLED!")
+    print(" PARKING TOUR SEARCH CALLED!")
     print("="*50)
     
     try:
         if 'user_email' not in session:
-            print("❌ NO USER IN SESSION")
+            print(" NO USER IN SESSION")
             return jsonify({'success': False, 'message': 'לא מחובר'}), 401
         
-        print(f"✅ User: {session['user_email']}")
+        print(f" User: {session['user_email']}")
         
         # בדיקת הרשאות - מבוטלת זמנית לצורך בדיקה
         # TODO: להחזיר בדיקת הרשאות אחרי הבדיקות
@@ -2694,7 +2694,7 @@ def parking_tour_search():
         # ניקוי לוחית רישוי - הסרת רווחים ומקפים
         clean_plate = license_plate.replace(' ', '').replace('-', '')
         
-        print(f"🔍 Searching for license plate: {clean_plate} in parking: {parking_id}")
+        print(f" Searching for license plate: {clean_plate} in parking: {parking_id}")
         
         # בדיקת דמו - החזרת תוצאה לדוגמה
         if clean_plate == "23320601":  # הלוחית שניסית
@@ -2708,7 +2708,7 @@ def parking_tour_search():
                 'validFrom': '2024-01-01',
                 'validUntil': '2025-12-31'
             }]
-            print("✅ DEMO MODE - Returning test result")
+            print(" DEMO MODE - Returning test result")
             return jsonify({
                 'success': True,
                 'data': demo_result,
@@ -2718,7 +2718,7 @@ def parking_tour_search():
         
         # נבדוק אם יש חניון
         if not parking_id:
-            print(f"❌ No parking_id provided")
+            print(f" No parking_id provided")
             return jsonify({
                 'success': False,
                 'message': 'לא נבחר חניון'
@@ -2740,7 +2740,7 @@ def parking_tour_search():
                     ip_address = parking_data.get('ip_address') or ip_address
                     port = parking_data.get('port') or port
                 else:
-                    print(f"⚠️ No parking mapping found for parking {parking_id}, using defaults")
+                    print(f" No parking mapping found for parking {parking_id}, using defaults")
         except Exception as e:
             print(f"Error getting parking data: {str(e)}, using defaults")
         
@@ -2762,7 +2762,7 @@ def parking_tour_search():
         
         try:
             # קריאה ישירה לשרת
-            print(f"🌐 Making direct request to parking server...")
+            print(f" Making direct request to parking server...")
             
             # ביטול אזהרות SSL
             import urllib3
@@ -2771,11 +2771,11 @@ def parking_tour_search():
             response = requests.get(url, headers=headers, verify=False, timeout=30)
             
             print(f"📡 Response status: {response.status_code}")
-            print(f"📄 Response headers: {dict(response.headers)}")
+            print(f" Response headers: {dict(response.headers)}")
             
             if response.status_code != 200:
-                print(f"❌ Server returned {response.status_code}")
-                print(f"📄 Error response: {response.text[:500]}")
+                print(f" Server returned {response.status_code}")
+                print(f" Error response: {response.text[:500]}")
                 return jsonify({
                     'success': False,
                     'message': 'שגיאה בחיפוש במערכת החניון'
@@ -2783,29 +2783,29 @@ def parking_tour_search():
             
             # עיבוד התשובה
             content_type = response.headers.get('content-type', '')
-            print(f"📄 Content-Type: {content_type}")
-            print(f"📄 Response body (first 1000 chars): {response.text[:1000]}")
+            print(f" Content-Type: {content_type}")
+            print(f" Response body (first 1000 chars): {response.text[:1000]}")
             
             consumers_data = []
             
             if 'xml' in content_type or response.text.startswith('<?xml'):
-                print(f"📋 Parsing XML response...")
+                print(f" Parsing XML response...")
                 import xml.etree.ElementTree as ET
                 
                 try:
                     root = ET.fromstring(response.text)
-                    print(f"📋 Root element: {root.tag}")
+                    print(f" Root element: {root.tag}")
                     
                     # Option 1: consumers/consumer structure
                     consumers_elem = root.find('.//consumers')
                     if consumers_elem is not None:
-                        print(f"📋 Found consumers element")
+                        print(f" Found consumers element")
                         for consumer_elem in consumers_elem.findall('consumer'):
                             consumer_data = {}
                             for child in consumer_elem:
                                 consumer_data[child.tag] = child.text
                             consumers_data.append(consumer_data)
-                            print(f"📋 Consumer found: {consumer_data}")
+                            print(f" Consumer found: {consumer_data}")
                     
                     # Option 2: Direct consumer elements
                     if not consumers_data:
@@ -2814,7 +2814,7 @@ def parking_tour_search():
                             for child in consumer_elem:
                                 consumer_data[child.tag] = child.text
                             consumers_data.append(consumer_data)
-                            print(f"📋 Consumer found (direct): {consumer_data}")
+                            print(f" Consumer found (direct): {consumer_data}")
                     
                     # Option 3: Root is consumer
                     if not consumers_data and root.tag == 'consumer':
@@ -2822,17 +2822,17 @@ def parking_tour_search():
                         for child in root:
                             consumer_data[child.tag] = child.text
                         consumers_data = [consumer_data]
-                        print(f"📋 Consumer found (root): {consumer_data}")
+                        print(f" Consumer found (root): {consumer_data}")
                 
                 except ET.ParseError as e:
-                    print(f"❌ XML Parse error: {str(e)}")
+                    print(f" XML Parse error: {str(e)}")
                     return jsonify({
                         'success': False,
                         'message': 'שגיאה בפענוח תשובת השרת'
                     })
             else:
                 # Try JSON
-                print(f"📋 Trying to parse as JSON...")
+                print(f" Trying to parse as JSON...")
                 try:
                     json_data = response.json()
                     if isinstance(json_data, list):
@@ -2844,25 +2844,25 @@ def parking_tour_search():
                             consumers_data = [json_data['consumer']]
                         else:
                             consumers_data = [json_data]
-                    print(f"📋 Parsed JSON successfully: {len(consumers_data)} consumers")
+                    print(f" Parsed JSON successfully: {len(consumers_data)} consumers")
                 except:
-                    print(f"❌ Failed to parse as JSON")
+                    print(f" Failed to parse as JSON")
                     return jsonify({
                         'success': False,
                         'message': 'שגיאה בפענוח תשובת השרת'
                     })
             
             result = {'success': True, 'data': consumers_data}
-            print(f"✅ Search completed successfully! Found {len(consumers_data)} consumers")
+            print(f" Search completed successfully! Found {len(consumers_data)} consumers")
                 
         except requests.exceptions.RequestException as e:
-            print(f"❌ Request error: {str(e)}")
+            print(f" Request error: {str(e)}")
             return jsonify({
                 'success': False,
                 'message': f'שגיאה בחיבור לשרת החניון'
             })
         except Exception as e:
-            print(f"❌ Unexpected error: {str(e)}")
+            print(f" Unexpected error: {str(e)}")
             import traceback
             print(traceback.format_exc())
             return jsonify({
@@ -2891,7 +2891,7 @@ def parking_tour_search():
         # עיבוד התוצאות
         found_subscribers = []
         
-        print(f"📊 Found {len(consumers)} consumers with lpn={clean_plate}")
+        print(f" Found {len(consumers)} consumers with lpn={clean_plate}")
         
         # עיבוד כל מנוי שנמצא
         for consumer in consumers:
@@ -2924,7 +2924,7 @@ def parking_tour_search():
             }
             found_subscribers.append(subscriber_data)
         
-        print(f"✅ Returning {len(found_subscribers)} subscribers")
+        print(f" Returning {len(found_subscribers)} subscribers")
         
         return jsonify({
             'success': True,
@@ -2934,7 +2934,7 @@ def parking_tour_search():
         
     except Exception as e:
         error_details = f"Error in parking tour search: {str(e)}"
-        print(f"❌ {error_details}")
+        print(f" {error_details}")
         import traceback
         print(traceback.format_exc())
         return jsonify({
@@ -3074,7 +3074,7 @@ def master_create_user():
         result = supabase.table('user_parkings').insert(new_user_data).execute()
         
         if result.data:
-            print(f"✅ User created successfully: {username} (ID: {next_user_id})")
+            print(f" User created successfully: {username} (ID: {next_user_id})")
             
             # שליחת מייל למשתמש החדש
             email_sent = send_new_user_welcome_email(
@@ -3101,11 +3101,11 @@ def master_create_user():
                 }
             })
         else:
-            print(f"❌ Failed to insert user to database")
+            print(f" Failed to insert user to database")
             return jsonify({'success': False, 'message': 'שגיאה ביצירת המשתמש במסד הנתונים'})
         
     except Exception as e:
-        print(f"❌ Master create user error: {str(e)}")
+        print(f" Master create user error: {str(e)}")
         return jsonify({'success': False, 'message': f'שגיאה במערכת: {str(e)}'})
 
 
@@ -3213,7 +3213,7 @@ def parking_manager_create_user():
            next_user_id = random.randint(1000, 9999)
            print(f"🎲 Using random user_id: {next_user_id}")
        
-       # הכנת הנתונים להוספה - 🔒 יוצר רק קוד מנהל חברה לחניון הספציפי
+       # הכנת הנתונים להוספה -  יוצר רק קוד מנהל חברה לחניון הספציפי
        current_time = datetime.now(timezone.utc).isoformat()
        
        new_user_data = {
@@ -3222,11 +3222,11 @@ def parking_manager_create_user():
            'email': validated_email,
            'password_hash': password_hash,
            'role': 'user',
-           'project_number': manager_data['project_number'],  # 🔒 חובה - רק החניון של המנהל
-           'parking_name': manager_data['parking_name'],      # 🔒 חובה - רק החניון של המנהל
-           'company_type': manager_data['company_type'],      # 🔒 חובה - רק החברה של המנהל
-           'access_level': 'company_manager',                 # 🔒 חובה - תמיד מנהל חברה
-           'code_type': 'company_manager',                    # 🔒 חובה - תמיד קוד מנהל חברה
+           'project_number': manager_data['project_number'],  #  חובה - רק החניון של המנהל
+           'parking_name': manager_data['parking_name'],      #  חובה - רק החניון של המנהל
+           'company_type': manager_data['company_type'],      #  חובה - רק החברה של המנהל
+           'access_level': 'company_manager',                 #  חובה - תמיד מנהל חברה
+           'code_type': 'company_manager',                    #  חובה - תמיד קוד מנהל חברה
            'created_at': current_time,
            'updated_at': current_time,
            'password_changed_at': current_time,
@@ -3247,7 +3247,7 @@ def parking_manager_create_user():
        result = supabase.table('user_parkings').insert(new_user_data).execute()
        
        if result.data:
-           print(f"✅ Company manager created successfully: {username} (ID: {next_user_id}) - FOR PARKING: {manager_data['project_number']} ({manager_data['parking_name']})")
+           print(f" Company manager created successfully: {username} (ID: {next_user_id}) - FOR PARKING: {manager_data['project_number']} ({manager_data['parking_name']})")
            
            # שליחת מייל למשתמש החדש
            email_sent = send_new_user_welcome_email(
@@ -3262,15 +3262,15 @@ def parking_manager_create_user():
                # Use company_list as contract ID if valid (single company)
                target_contract = company_list if company_list and company_list.strip().isdigit() else None
                if target_contract and int(new_user_data.get('counting', 0)) > 0:
-                   print(f"🔄 Auto-syncing contract {target_contract} with counting {new_user_data.get('counting')}...")
+                   print(f" Auto-syncing contract {target_contract} with counting {new_user_data.get('counting')}...")
                    success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_user_data.get('counting'))
                    if success:
                        parking_sync_status = " ועודכן במערכת החניון."
                    else:
-                       print(f"⚠️ Sync failed: {msg}")
+                       print(f" Sync failed: {msg}")
                        parking_sync_status = f" (נכשל עדכון בחניון: {msg})"
            except Exception as e:
-               print(f"❌ Sync exception: {e}")
+               print(f" Sync exception: {e}")
 
            if email_sent:
                message = f'מנהל חברה {username} נוצר בהצלחה עבור חניון {manager_data["parking_name"]}! מייל נשלח ל-{validated_email}{parking_sync_status}'
@@ -3291,11 +3291,11 @@ def parking_manager_create_user():
                }
            })
        else:
-           print(f"❌ Failed to insert company manager to database")
+           print(f" Failed to insert company manager to database")
            return jsonify({'success': False, 'message': 'שגיאה ביצירת המנהל במסד הנתונים'})
        
    except Exception as e:
-       print(f"❌ Parking manager create company manager error: {str(e)}")
+       print(f" Parking manager create company manager error: {str(e)}")
        return jsonify({'success': False, 'message': f'שגיאה במערכת: {str(e)}'})
 
 @app.route('/api/parking-manager/update-user', methods=['POST'])
@@ -3417,13 +3417,13 @@ def parking_manager_update_user():
         }
         
         print(f"💾 Updating user {user_id} in parking: {manager_data['project_number']} ({manager_data['parking_name']})")
-        print(f"📝 Update data: {update_data}")
+        print(f" Update data: {update_data}")
         
         # עדכון המשתמש במסד הנתונים
         result = supabase.table('user_parkings').update(update_data).eq('user_id', user_id).eq('project_number', manager_data['project_number']).execute()
         
         if result.data:
-            print(f"✅ User updated successfully: {username} (ID: {user_id}) - FOR PARKING: {manager_data['project_number']} ({manager_data['parking_name']})")
+            print(f" User updated successfully: {username} (ID: {user_id}) - FOR PARKING: {manager_data['project_number']} ({manager_data['parking_name']})")
             
             # Sync counting to parking system if applicable
             parking_sync_status = ""
@@ -3433,15 +3433,15 @@ def parking_manager_update_user():
                 target_contract = str(final_company_list).strip() if final_company_list and str(final_company_list).strip().isdigit() else None
                 
                 if target_contract and new_counting > 0:
-                     print(f"🔄 Auto-syncing contract {target_contract} with counting {new_counting}...")
+                     print(f" Auto-syncing contract {target_contract} with counting {new_counting}...")
                      success, msg = update_parking_contract_counting(manager_data['project_number'], target_contract, new_counting)
                      if success:
                          parking_sync_status = " ועודכן במערכת החניון."
                      else:
-                         print(f"⚠️ Sync failed: {msg}")
+                         print(f" Sync failed: {msg}")
                          parking_sync_status = f" (נכשל עדכון בחניון: {msg})"
             except Exception as e:
-                print(f"❌ Sync exception: {e}")
+                print(f" Sync exception: {e}")
 
             return jsonify({
                 'success': True,
@@ -3456,11 +3456,11 @@ def parking_manager_update_user():
                 }
             })
         else:
-            print(f"❌ Failed to update user in database")
+            print(f" Failed to update user in database")
             return jsonify({'success': False, 'message': 'שגיאה בעדכון המשתמש במסד הנתונים'})
         
     except Exception as e:
-        print(f"❌ Parking manager update user error: {str(e)}")
+        print(f" Parking manager update user error: {str(e)}")
         return jsonify({'success': False, 'message': f'שגיאה במערכת: {str(e)}'})
 
 @app.route('/api/master/reset-password', methods=['POST'])
@@ -3517,7 +3517,7 @@ def master_reset_password():
             return jsonify({'success': False, 'message': error_msg})
         
     except Exception as e:
-        print(f"❌ Master reset password error: {str(e)}")
+        print(f" Master reset password error: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאה במערכת'})
 
 @app.route('/company-manager')
@@ -3533,7 +3533,7 @@ def company_manager_page():
         ).eq('email', session['user_email']).execute()
         
         if not user_result.data:
-            print(f"⚠️ User not found: {session['user_email']}")
+            print(f" User not found: {session['user_email']}")
             return redirect(url_for('dashboard'))
         
         user_data = user_result.data[0]
@@ -3545,7 +3545,7 @@ def company_manager_page():
         
         # בדיקה שזה מנהל חברה
         if code_type != 'company_manager' and access_level != 'company_manager':
-            print(f"⚠️ Unauthorized access attempt to company-manager by {session['user_email']}")
+            print(f" Unauthorized access attempt to company-manager by {session['user_email']}")
             return redirect(url_for('dashboard'))
         
         # בדיקת הרשאות - מאפשרים כניסה לכל מנהל חברה
@@ -3555,7 +3555,7 @@ def company_manager_page():
         
         # אם אין הרשאות בכלל או הרשאות לא תקינות
         if not has_valid_permission and permissions not in ['', 'B']:
-            print(f"⚠️ Invalid permissions for {session['user_email']}: {permissions}")
+            print(f" Invalid permissions for {session['user_email']}: {permissions}")
             return redirect(url_for('dashboard'))
         
         # שמירת נתונים ב-session לשימוש ב-API
@@ -3585,7 +3585,7 @@ def get_parking_connection_details(project_number):
     Mirrors logic from company_manager_proxy.
     """
     if not supabase:
-        print("❌ Supabase not initialized")
+        print(" Supabase not initialized")
         return None
 
     try:
@@ -3625,7 +3625,7 @@ def get_parking_connection_details(project_number):
                                  'description': server_data.get('name')
                              }
             except Exception as e:
-                print(f"❌ Error searching fallback tables for parking {project_number}: {str(e)}")
+                print(f" Error searching fallback tables for parking {project_number}: {str(e)}")
                 return None
         else:
              data = parking_result.data[0]
@@ -3636,7 +3636,7 @@ def get_parking_connection_details(project_number):
              }
              
     except Exception as e:
-        print(f"❌ Error getting parking connection details: {str(e)}")
+        print(f" Error getting parking connection details: {str(e)}")
         return None
     
     return None
@@ -3646,18 +3646,18 @@ def update_parking_contract_counting(project_number, contract_id, counting_value
     Updates the parking system contract with the new counting limit via XML PUT request.
     Using verified structure from local testing.
     """
-    print(f"🔄 Attempting to update parking system: Project={project_number}, Contract={contract_id}, Counting={counting_value}")
+    print(f" Attempting to update parking system: Project={project_number}, Contract={contract_id}, Counting={counting_value}")
     
     connection = get_parking_connection_details(project_number)
     if not connection:
-        print(f"❌ Could not find connection details for parking {project_number}")
+        print(f" Could not find connection details for parking {project_number}")
         return False, "Connection details not found"
         
     ip_address = connection['ip_address']
     port = connection['port']
     
     if not ip_address:
-         print(f"❌ Missing IP address for parking {project_number}")
+         print(f" Missing IP address for parking {project_number}")
          return False, "Missing IP address"
 
     # Construct URL
@@ -3696,14 +3696,14 @@ def update_parking_contract_counting(project_number, contract_id, counting_value
         print(f"📥 Parking System Response: Code={response.status_code}, Body={response.text[:200]}")
         
         if response.status_code in [200, 201]:
-             print("✅ Parking system update successful")
+             print(" Parking system update successful")
              return True, "Updated successfully"
         else:
-             print(f"❌ Parking system update failed: {response.status_code}")
+             print(f" Parking system update failed: {response.status_code}")
              return False, f"HTTP {response.status_code}"
 
     except Exception as e:
-        print(f"❌ Exception sending update to parking system: {str(e)}")
+        print(f" Exception sending update to parking system: {str(e)}")
         return False, str(e)
 
 @app.route('/api/get-current-user', methods=['GET'])
@@ -4169,7 +4169,7 @@ def company_manager_proxy():
         if data and '_internal_session' in data:
             internal_session = data.pop('_internal_session')
             if internal_session:
-                print(f"📱 Internal session received: {internal_session.get('user_email')}")
+                print(f" Internal session received: {internal_session.get('user_email')}")
         
         if 'user_email' not in session and not internal_session:
             if is_local_dev:
@@ -4183,7 +4183,7 @@ def company_manager_proxy():
         # Use internal session if provided
         if internal_session:
             current_user_email = internal_session.get('user_email')
-            print(f"📱 Using internal session for user: {current_user_email}")
+            print(f" Using internal session for user: {current_user_email}")
         else:
             current_user_email = session.get('user_email')
             
@@ -4260,7 +4260,7 @@ def company_manager_proxy():
                     else:
                         return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
             except Exception as e:
-                print(f"❌ Error searching fallback tables: {str(e)}")
+                print(f" Error searching fallback tables: {str(e)}")
                 return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
         else:
             parking_data = parking_result.data[0]
@@ -4312,7 +4312,7 @@ def company_manager_proxy():
             if '?' in endpoint:
                 # יש query parameters - להשתמש ב-endpoint כמו שהוא
                 url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{endpoint}"
-                print(f"🔍 Using consumers endpoint with query params: {endpoint}")
+                print(f" Using consumers endpoint with query params: {endpoint}")
             else:
                 # Check if we have a contractId in payload to filter by
                 contract_id = payload.get('contractId') if payload else None
@@ -4371,7 +4371,7 @@ def company_manager_proxy():
             # Commands use PUT, queries use GET
             if '/command/' in endpoint:
                 method = 'PUT'
-                print(f"📱 Device Control Command: {endpoint}")
+                print(f" Device Control Command: {endpoint}")
             else:
                 method = 'GET'
         elif 'CustomerMediaWebService' in endpoint:
@@ -4465,14 +4465,20 @@ def company_manager_proxy():
                     for key in ['displayText', 'limit', 'status', 'delete', 'lpn1', 'lpn2', 'lpn3']:
                         if key in payload and payload[key] is not None and payload[key] != '':
                             elem = ET.SubElement(root, key)
-                            elem.text = str(payload[key])
+                            if isinstance(payload[key], dict):
+                                for subk, subv in payload[key].items():
+                                    if subv is not None and subv != '':
+                                        sub_elem = ET.SubElement(elem, subk)
+                                        sub_elem.text = str(subv)
+                            else:
+                                elem.text = str(payload[key])
                     
                     # Convert to XML string
                     xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
-                    print(f"   📝 Sending XML for consumer creation (POST to {url}):")
+                    print(f"    Sending XML for consumer creation (POST to {url}):")
                     print(f"   Consumer ID: {payload.get('consumer', {}).get('id', 'NEW')}")
-                    print(f"   📄 Full XML being sent:\n{xml_str}")
-                    print(f"   📏 XML length: {len(xml_str)} characters")
+                    print(f"    Full XML being sent:\n{xml_str}")
+                    print(f"    XML length: {len(xml_str)} characters")
                     
                     # Send as XML
                     headers['Content-Type'] = 'application/xml'
@@ -4536,12 +4542,18 @@ def company_manager_proxy():
                     for key in ['lpn1', 'lpn2', 'lpn3']:
                         if key in payload and payload[key]:
                             elem = ET.SubElement(root, key)
-                            elem.text = str(payload[key])
+                            if isinstance(payload[key], dict):
+                                for subk, subv in payload[key].items():
+                                    if subv is not None and subv != '':
+                                        sub_elem = ET.SubElement(elem, subk)
+                                        sub_elem.text = str(subv)
+                            else:
+                                elem.text = str(payload[key])
                     
                     # Convert to XML string
                     xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
-                    print(f"   📝 Sending XML for update (PUT to {url}):")
-                    print(f"   📅 Dates in consumer: xValidFrom={payload.get('consumer', {}).get('xValidFrom')}, xValidUntil={payload.get('consumer', {}).get('xValidUntil')}")
+                    print(f"    Sending XML for update (PUT to {url}):")
+                    print(f"    Dates in consumer: xValidFrom={payload.get('consumer', {}).get('xValidFrom')}, xValidUntil={payload.get('consumer', {}).get('xValidUntil')}")
                     
                     headers['Content-Type'] = 'application/xml'
                     response = requests.put(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
@@ -4567,7 +4579,7 @@ def company_manager_proxy():
                         counting_elem.text = str(payload['counting'])
                         
                     xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
-                    print(f"   📝 Sending XML for Contract Update (PUT to {url}):\n{xml_str}")
+                    print(f"    Sending XML for Contract Update (PUT to {url}):\n{xml_str}")
                     
                     headers['Content-Type'] = 'application/xml'
                     response = requests.put(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
@@ -4606,7 +4618,7 @@ def company_manager_proxy():
                         
                         # Handle Device Control Web Service responses
                         if 'DeviceControlWebService' in endpoint:
-                            print(f"   📱 Parsing Device Control response for endpoint: {endpoint}")
+                            print(f"    Parsing Device Control response for endpoint: {endpoint}")
                             
                             if 'geometry' in endpoint:
                                 # Parse geometry response
@@ -4618,7 +4630,7 @@ def company_manager_proxy():
                                     cell_num = cell_comp.find('number')
                                     if cell_num is not None:
                                         cell_computers.append(cell_num.text)
-                                        print(f"   📱 Found cell computer: {cell_num.text}")
+                                        print(f"    Found cell computer: {cell_num.text}")
                                 
                                 # Find all field-device elements recursively
                                 for device in root.findall('.//field-device'):
@@ -4690,7 +4702,7 @@ def company_manager_proxy():
                                             'cellComputers': cell_computers  # Store for command use
                                         })
                                 
-                                print(f"   ✅ Found {len(devices)} devices in geometry")
+                                print(f"    Found {len(devices)} devices in geometry")
                                 
                                 # Store cell computers in session for command use
                                 if cell_computers and internal_session:
@@ -4729,7 +4741,7 @@ def company_manager_proxy():
                                         }
                                         events.append(event_info)
                                 
-                                print(f"   ✅ Found {len(events)} events")
+                                print(f"    Found {len(events)} events")
                                 return jsonify({'success': True, 'data': events})
                             
                             elif 'version' in endpoint:
@@ -4740,12 +4752,12 @@ def company_manager_proxy():
                             
                             elif 'command' in endpoint:
                                 # Parse command response
-                                print(f"   📱 Parsing command response")
+                                print(f"    Parsing command response")
                                 status_elem = root.find('.//status')
                                 if status_elem is not None:
                                     status_code = int(status_elem.text)
                                     success = status_code == 0
-                                    print(f"   📱 Command response status: {status_code} ({'Success' if success else 'Failed'})")
+                                    print(f"    Command response status: {status_code} ({'Success' if success else 'Failed'})")
                                     return jsonify({
                                         'success': success,
                                         'status': status_code,
@@ -4847,7 +4859,7 @@ def company_manager_proxy():
                             elif payload and 'contractId' in payload:
                                 # Only filter if we got ALL consumers (old behavior)
                                 contract_id = str(payload['contractId'])
-                                print(f"   🔍 Got ALL consumers - need to filter for contract ID: {contract_id}")
+                                print(f"    Got ALL consumers - need to filter for contract ID: {contract_id}")
                                 
                                 # Filter consumers by contractId
                                 filtered = []
@@ -4871,10 +4883,10 @@ def company_manager_proxy():
                                             break
                                 
                                 if filtered:
-                                    print(f"   ✅ Filtered to {len(filtered)} consumers for contract {contract_id}")
+                                    print(f"    Filtered to {len(filtered)} consumers for contract {contract_id}")
                                     consumers = filtered
                                 else:
-                                    print(f"   ⚠️ No consumers found for contract {contract_id} after filtering")
+                                    print(f"    No consumers found for contract {contract_id} after filtering")
                                     consumers = []
                             
                             # Minimal logging for performance
@@ -4928,7 +4940,7 @@ def company_manager_proxy():
                                 pass
                                 
                             except Exception as e:
-                                print(f"   ❌ Error parsing consumer detail XML: {e}")
+                                print(f"    Error parsing consumer detail XML: {e}")
                                 consumer_detail = {'error': str(e)}
                             
                             return jsonify({'success': True, 'data': consumer_detail})
@@ -5133,7 +5145,7 @@ def company_manager_proxy():
                             return jsonify({'success': True, 'raw': response.text})
                             
                     except Exception as e:
-                        print(f"   ❌ XML parse error: {e}")
+                        print(f"    XML parse error: {e}")
                         return jsonify({'success': True, 'raw': response.text})
                 else:
                     # נסה לפרש כ-JSON
@@ -5227,13 +5239,13 @@ def company_manager_proxy():
                                                 result['data'] = {'id': id_elem.text}
                                                 print(f"   🆕 New consumer ID from server: {id_elem.text}")
                                             else:
-                                                print(f"   ⚠️ No ID found in consumer element")
+                                                print(f"    No ID found in consumer element")
                                         else:
-                                            print(f"   ⚠️ No consumer element found in response")
+                                            print(f"    No consumer element found in response")
                                     else:
-                                        print(f"   ⚠️ Response is not XML")
+                                        print(f"    Response is not XML")
                                 except Exception as e:
-                                    print(f"   ❌ Error parsing creation response: {str(e)}")
+                                    print(f"    Error parsing creation response: {str(e)}")
                         
                         return jsonify(result)
                     except Exception as e:
@@ -5244,8 +5256,8 @@ def company_manager_proxy():
                             'data': {'raw': response.text}
                         })
             else:
-                print(f"   ❌ Error from parking server: {response.status_code}")
-                print(f"   📝 Error details: {response.text[:500]}")
+                print(f"    Error from parking server: {response.status_code}")
+                print(f"    Error details: {response.text[:500]}")
                 return jsonify({
                     'success': False,
                     'message': f'שגיאה בקריאה לשרת החניון: {response.status_code}'
@@ -5271,7 +5283,7 @@ def company_manager_proxy():
                     
                     response = requests.get(url, headers=headers, verify=False, timeout=10)
                     if response.status_code == 200:
-                        print(f"   ✅ Worked without SSL verification!")
+                        print(f"    Worked without SSL verification!")
                         data = response.json() if response.text else {}
                         return jsonify({'success': True, 'data': data})
                 except:
@@ -5291,7 +5303,7 @@ def company_manager_proxy():
             }), 500
             
     except Exception as e:
-        print(f"❌ General proxy error: {str(e)}")
+        print(f" General proxy error: {str(e)}")
         return jsonify({'success': False, 'error': 'שגיאה כללית במערכת'}), 500
 
 # ========== API למנהל חניון ==========
@@ -5589,8 +5601,8 @@ def send_new_user_welcome_email(email, username, password, login_url):
     """שליחת מייל ברוכים הבאים למשתמש חדש"""
     
     if not mail:
-        print(f"❌ Mail system not available")
-        print(f"📱 NEW USER DETAILS for {email}:")
+        print(f" Mail system not available")
+        print(f" NEW USER DETAILS for {email}:")
         print(f"   Username: {username}")
         print(f"   Password: {password}")
         print(f"   URL: {login_url}")
@@ -5636,12 +5648,12 @@ def send_new_user_welcome_email(email, username, password, login_url):
         )
         
         mail.send(msg)
-        print(f"✅ Welcome email sent successfully to {email}")
+        print(f" Welcome email sent successfully to {email}")
         return True
         
     except Exception as e:
-        print(f"❌ Welcome email error: {str(e)}")
-        print(f"📱 BACKUP - NEW USER DETAILS for {email}:")
+        print(f" Welcome email error: {str(e)}")
+        print(f" BACKUP - NEW USER DETAILS for {email}:")
         print(f"   Username: {username}")
         print(f"   Password: {password}")
         print(f"   URL: {login_url}")
@@ -5651,8 +5663,8 @@ def send_password_reset_email(email, username, new_password):
     """שליחת מייל על איפוס סיסמה"""
     
     if not mail:
-        print(f"❌ Mail system not available")
-        print(f"📱 PASSWORD RESET for {username}: {new_password}")
+        print(f" Mail system not available")
+        print(f" PASSWORD RESET for {username}: {new_password}")
         return False
     
     try:
@@ -5694,12 +5706,12 @@ def send_password_reset_email(email, username, new_password):
         )
         
         mail.send(msg)
-        print(f"✅ Password reset email sent successfully to {email}")
+        print(f" Password reset email sent successfully to {email}")
         return True
         
     except Exception as e:
-        print(f"❌ Password reset email error: {str(e)}")
-        print(f"📱 BACKUP - PASSWORD RESET for {username}: {new_password}")
+        print(f" Password reset email error: {str(e)}")
+        print(f" BACKUP - PASSWORD RESET for {username}: {new_password}")
         return False 
 
 def clean_expired_reset_codes():
@@ -5718,8 +5730,8 @@ def send_password_reset_verification_email(email, code, username):
     """שליחת מייל עם קוד איפוס סיסמה"""
     
     if not mail:
-        print(f"❌ Mail system not available")
-        print(f"📱 RESET CODE for {email}: {code}")
+        print(f" Mail system not available")
+        print(f" RESET CODE for {email}: {code}")
         return False
     
     try:
@@ -5759,12 +5771,12 @@ def send_password_reset_verification_email(email, code, username):
         )
         
         mail.send(msg)
-        print(f"✅ Password reset email sent successfully to {email}")
+        print(f" Password reset email sent successfully to {email}")
         return True
         
     except Exception as e:
-        print(f"❌ Password reset email error: {str(e)}")
-        print(f"📱 BACKUP CODE for {email}: {code}")
+        print(f" Password reset email error: {str(e)}")
+        print(f" BACKUP CODE for {email}: {code}")
         return False
 
 # ניקוי אוטומטי של קודים ישנים
@@ -5777,7 +5789,7 @@ def auto_cleanup_reset_codes():
                 clean_expired_reset_codes()
                 print(f"🧹 Reset codes cleanup completed")
             except Exception as e:
-                print(f"⚠️ Cleanup error: {str(e)}")
+                print(f" Cleanup error: {str(e)}")
     
     cleanup_thread = threading.Thread(target=cleanup_loop, daemon=True)
     cleanup_thread.start()
@@ -5903,7 +5915,7 @@ def send_guest_email():
                 gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
                 
                 if not gmail_user or not gmail_password:
-                    print(f"❌ Missing Gmail credentials")
+                    print(f" Missing Gmail credentials")
                     return jsonify({'success': False, 'message': 'חסרים פרטי Gmail'})
                 
                 msg = MIMEMultipart('alternative')
@@ -5978,14 +5990,14 @@ def send_guest_email():
                 server.send_message(msg)
                 server.quit()
                 
-                print(f"✅ Guest email sent to {validated_email}")
+                print(f" Guest email sent to {validated_email}")
                 return jsonify({'success': True, 'message': 'מייל נשלח בהצלחה'})
                 
             except Exception as e:
-                print(f"❌ Failed to send guest email: {str(e)}")
+                print(f" Failed to send guest email: {str(e)}")
                 return jsonify({'success': False, 'message': 'שגיאה בשליחת מייל'})
         else:
-            print(f"⚠️ Mail system not available")
+            print(f" Mail system not available")
             return jsonify({'success': False, 'message': 'מערכת המייל לא זמינה'})
             
     except Exception as e:
@@ -6073,13 +6085,13 @@ def test_render_connection():
         
         try:
             response = requests.get(url, headers=headers, verify=False, timeout=15)
-            print(f"   ✅ Status: {response.status_code}")
+            print(f"    Status: {response.status_code}")
             
             if response.status_code == 200:
                 try:
                     data = response.json()
                     count = len(data) if isinstance(data, list) else 1
-                    print(f"   📊 Got {count} items")
+                    print(f"    Got {count} items")
                     results.append({
                         'endpoint': endpoint,
                         'status': 200,
@@ -6114,7 +6126,7 @@ def test_render_connection():
                 'success': False
             })
         except Exception as e:
-            print(f"   ❌ ERROR: {str(e)[:100]}")
+            print(f"    ERROR: {str(e)[:100]}")
             results.append({
                 'endpoint': endpoint,
                 'error': str(e)[:100],
@@ -6242,7 +6254,7 @@ def test_parking_connection():
                     'success': False,
                     'error': str(e)
                 })
-                print(f"❌ Failed: {url} - {str(e)}")
+                print(f" Failed: {url} - {str(e)}")
         
         return jsonify({
             'success': True,
@@ -6697,7 +6709,7 @@ def mobile_login():
         if not clean_phone:
             return jsonify({'success': False, 'message': 'מספר טלפון לא תקין'})
             
-        print(f"📱 Mobile login attempt for phone: {clean_phone}")
+        print(f" Mobile login attempt for phone: {clean_phone}")
         
         # בדוק אם המשתמש קיים במסד הנתונים
         user_result = supabase.table('user_parkings').select('*').eq('phone_number', clean_phone).execute()
@@ -6730,7 +6742,7 @@ def mobile_login():
             return jsonify({'success': False, 'message': f'שגיאה בשליחת ווטסאפ: {msg}'})
             
     except Exception as e:
-        print(f"❌ Error in mobile_login: {str(e)}")
+        print(f" Error in mobile_login: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': 'שגיאת שרת'})
@@ -6795,7 +6807,7 @@ def mobile_verify():
         })
         
     except Exception as e:
-        print(f"❌ Error in mobile_verify: {str(e)}")
+        print(f" Error in mobile_verify: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאת שרת'})
 
 
@@ -6873,7 +6885,7 @@ def mobile_get_subscribers():
             'Accept': 'application/xml, text/xml'
         }
         
-        print(f"📱 API Mobile fetching from: {url} for user_id={user_id}, admin={is_admin}")
+        print(f" API Mobile fetching from: {url} for user_id={user_id}, admin={is_admin}")
         
         response = requests.get(url, headers=headers, verify=False, timeout=15)
         
@@ -7016,7 +7028,7 @@ def mobile_get_subscribers():
             return jsonify({'success': False, 'message': f'Server returned {response.status_code}'})
             
     except Exception as e:
-        print(f"❌ Error in mobile_get_subscribers: {str(e)}")
+        print(f" Error in mobile_get_subscribers: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאת התחברות לשרת החניון'})
 
 if __name__ == '__main__':
