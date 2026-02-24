@@ -338,6 +338,7 @@ function SubscribersScreen({ route, navigation }) {
   const [subscribers, setSubscribers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+  const [parkingName, setParkingName] = useState('');
 
   useEffect(() => {
     fetchSubscribers();
@@ -362,6 +363,9 @@ function SubscribersScreen({ route, navigation }) {
           subsData = subsData ? [subsData] : [];
         }
         setSubscribers(subsData);
+        if (response.data.parking_name) {
+          setParkingName(response.data.parking_name);
+        }
       } else {
         Alert.alert('שגיאה', response.data.message || 'שגיאה במשיכת מנויים');
       }
@@ -389,6 +393,16 @@ function SubscribersScreen({ route, navigation }) {
       licensePlate = typeof item.lpn1 === 'string' ? item.lpn1 : (item.lpn1.plate || 'אין רכב מוגדר');
     } else if (item.vehicle1) {
       licensePlate = typeof item.vehicle1 === 'string' ? item.vehicle1 : (item.vehicle1.plate || 'אין רכב מוגדר');
+    }
+
+    let licensePlate2 = '-';
+    if (item.lpn2) {
+      licensePlate2 = typeof item.lpn2 === 'string' ? item.lpn2 : (item.lpn2.plate || '-');
+    }
+
+    let licensePlate3 = '-';
+    if (item.lpn3) {
+      licensePlate3 = typeof item.lpn3 === 'string' ? item.lpn3 : (item.lpn3.plate || '-');
     }
 
     const subNum = item.subscriberNum || index;
@@ -421,16 +435,23 @@ function SubscribersScreen({ route, navigation }) {
               <Text style={styles.subDetailValue}>{item.validUntil ? item.validUntil.split('T')[0] : '-'}</Text>
             </View>
             <View style={styles.subDetailRow}>
+              <Text style={styles.subDetailLabel}>רכב 2:</Text>
+              <Text style={styles.subDetailValue}>{licensePlate2}</Text>
+            </View>
+            <View style={styles.subDetailRow}>
+              <Text style={styles.subDetailLabel}>רכב 3:</Text>
+              <Text style={styles.subDetailValue}>{licensePlate3}</Text>
+            </View>
+            <View style={styles.subDetailRow}>
               <Text style={styles.subDetailLabel}>פרופיל:</Text>
               <Text style={styles.subDetailValue}>{item.profileName || item.profile || item.extCardProfile || '-'}</Text>
             </View>
-            <View style={styles.subDetailRow}>
-              <Text style={styles.subDetailLabel}>מספר תג:</Text>
-              <Text style={styles.subDetailValue}>{item.tagNum || item.idCard || '-'}</Text>
-            </View>
 
             <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-around', marginVertical: 10 }}>
-              <TouchableOpacity style={styles.actionButton}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigation.navigate('EditSubscriber', { subscriber: item, user: user })}
+              >
                 <Text style={styles.actionButtonText}>✏️ ערוך מנוי</Text>
               </TouchableOpacity>
             </View>
@@ -444,7 +465,7 @@ function SubscribersScreen({ route, navigation }) {
   const getSubCorpName = (sub) => typeof sub.contractName === 'string' ? sub.contractName : (sub.companyName || '');
   const getSubCorpId = (sub) => sub.contractId || sub.contractid || sub.companyNum || '';
 
-  const displayCompanyName = 'חניון ' + (user?.project_number || '');
+  const displayCompanyName = parkingName || 'חניון ' + (user?.project_number || '');
   const displayCompanyId = subscribers.length > 0 ? (getSubCorpId(subscribers[0]) || user.company_list || 'כללי') : (user.company_list || 'כללי');
 
   return (
@@ -494,6 +515,117 @@ function SubscribersScreen({ route, navigation }) {
 }
 
 // ==========================================
+// 4. EDIT SUBSCRIBER SCREEN
+// ==========================================
+function EditSubscriberScreen({ route, navigation }) {
+  const { subscriber, user } = route.params;
+  const cId = subscriber.contractId || subscriber.companyNum || subscriber.contractid || '';
+  const sId = subscriber.id || subscriber.subscriberNum || '';
+
+  const [fname, setFname] = useState(typeof subscriber.firstName === 'string' ? subscriber.firstName : (subscriber.firstName?.['#text'] || ''));
+  const [lname, setLname] = useState(typeof subscriber.lastName === 'string' ? subscriber.lastName : (subscriber.lastName?.['#text'] || ''));
+
+  const extractLpn = (lpnObj) => typeof lpnObj === 'string' ? lpnObj : (lpnObj?.plate || '');
+  const [lpn1, setLpn1] = useState(extractLpn(subscriber.lpn1) || extractLpn(subscriber.vehicle1) || '');
+  const [lpn2, setLpn2] = useState(extractLpn(subscriber.lpn2) || '');
+  const [lpn3, setLpn3] = useState(extractLpn(subscriber.lpn3) || '');
+
+  const [validFrom, setValidFrom] = useState(subscriber.validFrom ? subscriber.validFrom.split('T')[0] : '');
+  const [validUntil, setValidUntil] = useState(subscriber.validUntil ? subscriber.validUntil.split('T')[0] : '');
+
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!cId || !sId) {
+      Alert.alert('שגיאה', 'מזהה מנוי חסר, לא ניתן לעדכן');
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        consumer: {
+          id: sId,
+          contractid: cId,
+          xValidFrom: validFrom ? validFrom + 'T00:00:00+03:00' : undefined,
+          xValidUntil: validUntil ? validUntil + 'T23:59:59+03:00' : undefined
+        },
+        person: { firstName: fname, surname: lname }
+      };
+
+      if (lpn1) payload.lpn1 = { plate: lpn1 };
+      if (lpn2) payload.lpn2 = { plate: lpn2 };
+      if (lpn3) payload.lpn3 = { plate: lpn3 };
+
+      const response = await axios.post(`${API_URL}/api/mobile/proxy`, {
+        endpoint: `consumers/${cId},${sId}/detail`,
+        method: 'PUT',
+        project_number: user.project_number,
+        user_id: user.user_id,
+        company_list: user.company_list,
+        payload: payload
+      }, { timeout: 15000 });
+
+      if (response.data.success) {
+        Alert.alert('הצלחה', 'המנוי עודכן בהצלחה', [
+          { text: 'אישור', onPress: () => navigation.goBack() }
+        ]);
+      } else {
+        Alert.alert('שגיאה', response.data.message || 'שגיאה בעדכון מנוי');
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert('שגיאת תקשורת', 'לא ניתן לעדכן את המנוי כרגע');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.headerAlt}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Text style={{ fontSize: 24 }}>🔙</Text>
+        </TouchableOpacity>
+        <Text style={styles.dashboardTitle}>עריכת מנוי</Text>
+      </View>
+
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
+        <View style={styles.editCard}>
+          <Text style={styles.label}>שם פרטי</Text>
+          <TextInput style={styles.input} value={fname} onChangeText={setFname} textAlign="right" />
+
+          <Text style={styles.label}>שם משפחה</Text>
+          <TextInput style={styles.input} value={lname} onChangeText={setLname} textAlign="right" />
+
+          <Text style={styles.label}>רכב 1</Text>
+          <TextInput style={styles.input} value={lpn1} onChangeText={setLpn1} textAlign="right" />
+
+          <Text style={styles.label}>רכב 2</Text>
+          <TextInput style={styles.input} value={lpn2} onChangeText={setLpn2} textAlign="right" />
+
+          <Text style={styles.label}>רכב 3</Text>
+          <TextInput style={styles.input} value={lpn3} onChangeText={setLpn3} textAlign="right" />
+
+          <Text style={styles.label}>תחילת תוקף (YYYY-MM-DD)</Text>
+          <TextInput style={styles.input} value={validFrom} onChangeText={setValidFrom} textAlign="right" />
+
+          <Text style={styles.label}>תוקף עד (YYYY-MM-DD)</Text>
+          <TextInput style={styles.input} value={validUntil} onChangeText={setValidUntil} textAlign="right" />
+
+          <TouchableOpacity
+            style={[styles.button, saving && styles.buttonDisabled]}
+            onPress={handleSave}
+            disabled={saving}
+          >
+            {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>שמור שינויים</Text>}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+// ==========================================
 // NAVIGATION SETUP
 // ==========================================
 const Stack = createStackNavigator();
@@ -506,6 +638,7 @@ export default function App() {
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Dashboard" component={DashboardScreen} />
           <Stack.Screen name="Subscribers" component={SubscribersScreen} />
+          <Stack.Screen name="EditSubscriber" component={EditSubscriberScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
@@ -535,6 +668,16 @@ const styles = StyleSheet.create({
     shadowRadius: 15,
     elevation: 5,
     alignItems: 'center'
+  },
+  editCard: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
   },
   logoIcon: {
     width: 80,

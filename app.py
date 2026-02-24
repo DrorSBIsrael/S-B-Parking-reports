@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response, send_from_directory
+﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response, send_from_directory
 import flask
 from flask_mail import Mail, Message
 from supabase.client import create_client, Client
@@ -6812,10 +6812,10 @@ def mobile_get_subscribers():
         
         if not connection_details:
              try:
-                 parking_result = supabase.table('parkings').select('ip_address, port, description').eq('id', project_number).execute()
+                 parking_result = supabase.table('parkings').select('ip_address, port, description, name').eq('id', project_number).execute()
                  if parking_result.data:
                      data_p = parking_result.data[0]
-                     connection_details = {'ip_address': data_p.get('ip_address'), 'port': data_p.get('port', 443)}
+                     connection_details = {'ip_address': data_p.get('ip_address'), 'port': data_p.get('port', 443), 'description': data_p.get('description')}
              except: pass
              
         if not connection_details or not connection_details.get('ip_address'):
@@ -6963,23 +6963,35 @@ def mobile_get_subscribers():
                                 
                                 person = d_dict.get('person') or {}
                                 ident = d_dict.get('identification') or {}
+                                validation = d_dict.get('validation') or {}
+                                contract = d_dict.get('contract') or {}
                                 
                                 fname = person.get('firstName') or d_dict.get('firstName') or sub.get('firstName')
                                 lname = person.get('surname') or d_dict.get('surname') or sub.get('lastName')
-                                tagNum = ident.get('cardno') or sub.get('tagNum')
                                 
                                 if isinstance(fname, dict): fname = ""
                                 if isinstance(lname, dict): lname = ""
-                                if isinstance(tagNum, dict): tagNum = ""
                                 
                                 sub['firstName'] = fname
                                 sub['lastName'] = lname
-                                sub['tagNum'] = tagNum
                                 
-                                # try to extract plates
+                                # Extra Info
+                                sub['validFrom'] = validation.get('validFrom') or d_dict.get('validFrom') or sub.get('validFrom') or ''
+                                sub['validUntil'] = validation.get('validUntil') or d_dict.get('validUntil') or sub.get('validUntil') or ''
+                                sub['profileName'] = d_dict.get('profileName') or d_dict.get('profile') or sub.get('profileName') or ''
+                                
+                                # extract plates
                                 lpn1 = d_dict.get('lpn1') or sub.get('lpn1')
+                                lpn2 = d_dict.get('lpn2') or sub.get('lpn2')
+                                lpn3 = d_dict.get('lpn3') or sub.get('lpn3')
+                                
                                 if isinstance(lpn1, dict) and not lpn1.get('plate'): lpn1 = ""
+                                if isinstance(lpn2, dict) and not lpn2.get('plate'): lpn2 = ""
+                                if isinstance(lpn3, dict) and not lpn3.get('plate'): lpn3 = ""
+                                
                                 if lpn1: sub['lpn1'] = lpn1
+                                if lpn2: sub['lpn2'] = lpn2
+                                if lpn3: sub['lpn3'] = lpn3
                         except: pass
                         return sub
 
@@ -6990,7 +7002,8 @@ def mobile_get_subscribers():
 
             return jsonify({
                 'success': True,
-                'data': res_json
+                'data': res_json,
+                'parking_name': connection_details.get('description') or project_number
             })
         else:
             return jsonify({'success': False, 'message': f'Server returned {response.status_code}'})
