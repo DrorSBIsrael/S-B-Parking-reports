@@ -6975,10 +6975,17 @@ def mobile_get_subscribers():
                                 sub['firstName'] = fname
                                 sub['lastName'] = lname
                                 
+                                def extract_val(v):
+                                    if isinstance(v, dict): return v.get('#text') or ''
+                                    return v or ''
+                                
                                 # Extra Info
-                                sub['validFrom'] = validation.get('validFrom') or d_dict.get('validFrom') or sub.get('validFrom') or ''
-                                sub['validUntil'] = validation.get('validUntil') or d_dict.get('validUntil') or sub.get('validUntil') or ''
-                                sub['profileName'] = d_dict.get('profileName') or d_dict.get('profile') or sub.get('profileName') or ''
+                                sub['validFrom'] = extract_val(validation.get('xValidFrom')) or extract_val(validation.get('validFrom')) or extract_val(d_dict.get('validFrom')) or extract_val(sub.get('validFrom'))
+                                sub['validUntil'] = extract_val(validation.get('xValidUntil')) or extract_val(validation.get('validUntil')) or extract_val(d_dict.get('validUntil')) or extract_val(sub.get('validUntil'))
+                                
+                                uprof = ident.get('usageProfile') or d_dict.get('usageProfile') or {}
+                                p_name = uprof.get('profileName') or uprof.get('profile') or d_dict.get('profileName') or d_dict.get('profile') or sub.get('profileName') or ''
+                                sub['profileName'] = extract_val(p_name)
                                 
                                 # extract plates
                                 lpn1 = d_dict.get('lpn1') or sub.get('lpn1')

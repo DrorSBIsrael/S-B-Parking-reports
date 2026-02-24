@@ -556,12 +556,11 @@ function EditSubscriberScreen({ route, navigation }) {
       if (lpn2) payload.lpn2 = { plate: lpn2 };
       if (lpn3) payload.lpn3 = { plate: lpn3 };
 
-      const response = await axios.post(`${API_URL}/api/mobile/proxy`, {
+      const response = await axios.post(`${API_URL}/api/company-manager/proxy`, {
         endpoint: `consumers/${cId},${sId}/detail`,
         method: 'PUT',
-        project_number: user.project_number,
-        user_id: user.user_id,
-        company_list: user.company_list,
+        parking_id: user.project_number,
+        _internal_session: { user_email: user.user_id },
         payload: payload
       }, { timeout: 15000 });
 
