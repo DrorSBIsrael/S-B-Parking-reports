@@ -6806,11 +6806,11 @@ def mobile_get_subscribers():
             
         ip_address = connection_details.get('ip_address')
         port = connection_details.get('port', 443)
-        
-        # Получаем company_list пользователя из БД, чтобы мы могли отфильтровать абонентов
+        # Extract company list from request or DB
+        company_list_str = data.get('company_list') or ""
         user_id = data.get('user_id')
-        company_list_str = ""
-        if user_id:
+        
+        if not company_list_str and user_id:
             try:
                 user_res = supabase.table('parking_manager_users').select('company_list').eq('id', user_id).execute()
                 if user_res.data:
@@ -6858,13 +6858,16 @@ def mobile_get_subscribers():
                 try:
                     root = ET.fromstring(response.text)
                     consumers_list = []
-                    # במערכת שיידט לעיתים התגית היא consumer תחת consumers
-                    for cons in root.findall('.//consumer'):
-                        item = {}
-                        for child in cons:
-                            item[child.tag] = child.text
-                        if item:
-                            consumers_list.append(item)
+                    # נעבור על כל האלמנטים, תוך התעלמות מניימספייסים 
+                    for cons in root.iter():
+                        tag_name = cons.tag.split('}')[-1] if '}' in cons.tag else cons.tag
+                        if tag_name == 'consumer':
+                            item = {}
+                            for child in cons:
+                                child_tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+                                item[child_tag] = child.text
+                            if item:
+                                consumers_list.append(item)
                     res_json = {'consumers': {'consumer': consumers_list}}
                 except Exception as ex:
                     print("XML parsing failed string:", ex)
