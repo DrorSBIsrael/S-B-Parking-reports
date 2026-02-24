@@ -442,10 +442,10 @@ function SubscribersScreen({ route, navigation }) {
 
   // מציאת שם החברה לראש העמוד
   const getSubCorpName = (sub) => typeof sub.contractName === 'string' ? sub.contractName : (sub.companyName || '');
-  const getSubCorpId = (sub) => typeof sub.contractId === 'string' ? sub.contractId : (sub.companyNum || '');
+  const getSubCorpId = (sub) => sub.contractId || sub.contractid || sub.companyNum || '';
 
-  const displayCompanyName = subscribers.length > 0 ? (getSubCorpName(subscribers[0]) || 'חניון ' + user.project_number) : 'רשימת מנויים';
-  const displayCompanyId = subscribers.length > 0 ? (getSubCorpId(subscribers[0]) || 'כללי') : '';
+  const displayCompanyName = 'חניון ' + (user?.project_number || '');
+  const displayCompanyId = subscribers.length > 0 ? (getSubCorpId(subscribers[0]) || user.company_list || 'כללי') : (user.company_list || 'כללי');
 
   return (
     <SafeAreaView style={styles.container}>
@@ -465,7 +465,7 @@ function SubscribersScreen({ route, navigation }) {
       <View style={styles.searchContainer}>
         <TextInput
           style={[styles.searchInput, { textAlign: 'right' }]}
-          placeholder="🔍 חפש שם, לוחית רישוי או חברה..."
+          placeholder="חיפוש..."
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -695,9 +695,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 15,
     marginBottom: 10,
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -733,7 +730,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingVertical: 5,
     paddingHorizontal: 10,
-    width: 100,
+    minWidth: 100,
+    maxWidth: 150,
     alignItems: 'center'
   },
   subCarText: {
