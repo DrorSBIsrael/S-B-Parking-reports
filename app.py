@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response, send_from_directory
+﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response, send_from_directory
 import flask
 from flask_mail import Mail, Message
 from supabase.client import create_client, Client
