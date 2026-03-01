@@ -6959,7 +6959,7 @@ def mobile_get_subscribers():
             # Fetch details for small lists so names actually show up in mobile app
             if isinstance(res_json, dict) and 'consumers' in res_json and 'consumer' in res_json['consumers']:
                 final_list = res_json['consumers']['consumer']
-                if 0 < len(final_list) <= 150:
+                if 0 < len(final_list) <= 1000:
                     import concurrent.futures
                     def fetch_detail(sub):
                         try:
