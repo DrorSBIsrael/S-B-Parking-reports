@@ -6987,6 +6987,12 @@ def mobile_get_subscribers():
                                 sub['firstName'] = fname
                                 sub['lastName'] = lname
                                 
+                                # Extract Company/Contract Name
+                                c_name = contract.get('name') or d_dict.get('contractName') or sub.get('contractName') or sub.get('companyName') or ''
+                                if isinstance(c_name, dict): c_name = c_name.get('#text') or ''
+                                sub['contractName'] = c_name
+                                sub['companyName'] = c_name
+                                
                                 def extract_val(v):
                                     if isinstance(v, dict): return v.get('#text') or ''
                                     return v or ''

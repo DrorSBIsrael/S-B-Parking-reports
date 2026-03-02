@@ -467,7 +467,16 @@ function SubscribersScreen({ route, navigation }) {
   const getSubCorpId = (sub) => sub.contractId || sub.contractid || sub.companyNum || '';
 
   const displayCompanyName = parkingName || 'חניון ' + (user?.project_number || '');
-  const displayCompanyId = subscribers.length > 0 ? (getSubCorpId(subscribers[0]) || user.company_list || 'כללי') : (user.company_list || 'כללי');
+
+  let companyIdPart = user.company_list || 'כללי';
+  let companyNamePart = '';
+  if (subscribers.length > 0) {
+    const cId = getSubCorpId(subscribers[0]);
+    if (cId) companyIdPart = cId;
+    companyNamePart = getSubCorpName(subscribers[0]);
+  }
+
+  const displayCompanySubtitle = companyNamePart ? `חברה: ${companyNamePart} - ${companyIdPart}` : `חברה: ${companyIdPart}`;
 
   const handleLogout = async () => {
     try {
@@ -487,7 +496,7 @@ function SubscribersScreen({ route, navigation }) {
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ alignItems: 'flex-end', marginLeft: 15 }}>
             <Text style={styles.dashboardTitle}>{displayCompanyName}</Text>
-            {displayCompanyId ? <Text style={styles.dashboardSubtitle}>חברה: {displayCompanyId} ({subscribers.length} מנויים)</Text> : null}
+            {displayCompanyId ? <Text style={styles.dashboardSubtitle}>{displayCompanySubtitle} ({subscribers.length} מנויים)</Text> : null}
           </View>
           <LogoIcon code="512486143" size="small" />
         </View>
@@ -518,10 +527,16 @@ function SubscribersScreen({ route, navigation }) {
       )}
 
       <TouchableOpacity
-        style={styles.floatingButton}
-        onPress={() => navigation.navigate('EditSubscriber', { subscriber: {}, user: user, isNew: true })}
+        style={styles.fab}
+        onPress={() => navigation.navigate('EditSubscriber', {
+          subscriber: {},
+          user: user,
+          isNew: true,
+          isGuestFlow: true,
+          subscribersList: subscribers
+        })}
       >
-        <Text style={styles.floatingButtonText}>+</Text>
+        <Text style={styles.fabText}>+ אורח חדש</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -531,13 +546,30 @@ function SubscribersScreen({ route, navigation }) {
 // 4. EDIT SUBSCRIBER SCREEN
 // ==========================================
 function EditSubscriberScreen({ route, navigation }) {
-  const { subscriber, user, isNew, onSaveSuccess } = route.params;
+  const { subscriber, user, isNew, onSaveSuccess, isGuestFlow, subscribersList } = route.params;
 
   const defaultCompany = user?.company_list ? user.company_list.split(',')[0] : '';
   const [cId, setCId] = useState(subscriber.contractId || subscriber.companyNum || subscriber.contractid || defaultCompany);
-  const [sId, setSId] = useState(subscriber.id || subscriber.subscriberNum || '');
 
-  const [fname, setFname] = useState(typeof subscriber.firstName === 'string' ? subscriber.firstName : (subscriber.firstName?.['#text'] || ''));
+  // Calculate next guest ID if needed
+  let initialSId = subscriber.id || subscriber.subscriberNum || '';
+  if (isNew && isGuestFlow && subscribersList && subscribersList.length > 0) {
+    const existingGuests = subscribersList.filter(s => {
+      const num = parseInt(s.id || s.subscriberNum || 0);
+      return !isNaN(num) && num >= 40001;
+    });
+    let nextGuestId = 40001;
+    if (existingGuests.length > 0) {
+      const maxGuestId = Math.max(...existingGuests.map(s => parseInt(s.id || s.subscriberNum || 0)));
+      nextGuestId = maxGuestId + 1;
+    }
+    initialSId = String(nextGuestId);
+  } else if (isNew && isGuestFlow && (!subscribersList || subscribersList.length === 0)) {
+    initialSId = '40001'; // Default for first guest if list is empty
+  }
+  const [sId, setSId] = useState(initialSId);
+
+  const [fname, setFname] = useState(typeof subscriber.firstName === 'string' ? subscriber.firstName : (subscriber.firstName?.['#text'] || (isGuestFlow ? 'אורח' : '')));
   const [lname, setLname] = useState(typeof subscriber.lastName === 'string' ? subscriber.lastName : (subscriber.lastName?.['#text'] || ''));
 
   const extractLpn = (lpnObj) => typeof lpnObj === 'string' ? lpnObj : (lpnObj?.plate || '');
@@ -545,10 +577,22 @@ function EditSubscriberScreen({ route, navigation }) {
   const [lpn2, setLpn2] = useState(extractLpn(subscriber.lpn2) || '');
   const [lpn3, setLpn3] = useState(extractLpn(subscriber.lpn3) || '');
 
-  const [validFrom, setValidFrom] = useState(subscriber.validFrom ? subscriber.validFrom.split('T')[0] : '');
-  const [validUntil, setValidUntil] = useState(subscriber.validUntil ? subscriber.validUntil.split('T')[0] : '');
+  let defaultValidFrom = subscriber.validFrom ? subscriber.validFrom.split('T')[0] : '';
+  let defaultValidUntil = subscriber.validUntil ? subscriber.validUntil.split('T')[0] : '';
 
-  const [profileId, setProfileId] = useState(subscriber.profileId || subscriber.profile || subscriber.extCardProfile || '1');
+  if (isNew && isGuestFlow) {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    defaultValidFrom = today.toISOString().split('T')[0];
+    defaultValidUntil = tomorrow.toISOString().split('T')[0];
+  }
+
+  const [validFrom, setValidFrom] = useState(defaultValidFrom);
+  const [validUntil, setValidUntil] = useState(defaultValidUntil);
+
+  const [profileId, setProfileId] = useState(subscriber.profileId || subscriber.profile || subscriber.extCardProfile || (isGuestFlow ? '2' : '1'));
   const [tagNum, setTagNum] = useState(subscriber.tagNum || '');
 
   const [saving, setSaving] = useState(false);
@@ -633,7 +677,7 @@ function EditSubscriberScreen({ route, navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={{ fontSize: 24 }}>🔙</Text>
         </TouchableOpacity>
-        <Text style={styles.dashboardTitle}>{isNew ? 'הוספת מנוי חדש' : 'עריכת מנוי'}</Text>
+        <Text style={styles.dashboardTitle}>{isNew ? (isGuestFlow ? 'הוספת אורח חדש' : 'הוספת מנוי חדש') : 'עריכת מנוי'}</Text>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 20 }}>
@@ -999,27 +1043,26 @@ const styles = StyleSheet.create({
     color: '#95a5a6',
     fontSize: 16
   },
-  floatingButton: {
+  fab: {
     position: 'absolute',
     bottom: 30,
-    left: 30,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    left: 30, // Change alignment to left side to make it clear and out of the way
     backgroundColor: '#3498db',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
-    elevation: 8,
+    elevation: 6,
   },
-  floatingButtonText: {
+  fabText: {
     color: '#fff',
-    fontSize: 30,
-    fontWeight: '200',
-    marginTop: -2
+    fontSize: 18,
+    fontWeight: 'bold'
   },
   footerContainer: {
     marginTop: 30,
