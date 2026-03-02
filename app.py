@@ -6990,6 +6990,19 @@ def mobile_get_subscribers():
                                 # Extract Company/Contract Name
                                 c_name = contract.get('name') or d_dict.get('contractName') or sub.get('contractName') or sub.get('companyName') or ''
                                 if isinstance(c_name, dict): c_name = c_name.get('#text') or ''
+                                
+                                # Fallback: fetch contract explicitly if missing
+                                if not c_name and c_id:
+                                    try:
+                                        c_url = f"https://{ip_address}:{port}/CustomerMediaWebService/contracts/{c_id}"
+                                        c_resp = requests.get(c_url, headers=headers, verify=False, timeout=2)
+                                        if c_resp.status_code == 200:
+                                            c_root = ET.fromstring(c_resp.text)
+                                            c_dict = xml_to_dict(c_root)
+                                            c_name = c_dict.get('name') or c_dict.get('description') or ''
+                                            if isinstance(c_name, dict): c_name = c_name.get('#text') or ''
+                                    except Exception: pass
+                                
                                 sub['contractName'] = c_name
                                 sub['companyName'] = c_name
                                 
@@ -7002,6 +7015,10 @@ def mobile_get_subscribers():
                                 sub['validUntil'] = extract_val(ident.get('xValidUntil')) or extract_val(ident.get('validUntil')) or extract_val(validation.get('xValidUntil')) or extract_val(validation.get('validUntil')) or extract_val(d_dict.get('xValidUntil')) or extract_val(d_dict.get('validUntil')) or extract_val(sub.get('xValidUntil')) or extract_val(sub.get('validUntil'))
                                 
                                 uprof = ident.get('usageProfile') or d_dict.get('usageProfile') or {}
+                                
+                                p_id_val = uprof.get('id') or d_dict.get('profileId') or sub.get('profileId') or sub.get('extCardProfile') or ''
+                                sub['profileId'] = extract_val(p_id_val)
+                                
                                 p_name = uprof.get('profileName') or uprof.get('name') or uprof.get('profile') or d_dict.get('profileName') or d_dict.get('profile') or sub.get('profileName') or sub.get('profile') or sub.get('extCardProfile') or ''
                                 p_name_str = extract_val(p_name)
                                 sub['profileName'] = p_name_str

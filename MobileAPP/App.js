@@ -629,12 +629,11 @@ function EditSubscriberScreen({ route, navigation }) {
     const profileMap = new Map();
 
     subscribersList.forEach(sub => {
-      const pId = sub.profileId || sub.profile || sub.extCardProfile;
-      const rawName = sub.profileName || pId;
+      const pId = String(sub.profileId || sub.extCardProfile || sub.profile || '');
+      const rawName = String(sub.profileName || sub.profile || pId);
       if (pId && !profileMap.has(pId)) {
         // If the name is just the ID, format it. Otherwise keep Name (ID) format.
-        const pNameStr = typeof rawName === 'string' ? rawName : String(pId);
-        const displayName = pNameStr !== String(pId) ? `${pNameStr} (${pId})` : `פרופיל ${pId}`;
+        const displayName = rawName !== pId ? `${rawName} (${pId})` : `פרופיל ${pId}`;
         profileMap.set(pId, displayName);
       }
     });
