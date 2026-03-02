@@ -65,7 +65,7 @@ function LoginScreen({ navigation }) {
 
         const userData = await AsyncStorage.getItem('user_data');
         if (userData) {
-          navigation.replace('Dashboard', { user: JSON.parse(userData) });
+          navigation.replace('Subscribers', { user: JSON.parse(userData) });
         }
       } catch (error) {
         console.error('Failed to read user data', error);
@@ -183,7 +183,7 @@ function LoginScreen({ navigation }) {
       if (response.data.success) {
         await AsyncStorage.setItem('user_data', JSON.stringify(response.data.user));
         await AsyncStorage.setItem('last_phone_number', phoneNumber);
-        navigation.replace('Dashboard', { user: response.data.user });
+        navigation.replace('Subscribers', { user: response.data.user });
       } else {
         Alert.alert('שגיאה', response.data.message || 'הקוד שגוי');
       }
@@ -236,22 +236,8 @@ function LoginScreen({ navigation }) {
                   editable={!loading}
                   textContentType="oneTimeCode"
                   autoComplete="sms-otp"
+                  autoFocus={true}
                 />
-
-                <TouchableOpacity
-                  style={{ marginBottom: 15, alignSelf: 'center' }}
-                  onPress={async () => {
-                    const text = await Clipboard.getStringAsync();
-                    if (text && /^\d{6}$/.test(text.trim())) {
-                      setOtpCode(text.trim());
-                    } else {
-                      Alert.alert('שגיאה', 'לא נמצא קוד בן 6 ספרות בלוח ההעתקה');
-                    }
-                  }}
-                  disabled={loading}
-                >
-                  <Text style={{ color: '#3498db', fontSize: 13 }}>📋 הדבק קוד שהועתק מוואטסאפ</Text>
-                </TouchableOpacity>
 
                 <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleVerifyCode} disabled={loading}>
                   {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>🔐 אמת קוד והתחבר</Text>}
@@ -472,11 +458,20 @@ function SubscribersScreen({ route, navigation }) {
   const displayCompanyName = parkingName || 'חניון ' + (user?.project_number || '');
   const displayCompanyId = subscribers.length > 0 ? (getSubCorpId(subscribers[0]) || user.company_list || 'כללי') : (user.company_list || 'כללי');
 
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('user_data');
+      navigation.replace('Login');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerAlt}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={{ fontSize: 24 }}>🔙</Text>
+        <TouchableOpacity onPress={handleLogout} style={styles.backButton}>
+          <Text style={{ fontSize: 24 }}>🚪</Text>
         </TouchableOpacity>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ alignItems: 'flex-end', marginLeft: 15 }}>
@@ -682,7 +677,6 @@ export default function App() {
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: '#f5f7fa' } }}>
           <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Dashboard" component={DashboardScreen} />
           <Stack.Screen name="Subscribers" component={SubscribersScreen} />
           <Stack.Screen name="EditSubscriber" component={EditSubscriberScreen} />
         </Stack.Navigator>
