@@ -587,7 +587,7 @@ function EditSubscriberScreen({ route, navigation }) {
         parking_id: user.project_number,
         _internal_session: { user_email: user.user_id },
         payload: payload
-      }, { timeout: 15000 });
+      }, { timeout: 60000 });
 
       if (response.data.success) {
         Alert.alert('הצלחה', isNew ? 'המנוי נוסף בהצלחה' : 'המנוי עודכן בהצלחה', [
