@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, FlatList, Image, DeviceEventEmitter, AppState, PanResponder } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -577,23 +579,50 @@ function EditSubscriberScreen({ route, navigation }) {
   const [lpn2, setLpn2] = useState(extractLpn(subscriber.lpn2) || '');
   const [lpn3, setLpn3] = useState(extractLpn(subscriber.lpn3) || '');
 
-  let defaultValidFrom = subscriber.validFrom ? subscriber.validFrom.split('T')[0] : '';
-  let defaultValidUntil = subscriber.validUntil ? subscriber.validUntil.split('T')[0] : '';
+  let defaultValidFrom = subscriber.validFrom ? new Date(subscriber.validFrom) : '';
+  let defaultValidUntil = subscriber.validUntil ? new Date(subscriber.validUntil) : '';
 
   if (isNew && isGuestFlow) {
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    defaultValidFrom = today.toISOString().split('T')[0];
-    defaultValidUntil = tomorrow.toISOString().split('T')[0];
+    defaultValidFrom = today;
+    defaultValidUntil = tomorrow;
+  } else if (!subscriber.validFrom) {
+    defaultValidFrom = new Date();
   }
 
   const [validFrom, setValidFrom] = useState(defaultValidFrom);
   const [validUntil, setValidUntil] = useState(defaultValidUntil);
+  const [showFromPicker, setShowFromPicker] = useState(false);
+  const [showUntilPicker, setShowUntilPicker] = useState(false);
 
   const [profileId, setProfileId] = useState(subscriber.profileId || subscriber.profile || subscriber.extCardProfile || (isGuestFlow ? '2' : '1'));
-  const [tagNum, setTagNum] = useState(subscriber.tagNum || '');
+
+  // Extract unique profiles for Picker mapping
+  const availableProfiles = [];
+  if (subscribersList && subscribersList.length > 0) {
+    const profileMap = new Map();
+    // Add default guest profile and standard profile
+    profileMap.set('1', 'פרופיל 1 (מנוי)');
+    profileMap.set('2', 'פרופיל 2 (אורח)');
+
+    subscribersList.forEach(sub => {
+      const pId = sub.profileId || sub.profile || sub.extCardProfile;
+      const pName = sub.profileName || pId;
+      if (pId && !profileMap.has(pId)) {
+        profileMap.set(pId, typeof pName === 'string' ? pName : pId);
+      }
+    });
+
+    profileMap.forEach((name, id) => {
+      availableProfiles.push({ id, name });
+    });
+  } else {
+    availableProfiles.push({ id: '1', name: 'פרופיל 1 (מנוי)' });
+    availableProfiles.push({ id: '2', name: 'פרופיל 2 (אורח)' });
+  }
 
   const [saving, setSaving] = useState(false);
 
@@ -606,23 +635,40 @@ function EditSubscriberScreen({ route, navigation }) {
       Alert.alert('שגיאה', 'מזהה מנוי חסר, לא ניתן לעדכן');
       return;
     }
+    if (!lname.trim()) {
+      Alert.alert('שגיאה', 'חובה למלא שם משפחה');
+      return;
+    }
     setSaving(true);
     try {
+      const formatApiDate = (dateObj) => {
+        if (!dateObj) return undefined;
+        try {
+          const d = typeof dateObj === 'string' ? new Date(dateObj) : dateObj;
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${y}-${m}-${day}`;
+        } catch (e) { return undefined; }
+      };
+
+      const fromStr = formatApiDate(validFrom);
+      const untilStr = formatApiDate(validUntil);
+
       const payload = {
         consumer: {
           id: sId,
           contractid: cId,
-          xValidFrom: validFrom ? validFrom + 'T00:00:00+03:00' : undefined,
-          xValidUntil: validUntil ? validUntil + 'T23:59:59+03:00' : undefined
+          xValidFrom: fromStr ? fromStr + 'T00:00:00+03:00' : undefined,
+          xValidUntil: untilStr ? untilStr + 'T23:59:59+03:00' : undefined
         },
         person: { firstName: fname, surname: lname },
         identification: {
           ptcptType: '2',
-          cardno: tagNum,
           cardclass: '1',
           identificationType: '54',
-          validFrom: validFrom ? validFrom + 'T00:00:00+03:00' : undefined,
-          validUntil: validUntil ? validUntil + 'T23:59:59+03:00' : undefined,
+          validFrom: fromStr ? fromStr + 'T00:00:00+03:00' : undefined,
+          validUntil: untilStr ? untilStr + 'T23:59:59+03:00' : undefined,
           usageProfile: {
             id: profileId || '1'
           }
@@ -652,8 +698,8 @@ function EditSubscriberScreen({ route, navigation }) {
             lpn1: lpn1,
             lpn2: lpn2,
             lpn3: lpn3,
-            validFrom: validFrom ? validFrom + 'T00:00:00' : '',
-            validUntil: validUntil ? validUntil + 'T23:59:59' : '',
+            validFrom: fromStr ? fromStr + 'T00:00:00' : '',
+            validUntil: untilStr ? untilStr + 'T23:59:59' : '',
             profileName: profileId
           });
         }
@@ -680,55 +726,98 @@ function EditSubscriberScreen({ route, navigation }) {
         <Text style={styles.dashboardTitle}>{isNew ? (isGuestFlow ? 'הוספת אורח חדש' : 'הוספת מנוי חדש') : 'עריכת מנוי'}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
-        <View style={styles.editCard}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+      >
+        <ScrollView contentContainerStyle={{ padding: 20 }}>
+          <View style={styles.editCard}>
 
-          {isNew && (
-            <>
-              <Text style={styles.label}>מספר חברה</Text>
-              <TextInput style={styles.input} value={cId} onChangeText={setCId} textAlign="right" />
+            {isNew && (
+              <>
+                <Text style={styles.label}>מספר חברה</Text>
+                <TextInput style={styles.input} value={cId} onChangeText={setCId} textAlign="right" />
 
-              <Text style={styles.label}>מספר מנוי (השאר ריק למספר אוטומטי)</Text>
-              <TextInput style={styles.input} value={sId} onChangeText={setSId} textAlign="right" />
-            </>
-          )}
+                <Text style={styles.label}>מספר מנוי (השאר ריק למספר אוטומטי)</Text>
+                <TextInput style={styles.input} value={sId} onChangeText={setSId} textAlign="right" />
+              </>
+            )}
 
-          <Text style={styles.label}>שם פרטי</Text>
-          <TextInput style={styles.input} value={fname} onChangeText={setFname} textAlign="right" />
+            <Text style={styles.label}>שם פרטי</Text>
+            <TextInput style={styles.input} value={fname} onChangeText={setFname} textAlign="right" />
 
-          <Text style={styles.label}>שם משפחה</Text>
-          <TextInput style={styles.input} value={lname} onChangeText={setLname} textAlign="right" />
+            <Text style={styles.label}>שם משפחה <Text style={{ color: 'red' }}>*</Text></Text>
+            <TextInput style={styles.input} value={lname} onChangeText={setLname} textAlign="right" />
 
-          <Text style={styles.label}>מספר כרטיס (Tag)</Text>
-          <TextInput style={styles.input} value={tagNum} onChangeText={setTagNum} textAlign="right" />
+            <Text style={styles.label}>מזהה פרופיל ({availableProfiles.length} זמינים)</Text>
+            <View style={[styles.input, { padding: 0, justifyContent: 'center' }]}>
+              <Picker
+                selectedValue={profileId}
+                onValueChange={(itemValue) => setProfileId(itemValue)}
+                style={{ height: 50, width: '100%', textAlign: 'right' }}
+              >
+                {availableProfiles.map((p) => (
+                  <Picker.Item key={p.id} label={p.name} value={p.id} />
+                ))}
+              </Picker>
+            </View>
 
-          <Text style={styles.label}>מזהה פרופיל (לדוגמה: 1 לפרופיל סטנדרטי)</Text>
-          <TextInput style={styles.input} value={profileId} onChangeText={setProfileId} textAlign="right" />
+            <Text style={styles.label}>רכב 1</Text>
+            <TextInput style={styles.input} value={lpn1} onChangeText={setLpn1} textAlign="right" />
 
-          <Text style={styles.label}>רכב 1</Text>
-          <TextInput style={styles.input} value={lpn1} onChangeText={setLpn1} textAlign="right" />
+            <Text style={styles.label}>רכב 2</Text>
+            <TextInput style={styles.input} value={lpn2} onChangeText={setLpn2} textAlign="right" />
 
-          <Text style={styles.label}>רכב 2</Text>
-          <TextInput style={styles.input} value={lpn2} onChangeText={setLpn2} textAlign="right" />
+            <Text style={styles.label}>רכב 3</Text>
+            <TextInput style={styles.input} value={lpn3} onChangeText={setLpn3} textAlign="right" />
 
-          <Text style={styles.label}>רכב 3</Text>
-          <TextInput style={styles.input} value={lpn3} onChangeText={setLpn3} textAlign="right" />
+            <Text style={styles.label}>תחילת תוקף</Text>
+            <TouchableOpacity style={styles.input} onPress={() => setShowFromPicker(true)}>
+              <Text style={{ textAlign: 'right', marginTop: 10 }}>
+                {validFrom ? validFrom.toLocaleDateString('he-IL') : 'בחר תאריך'}
+              </Text>
+            </TouchableOpacity>
+            {showFromPicker && (
+              <DateTimePicker
+                value={validFrom || new Date()}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  setShowFromPicker(Platform.OS === 'ios');
+                  if (selectedDate) setValidFrom(selectedDate);
+                }}
+              />
+            )}
 
-          <Text style={styles.label}>תחילת תוקף (YYYY-MM-DD)</Text>
-          <TextInput style={styles.input} value={validFrom} onChangeText={setValidFrom} textAlign="right" />
+            <Text style={styles.label}>תוקף עד</Text>
+            <TouchableOpacity style={styles.input} onPress={() => setShowUntilPicker(true)}>
+              <Text style={{ textAlign: 'right', marginTop: 10 }}>
+                {validUntil ? validUntil.toLocaleDateString('he-IL') : 'ללא תוקף סיום (השאר ריק)'}
+              </Text>
+            </TouchableOpacity>
+            {showUntilPicker && (
+              <DateTimePicker
+                value={validUntil || new Date()}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  setShowUntilPicker(Platform.OS === 'ios');
+                  if (selectedDate) setValidUntil(selectedDate);
+                }}
+              />
+            )}
 
-          <Text style={styles.label}>תוקף עד (YYYY-MM-DD)</Text>
-          <TextInput style={styles.input} value={validUntil} onChangeText={setValidUntil} textAlign="right" />
-
-          <TouchableOpacity
-            style={[styles.button, saving && styles.buttonDisabled]}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>שמור שינויים</Text>}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+            <TouchableOpacity
+              style={[styles.button, saving && styles.buttonDisabled]}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>שמור שינויים</Text>}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
