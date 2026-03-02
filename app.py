@@ -7020,7 +7020,7 @@ def mobile_get_subscribers():
                         except: pass
                         return sub
 
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=40) as executor:
                         final_list = list(executor.map(fetch_detail, final_list))
                         
                 res_json['consumers']['consumer'] = final_list

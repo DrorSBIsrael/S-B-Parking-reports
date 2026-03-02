@@ -337,7 +337,7 @@ function SubscribersScreen({ route, navigation }) {
         project_number: user.project_number,
         user_id: user.user_id,
         company_list: user.company_list,
-      }, { timeout: 15000 });
+      }, { timeout: 60000 });
 
       if (response.data.success) {
         // פענוח הנתונים כי הם עלולים לחזור כ-JSON רגיל מקונברטור או כמערך
