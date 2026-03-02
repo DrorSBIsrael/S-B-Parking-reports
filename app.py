@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response, send_from_directory
+﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response, send_from_directory
 import flask
 from flask_mail import Mail, Message
 from supabase.client import create_client, Client
@@ -7051,7 +7051,7 @@ def mobile_get_subscribers():
             return jsonify({
                 'success': True,
                 'data': res_json,
-                'parking_name': connection_details.get('name') or connection_details.get('description') or project_number
+                'parking_name': connection_details.get('description') or connection_details.get('name') or project_number
             })
         else:
             return jsonify({'success': False, 'message': f'Server returned {response.status_code}'})

@@ -449,6 +449,7 @@ function SubscribersScreen({ route, navigation }) {
                 onPress={() => navigation.navigate('EditSubscriber', {
                   subscriber: item,
                   user: user,
+                  subscribersList: subscribers,
                   onSaveSuccess: (updatedDetails) => {
                     const newSubs = [...subscribers];
                     const idx = newSubs.findIndex(s => (s.id || s.subscriberNum) === (item.id || item.subscriberNum));
@@ -499,10 +500,10 @@ function SubscribersScreen({ route, navigation }) {
         <TouchableOpacity onPress={handleLogout} style={[styles.backButton, { backgroundColor: '#ffeaa7', paddingHorizontal: 15, borderRadius: 20 }]}>
           <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#d35400' }}>התנתק</Text>
         </TouchableOpacity>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ alignItems: 'flex-end', marginLeft: 15 }}>
-            <Text style={styles.dashboardTitle}>{displayCompanyName}</Text>
-            {companyIdPart ? <Text style={styles.dashboardSubtitle}>{displayCompanySubtitle} ({subscribers.length} מנויים)</Text> : null}
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
+          <View style={{ alignItems: 'flex-end', marginLeft: 15, flex: 1 }}>
+            <Text style={[styles.dashboardTitle, { textAlign: 'right' }]} numberOfLines={2} adjustsFontSizeToFit>{displayCompanyName}</Text>
+            {companyIdPart ? <Text style={[styles.dashboardSubtitle, { textAlign: 'right' }]} numberOfLines={2} adjustsFontSizeToFit>{displayCompanySubtitle} ({subscribers.length} מנויים)</Text> : null}
           </View>
           <LogoIcon code="512486143" size="small" />
         </View>
