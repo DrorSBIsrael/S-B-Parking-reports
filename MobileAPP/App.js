@@ -751,11 +751,11 @@ function EditSubscriberScreen({ route, navigation }) {
             <TextInput style={styles.input} value={lname} onChangeText={setLname} textAlign="right" />
 
             <Text style={styles.label}>מזהה פרופיל ({availableProfiles.length} זמינים)</Text>
-            <View style={[styles.input, { padding: 0, justifyContent: 'center' }]}>
+            <View style={[styles.input, { padding: 0, justifyContent: 'center', height: Platform.OS === 'ios' ? 120 : 50 }]}>
               <Picker
                 selectedValue={profileId}
                 onValueChange={(itemValue) => setProfileId(itemValue)}
-                style={{ height: 50, width: '100%', textAlign: 'right' }}
+                style={{ width: '100%' }}
               >
                 {availableProfiles.map((p) => (
                   <Picker.Item key={p.id} label={p.name} value={p.id} />
