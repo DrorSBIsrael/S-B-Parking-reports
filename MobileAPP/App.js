@@ -496,7 +496,7 @@ function SubscribersScreen({ route, navigation }) {
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ alignItems: 'flex-end', marginLeft: 15 }}>
             <Text style={styles.dashboardTitle}>{displayCompanyName}</Text>
-            {displayCompanyId ? <Text style={styles.dashboardSubtitle}>{displayCompanySubtitle} ({subscribers.length} מנויים)</Text> : null}
+            {companyIdPart ? <Text style={styles.dashboardSubtitle}>{displayCompanySubtitle} ({subscribers.length} מנויים)</Text> : null}
           </View>
           <LogoIcon code="512486143" size="small" />
         </View>
