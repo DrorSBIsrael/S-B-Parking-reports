@@ -156,7 +156,6 @@ function LoginScreen({ navigation }) {
       }, { timeout: 10000 });
 
       if (response.data.success) {
-        Alert.alert('הצלחה', 'קוד האימות נשלח לווטסאפ שלך!');
         setOtpMode(true);
       } else {
         Alert.alert('שגיאה', response.data.message || 'שגיאה בשליחת הקוד');
@@ -169,8 +168,8 @@ function LoginScreen({ navigation }) {
     }
   };
 
-  const handleVerifyCode = async () => {
-    if (!otpCode || otpCode.length !== 6) {
+  const handleVerifyCode = async (codeToVerify = otpCode) => {
+    if (!codeToVerify || codeToVerify.length !== 6) {
       Alert.alert('שגיאה', 'אנא הזן קוד בן 6 ספרות');
       return;
     }
@@ -179,7 +178,7 @@ function LoginScreen({ navigation }) {
     try {
       const response = await axios.post(`${API_URL}/api/mobile/verify`, {
         phone_number: phoneNumber,
-        otp_code: otpCode
+        otp_code: codeToVerify
       }, { timeout: 10000 });
 
       if (response.data.success) {
@@ -234,7 +233,12 @@ function LoginScreen({ navigation }) {
                   keyboardType="number-pad"
                   maxLength={6}
                   value={otpCode}
-                  onChangeText={setOtpCode}
+                  onChangeText={(text) => {
+                    setOtpCode(text);
+                    if (text.length === 6) {
+                      handleVerifyCode(text);
+                    }
+                  }}
                   editable={!loading}
                   textContentType="oneTimeCode"
                   autoComplete="sms-otp"
@@ -253,7 +257,7 @@ function LoginScreen({ navigation }) {
           </View>
 
           <View style={styles.footerContainer}>
-            <Text style={styles.footerText}>גרסה 3.1.1</Text>
+            <Text style={styles.footerText}>גרסה 3.1.3</Text>
             <Text style={styles.footerText}>By Dror Prince ®</Text>
           </View>
         </ScrollView>
