@@ -3591,7 +3591,7 @@ def get_parking_connection_details(project_number):
     try:
         # Search by project number (which matches 'description' in parkings table)
         parking_result = supabase.table('parkings').select(
-            'ip_address, port, description'
+            'ip_address, port, description, name'
         ).eq('description', str(project_number)).execute()
 
         if not parking_result.data:
@@ -3606,7 +3606,8 @@ def get_parking_connection_details(project_number):
                     return {
                         'ip_address': data.get('ip_address'),
                         'port': data.get('port', 443),
-                        'description': data.get('parking_name')
+                        'description': data.get('parking_name'),
+                        'name': data.get('parking_name')
                     }
                 else:
                     # Fallback: parking_servers (by name)
@@ -3632,7 +3633,8 @@ def get_parking_connection_details(project_number):
              return {
                 'ip_address': data.get('ip_address'),
                 'port': data.get('port', 443),
-                'description': data.get('description')
+                'description': data.get('description'),
+                'name': data.get('name')
              }
              
     except Exception as e:

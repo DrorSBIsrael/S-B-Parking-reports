@@ -747,7 +747,7 @@ function EditSubscriberScreen({ route, navigation }) {
         }
 
         let msgExt = "";
-        if (isGuestFlow && isNew && guestPhone.trim()) {
+        if (isGuestFlow && guestPhone.trim()) {
           try {
             let phoneStr = guestPhone.trim();
             if (phoneStr.startsWith('0')) phoneStr = '972' + phoneStr.substring(1);
@@ -853,7 +853,7 @@ function EditSubscriberScreen({ route, navigation }) {
             <Text style={styles.label}>רכב 3</Text>
             <TextInput style={[styles.input, !canEditV3 && { backgroundColor: '#ecf0f1', color: '#95a5a6' }]} value={lpn3} onChangeText={setLpn3} textAlign="right" keyboardType="numeric" editable={canEditV3} />
 
-            {isGuestFlow && isNew && (
+            {isGuestFlow && (
               <>
                 <Text style={styles.label}>טלפון נייד לאורח (אופציונלי לשליחת הודעה)</Text>
                 <TextInput style={styles.input} value={guestPhone} onChangeText={setGuestPhone} keyboardType="phone-pad" textAlign="right" placeholder="למשל 0501234567" />
