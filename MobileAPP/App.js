@@ -440,7 +440,18 @@ function SubscribersScreen({ route, navigation }) {
             <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-around', marginVertical: 10 }}>
               <TouchableOpacity
                 style={styles.actionButton}
-                onPress={() => navigation.navigate('EditSubscriber', { subscriber: item, user: user })}
+                onPress={() => navigation.navigate('EditSubscriber', {
+                  subscriber: item,
+                  user: user,
+                  onSaveSuccess: (updatedDetails) => {
+                    const newSubs = [...subscribers];
+                    const idx = newSubs.findIndex(s => (s.id || s.subscriberNum) === (item.id || item.subscriberNum));
+                    if (idx > -1) {
+                      newSubs[idx] = { ...newSubs[idx], ...updatedDetails };
+                      setSubscribers(newSubs);
+                    }
+                  }
+                })}
               >
                 <Text style={styles.actionButtonText}>✏️ ערוך מנוי</Text>
               </TouchableOpacity>
@@ -470,8 +481,8 @@ function SubscribersScreen({ route, navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerAlt}>
-        <TouchableOpacity onPress={handleLogout} style={styles.backButton}>
-          <Text style={{ fontSize: 24 }}>🚪</Text>
+        <TouchableOpacity onPress={handleLogout} style={[styles.backButton, { backgroundColor: '#ffeaa7', paddingHorizontal: 15, borderRadius: 20 }]}>
+          <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#d35400' }}>התנתק</Text>
         </TouchableOpacity>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ alignItems: 'flex-end', marginLeft: 15 }}>
@@ -520,7 +531,7 @@ function SubscribersScreen({ route, navigation }) {
 // 4. EDIT SUBSCRIBER SCREEN
 // ==========================================
 function EditSubscriberScreen({ route, navigation }) {
-  const { subscriber, user, isNew } = route.params;
+  const { subscriber, user, isNew, onSaveSuccess } = route.params;
 
   const defaultCompany = user?.company_list ? user.company_list.split(',')[0] : '';
   const [cId, setCId] = useState(subscriber.contractId || subscriber.companyNum || subscriber.contractid || defaultCompany);
@@ -590,6 +601,18 @@ function EditSubscriberScreen({ route, navigation }) {
       }, { timeout: 60000 });
 
       if (response.data.success) {
+        if (onSaveSuccess && !isNew) {
+          onSaveSuccess({
+            firstName: fname,
+            lastName: lname,
+            lpn1: lpn1,
+            lpn2: lpn2,
+            lpn3: lpn3,
+            validFrom: validFrom ? validFrom + 'T00:00:00' : '',
+            validUntil: validUntil ? validUntil + 'T23:59:59' : '',
+            profileName: profileId
+          });
+        }
         Alert.alert('הצלחה', isNew ? 'המנוי נוסף בהצלחה' : 'המנוי עודכן בהצלחה', [
           { text: 'אישור', onPress: () => navigation.goBack() }
         ]);
