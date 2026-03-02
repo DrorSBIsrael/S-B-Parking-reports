@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, FlatList, Image, DeviceEventEmitter, AppState, PanResponder } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, FlatList, Image, DeviceEventEmitter, AppState, PanResponder, ActionSheetIOS } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
@@ -595,6 +595,7 @@ function EditSubscriberScreen({ route, navigation }) {
   let defaultValidFrom = subscriber.validFrom ? new Date(subscriber.validFrom) : '';
   let defaultValidUntil = subscriber.validUntil ? new Date(subscriber.validUntil) : '';
 
+  let maxGuestDate = null;
   if (isNew && isGuestFlow) {
     const today = new Date();
     const tomorrow = new Date(today);
@@ -602,6 +603,15 @@ function EditSubscriberScreen({ route, navigation }) {
 
     defaultValidFrom = today;
     defaultValidUntil = tomorrow;
+
+    // Calculate maximum valid until date for guests (end of current week - Saturday)
+    // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    const currentDay = today.getDay();
+    const daysUntilSaturday = 6 - currentDay;
+    const upcomingSaturday = new Date(today);
+    upcomingSaturday.setDate(today.getDate() + daysUntilSaturday);
+    upcomingSaturday.setHours(23, 59, 59, 999);
+    maxGuestDate = upcomingSaturday;
   } else if (!subscriber.validFrom) {
     defaultValidFrom = new Date();
   }
@@ -651,6 +661,12 @@ function EditSubscriberScreen({ route, navigation }) {
     if (!lname.trim()) {
       Alert.alert('שגיאה', 'חובה למלא שם משפחה');
       return;
+    }
+    if (isGuestFlow && validUntil && maxGuestDate) {
+      if (validUntil > maxGuestDate) {
+        Alert.alert('שגיאה', 'אורחים יכולים להזמין רק עד סוף השבוע הנוכחי (שבת).');
+        return;
+      }
     }
     setSaving(true);
     try {
@@ -765,16 +781,26 @@ function EditSubscriberScreen({ route, navigation }) {
 
             <Text style={styles.label}>מזהה פרופיל ({availableProfiles.length} זמינים)</Text>
             {Platform.OS === 'ios' ? (
-              <Picker
-                selectedValue={profileId}
-                onValueChange={(itemValue) => setProfileId(itemValue)}
-                style={{ width: '100%', height: 150 }}
-                itemStyle={{ height: 150 }}
+              <TouchableOpacity
+                style={styles.input}
+                onPress={() => {
+                  ActionSheetIOS.showActionSheetWithOptions(
+                    {
+                      options: [...availableProfiles.map(p => p.name), 'ביטול'],
+                      cancelButtonIndex: availableProfiles.length,
+                    },
+                    (buttonIndex) => {
+                      if (buttonIndex !== availableProfiles.length) {
+                        setProfileId(availableProfiles[buttonIndex].id);
+                      }
+                    }
+                  );
+                }}
               >
-                {availableProfiles.map((p) => (
-                  <Picker.Item key={p.id} label={p.name} value={p.id} />
-                ))}
-              </Picker>
+                <Text style={{ textAlign: 'right', marginTop: 10 }}>
+                  {availableProfiles.find(p => p.id === profileId)?.name || profileId}
+                </Text>
+              </TouchableOpacity>
             ) : (
               <View style={[styles.input, { padding: 0, justifyContent: 'center' }]}>
                 <Picker
@@ -827,6 +853,7 @@ function EditSubscriberScreen({ route, navigation }) {
                 value={validUntil || new Date()}
                 mode="date"
                 display="default"
+                maximumDate={isGuestFlow ? maxGuestDate : undefined}
                 onChange={(event, selectedDate) => {
                   setShowUntilPicker(Platform.OS === 'ios');
                   if (selectedDate) setValidUntil(selectedDate);
