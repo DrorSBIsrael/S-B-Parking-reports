@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, FlatList, Image, DeviceEventEmitter, AppState, PanResponder, ActionSheetIOS } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, FlatList, Image, DeviceEventEmitter, AppState, PanResponder, ActionSheetIOS, Linking } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
@@ -450,6 +450,7 @@ function SubscribersScreen({ route, navigation }) {
                   subscriber: item,
                   user: user,
                   subscribersList: subscribers,
+                  parkingName: displayCompanyName,
                   onSaveSuccess: (updatedDetails) => {
                     const newSubs = [...subscribers];
                     const idx = newSubs.findIndex(s => (s.id || s.subscriberNum) === (item.id || item.subscriberNum));
@@ -535,13 +536,15 @@ function SubscribersScreen({ route, navigation }) {
 
       <View style={{ position: 'absolute', bottom: 30, left: 30, flexDirection: 'row-reverse', alignItems: 'center' }}>
         <TouchableOpacity
-          style={[styles.fab, { position: 'relative', bottom: 0, left: 0 }]}
+          disabled={!hasGuestPermission}
+          style={[styles.fab, { position: 'relative', bottom: 0, left: 0 }, !hasGuestPermission && { backgroundColor: '#bdc3c7', opacity: 0.7 }]}
           onPress={() => navigation.navigate('EditSubscriber', {
             subscriber: {},
             user: user,
             isNew: true,
             isGuestFlow: true,
-            subscribersList: subscribers
+            subscribersList: subscribers,
+            parkingName: displayCompanyName
           })}
         >
           <Text style={styles.fabText}>+ אורח חדש</Text>
@@ -562,7 +565,7 @@ function SubscribersScreen({ route, navigation }) {
 // 4. EDIT SUBSCRIBER SCREEN
 // ==========================================
 function EditSubscriberScreen({ route, navigation }) {
-  const { subscriber, user, isNew, onSaveSuccess, isGuestFlow, subscribersList } = route.params;
+  const { subscriber, user, isNew, onSaveSuccess, isGuestFlow, subscribersList, parkingName } = route.params;
 
   const defaultCompany = user?.company_list ? user.company_list.split(',')[0] : '';
   const [cId, setCId] = useState(subscriber.contractId || subscriber.companyNum || subscriber.contractid || defaultCompany);
@@ -597,6 +600,13 @@ function EditSubscriberScreen({ route, navigation }) {
   let defaultValidUntil = subscriber.validUntil ? new Date(subscriber.validUntil) : '';
 
   let maxGuestDate = null;
+  const [guestPhone, setGuestPhone] = useState('');
+
+  // Extract LPN Editing Permissions (1 or 2)
+  const userPerms = typeof user?.permissions === 'string' ? user.permissions.toUpperCase() : '';
+  const canEditV2 = userPerms.includes('2') || (!userPerms.includes('1') && !userPerms.includes('2'));
+  const canEditV3 = !userPerms.includes('1') && !userPerms.includes('2');
+
   if (isNew && isGuestFlow) {
     const today = new Date();
     const tomorrow = new Date(today);
@@ -735,7 +745,23 @@ function EditSubscriberScreen({ route, navigation }) {
             profileName: profileId
           });
         }
-        Alert.alert('הצלחה', isNew ? 'המנוי נוסף בהצלחה' : 'המנוי עודכן בהצלחה', [
+
+        let msgExt = "";
+        if (isGuestFlow && isNew && guestPhone.trim()) {
+          try {
+            let phoneStr = guestPhone.trim();
+            if (phoneStr.startsWith('0')) phoneStr = '972' + phoneStr.substring(1);
+            const pName = parkingName || 'החניון';
+            const waMsg = `שלום ${fname || 'אורח'},\nהוזמנת לחניון ${pName}.\nרכב מורשה: ${lpn1}\nבתוקף עד: ${untilStr}`;
+            const waUrl = `whatsapp://send?text=${encodeURIComponent(waMsg)}&phone=${phoneStr}`;
+            Linking.openURL(waUrl).catch(() => {
+              console.log('WhatsApp not installed or could not open');
+            });
+            msgExt = "\n(נשלחה הודעת וואטסאפ)";
+          } catch (e) { }
+        }
+
+        Alert.alert('הצלחה', (isNew ? 'המנוי נוסף בהצלחה' : 'המנוי עודכן בהצלחה') + msgExt, [
           { text: 'אישור', onPress: () => navigation.goBack() }
         ]);
       } else {
@@ -822,10 +848,17 @@ function EditSubscriberScreen({ route, navigation }) {
             <TextInput style={styles.input} value={lpn1} onChangeText={setLpn1} textAlign="right" keyboardType="numeric" />
 
             <Text style={styles.label}>רכב 2</Text>
-            <TextInput style={styles.input} value={lpn2} onChangeText={setLpn2} textAlign="right" keyboardType="numeric" />
+            <TextInput style={[styles.input, !canEditV2 && { backgroundColor: '#ecf0f1', color: '#95a5a6' }]} value={lpn2} onChangeText={setLpn2} textAlign="right" keyboardType="numeric" editable={canEditV2} />
 
             <Text style={styles.label}>רכב 3</Text>
-            <TextInput style={styles.input} value={lpn3} onChangeText={setLpn3} textAlign="right" keyboardType="numeric" />
+            <TextInput style={[styles.input, !canEditV3 && { backgroundColor: '#ecf0f1', color: '#95a5a6' }]} value={lpn3} onChangeText={setLpn3} textAlign="right" keyboardType="numeric" editable={canEditV3} />
+
+            {isGuestFlow && isNew && (
+              <>
+                <Text style={styles.label}>טלפון נייד לאורח (אופציונלי לשליחת הודעה)</Text>
+                <TextInput style={styles.input} value={guestPhone} onChangeText={setGuestPhone} keyboardType="phone-pad" textAlign="right" placeholder="למשל 0501234567" />
+              </>
+            )}
 
             <Text style={styles.label}>תחילת תוקף</Text>
             <TouchableOpacity style={styles.input} onPress={() => setShowFromPicker(true)}>
