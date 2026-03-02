@@ -627,22 +627,25 @@ function EditSubscriberScreen({ route, navigation }) {
   const availableProfiles = [];
   if (subscribersList && subscribersList.length > 0) {
     const profileMap = new Map();
-    // Add default guest profile and standard profile
-    profileMap.set('1', 'פרופיל 1 (מנוי)');
-    profileMap.set('2', 'פרופיל 2 (אורח)');
 
     subscribersList.forEach(sub => {
       const pId = sub.profileId || sub.profile || sub.extCardProfile;
-      const pName = sub.profileName || pId;
+      const rawName = sub.profileName || pId;
       if (pId && !profileMap.has(pId)) {
-        profileMap.set(pId, typeof pName === 'string' ? pName : pId);
+        // If the name is just the ID, format it. Otherwise keep Name (ID) format.
+        const pNameStr = typeof rawName === 'string' ? rawName : String(pId);
+        const displayName = pNameStr !== String(pId) ? `${pNameStr} (${pId})` : `פרופיל ${pId}`;
+        profileMap.set(pId, displayName);
       }
     });
 
     profileMap.forEach((name, id) => {
       availableProfiles.push({ id, name });
     });
-  } else {
+  }
+
+  // If list is completely empty or mapped to nothing, ensure at least some fallback exists
+  if (availableProfiles.length === 0) {
     availableProfiles.push({ id: '1', name: 'פרופיל 1 (מנוי)' });
     availableProfiles.push({ id: '2', name: 'פרופיל 2 (אורח)' });
   }

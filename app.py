@@ -6827,7 +6827,7 @@ def mobile_get_subscribers():
                  parking_result = supabase.table('parkings').select('ip_address, port, description, name').eq('id', project_number).execute()
                  if parking_result.data:
                      data_p = parking_result.data[0]
-                     connection_details = {'ip_address': data_p.get('ip_address'), 'port': data_p.get('port', 443), 'description': data_p.get('description')}
+                     connection_details = {'ip_address': data_p.get('ip_address'), 'port': data_p.get('port', 443), 'description': data_p.get('description'), 'name': data_p.get('name')}
              except: pass
              
         if not connection_details or not connection_details.get('ip_address'):
@@ -7034,7 +7034,7 @@ def mobile_get_subscribers():
             return jsonify({
                 'success': True,
                 'data': res_json,
-                'parking_name': connection_details.get('description') or project_number
+                'parking_name': connection_details.get('name') or connection_details.get('description') or project_number
             })
         else:
             return jsonify({'success': False, 'message': f'Server returned {response.status_code}'})
