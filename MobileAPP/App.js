@@ -375,6 +375,9 @@ function SubscribersScreen({ route, navigation }) {
     return fullTerm.includes(searchQuery.toLowerCase());
   });
 
+  const userPerms = typeof user?.permissions === 'string' ? user.permissions.toUpperCase() : '';
+  const hasGuestPermission = userPerms.includes('G');
+
   const renderSubscriberItem = ({ item, index }) => {
     const fname = typeof item.firstName === 'string' ? item.firstName : (item.firstName?.['#text'] || '');
     const lname = typeof item.lastName === 'string' ? item.lastName : (item.lastName?.['#text'] || '');
