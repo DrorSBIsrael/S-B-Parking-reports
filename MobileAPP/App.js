@@ -446,6 +446,10 @@ function SubscribersScreen({ route, navigation }) {
               <Text style={styles.subDetailLabel}>פרופיל:</Text>
               <Text style={styles.subDetailValue}>{item.profileName || item.profile || item.extCardProfile || '-'}</Text>
             </View>
+            <View style={styles.subDetailRow}>
+              <Text style={styles.subDetailLabel}>נוכח בחניון:</Text>
+              <Text style={styles.subDetailValue}>{item.presence ? 'כן' : 'לא'}</Text>
+            </View>
 
             <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-around', marginVertical: 10 }}>
               <TouchableOpacity
@@ -507,7 +511,10 @@ function SubscribersScreen({ route, navigation }) {
         />
       )}
 
-      <TouchableOpacity style={styles.floatingButton}>
+      <TouchableOpacity
+        style={styles.floatingButton}
+        onPress={() => navigation.navigate('EditSubscriber', { subscriber: {}, user: user, isNew: true })}
+      >
         <Text style={styles.floatingButtonText}>+</Text>
       </TouchableOpacity>
     </SafeAreaView>
@@ -518,9 +525,11 @@ function SubscribersScreen({ route, navigation }) {
 // 4. EDIT SUBSCRIBER SCREEN
 // ==========================================
 function EditSubscriberScreen({ route, navigation }) {
-  const { subscriber, user } = route.params;
-  const cId = subscriber.contractId || subscriber.companyNum || subscriber.contractid || '';
-  const sId = subscriber.id || subscriber.subscriberNum || '';
+  const { subscriber, user, isNew } = route.params;
+
+  const defaultCompany = user?.company_list ? user.company_list.split(',')[0] : '';
+  const [cId, setCId] = useState(subscriber.contractId || subscriber.companyNum || subscriber.contractid || defaultCompany);
+  const [sId, setSId] = useState(subscriber.id || subscriber.subscriberNum || '');
 
   const [fname, setFname] = useState(typeof subscriber.firstName === 'string' ? subscriber.firstName : (subscriber.firstName?.['#text'] || ''));
   const [lname, setLname] = useState(typeof subscriber.lastName === 'string' ? subscriber.lastName : (subscriber.lastName?.['#text'] || ''));
@@ -533,10 +542,17 @@ function EditSubscriberScreen({ route, navigation }) {
   const [validFrom, setValidFrom] = useState(subscriber.validFrom ? subscriber.validFrom.split('T')[0] : '');
   const [validUntil, setValidUntil] = useState(subscriber.validUntil ? subscriber.validUntil.split('T')[0] : '');
 
+  const [profileId, setProfileId] = useState(subscriber.profileId || subscriber.profile || subscriber.extCardProfile || '1');
+  const [tagNum, setTagNum] = useState(subscriber.tagNum || '');
+
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!cId || !sId) {
+    if (!cId) {
+      Alert.alert('שגיאה', 'מזהה חברה חסר, לא ניתן לשמור');
+      return;
+    }
+    if (!isNew && !sId) {
       Alert.alert('שגיאה', 'מזהה מנוי חסר, לא ניתן לעדכן');
       return;
     }
@@ -549,27 +565,41 @@ function EditSubscriberScreen({ route, navigation }) {
           xValidFrom: validFrom ? validFrom + 'T00:00:00+03:00' : undefined,
           xValidUntil: validUntil ? validUntil + 'T23:59:59+03:00' : undefined
         },
-        person: { firstName: fname, surname: lname }
+        person: { firstName: fname, surname: lname },
+        identification: {
+          ptcptType: '2',
+          cardno: tagNum,
+          cardclass: '1',
+          identificationType: '54',
+          validFrom: validFrom ? validFrom + 'T00:00:00+03:00' : undefined,
+          validUntil: validUntil ? validUntil + 'T23:59:59+03:00' : undefined,
+          usageProfile: {
+            id: profileId || '1'
+          }
+        }
       };
 
-      if (lpn1) payload.lpn1 = { plate: lpn1 };
-      if (lpn2) payload.lpn2 = { plate: lpn2 };
-      if (lpn3) payload.lpn3 = { plate: lpn3 };
+      if (lpn1) payload.lpn1 = lpn1.replace(/-/g, '');
+      if (lpn2) payload.lpn2 = lpn2.replace(/-/g, '');
+      if (lpn3) payload.lpn3 = lpn3.replace(/-/g, '');
+
+      const endpoint = isNew ? `contracts/${cId}/consumers` : `consumers/${cId},${sId}/detail`;
+      const method = isNew ? 'POST' : 'PUT';
 
       const response = await axios.post(`${API_URL}/api/company-manager/proxy`, {
-        endpoint: `consumers/${cId},${sId}/detail`,
-        method: 'PUT',
+        endpoint: endpoint,
+        method: method,
         parking_id: user.project_number,
         _internal_session: { user_email: user.user_id },
         payload: payload
       }, { timeout: 15000 });
 
       if (response.data.success) {
-        Alert.alert('הצלחה', 'המנוי עודכן בהצלחה', [
+        Alert.alert('הצלחה', isNew ? 'המנוי נוסף בהצלחה' : 'המנוי עודכן בהצלחה', [
           { text: 'אישור', onPress: () => navigation.goBack() }
         ]);
       } else {
-        Alert.alert('שגיאה', response.data.message || 'שגיאה בעדכון מנוי');
+        Alert.alert('שגיאה', response.data.message || 'שגיאה בשמירת מנוי');
       }
     } catch (error) {
       console.error(error);
@@ -585,16 +615,33 @@ function EditSubscriberScreen({ route, navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={{ fontSize: 24 }}>🔙</Text>
         </TouchableOpacity>
-        <Text style={styles.dashboardTitle}>עריכת מנוי</Text>
+        <Text style={styles.dashboardTitle}>{isNew ? 'הוספת מנוי חדש' : 'עריכת מנוי'}</Text>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         <View style={styles.editCard}>
+
+          {isNew && (
+            <>
+              <Text style={styles.label}>מספר חברה</Text>
+              <TextInput style={styles.input} value={cId} onChangeText={setCId} textAlign="right" />
+
+              <Text style={styles.label}>מספר מנוי (השאר ריק למספר אוטומטי)</Text>
+              <TextInput style={styles.input} value={sId} onChangeText={setSId} textAlign="right" />
+            </>
+          )}
+
           <Text style={styles.label}>שם פרטי</Text>
           <TextInput style={styles.input} value={fname} onChangeText={setFname} textAlign="right" />
 
           <Text style={styles.label}>שם משפחה</Text>
           <TextInput style={styles.input} value={lname} onChangeText={setLname} textAlign="right" />
+
+          <Text style={styles.label}>מספר כרטיס (Tag)</Text>
+          <TextInput style={styles.input} value={tagNum} onChangeText={setTagNum} textAlign="right" />
+
+          <Text style={styles.label}>מזהה פרופיל (לדוגמה: 1 לפרופיל סטנדרטי)</Text>
+          <TextInput style={styles.input} value={profileId} onChangeText={setProfileId} textAlign="right" />
 
           <Text style={styles.label}>רכב 1</Text>
           <TextInput style={styles.input} value={lpn1} onChangeText={setLpn1} textAlign="right" />

@@ -6992,16 +6992,16 @@ def mobile_get_subscribers():
                                     return v or ''
                                 
                                 # Extra Info
-                                sub['validFrom'] = extract_val(validation.get('xValidFrom')) or extract_val(validation.get('validFrom')) or extract_val(d_dict.get('xValidFrom')) or extract_val(d_dict.get('validFrom')) or extract_val(sub.get('xValidFrom')) or extract_val(sub.get('validFrom'))
-                                sub['validUntil'] = extract_val(validation.get('xValidUntil')) or extract_val(validation.get('validUntil')) or extract_val(d_dict.get('xValidUntil')) or extract_val(d_dict.get('validUntil')) or extract_val(sub.get('xValidUntil')) or extract_val(sub.get('validUntil'))
+                                sub['validFrom'] = extract_val(ident.get('xValidFrom')) or extract_val(ident.get('validFrom')) or extract_val(validation.get('xValidFrom')) or extract_val(validation.get('validFrom')) or extract_val(d_dict.get('xValidFrom')) or extract_val(d_dict.get('validFrom')) or extract_val(sub.get('xValidFrom')) or extract_val(sub.get('validFrom'))
+                                sub['validUntil'] = extract_val(ident.get('xValidUntil')) or extract_val(ident.get('validUntil')) or extract_val(validation.get('xValidUntil')) or extract_val(validation.get('validUntil')) or extract_val(d_dict.get('xValidUntil')) or extract_val(d_dict.get('validUntil')) or extract_val(sub.get('xValidUntil')) or extract_val(sub.get('validUntil'))
                                 
                                 uprof = ident.get('usageProfile') or d_dict.get('usageProfile') or {}
-                                p_name = uprof.get('profileName') or uprof.get('profile') or d_dict.get('profileName') or d_dict.get('profile') or sub.get('profileName') or sub.get('profile') or sub.get('extCardProfile') or ''
+                                p_name = uprof.get('profileName') or uprof.get('name') or uprof.get('profile') or d_dict.get('profileName') or d_dict.get('profile') or sub.get('profileName') or sub.get('profile') or sub.get('extCardProfile') or ''
                                 p_name_str = extract_val(p_name)
                                 sub['profileName'] = p_name_str
                                 sub['profile'] = p_name_str
                                 
-                                pres = d_dict.get('presence') or sub.get('presence')
+                                pres = ident.get('present') or ident.get('presence') or d_dict.get('presence') or sub.get('presence')
                                 pres_str = extract_val(pres)
                                 sub['presence'] = True if str(pres_str).lower() in ['true', '1', 'yes'] else False
                                 
