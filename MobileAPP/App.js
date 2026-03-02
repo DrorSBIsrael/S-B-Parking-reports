@@ -532,18 +532,27 @@ function SubscribersScreen({ route, navigation }) {
         />
       )}
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('EditSubscriber', {
-          subscriber: {},
-          user: user,
-          isNew: true,
-          isGuestFlow: true,
-          subscribersList: subscribers
-        })}
-      >
-        <Text style={styles.fabText}>+ אורח חדש</Text>
-      </TouchableOpacity>
+      <View style={{ position: 'absolute', bottom: 30, left: 30, flexDirection: 'row-reverse', alignItems: 'center' }}>
+        <TouchableOpacity
+          style={[styles.fab, { position: 'relative', bottom: 0, left: 0 }]}
+          onPress={() => navigation.navigate('EditSubscriber', {
+            subscriber: {},
+            user: user,
+            isNew: true,
+            isGuestFlow: true,
+            subscribersList: subscribers
+          })}
+        >
+          <Text style={styles.fabText}>+ אורח חדש</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.fab, { position: 'relative', bottom: 0, left: 0, marginRight: 15, backgroundColor: '#2ecc71', paddingHorizontal: 15 }]}
+          onPress={fetchSubscribers}
+        >
+          <Text style={styles.fabText}>🔄 רענן</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -755,26 +764,39 @@ function EditSubscriberScreen({ route, navigation }) {
             <TextInput style={styles.input} value={lname} onChangeText={setLname} textAlign="right" />
 
             <Text style={styles.label}>מזהה פרופיל ({availableProfiles.length} זמינים)</Text>
-            <View style={[styles.input, { padding: 0, justifyContent: 'center', height: Platform.OS === 'ios' ? 120 : 50 }]}>
+            {Platform.OS === 'ios' ? (
               <Picker
                 selectedValue={profileId}
                 onValueChange={(itemValue) => setProfileId(itemValue)}
-                style={{ width: '100%' }}
+                style={{ width: '100%', height: 150 }}
+                itemStyle={{ height: 150 }}
               >
                 {availableProfiles.map((p) => (
                   <Picker.Item key={p.id} label={p.name} value={p.id} />
                 ))}
               </Picker>
-            </View>
+            ) : (
+              <View style={[styles.input, { padding: 0, justifyContent: 'center' }]}>
+                <Picker
+                  selectedValue={profileId}
+                  onValueChange={(itemValue) => setProfileId(itemValue)}
+                  style={{ width: '100%' }}
+                >
+                  {availableProfiles.map((p) => (
+                    <Picker.Item key={p.id} label={p.name} value={p.id} />
+                  ))}
+                </Picker>
+              </View>
+            )}
 
             <Text style={styles.label}>רכב 1</Text>
-            <TextInput style={styles.input} value={lpn1} onChangeText={setLpn1} textAlign="right" />
+            <TextInput style={styles.input} value={lpn1} onChangeText={setLpn1} textAlign="right" keyboardType="numeric" />
 
             <Text style={styles.label}>רכב 2</Text>
-            <TextInput style={styles.input} value={lpn2} onChangeText={setLpn2} textAlign="right" />
+            <TextInput style={styles.input} value={lpn2} onChangeText={setLpn2} textAlign="right" keyboardType="numeric" />
 
             <Text style={styles.label}>רכב 3</Text>
-            <TextInput style={styles.input} value={lpn3} onChangeText={setLpn3} textAlign="right" />
+            <TextInput style={styles.input} value={lpn3} onChangeText={setLpn3} textAlign="right" keyboardType="numeric" />
 
             <Text style={styles.label}>תחילת תוקף</Text>
             <TouchableOpacity style={styles.input} onPress={() => setShowFromPicker(true)}>
