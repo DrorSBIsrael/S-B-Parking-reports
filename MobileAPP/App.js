@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, FlatList, Image, DeviceEventEmitter, AppState } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, FlatList, Image, DeviceEventEmitter, AppState, PanResponder } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -693,17 +693,65 @@ function EditSubscriberScreen({ route, navigation }) {
 // NAVIGATION SETUP
 // ==========================================
 const Stack = createStackNavigator();
+export const navigationRef = createNavigationContainerRef();
+
+const TIMEOUT_IN_MS = 15 * 60 * 1000; // 15 Minutes
 
 export default function App() {
+  const timerId = useRef(false);
+
+  // Clear session and navigate to Login
+  const performAutoLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('user_data');
+      if (navigationRef.isReady()) {
+        navigationRef.current?.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const startInactivityTimer = () => {
+    if (timerId.current) {
+      clearTimeout(timerId.current);
+    }
+    timerId.current = setTimeout(performAutoLogout, TIMEOUT_IN_MS);
+  };
+
+  useEffect(() => {
+    startInactivityTimer();
+    return () => clearTimeout(timerId.current);
+  }, []);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponderCapture: () => {
+        startInactivityTimer();
+        return false;
+      },
+      onMoveShouldSetPanResponderCapture: () => {
+        startInactivityTimer();
+        return false;
+      },
+      onPanResponderTerminationRequest: () => true,
+    })
+  ).current;
+
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: '#f5f7fa' } }}>
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Subscribers" component={SubscribersScreen} />
-          <Stack.Screen name="EditSubscriber" component={EditSubscriberScreen} />
-        </Stack.Navigator>
-      </NavigationContainer>
+      <View style={{ flex: 1 }} {...panResponder.panHandlers}>
+        <NavigationContainer ref={navigationRef}>
+          <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: '#f5f7fa' } }}>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Subscribers" component={SubscribersScreen} />
+            <Stack.Screen name="EditSubscriber" component={EditSubscriberScreen} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </View>
     </SafeAreaProvider>
   );
 }
