@@ -3109,8 +3109,6 @@ def master_create_user():
         return jsonify({'success': False, 'message': f'שגיאה במערכת: {str(e)}'})
 
 
-@app.route('/api/parking-manager/create-user', methods=['POST'])
-
 def clean_phone_number(phone):
     if not phone:
         return None
@@ -3122,6 +3120,8 @@ def clean_phone_number(phone):
     elif len(cleaned) == 9 and not cleaned.startswith('972'):
         cleaned = '972' + cleaned
     return cleaned
+
+@app.route('/api/parking-manager/create-user', methods=['POST'])
 
 def parking_manager_create_user():
    """יצירת קוד מנהל חברה - למנהל חניון בלבד - רק לחניון שלו"""
@@ -3235,7 +3235,6 @@ def parking_manager_create_user():
            'code_expires_at': None,
            'password_expires_at': None,
            'company_list': company_list if company_list else None,
-            'phone_number': clean_phone_number(phone_number),
            'phone_number': clean_phone_number(phone_number),
            'permissions': permissions,  # Store user permissions
            'counting': new_counting
