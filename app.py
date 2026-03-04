@@ -4501,17 +4501,17 @@ def company_manager_proxy():
                     if 'consumer' in payload:
                         consumer_elem = ET.SubElement(root, 'consumer', href=f"/consumers/{payload['consumer'].get('contractid', '')},{payload['consumer'].get('id', '')}")
                         for key, value in payload['consumer'].items():
-                            if value and key != 'href':
+                            if value is not None and key != 'href':
                                 elem = ET.SubElement(consumer_elem, key)
-                                elem.text = str(value)
+                                elem.text = str(value) if value != '' else ''
                     
                     # Add person element if exists
                     if 'person' in payload:
                         person_elem = ET.SubElement(root, 'person')
                         for key, value in payload['person'].items():
-                            if value:
+                            if value is not None:
                                 elem = ET.SubElement(person_elem, key)
-                                elem.text = str(value)
+                                elem.text = str(value) if value != '' else ''
                     
                     # Add identification element if exists
                     if 'identification' in payload:
@@ -4542,15 +4542,15 @@ def company_manager_proxy():
                     
                     # Add vehicle data at root level
                     for key in ['lpn1', 'lpn2', 'lpn3']:
-                        if key in payload and payload[key]:
+                        if key in payload:
                             elem = ET.SubElement(root, key)
                             if isinstance(payload[key], dict):
                                 for subk, subv in payload[key].items():
-                                    if subv is not None and subv != '':
+                                    if subv is not None:
                                         sub_elem = ET.SubElement(elem, subk)
-                                        sub_elem.text = str(subv)
+                                        sub_elem.text = str(subv) if subv != '' else ''
                             else:
-                                elem.text = str(payload[key])
+                                elem.text = str(payload[key]) if payload[key] else ''
                     
                     # Convert to XML string
                     xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
