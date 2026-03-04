@@ -1,4 +1,4 @@
-﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response, send_from_directory
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response, send_from_directory
 import flask
 from flask_mail import Mail, Message
 from supabase.client import create_client, Client
@@ -6841,14 +6841,16 @@ def mobile_get_subscribers():
         company_list_str = data.get('company_list')
         user_id = data.get('user_id')
         user_permissions = ""
+        user_parking_name = ""
         
         if user_id:
             try:
-                user_res = supabase.table('user_parkings').select('company_list, permissions').eq('user_id', user_id).execute()
+                user_res = supabase.table('user_parkings').select('company_list, permissions, parking_name').eq('user_id', user_id).execute()
                 if user_res.data:
                     if company_list_str is None:
                         company_list_str = user_res.data[0].get('company_list') or ""
                     user_permissions = user_res.data[0].get('permissions') or ""
+                    user_parking_name = user_res.data[0].get('parking_name') or ""
             except Exception as e:
                 print(f"Failed to fetch user permissions: {e}")
         else:
@@ -7053,7 +7055,7 @@ def mobile_get_subscribers():
             return jsonify({
                 'success': True,
                 'data': res_json,
-                'parking_name': connection_details.get('description') or connection_details.get('name') or project_number
+                'parking_name': user_parking_name or connection_details.get('name') or connection_details.get('description') or project_number
             })
         else:
             return jsonify({'success': False, 'message': f'Server returned {response.status_code}'})
