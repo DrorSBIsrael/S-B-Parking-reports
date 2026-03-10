@@ -6712,6 +6712,11 @@ def mobile_login():
             
         print(f" Mobile login attempt for phone: {clean_phone}")
         
+        # 🍏 Apple Review Bypass: Skip OTP sending for this specific test number
+        if clean_phone == '972546784210':
+            print("🍏 Apple Reviewer login attempt. Bypassing WhatsApp OTP.")
+            return jsonify({'success': True, 'message': 'הזן סיסמת בדיקה', 'phone_number': clean_phone})
+        
         # בדוק אם המשתמש קיים במסד הנתונים
         user_result = supabase.table('user_parkings').select('*').eq('phone_number', clean_phone).execute()
         
@@ -6760,33 +6765,45 @@ def mobile_verify():
             
         clean_phone = clean_phone_number(phone_number)
         
-        # בדוק במסד
-        user_result = supabase.table('user_parkings').select('*').eq('phone_number', clean_phone).execute()
-        
-        if not user_result.data:
-            return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
+        # 🍏 Apple Review Bypass logic
+        if clean_phone == '972546784210' and str(otp_code) == '032012':
+            target_phone = '972545484210'
+            print(f"🍏 Apple Reviewer verified. Logging in as target phone: {target_phone}")
             
-        user = user_result.data[0]
-        
-        if not user.get('mobile_otp') or str(user.get('mobile_otp')) != str(otp_code):
-            return jsonify({'success': False, 'message': 'קוד אימות שגוי'})
+            user_result = supabase.table('user_parkings').select('*').eq('phone_number', target_phone).execute()
+            if not user_result.data:
+                return jsonify({'success': False, 'message': 'משתמש יעד לבדיקה לא נמצא במסד הנתונים'})
             
-        import datetime
-        from datetime import timezone
-        otp_expiry = user.get('otp_expires_at')
-        if otp_expiry:
-            try:
-                expiry_dt = datetime.datetime.fromisoformat(otp_expiry.replace('Z', '+00:00'))
-                if datetime.datetime.now(timezone.utc) > expiry_dt:
-                    return jsonify({'success': False, 'message': 'קוד אימות פג תוקף (עברו 5 דקות)'})
-            except Exception as e:
-                print(f"Error parsing OTP expiry: {e}")
+            user = user_result.data[0]
+            # No OTP validation/expiration check is needed for bypass
+        else:
+            # בדוק במסד - Regular Flow
+            user_result = supabase.table('user_parkings').select('*').eq('phone_number', clean_phone).execute()
+            
+            if not user_result.data:
+                return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
                 
-        # Clear the OTP after successful use
-        supabase.table('user_parkings').update({
-            'mobile_otp': None,
-            'otp_expires_at': None
-        }).eq('user_id', user.get('user_id')).execute()
+            user = user_result.data[0]
+            
+            if not user.get('mobile_otp') or str(user.get('mobile_otp')) != str(otp_code):
+                return jsonify({'success': False, 'message': 'קוד אימות שגוי'})
+                
+            import datetime
+            from datetime import timezone
+            otp_expiry = user.get('otp_expires_at')
+            if otp_expiry:
+                try:
+                    expiry_dt = datetime.datetime.fromisoformat(otp_expiry.replace('Z', '+00:00'))
+                    if datetime.datetime.now(timezone.utc) > expiry_dt:
+                        return jsonify({'success': False, 'message': 'קוד אימות פג תוקף (עברו 5 דקות)'})
+                except Exception as e:
+                    print(f"Error parsing OTP expiry: {e}")
+                    
+            # Clear the OTP after successful use
+            supabase.table('user_parkings').update({
+                'mobile_otp': None,
+                'otp_expires_at': None
+            }).eq('user_id', user.get('user_id')).execute()
             
         # צור session לאפליקציה (token)
         # מכיוון שלפלאסק שלנו יש session מבוסס עוגיות, לנייד כדאי להחזיר JSON עם הנתונים
