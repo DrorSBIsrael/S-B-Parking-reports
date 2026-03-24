@@ -1284,7 +1284,7 @@ const translations = {
         fromRevenue: 'מסך ההכנסות', entryWithSub: 'כניסות עם מנוי', entryNoSub: 'כניסות ללא מנוי',
         entryViaApp: 'כניסות דרך אפליקציה', perEntry: 'לכל כניסה',
         exits: 'יציאות', days: 'ימים', dailyAvgRevenue: 'הכנסה יומית ממוצעת',
-        week: 'שבוע',
+        week: 'שבוע', from: 'מתוך',
         monthNames: ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'],
         weekdays: ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'],
         avgRevenue: 'ממוצע הכנסות', avgEntries: 'ממוצע כניסות',
@@ -1342,7 +1342,7 @@ const translations = {
         fromRevenue: 'of total revenue', entryWithSub: 'Subscription entries', entryNoSub: 'Walk-in entries',
         entryViaApp: 'App entries', perEntry: 'per entry',
         exits: 'Exits', days: 'days', dailyAvgRevenue: 'Avg daily revenue',
-        week: 'Week',
+        week: 'Week', from: 'of',
         monthNames: ['January','February','March','April','May','June','July','August','September','October','November','December'],
         weekdays: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
         avgRevenue: 'Avg Revenue', avgEntries: 'Avg Entries',
@@ -2221,118 +2221,118 @@ function updateStats() {
     const statsHTML = `
         <div class="stat-card" data-stat-type="revenue">
             <div class="icon" style="background: linear-gradient(135deg, #007AFF, #5AC8FA);">💰</div>
-            <h3>סה"כ הכנסות</h3>
+            <h3>${t('totalRevenue')}</h3>
             <div class="value">₪${stats.totalRevenue.toLocaleString()}</div>
             ${changes.revenue !== null ? `
             <div class="change ${changes.revenue >= 0 ? 'positive' : 'negative'}">
                 <span>${changes.revenue >= 0 ? '▲' : '▼'}</span>
                 <span>${Math.abs(changes.revenue).toFixed(1)}%</span>
             </div>
-            ` : '<div class="change neutral">ללא נתוני השוואה</div>'}
-            <div class="subtext">מכל אמצעי התשלום</div>
+            ` : `<div class="change neutral">${t('noData2')}</div>`}
+            <div class="subtext">${t('fromAllPayments')}</div>
             <div class="tsper1-line">₪${(stats.totalTsper1 || 0).toLocaleString()}</div>
-            ${(stats.totalTsper1 || 0) > 0 ? '<div style="color: var(--danger); font-size: 11px; margin-top: 4px; font-weight: 500;">זיכוי מכרטיסי הנחה</div>' : ''}
+            ${(stats.totalTsper1 || 0) > 0 ? `<div style="color: var(--danger); font-size: 11px; margin-top: 4px; font-weight: 500;">${t('discountCredit')}</div>` : ''}
         </div>
         
         <div class="stat-card" data-stat-type="entries">
             <div class="icon" style="background: linear-gradient(135deg, #34C759, #30D158);">🚗</div>
-            <h3>סה"כ כניסות</h3>
+            <h3>${t('totalEntries')}</h3>
             <div class="value">${stats.totalEntries.toLocaleString()}</div>
             ${changes.entries !== null ? `
             <div class="change ${changes.entries >= 0 ? 'positive' : 'negative'}">
                 <span>${changes.entries >= 0 ? '▲' : '▼'}</span>
                 <span>${Math.abs(changes.entries).toFixed(1)}%</span>
             </div>
-            ` : '<div class="change neutral">ללא נתוני השוואה</div>'}
-            <div class="subtext">${stats.dailyAvgEntries.toLocaleString()} בממוצע ליום</div>
-            <div class="exit-line">יציאות: ${(stats.totalExits || 0).toLocaleString()}</div>
+            ` : `<div class="change neutral">${t('noData2')}</div>`}
+            <div class="subtext">${stats.dailyAvgEntries.toLocaleString()} ${t('avgEntriesPerDay')}</div>
+            <div class="exit-line">${t('exits')}: ${(stats.totalExits || 0).toLocaleString()}</div>
         </div>
         
         <div class="stat-card" data-stat-type="casual">
             <div class="icon" style="background: linear-gradient(135deg, #5856D6, #6E6CE3);">👤</div>
-            <h3>מזדמנים</h3>
+            <h3>${t('casual')}</h3>
             <div class="value">${stats.totalCasual.toLocaleString()}</div>
-            <div class="change neutral">${stats.casualPercent.toFixed(1)}% מהכניסות</div>
-            <div class="subtext">כניסות ללא מנוי</div>
-            <div class="exit-line">יציאות: ${(stats.totalExitsCasual || 0).toLocaleString()}</div>
+            <div class="change neutral">${stats.casualPercent.toFixed(1)}% ${t('fromRevenue')}</div>
+            <div class="subtext">${t('entryNoSub')}</div>
+            <div class="exit-line">${t('exits')}: ${(stats.totalExitsCasual || 0).toLocaleString()}</div>
         </div>
         
         <div class="stat-card" data-stat-type="members">
             <div class="icon" style="background: linear-gradient(135deg, #FF9500, #FF9F0A);">⭐</div>
-            <h3>מנויים</h3>
+            <h3>${t('members')}</h3>
             <div class="value">${stats.totalMembers.toLocaleString()}</div>
-            <div class="change neutral">${stats.memberPercent.toFixed(1)}% מהכניסות</div>
-            <div class="subtext">כניסות עם מנוי</div>
-            <div class="exit-line">יציאות: ${(stats.totalExitsMembers || 0).toLocaleString()}</div>
+            <div class="change neutral">${stats.memberPercent.toFixed(1)}% ${t('fromRevenue')}</div>
+            <div class="subtext">${t('entryWithSub')}</div>
+            <div class="exit-line">${t('exits')}: ${(stats.totalExitsMembers || 0).toLocaleString()}</div>
         </div>
         
         ${stats.totalApp > 0 ? `
         <div class="stat-card" data-stat-type="app">
             <div class="icon" style="background: linear-gradient(135deg, #AF52DE, #C969FF);">📱</div>
-            <h3>אפליקציה</h3>
+            <h3>${t('app')}</h3>
             <div class="value">${stats.totalApp.toLocaleString()}</div>
-            <div class="change neutral">${stats.appPercent.toFixed(1)}% מהכניסות</div>
-            <div class="subtext">כניסות דרך אפליקציה</div>
+            <div class="change neutral">${stats.appPercent.toFixed(1)}% ${t('fromRevenue')}</div>
+            <div class="subtext">${t('entryViaApp')}</div>
         </div>
         ` : ''}
         
         <div class="stat-card" data-stat-type="barriers" ${isGroup && !isSingleParkingMode ? 'style="cursor: pointer;"' : ''}>
             <div class="icon" style="background: linear-gradient(135deg, #FF3B30, #FF6961);">🚧</div>
-            <h3>פתיחות מחסום</h3>
+            <h3>${t('barrierOpenings')}</h3>
             <div class="value">${stats.totalBarrier.toLocaleString()}</div>
             <div class="change ${stats.barrierPercent > 5 ? 'negative' : 'positive'}">
-                ${stats.barrierPercent.toFixed(1)}% מהכניסות
+                ${stats.barrierPercent.toFixed(1)}% ${t('fromRevenue')}
             </div>
-            <div class="subtext">${stats.barrierPerEntry.toFixed(2)} לכל כניסה</div>
+            <div class="subtext">${stats.barrierPerEntry.toFixed(2)} ${t('perEntry')}</div>
         </div>
         
         <div class="stat-card" data-stat-type="cash">
             <div class="icon" style="background: linear-gradient(135deg, #30D158, #34C759);">💵</div>
-            <h3>מזומן</h3>
+            <h3>${t('cash')}</h3>
             <div class="value">₪${stats.totalCash.toLocaleString()}</div>
             <div class="change neutral">${stats.cashPercent.toFixed(1)}%</div>
-            <div class="subtext">מסך ההכנסות</div>
+            <div class="subtext">${t('fromRevenue')}</div>
         </div>
         
         <div class="stat-card" data-stat-type="credit">
             <div class="icon" style="background: linear-gradient(135deg, #007AFF, #0051D5);">💳</div>
-            <h3>אשראי</h3>
+            <h3>${t('credit')}</h3>
             <div class="value">₪${stats.totalCredit.toLocaleString()}</div>
             <div class="change neutral">${stats.creditPercent.toFixed(1)}%</div>
-            <div class="subtext">מסך ההכנסות</div>
+            <div class="subtext">${t('fromRevenue')}</div>
         </div>
         
         <div class="stat-card" data-stat-type="pango">
             <div class="icon" style="background: linear-gradient(135deg, #5856D6, #AF52DE);">📲</div>
-            <h3>פנגו</h3>
+            <h3>${t('pango')}</h3>
             <div class="value">₪${stats.totalPango.toLocaleString()}</div>
             <div class="change neutral">${stats.pangoPercent.toFixed(1)}%</div>
-            <div class="subtext">מסך ההכנסות</div>
+            <div class="subtext">${t('fromRevenue')}</div>
         </div>
         
         <div class="stat-card" data-stat-type="cello">
             <div class="icon" style="background: linear-gradient(135deg, #FF9500, #FF3B30);">📞</div>
-            <h3>סלו</h3>
+            <h3>${t('cello')}</h3>
             <div class="value">₪${stats.totalCello.toLocaleString()}</div>
             <div class="change neutral">${stats.celloPercent.toFixed(1)}%</div>
-            <div class="subtext">מסך ההכנסות</div>
+            <div class="subtext">${t('fromRevenue')}</div>
         </div>
         
         <div class="stat-card" data-stat-type="avg-revenue">
             <div class="icon" style="background: linear-gradient(135deg, #00C7BE, #30D158);">📊</div>
-            <h3>ממוצע יומי</h3>
+            <h3>${t('dailyAvg')}</h3>
             <div class="value">₪${stats.dailyAvgRevenue.toLocaleString()}</div>
-            <div class="change neutral">${stats.uniqueDays} ימים</div>
-            <div class="subtext">הכנסה יומית ממוצעת</div>
+            <div class="change neutral">${stats.uniqueDays} ${t('days')}</div>
+            <div class="subtext">${t('dailyAvgRevenue')}</div>
         </div>
         
         ${!isSingleParkingMode ? `
         <div class="stat-card multi-parking-only" data-stat-type="parkings">
             <div class="icon" style="background: linear-gradient(135deg, #FF3B30, #FF9500);">🏢</div>
-            <h3>חניונים פעילים</h3>
+            <h3>${t('activeParkings')}</h3>
             <div class="value">${stats.uniqueParkings}</div>
-            <div class="change neutral">מתוך ${userParkings.length - 1}</div>
-            <div class="subtext">חניונים ברשת</div>
+            <div class="change neutral">${t('from') || 'מתוך'} ${userParkings.length - 1}</div>
+            <div class="subtext">${t('allParkings')}</div>
         </div>
         ` : ''}
     `;
