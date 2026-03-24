@@ -2751,7 +2751,7 @@ function createPaymentChart() {
     charts.payment = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['מזומן', 'אשראי', 'פנגו', 'סלו'],
+            labels: [t('cash'), t('credit'), t('pango'), t('cello')],
             datasets: [{
                 data: [totalCash, totalCredit, totalPango, totalCello],
                 backgroundColor: [
@@ -2822,7 +2822,7 @@ function createEntriesChart() {
     const totalApp = currentData.reduce((sum, d) => sum + (d.t_entry_ap || 0), 0);
     
     const chartData = {
-        labels: ['מזדמנים', 'מנויים'],
+        labels: [t('casual'), t('members')],
         datasets: [{
             data: [totalCasual, totalMembers],
             backgroundColor: ['#34C759', '#007AFF'],
@@ -2832,7 +2832,7 @@ function createEntriesChart() {
     };
     
     if (totalApp > 0) {
-        chartData.labels.push('אפליקציה');
+        chartData.labels.push(t('app'));
         chartData.datasets[0].data.push(totalApp);
         chartData.datasets[0].backgroundColor.push('#AF52DE');
     }
@@ -2986,9 +2986,9 @@ function createDailyChart() {
                         },
                         label: function(context) {
                             if (context.datasetIndex === 0) {
-                                return `הכנסות: ₪${Math.round(context.parsed.y).toLocaleString()}`;
+                                return `${t('revenue')}: ₪${Math.round(context.parsed.y).toLocaleString()}`;
                             } else {
-                                return `כניסות: ${Math.round(context.parsed.y).toLocaleString()}`;
+                                return `${t('entries')}: ${Math.round(context.parsed.y).toLocaleString()}`;
                             }
                         }
                     }
@@ -3365,7 +3365,7 @@ function createBarrierChart() {
         data: {
             labels: formattedLabels,
             datasets: [{
-                label: 'פתיחות מחסום',
+                label: t('barrierOpenings'),
                 data: barriers,
                 borderColor: '#FF3B30',
                 backgroundColor: 'rgba(255, 59, 48, 0.1)',
