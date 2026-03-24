@@ -1285,6 +1285,11 @@ const translations = {
         entryViaApp: 'כניסות דרך אפליקציה', perEntry: 'לכל כניסה',
         exits: 'יציאות', days: 'ימים', dailyAvgRevenue: 'הכנסה יומית ממוצעת',
         week: 'שבוע', from: 'מתוך',
+        minutes: 'דקות', hours: 'שעות',
+        stay060: '0-60 דקות', stay015: '0-15 דקות',
+        stayUpTo2: 'עד 2 שעות', stayUpTo3: 'עד 3 שעות', stayUpTo4: 'עד 4 שעות',
+        stayUpTo5: 'עד 5 שעות', stayUpTo6: 'עד 6 שעות', stay724: '7-24 שעות',
+        stay015partOf060: 'חלק מ-0-60', avgStayLabel: 'ממוצע שהייה מזדמנים',
         monthNames: ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'],
         weekdays: ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'],
         avgRevenue: 'ממוצע הכנסות', avgEntries: 'ממוצע כניסות',
@@ -1343,6 +1348,11 @@ const translations = {
         entryViaApp: 'App entries', perEntry: 'per entry',
         exits: 'Exits', days: 'days', dailyAvgRevenue: 'Avg daily revenue',
         week: 'Week', from: 'of',
+        minutes: 'minutes', hours: 'hours',
+        stay060: '0-60 min', stay015: '0-15 min',
+        stayUpTo2: 'Up to 2h', stayUpTo3: 'Up to 3h', stayUpTo4: 'Up to 4h',
+        stayUpTo5: 'Up to 5h', stayUpTo6: 'Up to 6h', stay724: '7-24h',
+        stay015partOf060: 'part of 0-60', avgStayLabel: 'Avg stay (casual)',
         monthNames: ['January','February','March','April','May','June','July','August','September','October','November','December'],
         weekdays: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
         avgRevenue: 'Avg Revenue', avgEntries: 'Avg Entries',
@@ -3055,34 +3065,34 @@ function updateStayDuration() {
     
     // Update the title with average stay
 const stayTitleElement = document.querySelector('#stayDurationGrid').parentElement.querySelector('.chart-title span:last-child');
-if (stayTitleElement) {
+    if (stayTitleElement) {
     const avgHours = Math.floor(avgStayCasual / 60);
     const avgMinutes = Math.floor(avgStayCasual % 60);
     
     let avgText = '';
     if (avgStayCasual > 0) {
         if (avgHours > 0) {
-            avgText = `${avgHours} שעות ${avgMinutes} דקות`;
+            avgText = `${avgHours} ${t('hours')} ${avgMinutes} ${t('minutes')}`;
         } else {
-            avgText = `${avgMinutes} דקות`;
+            avgText = `${avgMinutes} ${t('minutes')}`;
         }
-        avgText += ` (מחושב לפי נקודות אמצע של טווחים)`;
+        avgText += ` ${t('calcByMidpoint')}`;
     } else {
-        avgText = 'אין נתונים';
+        avgText = t('noData2');
     }
     
-    stayTitleElement.innerHTML = `זמני שהייה <span style="font-size: 14px; color: var(--primary); font-weight: 500;">- ממוצע שהייה מזדמנים: ${avgText}</span>`;
+    stayTitleElement.innerHTML = `${t('stayTimes')} <span style="font-size: 14px; color: var(--primary); font-weight: 500;">- ${t('avgStayLabel')}: ${avgText}</span>`;
 }
     
     // Prepare durations for display (combining 0-60)
     const durations = {
-        '0-60 דקות': stay0to60,
-        'עד 2 שעות': currentData.reduce((sum, d) => sum + (d.stay_2 || 0), 0),
-        'עד 3 שעות': currentData.reduce((sum, d) => sum + (d.stay_3 || 0), 0),
-        'עד 4 שעות': currentData.reduce((sum, d) => sum + (d.stay_4 || 0), 0),
-        'עד 5 שעות': currentData.reduce((sum, d) => sum + (d.stay_5 || 0), 0),
-        'עד 6 שעות': currentData.reduce((sum, d) => sum + (d.stay_6 || 0), 0),
-        '7-24 שעות': currentData.reduce((sum, d) => sum + (d.stay_724 || 0), 0),
+        [t('stay060')]: stay0to60,
+        [t('stayUpTo2')]: currentData.reduce((sum, d) => sum + (d.stay_2 || 0), 0),
+        [t('stayUpTo3')]: currentData.reduce((sum, d) => sum + (d.stay_3 || 0), 0),
+        [t('stayUpTo4')]: currentData.reduce((sum, d) => sum + (d.stay_4 || 0), 0),
+        [t('stayUpTo5')]: currentData.reduce((sum, d) => sum + (d.stay_5 || 0), 0),
+        [t('stayUpTo6')]: currentData.reduce((sum, d) => sum + (d.stay_6 || 0), 0),
+        [t('stay724')]: currentData.reduce((sum, d) => sum + (d.stay_724 || 0), 0),
     };
     
     if (stayDurationViewMode === 'cards') {
@@ -3104,7 +3114,7 @@ if (stayTitleElement) {
         
         html += `
             <div class="stay-duration-item stay-060" style="position: relative; overflow: visible; border: 2px solid var(--primary); background: linear-gradient(135deg, rgba(0, 122, 255, 0.05), rgba(0, 122, 255, 0.02));">
-                <div class="stay-duration-time" style="font-weight: 700; color: var(--primary);">0-60 דקות</div>
+            <div class="stay-duration-time" style="font-weight: 700; color: var(--primary);">${t('stay060')}</div>
                 <div class="stay-duration-value" style="color: var(--primary);">${stay0to60.toLocaleString()}</div>
                 <div class="stay-duration-percent">${percentage060}%</div>
                 <div style="
@@ -3122,15 +3132,15 @@ if (stayTitleElement) {
                     box-shadow: 0 4px 12px rgba(0, 122, 255, 0.15);
                     z-index: 10;
                 ">
-                    <strong style="font-size: 14px;">0-15 דקות:</strong> ${stay015.toLocaleString()} 
-                    <span style="color: var(--text-secondary);">(${percentage015of60}% מתוך 0-60)</span>
+                    <strong style="font-size: 14px;">${t('stay015')}:</strong> ${stay015.toLocaleString()} 
+                    <span style="color: var(--text-secondary);">(${percentage015of60}% ${t('stay015partOf060')} 0-60)</span>
                 </div>
             </div>
         `;
         
         // Add other duration cards - כל אחד שיש לו ערך גדול מ-0
         Object.entries(durations).forEach(([time, value]) => {
-            if (time !== '0-60 דקות' && value > 0) {
+            if (time !== t('stay060') && value > 0) {
                 const percentage = actualTotal > 0 ? ((value / actualTotal) * 100).toFixed(1) : '0';
                 html += `
                     <div class="stay-duration-item">
@@ -3165,10 +3175,10 @@ function createStayDurationChart(durations, chartType, stay015, stay0to60) {
     // For bar chart, add special handling for 0-15 minutes
     if (chartType === 'bar') {
         // Find the index of 0-60 minutes
-        const index060 = labels.indexOf('0-60 דקות');
+        const index060 = labels.indexOf(t('stay060'));
         if (index060 !== -1) {
             // Insert 0-15 minutes after 0-60 minutes
-            labels.splice(index060 + 1, 0, '0-15 דקות (חלק מ-0-60)');
+            labels.splice(index060 + 1, 0, `${t('stay015')} (${t('stay015partOf060')} 0-60)`);
             values.splice(index060 + 1, 0, stay015);
         }
     }
@@ -3180,7 +3190,7 @@ function createStayDurationChart(durations, chartType, stay015, stay0to60) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'מספר רכבים',
+                label: t('vehicles'),
                 data: values,
                 backgroundColor: chartType === 'bar' ? 
                     labels.map(label => label.includes('0-15') ? 'rgba(0, 122, 255, 0.4)' : 'rgba(0, 122, 255, 0.8)') :
@@ -3220,7 +3230,7 @@ function createStayDurationChart(durations, chartType, stay015, stay0to60) {
                                 
                                 // Special handling for 0-60 minutes in pie chart
                                 let displayText = `${label}: ${value.toLocaleString()} (${percentage}%)`;
-                                if (label === '0-60 דקות' && stay015 && stay0to60) {
+                                if (label === t('stay060') && stay015 && stay0to60) {
                                     const percentage015of60 = stay0to60 > 0 ? ((stay015 / stay0to60) * 100).toFixed(1) : '0';
                                     displayText += ` | 0-15: ${stay015.toLocaleString()} (${percentage015of60}%)`;
                                     }
@@ -3267,18 +3277,18 @@ function createStayDurationChart(durations, chartType, stay015, stay0to60) {
                                 const actualTotal = context.dataset.data.reduce((a, b) => a + b, 0);
                                 const percentage015 = actualTotal > 0 ? ((stay015 / actualTotal) * 100).toFixed(1) : '0';
                                 const of60Percent = stay0to60 > 0 ? ((stay015 / stay0to60) * 100).toFixed(1) : '0';
-                                return `0-15 דקות: ${value.toLocaleString()} רכבים (${percentage015}% מהסה"כ, ${of60Percent}% מתוך 0-60)`;
+                                return `${t('stay015')}: ${value.toLocaleString()} ${t('vehicles')} (${percentage015}%, ${of60Percent}% ${t('stay015partOf060')} 0-60)`;
                             }
                             
                             if (chartType === 'bar') {
-                                return `${value.toLocaleString()} רכבים (${percentage}%)`;
+                                return `${value.toLocaleString()} ${t('vehicles')} (${percentage}%)`;
                             } else {
                                 // Pie chart
-                                if (context.label === '0-60 דקות' && stay015 && stay0to60) {
+                                if (context.label === t('stay060') && stay015 && stay0to60) {
                                     const percentage015of60 = stay0to60 > 0 ? ((stay015 / stay0to60) * 100).toFixed(1) : '0';
                                     return [
                                         `${context.label}: ${value.toLocaleString()} (${percentage}%)`,
-                                        `מתוכם 0-15 דקות: ${stay015.toLocaleString()} (${percentage015of60}%)`
+                                        `${t('stay015partOf060')} ${t('stay015')}: ${stay015.toLocaleString()} (${percentage015of60}%)`
                                     ];
                                 }
                                 return `${context.label}: ${value.toLocaleString()} (${percentage}%)`;
@@ -3384,7 +3394,7 @@ function createBarrierChart() {
                             return tooltipItems[0].label;
                         },
                         label: function(context) {
-                            return `פתיחות מחסום: ${context.parsed.y.toLocaleString()}`;
+                            return `${t('barrierOpenings')}: ${context.parsed.y.toLocaleString()}`;
                         }
                     }
                 }
@@ -3486,13 +3496,13 @@ function createParkingComparisonChart() {
         data: {
             labels: labels,
             datasets: [{
-                label: 'הכנסות',
+                label: t('revenue'),
                 data: revenues,
                 backgroundColor: '#007AFF',
                 borderRadius: 8,
                 yAxisID: 'y'
             }, {
-                label: 'כניסות',
+                label: t('entries'),
                 data: entries,
                 backgroundColor: '#5AC8FA',
                 borderRadius: 8,
@@ -3668,7 +3678,7 @@ function updateEncodersInfo() {
                 text-align: center;
             ">
                 <div style="color: var(--text-secondary); font-size: 14px; margin-bottom: 8px;">
-                    מקודד 1
+                    ${t('encoder1')}
                 </div>
                 <div style="font-size: 28px; font-weight: 700; color: var(--primary);">
                     ${totalEncoder1.toLocaleString()}
@@ -3682,7 +3692,7 @@ function updateEncodersInfo() {
                 text-align: center;
             ">
                 <div style="color: var(--text-secondary); font-size: 14px; margin-bottom: 8px;">
-                    מקודד 2
+                    ${t('encoder2')}
                 </div>
                 <div style="font-size: 28px; font-weight: 700; color: var(--primary);">
                     ${totalEncoder2.toLocaleString()}
@@ -3696,7 +3706,7 @@ function updateEncodersInfo() {
                 text-align: center;
             ">
                 <div style="color: var(--text-secondary); font-size: 14px; margin-bottom: 8px;">
-                    מקודד 3
+                    ${t('encoder3')}
                 </div>
                 <div style="font-size: 28px; font-weight: 700; color: var(--primary);">
                     ${totalEncoder3.toLocaleString()}
@@ -3710,7 +3720,7 @@ function updateEncodersInfo() {
                 text-align: center;
             ">
                 <div style="color: white; font-size: 14px; margin-bottom: 8px;">
-                    סה"כ מקודדים
+                    ${t('totalEncoders')}
                 </div>
                 <div style="font-size: 28px; font-weight: 700; color: white;">
                     ${totalEncoders.toLocaleString()}
@@ -3727,7 +3737,7 @@ function updateEncodersInfo() {
             font-size: 14px;
             text-align: center;
         ">
-            <strong>שים לב:</strong> נתוני המקודדים מוצגים לצפייה בלבד ואינם נכללים בסיכומים
+            <strong>${t('attention')}</strong> ${t('encoderNote')}
         </div>
     `;
     
