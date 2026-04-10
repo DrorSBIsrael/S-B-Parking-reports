@@ -934,17 +934,10 @@ def process_single_email(mail, email_id):
             print(f" Authorized senders: {AUTHORIZED_SENDERS}")
             # Skipping unauthorized sender
             
-            # 🆕 סימון המייל כדי לא לבדוק אותו שוב
-            try:
-                # Marking unauthorized email
-                mail.store(email_id, '+FLAGS', '\\Seen \\Flagged')
-                # Unauthorized email marked
-            except Exception as mark_error:
-                # Could not mark unauthorized email
-                pass
-            
+            # בוטל סימון המייל בשרת (כדי לא להעלים במקרה מיילים אישיים מתיבת הדואר)
+            # במקום זה, המייל יתווסף לרשימת המעובדים המקומית
             print(f" UNAUTHORIZED ACCESS LOGGED: {sender} tried to send data files")
-            return False
+            return 'unauthorized'
         
         print(f" AUTHORIZED SENDER: {sender}")
         
@@ -1342,21 +1335,22 @@ def check_for_new_emails():
             # Processing new email
             
             # עיבוד המייל
-            success = process_single_email(mail, email_id)
+            result = process_single_email(mail, email_id)
             
-            #  תיקון: הוסף לרשימה רק אם הצליח!
-            if success:
+            #  תיקון: הוסף לרשימה רק אם הצליח או אם זה שולח לא מורשה 
+            # (כדי שלא נמשוך אותו שוב ושוב מהשרת)
+            if result is True or result == 'unauthorized':
                 processed_email_ids.append(email_id_str)
                 # Email added to processed cache
             else:
-                # לא מוסיפים לרשימה - ננסה שוב בפעם הבאה
+                # שגיאה אחרת - לא מוסיפים לרשימה - ננסה שוב בפעם הבאה
                 # Email not added to cache - will retry
                 pass
             
             new_emails += 1
             
             # ספירת הצלחות בלבד
-            if success:
+            if result is True:
                 processed_successfully += 1
                 # Email processed successfully
             else:
