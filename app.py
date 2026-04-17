@@ -6689,6 +6689,17 @@ def test_manager_paths():
 
 # ========== MOBILE APP API ==========
 
+# מנויים קבועים (Bypass לחנויות אפליקציות או משתמשים מיוחדים ללא צורך ב-SMS)
+# מבנה: 'טלפון_התחברות': {'code': 'קוד_אימות', 'target_phone': 'טלפון_אמיתי_במסד_נתונים'}
+FIXED_OTP_ACCOUNTS = {
+    '972546784210': {'code': '032012', 'target_phone': '972545484210'}, # 🍏 Apple Review
+    '972541234567': {'code': '123456', 'target_phone': '972541111111'}, # מקום שמור 1 (דוגמה)
+    '972540000002': {'code': '222222', 'target_phone': '972000000002'}, # מקום שמור 2
+    '972540000003': {'code': '333333', 'target_phone': '972000000003'}, # מקום שמור 3
+    '972540000004': {'code': '444444', 'target_phone': '972000000004'}, # מקום שמור 4
+    '972540000005': {'code': '555555', 'target_phone': '972000000005'}, # מקום שמור 5
+}
+
 @app.route('/api/mobile/login', methods=['POST'])
 def mobile_login():
     try:
@@ -6706,10 +6717,10 @@ def mobile_login():
             
         print(f" Mobile login attempt for phone: {clean_phone}")
         
-        # 🍏 Apple Review Bypass: Skip OTP sending for this specific test number
-        if clean_phone == '972546784210':
-            print("🍏 Apple Reviewer login attempt. Bypassing WhatsApp OTP.")
-            return jsonify({'success': True, 'message': 'הזן סיסמת בדיקה', 'phone_number': clean_phone})
+        # Fixed OTP Accounts Bypass: Skip OTP sending
+        if clean_phone in FIXED_OTP_ACCOUNTS:
+            print(f" Bypass login attempt for fixed account: {clean_phone}.")
+            return jsonify({'success': True, 'message': 'הזן סיסמה', 'phone_number': clean_phone})
         
         # בדוק אם המשתמש קיים במסד הנתונים
         user_result = supabase.table('user_parkings').select('*').eq('phone_number', clean_phone).execute()
@@ -6759,14 +6770,14 @@ def mobile_verify():
             
         clean_phone = clean_phone_number(phone_number)
         
-        # 🍏 Apple Review Bypass logic
-        if clean_phone == '972546784210' and str(otp_code) == '032012':
-            target_phone = '972545484210'
-            print(f"🍏 Apple Reviewer verified. Logging in as target phone: {target_phone}")
+        # Fixed OTP Accounts Bypass logic
+        if clean_phone in FIXED_OTP_ACCOUNTS and str(otp_code) == FIXED_OTP_ACCOUNTS[clean_phone]['code']:
+            target_phone = FIXED_OTP_ACCOUNTS[clean_phone]['target_phone']
+            print(f" Fixed account verified. Logging in as target phone: {target_phone}")
             
             user_result = supabase.table('user_parkings').select('*').eq('phone_number', target_phone).execute()
             if not user_result.data:
-                return jsonify({'success': False, 'message': 'משתמש יעד לבדיקה לא נמצא במסד הנתונים'})
+                return jsonify({'success': False, 'message': 'משתמש יעד לא נמצא במסד הנתונים'})
             
             user = user_result.data[0]
             # No OTP validation/expiration check is needed for bypass
