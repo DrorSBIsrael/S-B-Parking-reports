@@ -484,47 +484,46 @@ class ParkingAPIXML {
                             });
                         }
                         
-                        // Use a sliding window concurrency model to eliminate pauses
-                        const CONCURRENCY = callbacks.batchSize || 15;
-                        let allUpdated = new Array(basicSubscribers.length);
-                        let currentIndex = 0;
-                        let completedCount = 0;
+                        // Load in batches of 25 for companies up to 300 subscribers
+                        const BATCH_SIZE = 25;
+                        const totalBatches = Math.ceil(basicSubscribers.length / BATCH_SIZE);
+                        // Loading subscribers in batches
+                        let allUpdated = [];
                         
-                        const worker = async () => {
-                            while (currentIndex < basicSubscribers.length) {
-                                const index = currentIndex++;
-                                const sub = basicSubscribers[index];
-                                const updated = await processSubscriber(sub);
-                                allUpdated[index] = updated;
-                                completedCount++;
-                                
-                                // Update UI for this item immediately
-                                if (callbacks.onDetailLoaded) {
-                                    callbacks.onDetailLoaded(updated, index);
-                                }
-                                
-                                // Update progress smoothly
-                                if (completedCount % Math.max(1, Math.floor(CONCURRENCY/2)) === 0 || completedCount === basicSubscribers.length) {
-                                    const progress = Math.round((completedCount / basicSubscribers.length) * 100);
-                                    if (callbacks.onProgress) {
-                                        callbacks.onProgress({ 
-                                            percent: progress,
-                                            current: completedCount,
-                                            total: basicSubscribers.length,
-                                            message: `טוען פרטי מנויים... ${completedCount} מתוך ${basicSubscribers.length}`
-                                        });
-                                    }
-                                }
+                        for (let i = 0; i < basicSubscribers.length; i += BATCH_SIZE) {
+                            const batch = basicSubscribers.slice(i, Math.min(i + BATCH_SIZE, basicSubscribers.length));
+                            const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+                            // Loading batch
+                            
+                            const batchPromises = batch.map(processSubscriber);
+                            const batchResults = await Promise.all(batchPromises);
+                            
+                            allUpdated = [...allUpdated, ...batchResults];
+                            
+                            // Update UI after each batch
+                            const progress = Math.round((allUpdated.length / basicSubscribers.length) * 100);
+                            if (callbacks.onProgress) {
+                                callbacks.onProgress({ 
+                                    percent: progress,
+                                    current: allUpdated.length,
+                                    total: basicSubscribers.length,
+                                    message: `טוען פרטי מנויים... ${allUpdated.length} מתוך ${basicSubscribers.length}`
+                                });
                             }
-                        };
-                        
-                        // Start CONCURRENCY workers running in parallel
-                        const workers = [];
-                        for (let i = 0; i < Math.min(CONCURRENCY, basicSubscribers.length); i++) {
-                            workers.push(worker());
+                            
+                            // Update only the changed items in the UI
+                            batchResults.forEach((updated, idx) => {
+                                const originalIndex = i + idx;
+                                if (callbacks.onDetailLoaded) {
+                                    callbacks.onDetailLoaded(updated, originalIndex);
+                                }
+                            });
+                            
+                            // Small delay between batches to let UI breathe
+                            if (i + BATCH_SIZE < basicSubscribers.length) {
+                                await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
+                            }
                         }
-                        
-                        await Promise.all(workers);
                         
                         basicSubscribers = allUpdated;
                         // All details loaded successfully
