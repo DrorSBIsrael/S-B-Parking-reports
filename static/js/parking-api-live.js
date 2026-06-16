@@ -484,8 +484,8 @@ class ParkingAPIXML {
                             });
                         }
                         
-                        // Load in batches of 50 for companies up to 300 subscribers
-                        const BATCH_SIZE = 50;
+                        // Load in batches for companies up to 300 subscribers
+                        const BATCH_SIZE = callbacks.batchSize || 10;
                         const totalBatches = Math.ceil(basicSubscribers.length / BATCH_SIZE);
                         // Loading subscribers in batches
                         let allUpdated = [];
