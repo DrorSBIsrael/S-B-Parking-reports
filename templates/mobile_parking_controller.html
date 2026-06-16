@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>בקרת חניון | שיידט את בכמן ישראל</title>
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-color: #333;
+            --text-secondary: #666;
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            direction: rtl;
+            padding-bottom: 80px;
+            /* Space for bottom sheet */
+        }
+
+        /* Header */
+        .app-header {
+            background: var(--card-bg);
+            padding: 15px;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .app-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .parking-status {
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #ccc;
+        }
+
+        .status-dot.online {
+            background-color: var(--success-color);
+            box-shadow: 0 0 5px var(--success-color);
+        }
+
+        .status-dot.offline {
+            background-color: var(--danger-color);
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        /* Device List */
+        .device-list {
+            padding: 15px;
+            display: grid;
+            gap: 15px;
+        }
+
+        .device-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: transform 0.2s;
+        }
+
+        .device-card:active {
+            transform: scale(0.98);
+        }
+
+        .device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .device-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .device-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            background-color: #eef2ff;
+            color: var(--primary-color);
+        }
+
+        .device-icon.entry {
+            color: var(--success-color);
+            background-color: #e8f5e9;
+        }
+
+        .device-icon.exit {
+            color: var(--danger-color);
+            background-color: #ffebee;
+        }
+
+        .device-icon.pass {
+            color: var(--warning-color);
+            background-color: #fff3e0;
+        }
+
+        .device-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .device-status-badge {
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            background-color: #eee;
+        }
+
+        .device-status-badge.open {
+            background-color: #e8f5e9;
+            color: var(--success-color);
+            animation: pulse 2s infinite;
+        }
+
+        .device-status-badge.closed {
+            background-color: #ffebee;
+            color: var(--danger-color);
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .device-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .action-btn {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: opacity 0.2s;
+        }
+
+        .action-btn:active {
+            opacity: 0.7;
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-open {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .btn-close {
+            background-color: var(--card-bg);
+            border: 2px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        /* Loading */
+        .loading-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loader {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #ddd;
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* No Devices */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 50%;
+            transform: translateX(50%);
+            padding: 16px 24px;
+            border-radius: 30px;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            display: none;
+            z-index: 9999;
+            text-align: center;
+            min-width: 200px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loader"></div>
+        <p style="margin-top: 15px;">טוען מכשירים...</p>
+    </div>
+
+    <!-- Header -->
+    <header class="app-header">
+        <button class="logout-btn" onclick="logout()">יציאה</button>
+        <div class="app-title">בקרת חניון</div>
+        <div class="parking-status">
+            <span id="parkingName">...</span>
+            <div id="connectionDot" class="status-dot"></div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <div id="deviceList" class="device-list">
+            <!-- Devices will be injected here -->
+        </div>
+
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-icon">📱</div>
+            <h3>אין מכשירים זמינים</h3>
+            <p>לא נמצאו מכשירים המוגדרים למשתמש זה.</p>
+        </div>
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Scripts -->
+    <script src="/static/js/mobile-parking-controller.js"></script>
+    <script>
+        const controller = new MobileParkingController();
+        const deviceListEl = document.getElementById('deviceList');
+        const emptyStateEl = document.getElementById('emptyState');
+        const loadingScreenEl = document.getElementById('loadingScreen');
+        const connectionDotEl = document.getElementById('connectionDot');
+        const parkingNameEl = document.getElementById('parkingName');
+        let currentToastTimeout = null;
+
+        // Initial Load
+        window.addEventListener('DOMContentLoaded', async () => {
+            const success = await controller.init();
+
+            // Update Header Info
+            const userInfo = await controller.getUserInfo();
+            if (userInfo) {
+                parkingNameEl.textContent = userInfo.parking_name || 'חניון';
+            }
+
+            renderDevices();
+
+            // Listen for status changes
+            window.addEventListener('connectionStatusChanged', (e) => {
+                connectionDotEl.className = `status-dot ${e.detail.connected ? 'online' : 'offline'}`;
+            });
+
+            // Start polling (UI specific) - controller handles data polling, we can just listen to changes?
+            // Since controller.devices is a simple array, we rely on controller polling logic.
+            // Currently controller has loadDevices() but doesn't auto-notify.
+            // We will hook into the poll manually for now.
+            setInterval(async () => {
+                await controller.loadDevices(); // Force reload using internal method
+                renderDevices();
+            }, 3000);
+
+            loadingScreenEl.style.display = 'none';
+        });
+
+        function renderDevices() {
+            const devices = controller.devices || [];
+
+            if (devices.length === 0) {
+                deviceListEl.style.display = 'none';
+                emptyStateEl.style.display = 'block';
+                return;
+            }
+
+            deviceListEl.style.display = 'grid';
+            emptyStateEl.style.display = 'none';
+
+            // Rebuild list (simple approach)
+            // Ideally should diff
+            const html = devices.map(device => {
+                const isEntry = device.type === 'entry';
+                const isExit = device.type === 'exit';
+                const isPass = device.type === 'pass';
+                const icon = isEntry ? '➡️' : (isExit ? '⬅️' : '↔️');
+                const iconClass = isEntry ? 'entry' : (isExit ? 'exit' : 'pass');
+
+                const isOpen = device.barrier === 'open';
+                const statusText = isOpen ? 'פתוח' : 'סגור';
+                const statusClass = isOpen ? 'open' : 'closed';
+
+                return `
+                <div class="device-card" id="device-${device.number}">
+                    <div class="device-header">
+                        <div class="device-info">
+                            <div class="device-icon ${iconClass}">${icon}</div>
+                            <div>
+                                <div class="device-name">${device.name || `מכשיר ${device.number}`}</div>
+                                <div style="font-size: 0.8rem; color: #666;">${device.type === 'entry' ? 'כניסה' : (device.type === 'exit' ? 'יציאה' : 'מעבר')}</div>
+                            </div>
+                        </div>
+                        <div class="device-status-badge ${statusClass}">
+                            ${statusText}
+                        </div>
+                    </div>
+                    <div class="device-actions">
+                        <button class="action-btn btn-open" onclick="handleCommand('open', ${device.number})">
+                            � פתח
+                        </button>
+                        <button class="action-btn btn-close" onclick="handleCommand('close', ${device.number})">
+                            🔒 סגור
+                        </button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            // Only update DOM if changed (prevents flickering input/scroll)
+            if (deviceListEl.innerHTML !== html) {
+                deviceListEl.innerHTML = html;
+            }
+        }
+
+        async function handleCommand(cmd, deviceNum) {
+            // Find button to show loading
+            const cardEl = document.getElementById(`device-${deviceNum}`);
+            const btn = cmd === 'open' ? cardEl.querySelector('.btn-open') : cardEl.querySelector('.btn-close');
+
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+            }
+
+            try {
+                const result = await controller.executeCommand(cmd, deviceNum);
+                if (result.success) {
+                    showToast('✅ פקודה בוצעה', 'success');
+                } else {
+                    showToast('❌ שגיאה: ' + result.message, 'error');
+                }
+            } catch (err) {
+                showToast('❌ שגיאה בתקשורת', 'error');
+            } finally {
+                // Determine logic: reload immediately ?
+                // The controller usually returns new state or we poll it.
+                // We'll let the next poll cycle update the UI for 100% truth.
+                // Or force load:
+                await controller.loadDevices();
+                renderDevices(); // Should re-enable button and update state
+            }
+        }
+
+        function showToast(msg, type) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.background = type === 'success' ? 'var(--success-color)' : 'var(--danger-color)';
+            toast.style.display = 'block';
+
+            if (currentToastTimeout) clearTimeout(currentToastTimeout);
+            currentToastTimeout = setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+
+        function logout() {
+            if (confirm('לצאת?')) location.href = '/logout';
+        }
+    </script>
+</body>
+
+</html>
