@@ -4178,9 +4178,9 @@ def get_contract_pooling():
         if geom_resp.status_code == 200:
             import xml.etree.ElementTree as ET
             g_root = ET.fromstring(geom_resp.content)
-            for f in g_root.findall('.//ns:facility', {'ns': 'http://interfaces.dcss.sidata.at/devicecontrol'}):
-                f_id = f.findtext('ns:id', default='', namespaces={'ns': 'http://interfaces.dcss.sidata.at/devicecontrol'})
-                f_name = f.findtext('ns:name', default='', namespaces={'ns': 'http://interfaces.dcss.sidata.at/devicecontrol'})
+            for f in g_root.iter('facility'):
+                f_id = f.findtext('number')
+                f_name = f.findtext('name')
                 if f_id: facility_names[f_id] = f_name
                 
         # Get Profile names
@@ -4190,9 +4190,10 @@ def get_contract_pooling():
         if prof_resp.status_code == 200:
             import xml.etree.ElementTree as ET
             p_root = ET.fromstring(prof_resp.content)
-            for p in p_root.findall('.//ns:profile', {'ns': 'http://interfaces.dcss.sidata.at/customermedia'}):
-                p_id = p.findtext('ns:id', default='', namespaces={'ns': 'http://interfaces.dcss.sidata.at/customermedia'})
-                p_name = p.findtext('ns:name', default='', namespaces={'ns': 'http://interfaces.dcss.sidata.at/customermedia'})
+            ns_prof = {'ns': 'http://gsph.sub.com/cust/types'}
+            for p in p_root.findall('.//ns:usageProfile', ns_prof):
+                p_id = p.findtext('ns:id', default='', namespaces=ns_prof)
+                p_name = p.findtext('ns:name', default='', namespaces=ns_prof)
                 if p_id: profile_names[p_id] = p_name
 
         # Get Pooling Details
@@ -4203,17 +4204,18 @@ def get_contract_pooling():
             return jsonify({'success': False, 'message': 'Failed to fetch contract details'})
             
         import xml.etree.ElementTree as ET
-        ns = {'ns': 'http://interfaces.dcss.sidata.at/customermedia'}
+        ns_cust = {'ns': 'http://gsph.sub.com/cust/types'}
         c_root = ET.fromstring(detail_resp.content)
-        pooling_node = c_root.find('.//ns:pooling', ns)
+        pooling_node = c_root.find('.//ns:pooling', ns_cust)
         
         data = []
         if pooling_node is not None:
-            for detail in pooling_node.findall('ns:poolingDetail', ns):
-                f_id = detail.findtext('ns:facility', default='0', namespaces=ns)
-                p_id = detail.findtext('ns:extCardProfile', default='0', namespaces=ns)
-                max_c = detail.findtext('ns:maxCounter', default='0', namespaces=ns)
-                pres_c = detail.findtext('ns:presentCounter', default='0', namespaces=ns)
+            for detail in pooling_node.findall('ns:poolingDetail', ns_cust):
+                f_id = detail.findtext('ns:facility', default='0', namespaces=ns_cust)
+                p_id = detail.findtext('ns:poolingProfile', default='-1', namespaces=ns_cust)
+                if p_id == '-1': p_id = '0'
+                max_c = detail.findtext('ns:maxCounter', default='0', namespaces=ns_cust)
+                pres_c = detail.findtext('ns:presentCounter', default='0', namespaces=ns_cust)
                 
                 data.append({
                     'facilityId': f_id,
@@ -4269,19 +4271,20 @@ def update_contract_pooling():
             return jsonify({'success': False, 'message': 'Failed to fetch contract details'})
             
         import xml.etree.ElementTree as ET
-        ns = {'ns': 'http://interfaces.dcss.sidata.at/customermedia'}
+        ns_cust = {'ns': 'http://gsph.sub.com/cust/types'}
         c_root = ET.fromstring(detail_resp.content)
-        pooling_node = c_root.find('.//ns:pooling', ns)
+        pooling_node = c_root.find('.//ns:pooling', ns_cust)
         
         if pooling_node is None:
             return jsonify({'success': False, 'message': 'No pooling data found'})
             
         # Parse current state
         current_state = {}
-        for detail in pooling_node.findall('ns:poolingDetail', ns):
-            f = detail.findtext('ns:facility', default='0', namespaces=ns)
-            p = detail.findtext('ns:extCardProfile', default='0', namespaces=ns)
-            m = int(detail.findtext('ns:maxCounter', default='0', namespaces=ns))
+        for detail in pooling_node.findall('ns:poolingDetail', ns_cust):
+            f = detail.findtext('ns:facility', default='0', namespaces=ns_cust)
+            p = detail.findtext('ns:poolingProfile', default='-1', namespaces=ns_cust)
+            if p == '-1': p = '0'
+            m = int(detail.findtext('ns:maxCounter', default='0', namespaces=ns_cust))
             current_state[(f, p)] = m
             
         # Apply updates to memory for validation
@@ -4302,15 +4305,17 @@ def update_contract_pooling():
              return jsonify({'success': False, 'message': f'הסכום של החניונים ({fac_sum_prof0}) חורג מהמקסימום המותר ({global_max})!'})
              
         # Apply updates to XML
-        for detail in pooling_node.findall('ns:poolingDetail', ns):
-            f = detail.findtext('ns:facility', default='0', namespaces=ns)
-            p = detail.findtext('ns:extCardProfile', default='0', namespaces=ns)
+        for detail in pooling_node.findall('ns:poolingDetail', ns_cust):
+            f = detail.findtext('ns:facility', default='0', namespaces=ns_cust)
+            p = detail.findtext('ns:poolingProfile', default='-1', namespaces=ns_cust)
+            if p == '-1': p = '0'
             for up in updates:
                 if str(up.get('facilityId')) == f and str(up.get('profileId')) == p:
-                    max_c = detail.find('ns:maxCounter', ns)
+                    max_c = detail.find('ns:maxCounter', ns_cust)
                     if max_c is not None:
                         max_c.text = str(up.get('maxCounter'))
                         
+        ET.register_namespace('', 'http://gsph.sub.com/cust/types')
         xml_payload = ET.tostring(c_root, encoding='utf-8', method='xml')
         
         put_resp = requests.put(detail_url, data=xml_payload, headers=headers, verify=False, timeout=10)
