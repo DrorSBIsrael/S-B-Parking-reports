@@ -1212,8 +1212,18 @@
                 return 0;
             });
             
+            let lastFacilityWasZero = null;
+
             currentPoolingData.forEach((row, index) => {
                 const isReadOnly = (row.facilityId === '0' && row.profileId === '0');
+                
+                if (lastFacilityWasZero === true && row.facilityId !== '0') {
+                    const spacer = document.createElement('tr');
+                    spacer.innerHTML = '<td colspan="4" style="height: 25px; border-bottom: 1px solid #dee2e6; background-color: transparent;"></td>';
+                    tbody.appendChild(spacer);
+                }
+                lastFacilityWasZero = (row.facilityId === '0');
+
                 const tr = document.createElement('tr');
                 if (isReadOnly) {
                     tr.style.backgroundColor = '#e9ecef';
@@ -1224,9 +1234,21 @@
                     ? `<span>${row.maxCounter}</span>` 
                     : `<input type="number" min="0" value="${row.maxCounter}" class="pooling-input" data-index="${index}" style="width: 80px; padding: 4px; text-align: center;" onchange="validatePoolingInputs()">`;
                 
+                let displayNameFacility = `${row.facilityName} <small style="color: gray;">(${row.facilityId})</small>`;
+                let displayNameProfile = `${row.profileName} <small style="color: gray;">(${row.profileId})</small>`;
+
+                if (row.facilityId === '0' && row.profileId === '0') {
+                    displayNameFacility = `חניון ראשי`;
+                    displayNameProfile = `מכסה כללית לחברה`;
+                } else if (row.facilityId === '0' && row.profileId !== '0') {
+                    displayNameFacility = `פרופיל`;
+                } else if (row.facilityId !== '0' && row.profileId === '0') {
+                    displayNameProfile = `חניון`;
+                }
+
                 tr.innerHTML = `
-                    <td>${row.facilityName} <small style="color: gray;">(${row.facilityId})</small></td>
-                    <td>${row.profileName} <small style="color: gray;">(${row.profileId})</small></td>
+                    <td>${displayNameFacility}</td>
+                    <td>${displayNameProfile}</td>
                     <td style="font-weight: bold; ${row.presentCounter > row.maxCounter ? 'color: red;' : ''}">${row.presentCounter}</td>
                     <td>${maxInput}</td>
                 `;
