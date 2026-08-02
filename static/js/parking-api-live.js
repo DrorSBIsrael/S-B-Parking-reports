@@ -571,18 +571,11 @@ class ParkingAPIXML {
                             allUpdated = [...allUpdated, ...batchResults];
                             
                             // DO NOT call callbacks.onProgress to avoid blocking the UI with loading screens
+                            // DO NOT call callbacks.onDetailLoaded to avoid freezing the browser with 2000 DOM updates
                             
-                            // Update only the changed items in the UI silently
-                            batchResults.forEach((updated, idx) => {
-                                const originalIndex = i + idx;
-                                if (callbacks.onDetailLoaded) {
-                                    callbacks.onDetailLoaded(updated, originalIndex);
-                                }
-                            });
-                            
-                            // Small delay between batches to let UI breathe
+                            // Larger delay between batches to let browser breathe completely
                             if (i + BATCH_SIZE < basicSubscribers.length) {
-                                await new Promise(resolve => setTimeout(resolve, 200));
+                                await new Promise(resolve => setTimeout(resolve, 800));
                             }
                         }
                         
@@ -597,6 +590,11 @@ class ParkingAPIXML {
                             console.log('Background loading finished and saved to cache for company ' + companyId);
                         } catch(e) {
                             console.warn('Could not save to localStorage, might be full or disabled');
+                        }
+                        
+                        // Only when fully done - update the UI once to show all details
+                        if (callbacks.onBasicLoaded) {
+                            callbacks.onBasicLoaded(basicSubscribers);
                         }
                     } else {
                         // Should not reach here with current strategy
