@@ -32,6 +32,27 @@ class ParkingUIIntegrationXML {
             this.setupSorting();
         }
     }
+    
+    _syncCache() {
+        if (!this.currentContract || !this.currentContract.id) return;
+        try {
+            const cacheKey = 'skidata_cache_company_' + this.currentContract.id;
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                const parsedData = JSON.parse(cached);
+                // כאן מגדירים לכמה ימים הזיכרון נחשב תקין כדי להרשות לעדכן אותו
+                const CACHE_VALID_DAYS = 5; 
+                const cacheAgeMs = Date.now() - (parsedData.timestamp || 0);
+                const isCacheValid = cacheAgeMs < (CACHE_VALID_DAYS * 24 * 60 * 60 * 1000);
+                
+                if (parsedData && isCacheValid) {
+                    parsedData.subscribers = this.subscribers;
+                    localStorage.setItem(cacheKey, JSON.stringify(parsedData));
+                    console.log('Synchronized local cache with UI state');
+                }
+            }
+        } catch(e) {}
+    }
 
     /**
      * Setup filter listeners
@@ -2605,6 +2626,7 @@ class ParkingUIIntegrationXML {
 
                         // CRITICAL: Actually update the subscriber in the array!
                         this.subscribers[index] = updatedSubscriber;
+                        this._syncCache();
 
                         // Updated subscriber in array
 
@@ -2638,6 +2660,7 @@ class ParkingUIIntegrationXML {
 
                     // Add to subscribers array
                     this.subscribers.push(newSubscriber);
+                    this._syncCache();
 
                     // Add only the new row instead of re-displaying the entire table
                     const tbody = document.querySelector('#subscribersTable tbody');
@@ -2779,7 +2802,10 @@ class ParkingUIIntegrationXML {
 
             if (result.success) {
                 this.showNotification('המנוי נמחק בהצלחה', 'success');
-                await this.loadSubscribers(); // Refresh the list
+                // Remove from local array and update cache
+                this.subscribers = this.subscribers.filter(s => String(s.subscriberNum) !== String(subscriberId) && String(s.id) !== String(subscriberId));
+                this._syncCache();
+                this.displaySubscribers(this.subscribers);
             } else {
                 this.showNotification('שגיאה במחיקת המנוי', 'error');
             }
