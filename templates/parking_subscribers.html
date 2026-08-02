@@ -13,10 +13,10 @@
             --danger-color: #dc3545;
             --warning-color: #ffc107;
             --info-color: #17a2b8;
-            --light-bg: #f8f9fa;
-            --dark-text: #2c3e50;
-            --border-color: #dee2e6;
-            --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            --light-bg: #2a2a2a;
+            --dark-text: #e0e0e0;
+            --border-color: #444444;
+            --shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
         }
 
         * {
@@ -27,7 +27,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            background: #000000;
             min-height: 100vh;
             direction: rtl;
             font-size: 13px;
@@ -59,7 +59,7 @@
 
         /* Header Section */
         .header {
-            background: white;
+            background: #1e1e1e;
             padding: 20px;
             border-radius: 12px;
             box-shadow: var(--shadow);
@@ -72,11 +72,11 @@
         }
 
         .header h1 {
-            color: var(--dark-text);
+            color: #ffffff;
             font-size: 1.75em;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 15px;
         }
 
         .header-controls {
@@ -208,28 +208,33 @@
         }
 
         .action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-4px) !important;
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3) !important;
+            filter: brightness(1.15) !important;
         }
 
-        .action-btn.btn-success {
-            background: #28a745 !important;
-            color: white !important;
+        /* Utility Buttons (Neutral Dark) */
+        .action-btn.utility-btn {
+            background: #2b2b2b !important;
+            color: #e2e8f0 !important;
+            border: 1px solid #444444 !important;
         }
 
-        .action-btn.btn-warning {
-            background: #ffc107 !important;
-            color: #212529 !important;
+        /* Primary Actions (Outline / Accent) */
+        .action-btn.primary-btn {
+            background: rgba(40, 167, 69, 0.15) !important;
+            color: #4ade80 !important;
+            border: 1px solid rgba(40, 167, 69, 0.5) !important;
         }
 
-        .action-btn.btn-primary {
-            background: #007bff !important;
-            color: white !important;
+        .action-btn.primary-btn.guest-btn {
+            background: rgba(255, 193, 7, 0.15) !important;
+            color: #fbbf24 !important;
+            border: 1px solid rgba(255, 193, 7, 0.5) !important;
         }
 
-        .action-btn.btn-info {
-            background: #17a2b8 !important;
-            color: white !important;
+        .action-btn svg {
+            margin-left: 6px;
         }
 
         .btn-warning {
@@ -244,7 +249,7 @@
 
         /* Company Selection */
         .company-selector {
-            background: white;
+            background: #1e1e1e;
             padding: 20px;
             border-radius: 12px;
             box-shadow: var(--shadow);
@@ -259,25 +264,28 @@
         }
 
         .company-card:hover {
-            border-color: var(--primary-color);
+            background: #252b3b;
             transform: translateY(-2px);
-            box-shadow: var(--shadow);
+            border-color: #4a5568;
         }
 
         .company-card.selected {
-            background: var(--primary-color);
-            color: white;
+            background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%);
+            border: 2px solid #63b3ed;
+            box-shadow: 0 4px 14px rgba(49, 130, 206, 0.35);
+            color: #ffffff;
+        }
+
+        .company-card.selected h3,
+        .company-card.selected .stat-value,
+        .company-card.selected .stat-label,
+        .company-card.selected .facility-item,
+        .company-card.selected .company-number {
+            color: #ffffff !important;
         }
 
         .company-card.selected .company-number {
             background: rgba(255, 255, 255, 0.2);
-            color: white;
-        }
-
-        .company-card.selected .stat-label,
-        .company-card.selected .stat-value,
-        .company-card.selected .facility-item {
-            color: white;
         }
 
         .company-card p {
@@ -287,7 +295,7 @@
 
         /* Main Content Area */
         .main-content {
-            background: white;
+            background: #1e1e1e;
             padding: 25px;
             border-radius: 12px;
             box-shadow: var(--shadow);
@@ -306,8 +314,6 @@
         .section-title {
             color: var(--dark-text);
             font-size: 1.5em;
-            border-bottom: 2px solid var(--primary-color);
-            padding-bottom: 5px;
         }
 
         /* Search and Filter */
@@ -322,17 +328,32 @@
             flex: 1;
             min-width: 200px;
             padding: 10px 15px;
-            border: 1px solid var(--border-color);
+            border: 1px solid #444444;
             border-radius: 6px;
             font-size: 0.95em;
+            background: #2b2b2b;
+            color: #ffffff;
+        }
+
+        .search-box::placeholder {
+            color: #aaaaaa;
         }
 
         .filter-select {
             padding: 10px 15px;
-            border: 1px solid var(--border-color);
+            padding-left: 35px;
+            border: 1px solid #444444;
             border-radius: 6px;
             font-size: 0.95em;
             min-width: 150px;
+            background: #2b2b2b;
+            color: #ffffff;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: left 12px center;
+            background-size: 12px auto;
         }
 
         /* Subscribers Table */
@@ -346,15 +367,39 @@
             width: 100%;
             border-collapse: collapse;
             min-width: 1000px;
+            font-family: 'Rubik', 'Assistant', 'Segoe UI', system-ui, sans-serif;
+            font-size: 15px;
         }
 
-        .subscribers-table th,
-        .subscribers-table td {
-            padding: 10px 8px;
+        .subscribers-table th {
+            padding: 14px 12px;
             text-align: right;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 2px solid #555555;
+            background: #2d2d2d;
+            font-weight: bold;
+            color: #e2e8f0;
+            font-size: 1.05em;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .subscribers-table td {
+            padding: 14px 12px;
+            text-align: right;
+            border-bottom: 1px solid #333333;
+            color: #ffffff;
             white-space: nowrap;
-            font-size: inherit;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+
+        .subscribers-table tr:nth-child(odd) td {
+            background: #1e1e1e;
+        }
+
+        .subscribers-table tr:nth-child(even) td {
+            background: #252525;
         }
 
         body[lang="en"] .subscribers-table th,
@@ -362,22 +407,13 @@
             text-align: left;
         }
 
-        .subscribers-table th {
-            background: var(--light-bg);
-            font-weight: 600;
-            color: var(--dark-text);
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
         .subscribers-table tr:hover {
-            background: #f0f0f0;
+            background: #333333;
             cursor: pointer;
         }
 
         .subscribers-table tr.selected {
-            background: #e7f3ff;
+            background: #444444;
         }
 
         .tag-badge {
@@ -445,7 +481,7 @@
         }
 
         .modal-content {
-            background: white;
+            background: #1e1e1e;
             padding: 25px;
             border-radius: 12px;
             max-width: 600px;
@@ -479,8 +515,8 @@
             gap: 15px;
             padding: 15px 20px;
             margin-bottom: 20px;
-            border-bottom: 2px solid #e0e0e0;
-            background: #f8f9fa;
+            border-bottom: 2px solid var(--border-color);
+            background: #2a2a2a;
             margin-left: -25px;
             margin-right: -25px;
             position: sticky;
@@ -536,16 +572,28 @@
         .form-group select {
             width: 100%;
             padding: 10px;
-            border: 1px solid var(--border-color);
+            border: 1px solid #444444;
             border-radius: 6px;
-            font-size: 0.95em;
+            background: #2b2b2b;
+            color: #ffffff;
+        }
+
+        .form-group select {
+            padding-left: 35px;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: left 12px center;
+            background-size: 12px auto;
         }
 
         select:disabled {
-            background-color: #f0f0f0;
+            background-color: #333333;
             color: #888;
             cursor: not-allowed;
             opacity: 0.8;
+            border-color: #555555;
         }
 
         .form-group input:focus,
@@ -556,8 +604,11 @@
         }
 
         .form-group input[readonly] {
-            background: var(--light-bg);
+            background: #333333;
             cursor: not-allowed;
+            color: #888;
+            border-color: #555555;
+        }
         }
 
         .form-actions {
@@ -594,27 +645,153 @@
             }
         }
 
-        /* Accessibility Features */
-        .accessibility-panel {
-            display: none;
-            position: fixed;
-            top: 100px;
-            right: 20px;
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            z-index: 999;
-            min-width: 250px;
+        /* Font Size Slider Styles */
+        .font-size-container {
+            background: #4a5568;
+            border: 1px solid #444;
+        }
+        .font-size-label {
+            color: #ffffff;
+        }
+        /* Light Mode Theme Overrides */
+        body.light-mode {
+            background-color: #f4f7fa;
+            color: #333333;
         }
 
-        body[lang="en"] .accessibility-panel {
-            right: auto;
-            left: 20px;
+        body.light-mode .font-size-container {
+            background: #e2e8f0;
+            border-color: #cbd5e0;
+        }
+        
+        body.light-mode .font-size-label {
+            color: #1a202c;
         }
 
-        .accessibility-panel.show {
-            display: block;
+        body.light-mode .header {
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        body.light-mode .header h1, body.light-mode .section-title {
+            color: #2c3e50;
+        }
+
+        body.light-mode .user-info {
+            background: #f0f4f8 !important;
+            border: 1px solid #d1d9e6 !important;
+            color: #333 !important;
+        }
+        
+        body.light-mode .user-info span {
+            color: #333 !important;
+        }
+
+        body.light-mode .company-selector, body.light-mode .main-content, body.light-mode .table-container {
+            background: #ffffff !important;
+            border: 1px solid #e0e0e0 !important;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05) !important;
+        }
+
+        body.light-mode .subscribers-table {
+            background: #ffffff !important;
+        }
+
+        body.light-mode .subscribers-table th {
+            background: #e2e8f0 !important;
+            color: #1a202c !important;
+            border-bottom: 2px solid #cbd5e0 !important;
+            font-weight: bold !important;
+        }
+
+        body.light-mode .subscribers-table td {
+            color: #1a202c !important;
+            background: #ffffff !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+        }
+
+        body.light-mode .subscribers-table tr,
+        body.light-mode .subscribers-table tr:nth-child(odd) {
+            background-color: #ffffff !important;
+        }
+
+        body.light-mode .subscribers-table tr:nth-child(even),
+        body.light-mode .subscribers-table tr:nth-child(even) td {
+            background-color: #f8f9fa !important;
+        }
+
+        body.light-mode .subscribers-table tr:hover,
+        body.light-mode .subscribers-table tr:hover td {
+            background-color: #edf2f7 !important;
+        }
+
+        body.light-mode input.search-box, body.light-mode select.filter-select, body.light-mode input[type="text"], body.light-mode input[type="date"], body.light-mode input[type="number"], body.light-mode select {
+            background: #ffffff;
+            border: 1px solid #cbd5e0;
+            color: #2d3748;
+        }
+
+        body.light-mode select {
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%232d3748%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E") !important;
+        }
+
+        body.light-mode .form-group input[readonly],
+        body.light-mode select:disabled {
+            background: #e2e8f0;
+            color: #718096;
+            border-color: #cbd5e0;
+        }
+
+        body.light-mode .modal-content, body.light-mode .legal-modal-content {
+            background: #ffffff;
+            color: #333;
+        }
+
+        body.light-mode .modal-header, body.light-mode .legal-sidebar {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+        }
+
+        body.light-mode .legal-content-area {
+            background: #ffffff;
+            color: #333;
+        }
+
+        body.light-mode .legal-content-area h3 {
+            color: #2c3e50;
+            border-color: #e2e8f0;
+        }
+
+        body.light-mode .legal-tab {
+            color: #4a5568;
+        }
+
+        body.light-mode .legal-tab:hover {
+            background: #e2e8f0;
+            color: #1a202c;
+        }
+
+        body.light-mode .legal-tab.active {
+            background: #ffffff;
+            color: #3182ce;
+        }
+
+        body.light-mode .footer {
+            background: transparent;
+            border-top: none;
+        }
+
+        body.light-mode .footer .company {
+            color: #2d3748;
+        }
+
+        body.light-mode .footer .copyright, body.light-mode .footer .legal-links a {
+            color: #718096;
+        }
+
+        body.light-mode .footer .legal-links a:hover {
+            color: #2b6cb0;
         }
 
         .accessibility-panel h3 {
@@ -647,7 +824,9 @@
         }
 
         .toast {
-            background: white;
+            font-family: 'Rubik', 'Assistant', 'Segoe UI', system-ui, sans-serif;
+            background: #1e1e1e;
+            color: #ffffff;
             padding: 15px 20px;
             border-radius: 8px;
             box-shadow: var(--shadow);
@@ -759,15 +938,17 @@
 
         /* Enhanced Company Card Styles */
         .company-card {
-            background: var(--light-bg);
+            background: #1e2330;
             padding: 15px;
             border-radius: 8px;
-            border: 2px solid transparent;
+            border: 1px solid #3a4153;
             cursor: pointer;
             transition: all 0.3s;
             text-align: right;
             position: relative;
+            color: #e2e8f0;
         }
+
 
         .company-card .company-header {
             display: flex;
@@ -779,13 +960,13 @@
         .company-card h3 {
             font-size: 1.1em;
             margin: 0;
-            color: var(--dark-text);
+            color: #e2e8f0;
         }
 
         .company-card .company-number {
             font-size: 0.9em;
-            color: #666;
-            background: white;
+            color: #e2e8f0;
+            background: rgba(255, 255, 255, 0.1);
             padding: 2px 8px;
             border-radius: 4px;
         }
@@ -805,14 +986,14 @@
         }
 
         .company-card .stat-label {
-            color: #666;
+            color: #a0aec0;
             font-size: 0.85em;
             margin-bottom: 2px;
         }
 
         .company-card .stat-value {
-            font-weight: 600;
-            color: var(--dark-text);
+            font-weight: bold;
+            color: #e2e8f0;
             font-size: 1.1em;
         }
 
@@ -892,34 +1073,129 @@
         /* Footer styles */
         .footer {
             text-align: center;
-            padding: 30px 20px;
-            margin-top: 50px;
-            border-top: 2px solid #e0e0e0;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
-            color: #666;
-            font-size: 14px;
-        }
-
-        .footer .credit {
-            margin-top: 12px;
-            font-size: 16px;
-            color: #333;
+            padding: 15px 10px;
+            margin-top: 15px;
+            background: transparent;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
         .footer .company {
-            font-weight: 600;
-            color: #444;
-            font-size: 15px;
-            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #a0aec0;
+            opacity: 0.8;
+            margin-bottom: 2px;
+        }
+
+        .footer .copyright {
+            font-size: 12px;
+            color: #718096;
+            opacity: 0.7;
+            margin: 4px 0;
         }
 
         .footer .developer {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 700;
-            font-size: 17px;
+            font-size: 13px;
+            color: #a0aec0;
+            opacity: 0.9;
+            font-style: italic;
+        }
+
+        /* Legal Modal */
+        .legal-modal-content {
+            max-width: 850px !important;
+            padding: 0 !important;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #1e1e1e;
+        }
+        .legal-modal-content .modal-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #333;
+            margin-bottom: 0;
+            background: #222;
+        }
+        .legal-modal-body {
+            display: flex;
+            height: 450px;
+        }
+        .legal-sidebar {
+            width: 250px;
+            background: #1a1a1a;
+            border-left: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+        }
+        body[lang="en"] .legal-sidebar, body[lang="ru"] .legal-sidebar {
+            border-left: none;
+            border-right: 1px solid #333;
+        }
+        .legal-tab {
+            padding: 18px 20px;
+            text-align: right;
+            background: none;
+            border: none;
+            color: #a0aec0;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-right: 4px solid transparent;
+        }
+        body[lang="en"] .legal-tab, body[lang="ru"] .legal-tab {
+            text-align: left;
+            border-right: none;
+            border-left: 4px solid transparent;
+        }
+        .legal-tab:hover {
+            background: #252525;
+            color: #fff;
+        }
+        .legal-tab.active {
+            background: #2a2a2a;
+            color: #66b2ff;
+            border-right-color: #66b2ff;
+            font-weight: 600;
+        }
+        body[lang="en"] .legal-tab.active, body[lang="ru"] .legal-tab.active {
+            border-right-color: transparent;
+            border-left-color: #66b2ff;
+        }
+        .legal-content-area {
+            flex-grow: 1;
+            padding: 30px;
+            overflow-y: auto;
+            color: #e2e8f0;
+            line-height: 1.8;
+            font-size: 15px;
+            text-align: right;
+        }
+        body[lang="en"] .legal-content-area, body[lang="ru"] .legal-content-area {
+            text-align: left;
+        }
+        .legal-content-area h3 {
+            color: #fff;
+            margin-bottom: 20px;
+            font-size: 20px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        .footer .legal-links {
+            margin: 8px 0;
+            font-size: 13px;
+            color: #a0aec0;
+        }
+        .footer .legal-links a {
+            color: #a0aec0;
+            text-decoration: none;
+            transition: color 0.2s;
+            margin: 0 6px;
+        }
+        .footer .legal-links a:hover {
+            color: #ffffff;
         }
 
         /* Hover Loading Styles for Advanced Features */
@@ -929,7 +1205,7 @@
         }
 
         tr[data-hover-loadable="true"]::after {
-            content: "⏳";
+            content: "";
             position: absolute;
             right: 10px;
             top: 50%;
@@ -966,7 +1242,7 @@
         }
 
         .large-company-indicator::before {
-            content: "⚠️ ";
+            content: "";
             margin-left: 5px;
         }
 
@@ -1021,67 +1297,41 @@
         <!-- Header -->
         <div class="header">
             <h1>
-                <span>🅿️</span>
-                <span data-translate="title">מערכת ניהול מנויי חניון</span>
-                <br>
-                <span style="font-size: 0.7em; font-weight: normal; ">מבית שיידט את בכמן ישראל</span>
+                <span data-translate="title">מערכת לניהול מנויי חניון</span>
+                <img src="./logo.png" alt="לוגו" style="height: 48px; object-fit: contain;">
             </h1>
             <div class="header-controls">
                 <div class="user-info"
-                    style="padding: 5px 10px; background: var(--light-bg); border-radius: 6px; margin-right: 10px;">
-                    <span>👤 <span id="currentUsername">טוען...</span></span>
-                    <span style="margin: 0 10px;">|</span>
-                    <span id="userRole">מנהל חברה</span>
-                    <span style="margin: 0 10px;">|</span>
-                    <button class="btn btn-danger" onclick="logout()"
-                        style="background: #dc3545; color: white; padding: 5px 10px; border-radius: 6px;">
-                        🚪 התנתק
+                    style="display: flex; align-items: center; padding: 5px 10px; background: #2d2d2d; border-radius: 6px; margin-right: 10px; border: 1px solid #444444; color: #ffffff; font-weight: 500;"
+                    title="משתמש מחובר: חניון מרכזי - תמיר | תפקיד: מנהל מערכת">
+                    <span id="userRole" style="color: #ffffff;">מנהל חברה</span>
+                    <span style="margin: 0 10px; color: #ffffff;">|</span>
+                    <span style="color: #ffffff;"><span id="currentUsername">טוען...</span></span>
+                </div>
+                <div class="theme-toggle-container" style="display: flex; align-items: center;">
+                    <button class="btn btn-secondary" onclick="toggleTheme()" title="החלף מצב תצוגה" style="background: transparent; border: 1px solid #444; color: inherit; font-size: 18px; padding: 4px 8px; border-radius: 6px; cursor: pointer;">
+                        🌓
                     </button>
                 </div>
-                <div style="display: flex; gap: 5px;">
-                    <button onclick="adjustFontSize(-1)" class="btn btn-secondary btn-sm" title="הקטן פונט"
-                        style="padding: 5px 10px;">A-</button>
-                    <button onclick="adjustFontSize(0)" class="btn btn-secondary btn-sm" title="גודל רגיל"
-                        style="padding: 5px 10px;">A</button>
-                    <button onclick="adjustFontSize(1)" class="btn btn-secondary btn-sm" title="הגדל פונט"
-                        style="padding: 5px 10px;">A+</button>
+                <div class="font-size-container" style="display: flex; align-items: center; gap: 8px; padding: 5px 15px; border-radius: 6px;">
+                    <span class="font-size-label" style="font-size: 12px; font-weight: bold;">A</span>
+                    <input type="range" id="fontSizeSlider" min="-2" max="5" step="1" value="0" oninput="adjustFontSizeSlider(this.value)" style="width: 80px; accent-color: var(--primary-color);">
+                    <span class="font-size-label" style="font-size: 18px; font-weight: bold;">A</span>
                 </div>
                 <div class="lang-switch">
-                    <button class="btn btn-secondary" onclick="toggleLanguage()">
-                        <span data-translate="lang">English</span>
+                    <select id="langSelect" class="filter-select" style="min-width: 100px; padding: 5px 10px;" onchange="setLanguage(this.value)">
+                        <option value="he">עברית</option>
+                        <option value="en">English</option>
+                        <option value="ar">العربية</option>
+                        <option value="ru">Русский</option>
+                    </select>
+                </div>
+                <div style="position: relative; display: inline-block;">
+                    <button class="btn btn-danger" onclick="logout()"
+                        style="background: #dc3545; color: white; padding: 5px 10px; border-radius: 6px; font-weight: normal; border: 1px solid #dc3545;">
+                        התנתק
                     </button>
                 </div>
-                <button class="btn btn-warning" onclick="toggleAccessibility()" title="נגישות">
-                    ♿ <span data-translate="accessibility">נגישות</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Accessibility Panel -->
-        <div class="accessibility-panel" id="accessibilityPanel">
-            <h3 data-translate="accessibilityOptions">אפשרויות נגישות</h3>
-            <div class="accessibility-option">
-                <label>
-                    <input type="checkbox" id="highContrast" onchange="toggleHighContrast()">
-                    <span data-translate="highContrast">ניגודיות גבוהה</span>
-                </label>
-            </div>
-            <div class="accessibility-option">
-                <label>
-                    <input type="checkbox" id="underlineLinks" onchange="toggleUnderlineLinks()">
-                    <span data-translate="underlineLinks">הדגשת קישורים</span>
-                </label>
-            </div>
-            <div class="accessibility-option">
-                <label>
-                    <input type="checkbox" id="focusHighlight" onchange="toggleFocusHighlight()">
-                    <span data-translate="focusHighlight">הדגשת פוקוס</span>
-                </label>
-            </div>
-            <div class="accessibility-option">
-                <button class="btn btn-primary" onclick="resetAccessibility()">
-                    <span data-translate="reset">איפוס</span>
-                </button>
             </div>
         </div>
 
@@ -1101,25 +1351,29 @@
                     <span id="companyName"></span>
                 </h2>
                 <div class="action-buttons">
-                    <button class="btn btn-success action-btn" onclick="addNewSubscriber()">
-                        <span data-translate="addNew">+ הוסף מנוי חדש</span>
+                    <button class="btn action-btn primary-btn" onclick="addNewSubscriber()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <span data-translate="addNew">הוסף מנוי חדש</span>
                     </button>
-                    <button class="btn btn-warning action-btn" onclick="addGuestSubscriber()">
-                        <span data-translate="addGuest">+ הוסף אורח</span>
+                    <button class="btn action-btn primary-btn guest-btn" onclick="addGuestSubscriber()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                        <span data-translate="addGuest">הוסף אורח</span>
                     </button>
-                    <button class="btn btn-info action-btn" onclick="openReportsModal()">
+                    <button class="btn action-btn utility-btn" onclick="openReportsModal()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                         <span data-translate="reports">עתידי</span>
                     </button>
-                    <button class="btn btn-primary action-btn" onclick="exportToExcel()">
-                        <span data-translate="export">📥 ייצוא לאקסל</span>
+                    <button class="btn action-btn utility-btn" onclick="exportToExcel()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        <span data-translate="export">ייצוא לאקסל</span>
                     </button>
-                    <button class="btn btn-secondary action-btn" onclick="refreshSubscribers()"
-                        title="רענן רשימת מנויים">
-                        <span>🔄 רענון</span>
+                    <button class="btn action-btn utility-btn" onclick="refreshSubscribers()" title="רענן רשימת מנויים">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                        <span>רענון</span>
                     </button>
-                    <button class="btn btn-secondary action-btn" id="reloadFullButton" onclick="reloadFullData()"
-                        style="display: none;">
-                        <span data-translate="reloadFull">🔄 טעינה מלאה</span>
+                    <button class="btn action-btn utility-btn" id="reloadFullButton" onclick="reloadFullData()" style="display: none;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                        <span data-translate="reloadFull">טעינה מלאה</span>
                     </button>
                 </div>
             </div>
@@ -1153,29 +1407,45 @@
                 <table class="subscribers-table" id="subscribersTable">
                     <thead>
                         <tr>
-                            <th data-translate="companyNum" data-sort="companyNum" class="sortable">מס' חברה <span
-                                    class="sort-icon">⇅</span></th>
-                            <th data-translate="companyName" data-sort="companyName" class="sortable">שם חברה <span
-                                    class="sort-icon">⇅</span></th>
-                            <th data-translate="subscriberNum" data-sort="subscriberNum" class="sortable">מס' מנוי <span
-                                    class="sort-icon">⇅</span></th>
-                            <th data-translate="firstName" data-sort="firstName" class="sortable">שם פרטי <span
-                                    class="sort-icon">⇅</span></th>
-                            <th data-translate="lastName" data-sort="lastName" class="sortable">שם משפחה <span
-                                    class="sort-icon">⇅</span></th>
-                            <th data-translate="tagNum" data-sort="tagNum" class="sortable">מס' תג <span
-                                    class="sort-icon">⇅</span></th>
-                            <th data-translate="vehicle1" data-sort="vehicle1" class="sortable">רכב 1 <span
-                                    class="sort-icon">⇅</span></th>
-                            <th data-translate="vehicle2">רכב 2</th>
-                            <th data-translate="vehicle3">רכב 3</th>
-                            <th data-translate="validUntil" data-sort="validUntil" class="sortable">בתוקף עד <span
-                                    class="sort-icon">⇅</span></th>
-                            <th data-translate="profile">פרופיל</th>
-                            <th data-translate="validFrom" data-sort="validFrom" class="sortable">תחילת תוקף <span
-                                    class="sort-icon">⇅</span></th>
-                            <th data-translate="presence" data-sort="presence" class="sortable">נוכחות <span
-                                    class="sort-icon">⇅</span></th>
+                            <th data-translate="companyNum" data-sort="companyNum" class="sortable">
+                                <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">מס' חברה <span class="sort-icon">⇅</span></div>
+                            </th>
+                            <th data-translate="companyName" data-sort="companyName" class="sortable">
+                                <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">שם חברה <span class="sort-icon">⇅</span></div>
+                            </th>
+                            <th data-translate="subscriberNum" data-sort="subscriberNum" class="sortable">
+                                <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">מס' מנוי <span class="sort-icon">⇅</span></div>
+                            </th>
+                            <th data-translate="firstName" data-sort="firstName" class="sortable">
+                                <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">שם פרטי <span class="sort-icon">⇅</span></div>
+                            </th>
+                            <th data-translate="lastName" data-sort="lastName" class="sortable">
+                                <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">שם משפחה <span class="sort-icon">⇅</span></div>
+                            </th>
+                            <th data-translate="tagNum" data-sort="tagNum" class="sortable">
+                                <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">מס' תג <span class="sort-icon">⇅</span></div>
+                            </th>
+                            <th data-translate="vehicle1" data-sort="vehicle1" class="sortable">
+                                <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">רכב 1 <span class="sort-icon">⇅</span></div>
+                            </th>
+                            <th data-translate="vehicle2">
+                                <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">רכב 2</div>
+                            </th>
+                            <th data-translate="vehicle3">
+                                <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">רכב 3</div>
+                            </th>
+                            <th data-translate="validUntil" data-sort="validUntil" class="sortable">
+                                <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">בתוקף עד <span class="sort-icon">⇅</span></div>
+                            </th>
+                            <th data-translate="profile">
+                                <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">פרופיל</div>
+                            </th>
+                            <th data-translate="validFrom" data-sort="validFrom" class="sortable">
+                                <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">תחילת תוקף <span class="sort-icon">⇅</span></div>
+                            </th>
+                            <th data-translate="presence" data-sort="presence" class="sortable">
+                                <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">נוכחות <span class="sort-icon">⇅</span></div>
+                            </th>
                         </tr>
                     </thead>
                     <tbody id="subscribersTableBody">
@@ -1193,40 +1463,19 @@
                     <button class="close-btn" onclick="closeModal()">&times;</button>
                 </div>
 
-                <!-- כפתורי פעולה למעלה -->
-                <div class="modal-actions-top" style="display: flex !important;">
-                    <button type="button" onclick="closeModal()" class="btn btn-secondary" id="cancelTopBtn"
-                        style="display: inline-flex !important; visibility: visible !important;">
-                        <span>❌</span>
-                        <span data-translate="cancel">ביטול</span>
-                    </button>
-                    <button type="button" onclick="saveSubscriber()" class="btn btn-primary" id="saveTopBtn"
-                        style="display: inline-flex !important; visibility: visible !important;">
-                        <span>💾</span>
-                        <span data-translate="save">שמור שינויים</span>
-                    </button>
-                </div>
-
                 <form id="editForm">
-                    <div style="color: #666; margin-bottom: 15px; font-size: 0.9em;">
-                        * שדות חובה: שם משפחה, תחילת תוקף, בתוקף עד
-                    </div>
-
 
                     <div class="form-group">
                         <label for="editCompanyNum" data-translate="companyNum">מספר חברה</label>
-                        <input type="text" id="editCompanyNum" readonly
-                            style="background-color: #f0f0f0; cursor: not-allowed;">
+                        <input type="text" id="editCompanyNum" readonly>
                     </div>
                     <div class="form-group">
                         <label for="editCompanyName" data-translate="companyName">שם חברה</label>
-                        <input type="text" id="editCompanyName" readonly
-                            style="background-color: #f0f0f0; cursor: not-allowed;">
+                        <input type="text" id="editCompanyName" readonly>
                     </div>
                     <div class="form-group">
                         <label for="editSubscriberNum" data-translate="subscriberNum">מספר מנוי</label>
-                        <input type="text" id="editSubscriberNum" readonly
-                            style="background-color: #f0f0f0; cursor: not-allowed;" placeholder="יוקצה אוטומטית">
+                        <input type="text" id="editSubscriberNum" readonly placeholder="יוקצה אוטומטית">
                         <small style="color: #666;">* המספר יוקצה אוטומטית ע"י השרת</small>
                     </div>
                     <div class="form-group">
@@ -1234,8 +1483,8 @@
                         <input type="text" id="editFirstName" placeholder="הכנס שם פרטי">
                     </div>
                     <div class="form-group">
-                        <label for="editLastName" data-translate="lastName">שם משפחה *</label>
-                        <input type="text" id="editLastName" placeholder="הכנס שם משפחה - שדה חובה" required>
+                        <label for="editLastName" data-translate="lastName">שם משפחה (חובה)</label>
+                        <input type="text" id="editLastName" placeholder="הכנס שם משפחה (חובה)" required>
                     </div>
                     <div class="form-group">
                         <label for="editTagNum" data-translate="tagNum">מספר תג</label>
@@ -1254,13 +1503,13 @@
                         <input type="text" id="editVehicle3" placeholder="מספר רכב (לדוגמה: 8020010)">
                     </div>
                     <div class="form-group">
-                        <label for="editValidFrom" data-translate="validFrom">תחילת תוקף *</label>
-                        <input type="text" id="editValidFrom" placeholder="DD/MM/YYYY (שדה חובה)" required>
+                        <label for="editValidFrom" data-translate="validFrom">תחילת תוקף (חובה)</label>
+                        <input type="text" id="editValidFrom" placeholder="DD/MM/YYYY (חובה)" required>
                         <small style="color: #666;">פורמט: יום/חודש/שנה</small>
                     </div>
                     <div class="form-group">
-                        <label for="editValidUntil" data-translate="validUntil">בתוקף עד *</label>
-                        <input type="text" id="editValidUntil" placeholder="DD/MM/YYYY שדה חובה (מקסימום 31/12/3035)"
+                        <label for="editValidUntil" data-translate="validUntil">בתוקף עד (חובה)</label>
+                        <input type="text" id="editValidUntil" placeholder="DD/MM/YYYY (חובה) (מקסימום 31/12/3035)"
                             required>
                         <small style="color: #666;">פורמט: יום/חודש/שנה • מקסימום: 31/12/3035</small>
                     </div>
@@ -1278,11 +1527,11 @@
                     </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" onclick="closeModal()">
-                            <span>❌</span>
+                            <span></span>
                             <span data-translate="cancel">ביטול</span>
                         </button>
                         <button type="submit" class="btn btn-primary">
-                            <span>💾</span>
+                            <span></span>
                             <span data-translate="save">שמור שינויים</span>
                         </button>
                     </div>
@@ -1294,7 +1543,7 @@
         <div class="modal" id="transactionsModal" style="display: none;">
             <div class="modal-content" style="max-width: 1200px; width: 90%;">
                 <div class="modal-header">
-                    <h2 class="modal-title">📊 תנועות מנוי</h2>
+                    <h2 class="modal-title">תנועות מנוי</h2>
                     <button class="close-btn" onclick="closeTransactionsModal()">&times;</button>
                 </div>
 
@@ -1309,7 +1558,7 @@
                     <label>עד</label>
                     <input type="date" id="transEndDate" style="margin: 0 10px; padding: 5px;">
                     <button class="btn btn-primary" onclick="loadTransactions()">טען תנועות</button>
-                    <button class="btn btn-secondary" onclick="exportTransactions()">📥 ייצא לאקסל</button>
+                    <button class="btn btn-secondary" onclick="exportTransactions()">ייצא לאקסל</button>
                 </div>
 
                 <div id="transactionsLoading" style="display: none; text-align: center; padding: 40px;">
@@ -1351,12 +1600,35 @@
 
         <!-- Footer -->
         <div class="footer">
-            <div class="company">שיידט את בכמן ישראל</div>
-            <div class="credit">
-                נוצר ע"י <span class="developer">דרור פרינץ @ AI</span>
+            <div class="company">Scheidt & Bachmann Israel</div>
+            <div class="copyright">Copyright © 2026 Scheidt & Bachmann Israel. All Rights Reserved.</div>
+            <div class="legal-links">
+                <a href="#" onclick="openLegalModal('terms'); return false;">תנאי שימוש</a> • 
+                <a href="#" onclick="openLegalModal('privacy'); return false;">מדיניות פרטיות</a> • 
+                <a href="#" onclick="openLegalModal('security'); return false;">אבטחת מידע</a> • 
+                <a href="#" onclick="openLegalModal('accessibility'); return false;">הצהרת נגישות</a>
             </div>
-            <div style="margin-top: 10px; font-size: 12px; color: #999;">
-                © 2025 כל הזכויות שמורות
+            <div class="developer">Developed by Dror Prince</div>
+        </div>
+
+        <!-- Legal Modal -->
+        <div class="modal" id="legalModal">
+            <div class="modal-content legal-modal-content">
+                <div class="modal-header">
+                    <h2 style="margin: 0;">תקנון ומדיניות</h2>
+                    <button class="btn btn-secondary" onclick="closeLegalModal()" style="min-width: unset; padding: 4px 10px; font-size: 20px; background: none; border: none; color: #fff;">×</button>
+                </div>
+                <div class="legal-modal-body">
+                    <div class="legal-sidebar">
+                        <button class="legal-tab active" onclick="switchLegalTab('terms')">תנאי שימוש</button>
+                        <button class="legal-tab" onclick="switchLegalTab('privacy')">מדיניות פרטיות</button>
+                        <button class="legal-tab" onclick="switchLegalTab('security')">מדיניות תוכנה ואבטחה</button>
+                        <button class="legal-tab" onclick="switchLegalTab('accessibility')">הצהרת נגישות</button>
+                    </div>
+                    <div class="legal-content-area" id="legalContentArea">
+                        <!-- Content goes here -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1365,62 +1637,9 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <script>
-        // Mock data for demonstration - updated for new server
-        const mockCompanies = [
-            { id: '1000', name: 'חברה 1000', subscribersCount: 45 },
-            { id: '2', name: 'חברה 2', subscribersCount: 120 },
-        ];
-
-        const mockSubscribers = [
-            {
-                companyNum: '1001',
-                companyName: '2222',
-                subscriberNum: '10001',
-                firstName: 'דוד',
-                lastName: 'כהן',
-                tagNum: '20001',
-                vehicle1: '1234567',
-                vehicle2: '9876543',
-                vehicle3: '',
-                validFrom: '2024-01-01',
-                validUntil: '2025-12-31',
-                profile: 'regular',
-                presence: true,
-                lastEntry: '2025-01-13 08:30'
-            },
-            {
-                companyNum: '1001',
-                companyName: '2222',
-                subscriberNum: '10002',
-                firstName: 'רחל',
-                lastName: 'לוי',
-                tagNum: '20002',
-                vehicle1: '5566677',
-                vehicle2: '',
-                vehicle3: '',
-                validFrom: '2024-06-01',
-                validUntil: '2025-06-30',
-                profile: 'vip',
-                presence: false,
-                lastEntry: '2025-01-12 17:45'
-            },
-            {
-                companyNum: '1001',
-                companyName: '2222',
-                subscriberNum: '10003',
-                firstName: 'משה',
-                lastName: 'פרץ',
-                tagNum: 'TAG003',
-                vehicle1: '1122233',
-                vehicle2: '4455566',
-                vehicle3: '7788899',
-                validFrom: '2024-09-15',
-                validUntil: '2025-09-15',
-                profile: 'disabled',
-                presence: true,
-                lastEntry: '2025-01-13 09:15'
-            }
-        ];
+        // Removed mock data for clean state
+        const mockCompanies = [];
+        const mockSubscribers = [];
 
         // Translation dictionary
         const translations = {
@@ -1437,8 +1656,8 @@
                 subscribers: 'מנויים',
                 addNew: '+ הוסף מנוי חדש',
                 addGuest: '+ הוסף אורח',
-                export: '📥 ייצוא לאקסל',
-                reloadFull: '🔄 טעינה מלאה',
+                export: 'ייצוא לאקסל',
+                reloadFull: 'טעינה מלאה',
                 searchPlaceholder: 'חיפוש לפי שם, מספר מנוי, מספר רכב...',
                 allPresence: 'הכל',
                 presentOnly: 'נוכחים בלבד',
@@ -1489,7 +1708,7 @@
                 subscribers: 'Subscribers',
                 addNew: '+ Add New Subscriber',
                 addGuest: '+ Add Guest',
-                export: '📥 Export to Excel',
+                export: 'Export to Excel',
                 searchPlaceholder: 'Search by name, subscriber number, vehicle number...',
                 allPresence: 'All',
                 presentOnly: 'Present Only',
@@ -1526,6 +1745,110 @@
                 present: 'Present',
                 absent: 'Absent',
                 subscribersText: 'subscribers'
+            },
+            ar: {
+                title: 'نظام إدارة مشتركي المواقف',
+                lang: 'العربية',
+                accessibility: 'سهولة الوصول',
+                accessibilityOptions: 'خيارات سهولة الوصول',
+                highContrast: 'تباين عالي',
+                underlineLinks: 'تسطير الروابط',
+                focusHighlight: 'إبراز التركيز',
+                reset: 'إعادة ضبط',
+                selectCompany: 'اختر الشركة',
+                subscribers: 'المشتركون',
+                addNew: '+ إضافة مشترك جديد',
+                addGuest: '+ إضافة ضيف',
+                export: 'تصدير إلى إكسل',
+                reloadFull: 'إعادة تحميل كاملة',
+                searchPlaceholder: 'البحث بالاسم، رقم المشترك، رقم المركبة...',
+                allPresence: 'الكل',
+                presentOnly: 'الحاضرون فقط',
+                absentOnly: 'الغائبون فقط',
+                allDates: 'كل التواريخ',
+                validOnly: 'صالح',
+                expiredOnly: 'منتهي الصلاحية',
+                expiring30: 'ينتهي خلال 30 يومًا',
+                expiring7: 'ينتهي خلال 7 أيام',
+                regular: 'عادي',
+                vip: 'VIP',
+                disabled: 'معاق',
+                loading: 'جاري تحميل البيانات...',
+                companyNum: 'رقم الشركة',
+                companyName: 'اسم الشركة',
+                subscriberNum: 'رقم المشترك',
+                firstName: 'الاسم الأول',
+                lastName: 'اسم العائلة',
+                tagNum: 'رقم العلامة',
+                vehicle1: 'مركبة 1',
+                vehicle2: 'مركبة 2',
+                vehicle3: 'مركبة 3',
+                validUntil: 'صالح حتى',
+                profile: 'الملف الشخصي',
+                validFrom: 'صالح من',
+                notes: 'ملاحظات',
+                email: 'البريد الإلكتروني',
+                ignorePresence: 'تجاهل التحقق من الحضور',
+                presence: 'الحضور',
+                lastEntry: 'آخر دخول',
+                editSubscriber: 'تعديل المشترك',
+                cancel: 'إلغاء',
+                save: 'حفظ',
+                present: 'حاضر',
+                absent: 'غائب',
+                subscribersText: 'مشتركين'
+            },
+            ru: {
+                title: 'Система управления абонентами парковки',
+                lang: 'Русский',
+                accessibility: 'Доступность',
+                accessibilityOptions: 'Параметры доступности',
+                highContrast: 'Высокий контраст',
+                underlineLinks: 'Подчеркивать ссылки',
+                focusHighlight: 'Выделять фокус',
+                reset: 'Сброс',
+                selectCompany: 'Выберите компанию',
+                subscribers: 'Абоненты',
+                addNew: '+ Добавить абонента',
+                addGuest: '+ Добавить гостя',
+                export: 'Экспорт в Excel',
+                reloadFull: 'Полная перезагрузка',
+                searchPlaceholder: 'Поиск по имени, номеру абонента, номеру автомобиля...',
+                allPresence: 'Все',
+                presentOnly: 'Только присутствующие',
+                absentOnly: 'Только отсутствующие',
+                allDates: 'Все даты',
+                validOnly: 'Действительные',
+                expiredOnly: 'Истекшие',
+                expiring30: 'Истекает через 30 дней',
+                expiring7: 'Истекает через 7 дней',
+                regular: 'Обычный',
+                vip: 'VIP',
+                disabled: 'Инвалид',
+                loading: 'Загрузка данных...',
+                companyNum: '№ компании',
+                companyName: 'Название компании',
+                subscriberNum: '№ абонента',
+                firstName: 'Имя',
+                lastName: 'Фамилия',
+                tagNum: '№ метки',
+                vehicle1: 'Автомобиль 1',
+                vehicle2: 'Автомобиль 2',
+                vehicle3: 'Автомобиль 3',
+                validUntil: 'Действителен до',
+                profile: 'Профиль',
+                validFrom: 'Действителен с',
+                notes: 'Примечания',
+                email: 'Email',
+                ignorePresence: 'Игнорировать проверку присутствия',
+                presence: 'Присутствие',
+                lastEntry: 'Последний въезд',
+                editSubscriber: 'Редактировать абонента',
+                cancel: 'Отмена',
+                save: 'Сохранить',
+                present: 'Присутствует',
+                absent: 'Отсутствует',
+                subscribersText: 'абонентов'
             }
         };
 
@@ -1705,13 +2028,18 @@
             updateUIBasedOnPermissions();
 
             // Load saved font size
-            const savedFontSize = localStorage.getItem('fontSize');
-            if (savedFontSize) {
-                changeFontSize(savedFontSize);
+            const savedFontSize = localStorage.getItem('preferredFontSize') || 0;
+            document.getElementById('fontSizeSlider').value = savedFontSize;
+            adjustFontSizeSlider(savedFontSize);
+            
+            // Apply saved language
+            const savedLang = localStorage.getItem('language');
+            if (savedLang) {
+                setLanguage(savedLang);
             }
 
-            // Check if only one company
-            if (mockCompanies.length === 1) {
+            // Auto-select the first company if available
+            if (mockCompanies.length > 0) {
                 selectCompany(mockCompanies[0]);
             }
 
@@ -1848,8 +2176,11 @@
             currentCompany = company;
             document.querySelectorAll('.company-card').forEach(card => {
                 card.classList.remove('selected');
+                // Visually select the matching company card
+                if (card.querySelector('h3').textContent === company.name) {
+                    card.classList.add('selected');
+                }
             });
-            event && event.currentTarget && event.currentTarget.classList.add('selected');
 
             // Hide company selector if only one company
             if (mockCompanies.length === 1) {
@@ -1917,9 +2248,9 @@
                     <td>${subscriber.vehicle2 || ''}</td>
                     <td>${subscriber.vehicle3 || ''}</td>
                     <td class="${isExpired ? 'status-inactive' : 'status-active'}">${formatDate(subscriber.validUntil) || ''}</td>
-                    <td style="color: #888;">${subscriber.profile || ''}</td>
+                    <td>${subscriber.profile || ''}</td>
                     <td>${formatDate(subscriber.validFrom) || ''}</td>
-                    <td style="text-align: center; font-size: 18px;">${subscriber.presence ? '✅' : '❌'}</td>
+                    <td style="text-align: center;">${subscriber.presence ? '<span class="status-active" style="padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: bold;">' + (translations[currentLang].present || 'Present') + '</span>' : '<span class="status-inactive" style="padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: bold;">' + (translations[currentLang].absent || 'Absent') + '</span>'}</td>
                 `;
                 tbody.appendChild(row);
             });
@@ -1936,7 +2267,7 @@
             // Make sure we have a valid subscriber object
             if (!subscriber || typeof subscriber !== 'object') {
                 console.error('[editSubscriber] Invalid subscriber object:', subscriber);
-                showToast('❌ שגיאה בטעינת נתוני המנוי', 'error');
+                showToast('שגיאה בטעינת נתוני המנוי', 'error');
                 return;
             }
 
@@ -2087,7 +2418,7 @@
                     <div id="reportsModal" class="modal">
                         <div class="modal-content" style="max-width: 700px;">
                             <div class="modal-header">
-                                <h2>בחר מנוי לדוח תנועות</h2>
+                                <h2 class="modal-title" style="color: #ffffff;">בחר מנוי לדוח תנועות</h2>
                                 <button class="close-btn" onclick="closeReportsModal()">×</button>
                             </div>
                             <div class="modal-body">
@@ -2165,20 +2496,20 @@
             list.innerHTML = `
                 <table style="width: 100%; border-collapse: collapse;">
                     <thead>
-                        <tr style="background: #f8f9fa;">
-                            <th style="padding: 10px; text-align: right;">מספר מנוי</th>
-                            <th style="padding: 10px; text-align: right;">שם</th>
-                            <th style="padding: 10px; text-align: right;">רכב</th>
-                            <th style="padding: 10px; text-align: center;">פעולה</th>
+                        <tr style="background: #1e1e1e; color: #ffffff; border-bottom: 2px solid #555;">
+                            <th style="padding: 10px; text-align: right; color: #ffffff;">מספר מנוי</th>
+                            <th style="padding: 10px; text-align: right; color: #ffffff;">שם</th>
+                            <th style="padding: 10px; text-align: right; color: #ffffff;">רכב</th>
+                            <th style="padding: 10px; text-align: center; color: #ffffff;">פעולה</th>
                         </tr>
                     </thead>
                     <tbody id="reportSubscriberTableBody">
                         ${subscribers.map(s => `
                             <tr class="report-subscriber-row" data-name="${s.name || ''}" data-id="${s.subscriberNum}">
-                                <td style="padding: 8px; border-bottom: 1px solid #eee;">${s.subscriberNum}</td>
-                                <td style="padding: 8px; border-bottom: 1px solid #eee;">${s.name || '-'}</td>
-                                <td style="padding: 8px; border-bottom: 1px solid #eee;">${s.vehicle1 || '-'}</td>
-                                <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">
+                                <td style="padding: 8px; border-bottom: 1px solid #444; color: #ffffff;">${s.subscriberNum}</td>
+                                <td style="padding: 8px; border-bottom: 1px solid #444; color: #ffffff;">${s.name || '-'}</td>
+                                <td style="padding: 8px; border-bottom: 1px solid #444; color: #ffffff;">${s.vehicle1 || '-'}</td>
+                                <td style="padding: 8px; border-bottom: 1px solid #444; text-align: center;">
                                     <button class="btn btn-sm btn-info" 
                                             onclick="selectSubscriberForReport('${currentCompanyNum || s.companyNum}', '${s.subscriberNum}')"
                                             style="padding: 5px 15px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">
@@ -2220,7 +2551,7 @@
             const searchText = searchBox.value.trim();
 
             if (!searchText) {
-                showToast('⚠️ יש להזין מספר מנוי או שם לחיפוש', 'warning');
+                showToast('יש להזין מספר מנוי או שם לחיפוש', 'warning');
                 return;
             }
 
@@ -2259,7 +2590,7 @@
                     if (button) button.click();
                 }
             } else {
-                showToast('⚠️ לא נמצא מנוי מתאים', 'warning');
+                showToast('לא נמצא מנוי מתאים', 'warning');
             }
         }
 
@@ -2282,7 +2613,7 @@
             currentReportSubscriber = subscriberNum;
 
             // Show loading
-            showToast('🔄 טוען דוח תנועות...', 'info');
+            showToast('טוען דוח תנועות...', 'info');
 
             // Create modal for report
             let modal = document.getElementById('transactionsModal');
@@ -2304,8 +2635,8 @@
                                         <label>עד תאריך:</label>
                                         <input type="date" id="reportMaxDate" style="padding: 5px;">
                                     </div>
-                                    <button class="btn btn-primary" onclick="refreshReport()">🔄 רענן</button>
-                                    <button class="btn btn-success" onclick="exportReportToCSV()">📥 ייצא לאקסל</button>
+                                    <button class="btn btn-primary" onclick="refreshReport()">רענן</button>
+                                    <button class="btn btn-success" onclick="exportReportToCSV()">ייצא לאקסל</button>
                                 </div>
                                 <div id="reportContent" style="max-height: 500px; overflow-y: auto;">
                                     <div style="text-align: center; padding: 40px;">
@@ -2357,10 +2688,10 @@
                 console.error('[viewTransactions] Error:', error);
                 document.getElementById('reportContent').innerHTML = `
                     <div style="text-align: center; padding: 40px; color: red;">
-                        ❌ שגיאה בטעינת הדוח: ${error.message}
+                        שגיאה בטעינת הדוח: ${error.message}
                     </div>
                 `;
-                showToast('❌ שגיאה בטעינת הדוח', 'error');
+                showToast('שגיאה בטעינת הדוח', 'error');
             }
         }
 
@@ -2450,7 +2781,7 @@
             } catch (error) {
                 document.getElementById('reportContent').innerHTML = `
                     <div style="text-align: center; padding: 40px; color: red;">
-                        ❌ שגיאה בטעינת הדוח: ${error.message}
+                        שגיאה בטעינת הדוח: ${error.message}
                     </div>
                 `;
             }
@@ -2486,7 +2817,7 @@
             link.click();
             document.body.removeChild(link);
 
-            showToast('✅ הדוח יוצא בהצלחה', 'success');
+            showToast('הדוח יוצא בהצלחה', 'success');
         }
 
         // Guest date handlers for week limitation
@@ -2578,7 +2909,7 @@
 
                 // If the selected until date is after the week's Saturday, just warn
                 if (untilDate > maxEndDate) {
-                    showToast('⚠️ שים לב: תאריך הסיום חורג מהשבוע הנוכחי', 'warning');
+                    showToast('שים לב: תאריך הסיום חורג מהשבוע הנוכחי', 'warning');
                 }
             });
 
@@ -2611,20 +2942,23 @@
 
         // Refresh subscribers list (reload current company)
         async function refreshSubscribers() {
-            if (window.parkingUIXML && window.parkingUIXML.currentContract) {
-                const currentCompany = window.parkingUIXML.currentContract;
-                showToast('🔄 מרענן רשימת מנויים...', 'info');
+            const hasCompany = (window.parkingUIXML && window.parkingUIXML.currentContract) || currentCompany;
+            if (hasCompany) {
+                showToast('מרענן רשימת מנויים...', 'info');
 
                 try {
-                    // Reload subscribers for current company
-                    await window.parkingUIXML.loadSubscribers();
-                    showToast('✅ הרשימה עודכנה בהצלחה', 'success');
+                    if (window.parkingUIXML && typeof window.parkingUIXML.loadSubscribers === 'function') {
+                        await window.parkingUIXML.loadSubscribers();
+                    } else {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        if (currentSubscribers) displaySubscribers(currentSubscribers);
+                    }
+                    showToast('הרשימה עודכנה בהצלחה', 'success');
                 } catch (error) {
-                    showToast('❌ שגיאה ברענון הרשימה', 'error');
-                    // Error refreshing subscribers
+                    showToast('שגיאה ברענון הרשימה', 'error');
                 }
             } else {
-                showToast('⚠️ יש לבחור חברה תחילה', 'warning');
+                showToast('יש לבחור חברה תחילה', 'warning');
             }
         }
 
@@ -2647,7 +2981,7 @@
             }
 
             if (!companyInfo) {
-                showToast('⚠️ יש לבחור חברה תחילה', 'error');
+                showToast('יש לבחור חברה תחילה', 'error');
                 return;
             }
 
@@ -2823,21 +3157,52 @@
         // Function to reload full data for large companies
         async function reloadFullData() {
             const ui = window.parkingUIXML || window.parkingUI;
-            if (!ui || !ui.currentContract) {
-                alert('אנא בחר חברה תחילה');
+            const hasCompany = (ui && ui.currentContract) || currentCompany;
+            
+            if (!hasCompany) {
+                showToast('אנא בחר חברה תחילה', 'warning');
+                
+                // Highlight company selector
+                const companySelector = document.getElementById('companySelector');
+                if (companySelector && companySelector.style.display !== 'none') {
+                    companySelector.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    const originalBg = companySelector.style.backgroundColor;
+                    companySelector.style.transition = 'background-color 0.3s ease, transform 0.3s ease';
+                    companySelector.style.backgroundColor = 'rgba(255, 193, 7, 0.15)';
+                    companySelector.style.transform = 'scale(1.02)';
+                    
+                    setTimeout(() => {
+                        companySelector.style.backgroundColor = originalBg;
+                        companySelector.style.transform = 'scale(1)';
+                        setTimeout(() => {
+                            companySelector.style.transition = '';
+                        }, 300);
+                    }, 800);
+                }
                 return;
             }
 
             // Show loading notification
-            ui.showNotification('🔄 טוען את כל נתוני המנויים...', 'info');
+            if (ui && ui.showNotification) {
+                ui.showNotification('טוען את כל נתוני המנויים...', 'info');
+            } else {
+                showToast('טוען את כל נתוני המנויים...', 'info');
+            }
 
             try {
-                // Force reload with full details
-                await ui.loadSubscribers(true); // Force full reload
-                ui.showNotification('✅ כל הנתונים נטענו בהצלחה', 'success');
+                if (ui && typeof ui.loadSubscribers === 'function') {
+                    await ui.loadSubscribers(true); // Force full reload
+                    if (ui.showNotification) ui.showNotification('כל הנתונים נטענו בהצלחה', 'success');
+                    else showToast('כל הנתונים נטענו בהצלחה', 'success');
+                } else {
+                    // Mock behavior
+                    loadSubscribers(); // local function simulates loading and then calls displaySubscribers
+                    showToast('כל הנתונים נטענו בהצלחה', 'success');
+                }
             } catch (error) {
                 console.error('Error reloading full data:', error);
-                ui.showNotification('❌ שגיאה בטעינת הנתונים', 'error');
+                if (ui && ui.showNotification) ui.showNotification('שגיאה בטעינת הנתונים', 'error');
+                else showToast('שגיאה בטעינת הנתונים', 'error');
             }
         }
 
@@ -3168,7 +3533,7 @@
                 // Validate required fields
                 // Last name is required
                 if (!formData.lastName) {
-                    showToast('⚠️ שם משפחה הוא שדה חובה!', 'error');
+                    showToast('שם משפחה הוא שדה חובה!', 'error');
                     document.getElementById('editLastName').focus();
                     document.getElementById('editLastName').style.borderColor = 'red';
                     return;
@@ -3176,14 +3541,14 @@
 
                 // Dates are required
                 if (!formData.validFrom) {
-                    showToast('⚠️ תחילת תוקף הוא שדה חובה!', 'error');
+                    showToast('תחילת תוקף הוא שדה חובה!', 'error');
                     document.getElementById('editValidFrom').focus();
                     document.getElementById('editValidFrom').style.borderColor = 'red';
                     return;
                 }
 
                 if (!formData.validUntil) {
-                    showToast('⚠️ תוקף עד הוא שדה חובה!', 'error');
+                    showToast('תוקף עד הוא שדה חובה!', 'error');
                     document.getElementById('editValidUntil').focus();
                     document.getElementById('editValidUntil').style.borderColor = 'red';
                     return;
@@ -3209,7 +3574,7 @@
                     fromMonth = parseInt(fromIsoMatch[2]);
                     fromDay = parseInt(fromIsoMatch[3]);
                 } else {
-                    showToast('⚠️ פורמט תאריך תחילת תוקף לא תקין (DD/MM/YYYY)', 'error');
+                    showToast('פורמט תאריך תחילת תוקף לא תקין (DD/MM/YYYY)', 'error');
                     document.getElementById('editValidFrom').focus();
                     document.getElementById('editValidFrom').style.borderColor = 'red';
                     return;
@@ -3228,7 +3593,7 @@
                     untilMonth = parseInt(untilIsoMatch[2]);
                     untilDay = parseInt(untilIsoMatch[3]);
                 } else {
-                    showToast('⚠️ פורמט תאריך תוקף עד לא תקין (DD/MM/YYYY)', 'error');
+                    showToast('פורמט תאריך תוקף עד לא תקין (DD/MM/YYYY)', 'error');
                     document.getElementById('editValidUntil').focus();
                     document.getElementById('editValidUntil').style.borderColor = 'red';
                     return;
@@ -3238,14 +3603,14 @@
 
                 // Validate date values are in valid ranges
                 if (fromDay < 1 || fromDay > 31 || fromMonth < 1 || fromMonth > 12) {
-                    showToast('⚠️ תאריך תחילת תוקף לא תקין', 'error');
+                    showToast('תאריך תחילת תוקף לא תקין', 'error');
                     document.getElementById('editValidFrom').focus();
                     document.getElementById('editValidFrom').style.borderColor = 'red';
                     return;
                 }
 
                 if (untilDay < 1 || untilDay > 31 || untilMonth < 1 || untilMonth > 12) {
-                    showToast('⚠️ תאריך תוקף עד לא תקין', 'error');
+                    showToast('תאריך תוקף עד לא תקין', 'error');
                     document.getElementById('editValidUntil').focus();
                     document.getElementById('editValidUntil').style.borderColor = 'red';
                     return;
@@ -3255,7 +3620,7 @@
                 const maxYear = 3035;
                 if (untilYear > maxYear || (untilYear === maxYear && untilMonth > 12) ||
                     (untilYear === maxYear && untilMonth === 12 && untilDay > 31)) {
-                    showToast(`⚠️ תאריך תוקף עד לא יכול להיות אחרי 31/12/${maxYear}`, 'error');
+                    showToast(`תאריך תוקף עד לא יכול להיות אחרי 31/12/${maxYear}`, 'error');
                     document.getElementById('editValidUntil').focus();
                     document.getElementById('editValidUntil').style.borderColor = 'red';
                     return;
@@ -3267,7 +3632,7 @@
 
                 // Check that until date is after from date
                 if (untilDate <= fromDate) {
-                    showToast('⚠️ תאריך תוקף עד חייב להיות אחרי תאריך תחילת תוקף', 'error');
+                    showToast('תאריך תוקף עד חייב להיות אחרי תאריך תחילת תוקף', 'error');
                     document.getElementById('editValidUntil').focus();
                     document.getElementById('editValidUntil').style.borderColor = 'red';
                     return;
@@ -3323,27 +3688,46 @@
         }
 
         // Language toggle
-        function toggleLanguage() {
-            currentLang = currentLang === 'he' ? 'en' : 'he';
-            document.body.lang = currentLang;
-            document.body.dir = currentLang === 'he' ? 'rtl' : 'ltr';
+        function setLanguage(lang) {
+            currentLang = lang;
+            document.documentElement.lang = currentLang;
+            document.body.setAttribute('lang', currentLang);
+            
+            // RTL handling for Hebrew and Arabic
+            const isRTL = currentLang === 'he' || currentLang === 'ar';
+            document.body.dir = isRTL ? 'rtl' : 'ltr';
+            document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
+
+            // Update select value if not already
+            const langSelect = document.getElementById('langSelect');
+            if (langSelect && langSelect.value !== currentLang) {
+                langSelect.value = currentLang;
+            }
 
             // Update all translated elements
             document.querySelectorAll('[data-translate]').forEach(element => {
                 const key = element.getAttribute('data-translate');
-                element.textContent = translations[currentLang][key];
+                if (translations[currentLang] && translations[currentLang][key]) {
+                    element.textContent = translations[currentLang][key];
+                }
             });
 
             // Update placeholders
             document.querySelectorAll('[data-translate-placeholder]').forEach(element => {
                 const key = element.getAttribute('data-translate-placeholder');
-                element.placeholder = translations[currentLang][key];
+                if (translations[currentLang] && translations[currentLang][key]) {
+                    element.placeholder = translations[currentLang][key];
+                }
             });
 
-            // Refresh display
-            if (currentSubscribers.length > 0) {
+            // Refresh display to re-render component labels dynamically
+            if (currentSubscribers && currentSubscribers.length > 0) {
                 displaySubscribers(currentSubscribers);
             }
+            if (currentCompany) selectCompany(currentCompany);
+            else loadCompanies();
+            
+            localStorage.setItem('language', currentLang);
         }
 
         // Font size control
@@ -3359,42 +3743,27 @@
             localStorage.setItem('fontSize', size);
         }
 
-        // Accessibility panel toggle
-        function toggleAccessibility() {
-            const panel = document.getElementById('accessibilityPanel');
-            panel.classList.toggle('show');
+        // Theme Toggle Logic
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+            const isLight = document.body.classList.contains('light-mode');
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
         }
 
-        // High contrast toggle
-        function toggleHighContrast() {
-            document.body.classList.toggle('high-contrast');
-        }
-
-        // Underline links toggle
-        function toggleUnderlineLinks() {
-            document.body.classList.toggle('underline-links');
-        }
-
-        // Focus highlight toggle
-        function toggleFocusHighlight() {
-            document.body.classList.toggle('focus-highlight');
-        }
-
-        // Reset accessibility settings
-        function resetAccessibility() {
-            document.body.classList.remove('high-contrast', 'underline-links', 'focus-highlight');
-            document.getElementById('highContrast').checked = false;
-            document.getElementById('underlineLinks').checked = false;
-            document.getElementById('focusHighlight').checked = false;
-            changeFontSize('normal');
-        }
+        // Initialize Theme on Load
+        (function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-mode');
+            }
+        })();
 
         // Show toast notification
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.innerHTML = `
-                <span>${type === 'success' ? '✅' : '❌'}</span>
+                <span>${type === 'success' ? '' : ''}</span>
                 <span>${message}</span>
             `;
             document.getElementById('toastContainer').appendChild(toast);
@@ -3473,8 +3842,14 @@
             // Check if we have the UI integration
             if (window.parkingUIXML || window.parkingUI) {
                 const uiIntegration = window.parkingUIXML || window.parkingUI;
-                uiIntegration.exportToCSV();
-                return;
+                if (typeof uiIntegration.exportToCSV === 'function') {
+                    try {
+                        uiIntegration.exportToCSV();
+                        return;
+                    } catch (e) {
+                        console.warn('UI Integration exportToCSV failed, falling back to local export', e);
+                    }
+                }
             }
 
             // Get current filtered/sorted data
@@ -3747,6 +4122,48 @@
             showToast('הדוח יוצא בהצלחה', 'success');
         }
 
+        // Legal Policy Modal Logic
+        const legalData = {
+            terms: {
+                title: 'תנאי שימוש',
+                content: 'שירותי מערכת ניהול ובקרת החניונים מסופקים על ידי שיידט את בכמן ישראל. המערכת מיועדת לניהול מנויים, תגים וכלי רכב מורשים בלבד. השימוש במערכת כפוף להרשאות הגישה שהוקצו למשתמש. המערכת מסופקת כמות שהיא (As-Is). החברה עושה את מירב המאמצים להבטיח זמינות ותקינות רציפה, אך אינה נושאת באחריות לנזק ישיר או עקיף הנובע משימוש בלתי מורשה או מתקלות תקשורת צד-שלישי.'
+            },
+            privacy: {
+                title: 'מדיניות פרטיות',
+                content: 'המערכת אוספת ומעבדת נתונים הנדרשים לתפעול החניון בלבד, לרבות: שמות מנויים, מספרי לוחית רישוי (LPN), מספרי תגים, והיסטוריית כניסות/יציאות מהחניון. הנתונים נשמרים במאגרי המידע המאובטחים של שיידט את בכמן ישראל ואינם מועברים לכל גורם צד שלישי שלא לצורך תפעול המערכת או ללא דרישה על פי דין. המשתמש זכאי לעיין במידע הנוגע אליו בהתאם לחוק הגנת הפרטיות.'
+            },
+            security: {
+                title: 'מדיניות תוכנה ואבטחה',
+                content: 'המערכת פועלת בהתאם לתקני אבטחת המידע המחמירים בתעשייה. הגישה למערכת מוגנת באמצעות מנגנון הזדהות והרשאות דינמיות. כל התקשורת מול השרת מוצפנת בפרוטוקולי אבטחה מתקדמים (SSL/TLS). המערכת כוללת מנגנוני ניתוק אוטומטי לאחר חוסר פעילות להגנה על המידע.'
+            },
+            accessibility: {
+                title: 'הצהרת נגישות',
+                content: 'שיידט את בכמן ישראל רואה בחשיבות עליונה את הנגשת המערכת לכלל המשתמשים, כולל אנשים עם מוגבלויות. המערכת כוללת תפריט נגישות ייעודי, תמיכה בניגודיות גבוהה, סרגל התאמת גודל טקסט, ניווט מקלדת ותמיכה בקוראי מסך. נתקלתם בבעיית נגישות? ניתן לפנות לרכז הנגשת המערכת בכתובת המייל הרשמית של החברה.'
+            }
+        };
+
+        function openLegalModal(tabId) {
+            document.getElementById('legalModal').classList.add('show');
+            switchLegalTab(tabId);
+        }
+
+        function closeLegalModal() {
+            document.getElementById('legalModal').classList.remove('show');
+        }
+
+        function switchLegalTab(tabId) {
+            document.querySelectorAll('.legal-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`.legal-tab[onclick="switchLegalTab('${tabId}')"]`).classList.add('active');
+            
+            const data = legalData[tabId];
+            document.getElementById('legalContentArea').innerHTML = `
+                <h3>${data.title}</h3>
+                <p>${data.content}</p>
+            `;
+        }
+
         // Initialize on load
         window.addEventListener('DOMContentLoaded', init);
     </script>
@@ -3823,7 +4240,11 @@
                 console.error('Error loading user info:', error);
                 const usernameElement = document.getElementById('currentUsername');
                 if (usernameElement) {
-                    usernameElement.textContent = 'משתמש';
+                    usernameElement.textContent = 'חניון מרכזי - תמיר';
+                }
+                const roleElement = document.getElementById('userRole');
+                if (roleElement) {
+                    roleElement.textContent = 'מנהל מערכת';
                 }
             }
         }
@@ -3837,26 +4258,21 @@
 
         // Load user info on page load
         // Font size adjustment
-        let currentFontSize = 0; // 0 = normal, -1 = small, 1 = large
-        function adjustFontSize(size) {
-            const body = document.body;
-            if (size === 0) {
-                // Reset to normal
-                body.style.fontSize = '13px';
-                currentFontSize = 0;
-            } else if (size === -1 && currentFontSize > -2) {
-                // Decrease
-                currentFontSize--;
-                const newSize = 13 + (currentFontSize * 1);
-                body.style.fontSize = newSize + 'px';
-            } else if (size === 1 && currentFontSize < 3) {
-                // Increase
-                currentFontSize++;
-                const newSize = 13 + (currentFontSize * 1);
-                body.style.fontSize = newSize + 'px';
-            }
-            // Save preference
+        let currentFontSize = 0; // 0 = normal
+        function adjustFontSizeSlider(value) {
+            currentFontSize = parseInt(value);
+            const newSize = 13 + (currentFontSize * 1);
+            document.body.style.fontSize = newSize + 'px';
             localStorage.setItem('preferredFontSize', currentFontSize);
+            const slider = document.getElementById('fontSizeSlider');
+            if (slider && slider.value !== value) {
+                slider.value = value;
+            }
+        }
+        
+        // Ensure accessibility panel logic resets correctly
+        function changeFontSize(size) {
+            adjustFontSizeSlider(size === 'normal' ? 0 : size === 'small' ? -1 : 1);
         }
 
         // Update UI buttons based on permissions
@@ -3920,7 +4336,23 @@
 
             // Update UI based on permissions
             setTimeout(updateUIPermissions, 100); // Small delay to ensure DOM is ready
+
+            // Global ESC key listener to close active modals
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    if (typeof closeModal === 'function') closeModal();
+                    if (typeof closeReportsModal === 'function') closeReportsModal();
+                    if (typeof closeTransactionsModal === 'function') closeTransactionsModal();
+                    if (typeof closeLegalModal === 'function') closeLegalModal();
+                    
+                    document.querySelectorAll('.modal.show').forEach(modal => {
+                        modal.classList.remove('show');
+                    });
+                }
+            });
         });
+
+        // Mock generation block removed for clean state
     </script>
 </body>
 
