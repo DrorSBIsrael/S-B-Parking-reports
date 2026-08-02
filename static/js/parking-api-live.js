@@ -304,7 +304,12 @@ class ParkingAPIXML {
                 const cached = localStorage.getItem(cacheKey);
                 if (cached) {
                     const parsedData = JSON.parse(cached);
-                    if (parsedData.date === new Date().toDateString() && parsedData.subscribers) {
+                    // כאן מגדירים לכמה ימים לשמור את הנתונים בזיכרון המקומי
+                    const CACHE_VALID_DAYS = 5; 
+                    const cacheAgeMs = Date.now() - (parsedData.timestamp || 0);
+                    const isCacheValid = cacheAgeMs < (CACHE_VALID_DAYS * 24 * 60 * 60 * 1000);
+                    
+                    if (isCacheValid && parsedData.subscribers) {
                         console.log('Loaded from cache for company ' + companyId);
                         onBasicLoaded(parsedData.subscribers);
                         // Make sure hasFullDetails is true for cached data
@@ -585,7 +590,7 @@ class ParkingAPIXML {
                         // Save to cache for the rest of the day
                         try {
                             const payload = {
-                                date: new Date().toDateString(),
+                                timestamp: Date.now(),
                                 subscribers: basicSubscribers
                             };
                             localStorage.setItem(cacheKey, JSON.stringify(payload));
