@@ -903,6 +903,8 @@ class ParkingUIIntegrationXML {
     async loadSubscribers(forceFullLoad = false) {
         if (!this.currentContract) return;
 
+        const requestedContractId = this.currentContract.id;
+
         // Clear any existing progress messages first
         this.hideProgressMessage();
 
@@ -921,6 +923,8 @@ class ParkingUIIntegrationXML {
 
                 // Callback when basic data is ready
                 onBasicLoaded: (basicSubscribers) => {
+                    if (!this.currentContract || String(this.currentContract.id) !== String(requestedContractId)) return;
+                    
                     this.subscribers = basicSubscribers;
 
                     // Update the actual subscriber count in the company card
@@ -978,6 +982,7 @@ class ParkingUIIntegrationXML {
 
                 // Callback when each detail is loaded
                 onDetailLoaded: (subscriber, index) => {
+                    if (!this.currentContract || String(this.currentContract.id) !== String(requestedContractId)) return;
                     // Update the specific row in the table
                     this.updateSubscriberRow(subscriber, index);
                     // Update present count in header
@@ -986,6 +991,8 @@ class ParkingUIIntegrationXML {
 
                 // Progress callback
                 onProgress: (progress) => {
+                    if (!this.currentContract || String(this.currentContract.id) !== String(requestedContractId)) return;
+
                     // Check if this is a large company notification
                     if (progress.message && progress.message.includes('חברה גדולה')) {
                         this.updateBackgroundProgress(progress.message);
