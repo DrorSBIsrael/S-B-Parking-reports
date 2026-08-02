@@ -295,6 +295,31 @@ class ParkingAPIXML {
             forceFullLoad = false  // Add this parameter
         } = callbacks;
         
+        const cacheKey = 'skidata_cache_company_' + companyId;
+        
+        if (forceFullLoad) {
+            try { localStorage.removeItem(cacheKey); } catch(e) {}
+        } else {
+            try {
+                const cached = localStorage.getItem(cacheKey);
+                if (cached) {
+                    const parsedData = JSON.parse(cached);
+                    if (parsedData.date === new Date().toDateString() && parsedData.subscribers) {
+                        console.log('Loaded from cache for company ' + companyId);
+                        onBasicLoaded(parsedData.subscribers);
+                        // Make sure hasFullDetails is true for cached data
+                        parsedData.subscribers.forEach(sub => sub.hasFullDetails = true);
+                        if (onProgress) onProgress({ percent: 100 });
+                        return { success: true, data: parsedData.subscribers, fromCache: true };
+                    } else {
+                        localStorage.removeItem(cacheKey);
+                    }
+                }
+            } catch(e) {
+                try { localStorage.removeItem(cacheKey); } catch(err) {}
+            }
+        }
+        
         try {
             // Step 1: Get basic list
         const result = await this.getConsumers(companyId, companyId);
@@ -350,7 +375,7 @@ class ParkingAPIXML {
             } else if (subscriberCount <= BATCH_LOAD_THRESHOLD) {
                 loadingStrategy = 'batch-50';
             } else {
-                loadingStrategy = 'on-demand';
+                loadingStrategy = 'background-cache';
             }
             
             // Map ALL available data from consumer list
@@ -527,6 +552,47 @@ class ParkingAPIXML {
                         
                         basicSubscribers = allUpdated;
                         // All details loaded successfully
+                    } else if (loadingStrategy === 'background-cache') {
+                        // Load in background silently for large companies
+                        const BATCH_SIZE = 25;
+                        let allUpdated = [];
+                        
+                        for (let i = 0; i < basicSubscribers.length; i += BATCH_SIZE) {
+                            const batch = basicSubscribers.slice(i, Math.min(i + BATCH_SIZE, basicSubscribers.length));
+                            
+                            const batchPromises = batch.map(processSubscriber);
+                            const batchResults = await Promise.all(batchPromises);
+                            
+                            allUpdated = [...allUpdated, ...batchResults];
+                            
+                            // DO NOT call callbacks.onProgress to avoid blocking the UI with loading screens
+                            
+                            // Update only the changed items in the UI silently
+                            batchResults.forEach((updated, idx) => {
+                                const originalIndex = i + idx;
+                                if (callbacks.onDetailLoaded) {
+                                    callbacks.onDetailLoaded(updated, originalIndex);
+                                }
+                            });
+                            
+                            // Small delay between batches to let UI breathe
+                            if (i + BATCH_SIZE < basicSubscribers.length) {
+                                await new Promise(resolve => setTimeout(resolve, 200));
+                            }
+                        }
+                        
+                        basicSubscribers = allUpdated;
+                        // Save to cache for the rest of the day
+                        try {
+                            const payload = {
+                                date: new Date().toDateString(),
+                                subscribers: basicSubscribers
+                            };
+                            localStorage.setItem(cacheKey, JSON.stringify(payload));
+                            console.log('Background loading finished and saved to cache for company ' + companyId);
+                        } catch(e) {
+                            console.warn('Could not save to localStorage, might be full or disabled');
+                        }
                     } else {
                         // Should not reach here with current strategy
                         // Unknown loading strategy
