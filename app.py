@@ -4212,8 +4212,7 @@ def get_contract_pooling():
         if pooling_node is not None:
             for detail in pooling_node.findall('ns:poolingDetail', ns_cust):
                 f_id = detail.findtext('ns:facility', default='0', namespaces=ns_cust)
-                p_id = detail.findtext('ns:poolingProfile', default='-1', namespaces=ns_cust)
-                if p_id == '-1': p_id = '0'
+                p_id = detail.findtext('ns:extCardProfile', default='0', namespaces=ns_cust)
                 max_c = detail.findtext('ns:maxCounter', default='0', namespaces=ns_cust)
                 pres_c = detail.findtext('ns:presentCounter', default='0', namespaces=ns_cust)
                 
@@ -4282,8 +4281,7 @@ def update_contract_pooling():
         current_state = {}
         for detail in pooling_node.findall('ns:poolingDetail', ns_cust):
             f = detail.findtext('ns:facility', default='0', namespaces=ns_cust)
-            p = detail.findtext('ns:poolingProfile', default='-1', namespaces=ns_cust)
-            if p == '-1': p = '0'
+            p = detail.findtext('ns:extCardProfile', default='0', namespaces=ns_cust)
             m = int(detail.findtext('ns:maxCounter', default='0', namespaces=ns_cust))
             current_state[(f, p)] = m
             
@@ -4307,8 +4305,7 @@ def update_contract_pooling():
         # Apply updates to XML
         for detail in pooling_node.findall('ns:poolingDetail', ns_cust):
             f = detail.findtext('ns:facility', default='0', namespaces=ns_cust)
-            p = detail.findtext('ns:poolingProfile', default='-1', namespaces=ns_cust)
-            if p == '-1': p = '0'
+            p = detail.findtext('ns:extCardProfile', default='0', namespaces=ns_cust)
             for up in updates:
                 if str(up.get('facilityId')) == f and str(up.get('profileId')) == p:
                     max_c = detail.find('ns:maxCounter', ns_cust)
