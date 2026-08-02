@@ -465,7 +465,7 @@
                 </form>
             </div>
 
-            <!-- רשימת משתמשי החניון -->
+        <!-- רשימת משתמשי החניון -->
             <div class="users-list-section">
                 <h2 class="section-title">👥 משתמשי החניון</h2>
 
@@ -489,6 +489,23 @@
                         <tbody id="usersTableBody">
                         </tbody>
                     </table>
+                </div>
+            </div>
+            
+            <!-- ניהול תפוסת חברות (Pooling) -->
+            <div class="users-list-section" style="margin-top: 30px;">
+                <h2 class="section-title">📊 ניהול תפוסה מורחב (פרופילים וחניונים)</h2>
+                <div class="info-note">
+                    💡 <strong>הערה:</strong> באפשרותך לערוך מכסות תפוסה לחברה (Contract) לפי פרופילים וחניונים ספציפיים.
+                </div>
+                <div style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 20px;">
+                    <div class="form-group" style="margin-bottom: 0; flex: 1; max-width: 300px;">
+                        <label for="poolingContractId">מספר חברה (Contract ID)</label>
+                        <input type="number" id="poolingContractId" placeholder="לדוגמא: 2">
+                    </div>
+                    <button class="btn btn-primary" style="flex: 0 0 auto; width: auto;" onclick="openPoolingModal()">
+                        ⚙️ נהל תפוסה לחברה זו
+                    </button>
                 </div>
             </div>
         </div>
@@ -585,6 +602,46 @@
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- Modal ניהול תפוסת חברה -->
+        <div id="poolingModal" class="edit-modal">
+            <div class="edit-modal-content" style="max-width: 800px; width: 95%;">
+                <div class="edit-modal-header">
+                    <h2 id="poolingModalTitle">📊 ניהול תפוסה לחברה</h2>
+                    <button class="close-modal" onclick="closePoolingModal()">✖️</button>
+                </div>
+                
+                <div id="poolingAlert" style="display: none;" class="alert"></div>
+                <div id="poolingLoading" class="loading" style="display: none;">טוען נתוני תפוסה מהחניון...</div>
+                
+                <div id="poolingContent" style="display: none;">
+                    <form id="poolingForm">
+                        <table class="users-table" id="poolingTable">
+                            <thead>
+                                <tr>
+                                    <th>שם חניון</th>
+                                    <th>שם פרופיל</th>
+                                    <th>רכבים בפנים</th>
+                                    <th>מכסה מקסימלית (Max Limit)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="poolingTableBody">
+                                <!-- יאוכלס דינמית -->
+                            </tbody>
+                        </table>
+                        
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button type="button" class="btn btn-primary" id="savePoolingBtn" style="flex: 1;" onclick="savePoolingData()">
+                                💾 שמור שינויים בחניון
+                            </button>
+                            <button type="button" class="btn close-modal" onclick="closePoolingModal()" style="flex: 0 0 auto;">
+                                סגור
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -1074,6 +1131,210 @@
 
         // טעינה ראשונית
         window.addEventListener('load', loadParkingInfo);
+        // === Pooling (Occupancy) Management Logic ===
+        let currentPoolingData = [];
+        let currentContractId = null;
+
+        async function openPoolingModal() {
+            const contractInput = document.getElementById('poolingContractId');
+            const contractId = contractInput.value.trim();
+            
+            if (!contractId) {
+                alert('נא להזין מספר חברה (Contract ID)');
+                return;
+            }
+            
+            // Check if manager is allowed to edit this company
+            if (!isCompanyAllowed(contractId, MANAGER_COMPANY_LIMIT)) {
+                alert(`אין לך הרשאה לגשת לחברה ${contractId}. החברות המותרות שלך: ${MANAGER_COMPANY_LIMIT || 'הכל'}`);
+                return;
+            }
+            
+            currentContractId = contractId;
+            document.getElementById('poolingModalTitle').innerText = `📊 ניהול תפוסה לחברה ${contractId}`;
+            document.getElementById('poolingModal').style.display = 'block';
+            document.getElementById('poolingContent').style.display = 'none';
+            document.getElementById('poolingAlert').style.display = 'none';
+            document.getElementById('poolingLoading').style.display = 'block';
+            
+            try {
+                const response = await fetch(`/api/company-manager/contract-pooling?parkingId=${parkingInfo.project_number}&contractId=${contractId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentPoolingData = data.data;
+                    renderPoolingTable();
+                    document.getElementById('poolingLoading').style.display = 'none';
+                    document.getElementById('poolingContent').style.display = 'block';
+                } else {
+                    showPoolingAlert('error', data.message || 'שגיאה בטעינת הנתונים מהחניון');
+                    document.getElementById('poolingLoading').style.display = 'none';
+                }
+            } catch (err) {
+                console.error(err);
+                showPoolingAlert('error', 'שגיאת תקשורת עם השרת');
+                document.getElementById('poolingLoading').style.display = 'none';
+            }
+        }
+
+        function closePoolingModal() {
+            document.getElementById('poolingModal').style.display = 'none';
+            currentPoolingData = [];
+            currentContractId = null;
+        }
+
+        function showPoolingAlert(type, message) {
+            const alertBox = document.getElementById('poolingAlert');
+            alertBox.style.display = 'block';
+            alertBox.innerText = message;
+            if (type === 'error') {
+                alertBox.className = 'alert alert-danger';
+            } else {
+                alertBox.className = 'alert alert-success';
+            }
+        }
+
+        function renderPoolingTable() {
+            const tbody = document.getElementById('poolingTableBody');
+            tbody.innerHTML = '';
+            
+            if (currentPoolingData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">לא נמצאו נתוני תפוסה (Pooling) עבור חברה זו.</td></tr>';
+                return;
+            }
+            
+            // Sort to make Facility 0 and Profile 0 appear at the top
+            currentPoolingData.sort((a, b) => {
+                if (a.facilityId === '0' && b.facilityId !== '0') return -1;
+                if (b.facilityId === '0' && a.facilityId !== '0') return 1;
+                if (a.profileId === '0' && b.profileId !== '0') return -1;
+                if (b.profileId === '0' && a.profileId !== '0') return 1;
+                return 0;
+            });
+            
+            currentPoolingData.forEach((row, index) => {
+                const isReadOnly = (row.facilityId === '0' && row.profileId === '0');
+                const tr = document.createElement('tr');
+                if (isReadOnly) {
+                    tr.style.backgroundColor = '#e9ecef';
+                    tr.title = "פרופיל ראשי - לקריאה בלבד";
+                }
+                
+                const maxInput = isReadOnly 
+                    ? `<span>${row.maxCounter}</span>` 
+                    : `<input type="number" min="0" value="${row.maxCounter}" class="pooling-input" data-index="${index}" style="width: 80px; padding: 4px; text-align: center;" onchange="validatePoolingInputs()">`;
+                
+                tr.innerHTML = `
+                    <td>${row.facilityName} <small style="color: gray;">(${row.facilityId})</small></td>
+                    <td>${row.profileName} <small style="color: gray;">(${row.profileId})</small></td>
+                    <td style="font-weight: bold; ${row.presentCounter > row.maxCounter ? 'color: red;' : ''}">${row.presentCounter}</td>
+                    <td>${maxInput}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        function validatePoolingInputs() {
+            // Check limits dynamically
+            const inputs = document.querySelectorAll('.pooling-input');
+            const newLimits = {};
+            
+            inputs.forEach(inp => {
+                const idx = inp.getAttribute('data-index');
+                const val = parseInt(inp.value) || 0;
+                const row = currentPoolingData[idx];
+                newLimits[`${row.facilityId}_${row.profileId}`] = val;
+            });
+            
+            // Get global max
+            const globalRow = currentPoolingData.find(r => r.facilityId === '0' && r.profileId === '0');
+            const globalMax = globalRow ? globalRow.maxCounter : 0;
+            
+            let subProfilesSum = 0;
+            let facSum = 0;
+            
+            // Reconstruct data to check
+            currentPoolingData.forEach((row, idx) => {
+                const isReadOnly = (row.facilityId === '0' && row.profileId === '0');
+                let val = isReadOnly ? row.maxCounter : (newLimits[`${row.facilityId}_${row.profileId}`] !== undefined ? newLimits[`${row.facilityId}_${row.profileId}`] : row.maxCounter);
+                
+                if (row.facilityId === '0' && row.profileId !== '0') subProfilesSum += val;
+                if (row.facilityId !== '0' && row.profileId === '0') facSum += val;
+            });
+            
+            const btn = document.getElementById('savePoolingBtn');
+            const alertBox = document.getElementById('poolingAlert');
+            
+            if (subProfilesSum > globalMax) {
+                showPoolingAlert('error', `סכום הפרופילים (${subProfilesSum}) עולה על המקסימום המותר (${globalMax})`);
+                btn.disabled = true;
+            } else if (facSum > globalMax) {
+                showPoolingAlert('error', `סכום החניונים (${facSum}) עולה על המקסימום המותר (${globalMax})`);
+                btn.disabled = true;
+            } else {
+                alertBox.style.display = 'none';
+                btn.disabled = false;
+            }
+        }
+
+        async function savePoolingData() {
+            const btn = document.getElementById('savePoolingBtn');
+            btn.disabled = true;
+            btn.innerText = 'שומר...';
+            
+            const inputs = document.querySelectorAll('.pooling-input');
+            const updates = [];
+            
+            inputs.forEach(inp => {
+                const idx = inp.getAttribute('data-index');
+                const val = parseInt(inp.value) || 0;
+                const row = currentPoolingData[idx];
+                if (row.maxCounter !== val) {
+                    updates.push({
+                        facilityId: row.facilityId,
+                        profileId: row.profileId,
+                        maxCounter: val
+                    });
+                }
+            });
+            
+            if (updates.length === 0) {
+                showPoolingAlert('success', 'לא בוצעו שינויים');
+                btn.disabled = false;
+                btn.innerText = '💾 שמור שינויים בחניון';
+                return;
+            }
+            
+            try {
+                const payload = {
+                    parkingId: parkingInfo.project_number,
+                    contractId: currentContractId,
+                    updates: updates
+                };
+                
+                const response = await fetch('/api/company-manager/contract-pooling/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showPoolingAlert('success', 'התפוסה עודכנה בהצלחה במערכת החניון!');
+                    // Reload data to show updated state
+                    setTimeout(() => openPoolingModal(), 1500);
+                } else {
+                    showPoolingAlert('error', data.message || 'שגיאה בעדכון הנתונים');
+                }
+            } catch (err) {
+                console.error(err);
+                showPoolingAlert('error', 'שגיאת תקשורת בנסיון השמירה');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = '💾 שמור שינויים בחניון';
+            }
+        }
     </script>
 </body>
 
