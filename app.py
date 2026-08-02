@@ -4123,6 +4123,206 @@ def test_proxy():
         'timestamp': datetime.now().isoformat()
     })
 
+def is_company_allowed(target_company, allowed_range_str):
+    if not allowed_range_str or not str(allowed_range_str).strip():
+        return True
+    
+    allowed_ranges = []
+    for part in str(allowed_range_str).split(','):
+        if '-' in part:
+            try:
+                start, end = part.split('-', 1)
+                allowed_ranges.append((int(start.strip()), int(end.strip())))
+            except ValueError:
+                pass
+        else:
+            try:
+                allowed_ranges.append((int(part.strip()), int(part.strip())))
+            except ValueError:
+                pass
+                
+    try:
+        target = int(target_company)
+    except ValueError:
+        return False
+        
+    for r_min, r_max in allowed_ranges:
+        if r_min <= target <= r_max:
+            return True
+            
+    return False
+
+@app.route('/api/company-manager/contract-pooling', methods=['GET'])
+def get_contract_pooling():
+    parking_id = request.args.get('parkingId')
+    contract_id = request.args.get('contractId')
+    
+    if not all([parking_id, contract_id]):
+        return jsonify({'success': False, 'message': 'Missing parameters'})
+        
+    connection = get_parking_connection_details(parking_id)
+    if not connection or not connection.get('ip_address'):
+        return jsonify({'success': False, 'message': 'Parking connection details not found'})
+        
+    ip = connection['ip_address']
+    port = connection.get('port', 8443)
+        
+    auth_string = base64.b64encode(b'2022:2022').decode('ascii')
+    headers = {'Authorization': f'Basic {auth_string}', 'Accept': 'application/xml'}
+    
+    try:
+        # Get Facility names
+        geom_url = f'https://{ip}:{port}/DeviceControlWebService/geometry'
+        geom_resp = requests.get(geom_url, headers=headers, verify=False, timeout=10)
+        facility_names = {'0': 'All Car Parks'}
+        if geom_resp.status_code == 200:
+            import xml.etree.ElementTree as ET
+            g_root = ET.fromstring(geom_resp.content)
+            for f in g_root.findall('.//ns:facility', {'ns': 'http://interfaces.dcss.sidata.at/devicecontrol'}):
+                f_id = f.findtext('ns:id', default='', namespaces={'ns': 'http://interfaces.dcss.sidata.at/devicecontrol'})
+                f_name = f.findtext('ns:name', default='', namespaces={'ns': 'http://interfaces.dcss.sidata.at/devicecontrol'})
+                if f_id: facility_names[f_id] = f_name
+                
+        # Get Profile names
+        prof_url = f'https://{ip}:{port}/CustomerMediaWebService/profiles'
+        prof_resp = requests.get(prof_url, headers=headers, verify=False, timeout=10)
+        profile_names = {'0': 'Default Profile'}
+        if prof_resp.status_code == 200:
+            import xml.etree.ElementTree as ET
+            p_root = ET.fromstring(prof_resp.content)
+            for p in p_root.findall('.//ns:profile', {'ns': 'http://interfaces.dcss.sidata.at/customermedia'}):
+                p_id = p.findtext('ns:id', default='', namespaces={'ns': 'http://interfaces.dcss.sidata.at/customermedia'})
+                p_name = p.findtext('ns:name', default='', namespaces={'ns': 'http://interfaces.dcss.sidata.at/customermedia'})
+                if p_id: profile_names[p_id] = p_name
+
+        # Get Pooling Details
+        detail_url = f'https://{ip}:{port}/CustomerMediaWebService/contracts/{contract_id}/detail'
+        detail_resp = requests.get(detail_url, headers=headers, verify=False, timeout=10)
+        
+        if detail_resp.status_code != 200:
+            return jsonify({'success': False, 'message': 'Failed to fetch contract details'})
+            
+        import xml.etree.ElementTree as ET
+        ns = {'ns': 'http://interfaces.dcss.sidata.at/customermedia'}
+        c_root = ET.fromstring(detail_resp.content)
+        pooling_node = c_root.find('.//ns:pooling', ns)
+        
+        data = []
+        if pooling_node is not None:
+            for detail in pooling_node.findall('ns:poolingDetail', ns):
+                f_id = detail.findtext('ns:facility', default='0', namespaces=ns)
+                p_id = detail.findtext('ns:extCardProfile', default='0', namespaces=ns)
+                max_c = detail.findtext('ns:maxCounter', default='0', namespaces=ns)
+                pres_c = detail.findtext('ns:presentCounter', default='0', namespaces=ns)
+                
+                data.append({
+                    'facilityId': f_id,
+                    'facilityName': facility_names.get(f_id, f'Facility {f_id}'),
+                    'profileId': p_id,
+                    'profileName': profile_names.get(p_id, f'Profile {p_id}'),
+                    'maxCounter': int(max_c),
+                    'presentCounter': int(pres_c)
+                })
+                
+        return jsonify({'success': True, 'data': data})
+        
+    except Exception as e:
+        print(f"Error in contract-pooling: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/company-manager/contract-pooling/update', methods=['POST'])
+def update_contract_pooling():
+    data = request.json
+    parking_id = data.get('parkingId')
+    contract_id = data.get('contractId')
+    updates = data.get('updates', [])
+    
+    if not all([parking_id, contract_id, updates]):
+        return jsonify({'success': False, 'message': 'Missing parameters'})
+        
+    # Backend Authorization Check
+    user_email = session.get('user_email')
+    if not user_email:
+        return jsonify({'success': False, 'message': 'Not logged in'}), 401
+        
+    user_result = supabase.table('user_parkings').select('company_list').eq('email', user_email).execute()
+    if user_result.data:
+        user_company_list = user_result.data[0].get('company_list', '')
+        if not is_company_allowed(contract_id, user_company_list):
+            return jsonify({'success': False, 'message': 'Unauthorized company edit access'}), 403
+        
+    connection = get_parking_connection_details(parking_id)
+    if not connection or not connection.get('ip_address'):
+        return jsonify({'success': False, 'message': 'Parking connection details not found'})
+        
+    ip = connection['ip_address']
+    port = connection.get('port', 8443)
+        
+    auth_string = base64.b64encode(b'2022:2022').decode('ascii')
+    headers = {'Authorization': f'Basic {auth_string}', 'Accept': 'application/xml', 'Content-Type': 'application/xml'}
+    
+    try:
+        # Fetch existing to validate maximums
+        detail_url = f'https://{ip}:{port}/CustomerMediaWebService/contracts/{contract_id}/detail'
+        detail_resp = requests.get(detail_url, headers=headers, verify=False, timeout=10)
+        if detail_resp.status_code != 200:
+            return jsonify({'success': False, 'message': 'Failed to fetch contract details'})
+            
+        import xml.etree.ElementTree as ET
+        ns = {'ns': 'http://interfaces.dcss.sidata.at/customermedia'}
+        c_root = ET.fromstring(detail_resp.content)
+        pooling_node = c_root.find('.//ns:pooling', ns)
+        
+        if pooling_node is None:
+            return jsonify({'success': False, 'message': 'No pooling data found'})
+            
+        # Parse current state
+        current_state = {}
+        for detail in pooling_node.findall('ns:poolingDetail', ns):
+            f = detail.findtext('ns:facility', default='0', namespaces=ns)
+            p = detail.findtext('ns:extCardProfile', default='0', namespaces=ns)
+            m = int(detail.findtext('ns:maxCounter', default='0', namespaces=ns))
+            current_state[(f, p)] = m
+            
+        # Apply updates to memory for validation
+        for up in updates:
+            f = str(up.get('facilityId'))
+            p = str(up.get('profileId'))
+            current_state[(f, p)] = int(up.get('maxCounter'))
+            
+        # Validate logic (same as frontend)
+        global_max = current_state.get(('0', '0'), 0)
+        
+        sub_profiles_sum = sum(v for (f, p), v in current_state.items() if f == '0' and p != '0')
+        if sub_profiles_sum > global_max:
+             return jsonify({'success': False, 'message': f'הסכום של הפרופילים ({sub_profiles_sum}) חורג מהמקסימום המותר ({global_max})!'})
+             
+        fac_sum_prof0 = sum(v for (f, p), v in current_state.items() if f != '0' and p == '0')
+        if fac_sum_prof0 > global_max:
+             return jsonify({'success': False, 'message': f'הסכום של החניונים ({fac_sum_prof0}) חורג מהמקסימום המותר ({global_max})!'})
+             
+        # Apply updates to XML
+        for detail in pooling_node.findall('ns:poolingDetail', ns):
+            f = detail.findtext('ns:facility', default='0', namespaces=ns)
+            p = detail.findtext('ns:extCardProfile', default='0', namespaces=ns)
+            for up in updates:
+                if str(up.get('facilityId')) == f and str(up.get('profileId')) == p:
+                    max_c = detail.find('ns:maxCounter', ns)
+                    if max_c is not None:
+                        max_c.text = str(up.get('maxCounter'))
+                        
+        xml_payload = ET.tostring(c_root, encoding='utf-8', method='xml')
+        
+        put_resp = requests.put(detail_url, data=xml_payload, headers=headers, verify=False, timeout=10)
+        if put_resp.status_code in (200, 204, 201):
+            return jsonify({'success': True, 'message': 'עודכן בהצלחה'})
+        else:
+            return jsonify({'success': False, 'message': f'השרת דחה את העדכון. סטטוס: {put_resp.status_code}'})
+            
+    except Exception as e:
+        print(f"Error in contract-pooling/update: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
+
 @app.route('/api/company-manager/proxy', methods=['POST', 'OPTIONS', 'GET'])
 def company_manager_proxy():
     """Proxy לקריאות API לשרתי החניונים"""
