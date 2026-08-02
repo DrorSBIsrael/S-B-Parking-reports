@@ -311,9 +311,17 @@ class ParkingAPIXML {
                     
                     if (isCacheValid && parsedData.subscribers) {
                         console.log('Loaded from cache for company ' + companyId);
+                        
+                        // Force update company number and name to fix any previously corrupted cache
+                        parsedData.subscribers = parsedData.subscribers.map(sub => ({
+                            ...sub,
+                            companyNum: companyId,
+                            contractId: companyId,
+                            companyName: callbacks.companyName || sub.companyName,
+                            hasFullDetails: true
+                        }));
+                        
                         onBasicLoaded(parsedData.subscribers);
-                        // Make sure hasFullDetails is true for cached data
-                        parsedData.subscribers.forEach(sub => sub.hasFullDetails = true);
                         if (onProgress) onProgress({ percent: 100 });
                         return { success: true, data: parsedData.subscribers, fromCache: true };
                     } else {
