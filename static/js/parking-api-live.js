@@ -558,24 +558,20 @@ class ParkingAPIXML {
                         basicSubscribers = allUpdated;
                         // All details loaded successfully
                     } else if (loadingStrategy === 'background-cache') {
-                        // Load in background silently for large companies
-                        const BATCH_SIZE = 25;
+                        // Load in background sequentially (one by one) to prevent network/browser stalling
                         let allUpdated = [];
                         
-                        for (let i = 0; i < basicSubscribers.length; i += BATCH_SIZE) {
-                            const batch = basicSubscribers.slice(i, Math.min(i + BATCH_SIZE, basicSubscribers.length));
+                        for (let i = 0; i < basicSubscribers.length; i++) {
+                            try {
+                                const updated = await processSubscriber(basicSubscribers[i]);
+                                allUpdated.push(updated);
+                            } catch (e) {
+                                allUpdated.push(basicSubscribers[i]);
+                            }
                             
-                            const batchPromises = batch.map(processSubscriber);
-                            const batchResults = await Promise.all(batchPromises);
-                            
-                            allUpdated = [...allUpdated, ...batchResults];
-                            
-                            // DO NOT call callbacks.onProgress to avoid blocking the UI with loading screens
-                            // DO NOT call callbacks.onDetailLoaded to avoid freezing the browser with 2000 DOM updates
-                            
-                            // Larger delay between batches to let browser breathe completely
-                            if (i + BATCH_SIZE < basicSubscribers.length) {
-                                await new Promise(resolve => setTimeout(resolve, 800));
+                            // Let the browser breathe every 5 items to guarantee UI responsiveness
+                            if (i % 5 === 0) {
+                                await new Promise(resolve => setTimeout(resolve, 20));
                             }
                         }
                         
