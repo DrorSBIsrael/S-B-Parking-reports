@@ -2029,8 +2029,24 @@ def login():
             return jsonify({'success': False, 'message': 'סיסמה לא תקינה'})
         
         
-# קריאה לפונקציה עם טיפול פשוט  
+# ביצוע התחברות מול המסד
         try:
+            # Special bypass for parking_tour users with fixed password 342516
+            try:
+                pt_check = supabase.table('user_parkings').select('email, code_type, username').eq('username', validated_username).execute()
+                if pt_check.data and len(pt_check.data) > 0:
+                    pt_user = pt_check.data[0]
+                    if pt_user.get('code_type', '').lower() == 'parking_tour' and validated_password == '342516':
+                        email = pt_user['email']
+                        session['user_email'] = email
+                        redirect_url = get_user_redirect_url(email)
+                        return jsonify({
+                            'success': True,
+                            'redirect': redirect_url
+                        })
+            except Exception as e:
+                print(f"Error checking parking_tour bypass: {e}")
+
             result = supabase.rpc('user_login', {
                 'p_username': validated_username,
                 'p_password': validated_password
