@@ -513,6 +513,15 @@
         // Initialize
         let currentUserData = null;
         let currentParkingId = null;
+        let autoSearchTimeout = null;
+        let autoClearTimeout = null;
+        
+        function scheduleAutoClear() {
+            if (autoClearTimeout) clearTimeout(autoClearTimeout);
+            autoClearTimeout = setTimeout(() => {
+                clearSearch();
+            }, 10000);
+        }
 
         // Load user data on page load
         window.addEventListener('DOMContentLoaded', async () => {
@@ -530,6 +539,23 @@
             document.getElementById('licensePlate').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     searchSubscriber();
+                }
+            });
+
+            // Auto-search logic
+            document.getElementById('licensePlate').addEventListener('input', (e) => {
+                if (autoSearchTimeout) clearTimeout(autoSearchTimeout);
+                
+                const val = e.target.value.replace(/[\s-]/g, '');
+                
+                if (val.length === 8) {
+                    autoSearchTimeout = setTimeout(() => {
+                        searchSubscriber();
+                    }, 1000);
+                } else if (val.length === 7) {
+                    autoSearchTimeout = setTimeout(() => {
+                        searchSubscriber();
+                    }, 2000);
                 }
             });
         });
@@ -558,6 +584,15 @@
 
         // Search for subscriber by license plate
         async function searchSubscriber() {
+            if (autoSearchTimeout) {
+                clearTimeout(autoSearchTimeout);
+                autoSearchTimeout = null;
+            }
+            if (autoClearTimeout) {
+                clearTimeout(autoClearTimeout);
+                autoClearTimeout = null;
+            }
+
             const licensePlate = document.getElementById('licensePlate').value.trim();
 
             if (!licensePlate) {
@@ -669,6 +704,7 @@
             });
 
             document.getElementById('resultsSection').classList.add('active');
+            scheduleAutoClear();
         }
 
         // Format date robustly
@@ -759,10 +795,13 @@
                 </div>
             `;
             document.getElementById('resultsSection').classList.add('active');
+            scheduleAutoClear();
         }
 
         // Clear search
         function clearSearch() {
+            if (autoSearchTimeout) clearTimeout(autoSearchTimeout);
+            if (autoClearTimeout) clearTimeout(autoClearTimeout);
             document.getElementById('licensePlate').value = '';
             hideResults();
             document.getElementById('licensePlate').focus();
@@ -794,6 +833,7 @@
                 </div>
             `;
             document.getElementById('resultsSection').classList.add('active');
+            scheduleAutoClear();
         }
 
 
