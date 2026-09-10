@@ -53,6 +53,8 @@ password_reset_codes = {}
 AUTHORIZED_SENDERS = [
     'Dror@sbparking.co.il',
     'dror@sbparking.co.il',  # case insensitive
+    'Reports@sbparkingai.com',
+    'reports@sbparkingai.com',  # case insensitive
     'Report@sbparking.co.il',
     'report@sbparking.co.il'  # case insensitive
 ]
