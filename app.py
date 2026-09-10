@@ -2036,7 +2036,7 @@ def login():
                 pt_check = supabase.table('user_parkings').select('email, code_type, username').eq('username', validated_username).execute()
                 if pt_check.data and len(pt_check.data) > 0:
                     pt_user = pt_check.data[0]
-                    if pt_user.get('code_type', '').lower() == 'parking_tour' and validated_password == '342516':
+                    if pt_user.get('code_type', '').strip().lower() == 'parking_tour' and validated_password == '342516':
                         email = pt_user['email']
                         session['user_email'] = email
                         redirect_url = get_user_redirect_url(email)
@@ -2145,8 +2145,18 @@ def verify_code():
             return jsonify({'success': False, 'message': 'אין בקשה לאימות'})
         
         
-        # בדיקת הקוד מהמסד נתונים
-        if verify_code_from_database(email, validated_code):
+        # בדיקת הקוד מהמסד נתונים        # ביצוע אימות מול המסד
+        bypass_otp = False
+        try:
+            if validated_code == '342516':
+                user_check = supabase.table('user_parkings').select('code_type').eq('email', email).execute()
+                if user_check.data and len(user_check.data) > 0:
+                    if user_check.data[0].get('code_type', '').strip().lower() == 'parking_tour':
+                        bypass_otp = True
+        except Exception as e:
+            print(f"Error checking parking_tour OTP bypass: {e}")
+
+        if bypass_otp or verify_code_from_database(email, validated_code):
             session['user_email'] = email
             session.pop('pending_email', None)
             
