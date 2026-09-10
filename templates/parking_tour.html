@@ -651,7 +651,7 @@
                 profileName: getText('identification > usageProfile > name') || getText('profileName') || 'רגיל',
 
                 // Presence
-                presence: getText('identification > present') === 'true' || getText('identification > status') === '0',
+                presence: getText('present') === 'true' || getText('identification > present') === 'true' || getAttr('identification', 'present') === 'true',
 
                 // Raw data for debugging if needed
                 fullDetailsLoaded: true
