@@ -383,8 +383,8 @@
             <div class="search-form">
                 <div class="form-group">
                     <label class="form-label" for="licensePlate">מספר רישוי:</label>
-                    <input type="text" id="licensePlate" class="form-input" placeholder="12-345-67" autocomplete="off"
-                        maxlength="10">
+                    <input type="tel" pattern="[0-9]*" inputmode="numeric" id="licensePlate" class="form-input" placeholder="1234567" autocomplete="off"
+                        maxlength="10" enterkeyhint="search">
                 </div>
                 <button class="btn btn-primary" onclick="searchSubscriber()">
                     🔍 חיפוש מנוי
@@ -507,6 +507,9 @@
                 const el = xmlDoc.querySelector(selector);
                 return el ? el.getAttribute(attr) : '';
             };
+            
+            // Log XML for debugging
+            console.log("Raw XML:", xmlDoc.documentElement.innerHTML);
 
             // Extract fields based on XML structure
             // Checks multiple possible locations as API structure varies
@@ -533,7 +536,7 @@
                 profileName: getText('identification > usageProfile > name') || getText('profileName') || 'רגיל',
 
                 // Presence
-                presence: getText('identification > status') === '0', // Approximate mapping
+                presence: getText('identification > present') === 'true' || getText('identification > status') === '0',
 
                 // Raw data for debugging if needed
                 fullDetailsLoaded: true
@@ -553,15 +556,31 @@
             document.getElementById('resultsSection').classList.add('active');
         }
 
+        // Format date robustly
+        function formatDate(dateStr) {
+            if (!dateStr) return 'לא ידוע';
+            try {
+                // If it's already in a readable format or looks like dd.mm.yyyy
+                if (dateStr.includes('.')) {
+                    const parts = dateStr.split('T')[0].split(' ')[0].split('.');
+                    if (parts.length === 3) {
+                        return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2]}`;
+                    }
+                }
+                const date = new Date(dateStr);
+                if (isNaN(date.getTime())) return dateStr;
+                return date.toLocaleDateString('he-IL');
+            } catch(e) {
+                return dateStr;
+            }
+        }
+
         // Create subscriber card
         function createSubscriberCard(subscriber) {
             const card = document.createElement('div');
             card.className = 'subscriber-card';
 
-            // Check if subscription is active
-            const now = new Date();
-            const validUntil = new Date(subscriber.validUntil || subscriber.xValidUntil);
-            const isActive = validUntil > now;
+            const isPresent = subscriber.presence;
 
             // Collect all vehicles
             const vehicles = [];
@@ -578,8 +597,8 @@
                         <div class="subscriber-id">מנוי מס': ${subscriber.subscriberNum || subscriber.id}</div>
                     </div>
                     <div>
-                        <span class="status-tag ${isActive ? 'status-active' : 'status-expired'}">
-                            ${isActive ? '✓ פעיל' : '✗ לא פעיל'}
+                        <span class="status-tag ${isPresent ? 'status-active' : 'status-expired'}">
+                            ${isPresent ? '✓ נוכח בחניון' : '✗ לא נוכח'}
                         </span>
                     </div>
                 </div>
@@ -662,12 +681,7 @@
             document.getElementById('resultsSection').classList.add('active');
         }
 
-        // Format date
-        function formatDate(dateStr) {
-            if (!dateStr) return 'לא ידוע';
-            const date = new Date(dateStr);
-            return date.toLocaleDateString('he-IL');
-        }
+
 
         // Logout
         function logout() {
