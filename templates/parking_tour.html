@@ -17,6 +17,25 @@
             --dark-text: #2c3e50;
             --border-color: #dee2e6;
             --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            --bg-gradient-1: var(--primary-color);
+            --bg-gradient-2: var(--secondary-color);
+            --card-bg: white;
+            --header-bg: white;
+        }
+
+        body.dark-mode {
+            --primary-color: #4a5c92;
+            --secondary-color: #3b2c4e;
+            --success-color: #2d8a43;
+            --danger-color: #b02a37;
+            --light-bg: #2c3e50;
+            --dark-text: #f8f9fa;
+            --border-color: #4a5568;
+            --bg-gradient-1: #1a1a2e;
+            --bg-gradient-2: #16213e;
+            --card-bg: #1f2937;
+            --header-bg: #1f2937;
+            --shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
         }
 
         * {
@@ -27,10 +46,15 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            background: linear-gradient(135deg, var(--bg-gradient-1) 0%, var(--bg-gradient-2) 100%);
             min-height: 100vh;
             direction: rtl;
-            font-size: 14px;
+            font-size: 17px; /* הוגדל ב-20% */
+            transition: font-size 0.3s, background 0.3s;
+        }
+
+        body.large-text {
+            font-size: 21px; /* הגדלה נוספת */
         }
 
         .container {
@@ -39,9 +63,38 @@
             padding: 20px;
         }
 
+        /* Accessibility Bar */
+        .accessibility-bar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 10px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .acc-btn {
+            background: var(--card-bg);
+            color: var(--dark-text);
+            border: 2px solid var(--border-color);
+            border-radius: 50px;
+            padding: 8px 15px;
+            font-size: 1.1em;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: var(--shadow);
+            transition: all 0.2s;
+        }
+
+        .acc-btn:hover {
+            transform: scale(1.05);
+            border-color: var(--primary-color);
+        }
+
         /* Header Section */
         .header {
-            background: white;
+            background: var(--header-bg);
             padding: 25px;
             border-radius: 12px;
             box-shadow: var(--shadow);
@@ -63,13 +116,13 @@
         }
 
         .user-info {
-            color: #666;
+            color: #888;
             font-size: 0.9em;
         }
 
         /* Search Section */
         .search-section {
-            background: white;
+            background: var(--card-bg);
             padding: 30px;
             border-radius: 12px;
             box-shadow: var(--shadow);
@@ -109,6 +162,8 @@
             text-align: center;
             font-weight: 600;
             letter-spacing: 2px;
+            background: var(--light-bg);
+            color: var(--dark-text);
         }
 
         .form-input:focus {
@@ -141,15 +196,16 @@
             background: var(--light-bg);
             color: var(--dark-text);
             margin-top: 10px;
+            border: 1px solid var(--border-color);
         }
 
         .btn-secondary:hover {
-            background: #e9ecef;
+            background: var(--border-color);
         }
 
         /* Results Section */
         .results-section {
-            background: white;
+            background: var(--card-bg);
             padding: 30px;
             border-radius: 12px;
             box-shadow: var(--shadow);
@@ -181,23 +237,33 @@
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
 
+        .company-title-large {
+            font-size: 1.8em;
+            font-weight: 800;
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
         .subscriber-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
             padding-bottom: 15px;
-            border-bottom: 2px solid #dee2e6;
+            border-bottom: 2px solid var(--border-color);
         }
 
         .subscriber-name {
-            font-size: 1.2em;
+            font-size: 1.3em;
             font-weight: 600;
             color: var(--dark-text);
         }
 
         .subscriber-id {
-            color: #666;
+            color: #888;
             font-size: 0.9em;
         }
 
@@ -212,36 +278,48 @@
             flex-direction: column;
         }
 
+        .detail-item.full-width {
+            grid-column: 1 / -1;
+            align-items: center;
+            background: var(--card-bg);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px dashed var(--border-color);
+        }
+
         .detail-label {
             font-size: 0.85em;
-            color: #666;
-            margin-bottom: 3px;
+            color: #888;
+            margin-bottom: 5px;
         }
 
         .detail-value {
             font-weight: 600;
             color: var(--dark-text);
+            font-size: 1.1em;
         }
 
         .vehicle-list {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
+            justify-content: center;
         }
 
         .vehicle-tag {
             background: var(--primary-color);
             color: white;
-            padding: 5px 12px;
+            padding: 8px 15px;
             border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: 600;
+            font-size: 1.2em;
+            font-weight: 700;
+            letter-spacing: 2px;
         }
 
         .status-tag {
             padding: 5px 15px;
             border-radius: 20px;
-            font-size: 0.85em;
+            font-size: 0.9em;
             font-weight: 600;
             display: inline-block;
         }
@@ -250,10 +328,20 @@
             background: #d4edda;
             color: #155724;
         }
+        
+        body.dark-mode .status-active {
+            background: #155724;
+            color: #d4edda;
+        }
 
         .status-expired {
             background: #f8d7da;
             color: #721c24;
+        }
+
+        body.dark-mode .status-expired {
+            background: #721c24;
+            color: #f8d7da;
         }
 
         /* Loading and Messages */
@@ -312,7 +400,7 @@
         .no-results {
             text-align: center;
             padding: 40px;
-            color: #666;
+            color: #888;
         }
 
         .no-results-icon {
@@ -327,13 +415,14 @@
             top: 20px;
             left: 20px;
             padding: 8px 20px;
-            background: rgba(255, 255, 255, 0.9);
+            background: var(--card-bg);
             color: var(--danger-color);
             border: 2px solid var(--danger-color);
             border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
             transition: all 0.3s;
+            z-index: 101;
         }
 
         .logout-btn:hover {
@@ -359,7 +448,7 @@
 
             .logout-btn {
                 position: static;
-                margin-bottom: 20px;
+                margin-bottom: 10px;
                 width: 100%;
             }
         }
@@ -368,6 +457,11 @@
 
 <body>
     <button class="logout-btn" onclick="logout()">יציאה</button>
+
+    <div class="accessibility-bar">
+        <button class="acc-btn" onclick="toggleDarkMode()" title="מצב לילה">🌓</button>
+        <button class="acc-btn" onclick="toggleTextSize()" title="הגדל טקסט">A+</button>
+    </div>
 
     <div class="container">
         <!-- Header -->
@@ -403,12 +497,33 @@
     </div>
 
     <script>
+        // Accessibility functions
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('parking_tour_dark', isDark);
+        }
+
+        function toggleTextSize() {
+            document.body.classList.toggle('large-text');
+            const isLarge = document.body.classList.contains('large-text');
+            localStorage.setItem('parking_tour_large', isLarge);
+        }
+
         // Initialize
         let currentUserData = null;
         let currentParkingId = null;
 
         // Load user data on page load
         window.addEventListener('DOMContentLoaded', async () => {
+            // Restore accessibility settings
+            if (localStorage.getItem('parking_tour_dark') === 'true') {
+                document.body.classList.add('dark-mode');
+            }
+            if (localStorage.getItem('parking_tour_large') === 'true') {
+                document.body.classList.add('large-text');
+            }
+
             await loadUserData();
 
             // Setup enter key for search
@@ -589,6 +704,15 @@
             if (subscriber.vehicle3 || subscriber.lpn3) vehicles.push(subscriber.vehicle3 || subscriber.lpn3);
 
             card.innerHTML = `
+                <div class="company-title-large">${subscriber.companyName || 'חברה לא ידועה'}</div>
+                
+                <div class="detail-item full-width" style="margin-bottom: 20px;">
+                    <span class="detail-label">רכבים מורשים:</span>
+                    <div class="vehicle-list">
+                        ${vehicles.map(v => `<span class="vehicle-tag">${v}</span>`).join('')}
+                    </div>
+                </div>
+
                 <div class="subscriber-header">
                     <div>
                         <div class="subscriber-name">
@@ -602,24 +726,15 @@
                         </span>
                     </div>
                 </div>
+
                 <div class="subscriber-details">
                     <div class="detail-item">
-                        <span class="detail-label">חברה:</span>
-                        <span class="detail-value">${subscriber.companyName || 'לא ידוע'}</span>
+                        <span class="detail-label">פרופיל:</span>
+                        <span class="detail-value">${subscriber.profileName || 'רגיל'}</span>
                     </div>
                     <div class="detail-item">
                         <span class="detail-label">תוקף עד:</span>
                         <span class="detail-value">${formatDate(subscriber.validUntil || subscriber.xValidUntil)}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">כלי רכב:</span>
-                        <div class="vehicle-list">
-                            ${vehicles.map(v => `<span class="vehicle-tag">${v}</span>`).join('')}
-                        </div>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">פרופיל:</span>
-                        <span class="detail-value">${subscriber.profileName || 'רגיל'}</span>
                     </div>
                     ${subscriber.tagNum ? `
                         <div class="detail-item">
