@@ -452,6 +452,149 @@
                 width: 100%;
             }
         }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+            color: var(--dark-text);
+            font-size: 0.9em;
+            opacity: 0.8;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .footer .company {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .footer .legal-links {
+            margin: 10px 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .footer .legal-links a {
+            color: var(--dark-text);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer .legal-links a:hover {
+            color: var(--primary-color);
+            text-decoration: underline;
+        }
+
+        .developer {
+            font-size: 0.8em;
+            opacity: 0.6;
+            margin-top: 5px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            color: var(--dark-text);
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--header-bg);
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: var(--dark-text);
+        }
+
+        .legal-modal-body {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        @media (min-width: 600px) {
+            .legal-modal-body {
+                flex-direction: row;
+            }
+        }
+
+        .legal-sidebar {
+            display: flex;
+            flex-direction: column;
+            background: var(--light-bg);
+            border-left: 1px solid var(--border-color);
+            padding: 10px;
+            min-width: 150px;
+        }
+
+        @media (max-width: 599px) {
+            .legal-sidebar {
+                flex-direction: row;
+                overflow-x: auto;
+                border-left: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+        }
+
+        .legal-tab {
+            background: none;
+            border: none;
+            padding: 10px;
+            text-align: right;
+            cursor: pointer;
+            color: var(--dark-text);
+            font-size: 1em;
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+
+        .legal-tab.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .legal-content-area {
+            padding: 20px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
     </style>
 </head>
 
@@ -494,9 +637,82 @@
             <h2 class="results-title">תוצאות חיפוש</h2>
             <div id="resultsContent"></div>
         </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="company">Scheidt & Bachmann Israel</div>
+            <div class="copyright">Copyright © 2026 Scheidt & Bachmann Israel. All Rights Reserved.</div>
+            <div class="legal-links">
+                <a href="#" onclick="openLegalModal('terms'); return false;">תנאי שימוש</a>
+                <a href="#" onclick="openLegalModal('privacy'); return false;">מדיניות פרטיות</a>
+                <a href="#" onclick="openLegalModal('security'); return false;">אבטחת מידע</a>
+                <a href="#" onclick="openLegalModal('accessibility'); return false;">הצהרת נגישות</a>
+            </div>
+            <div class="developer">Developed by Dror Prince</div>
+        </div>
+    </div>
+
+    <!-- Legal Modal -->
+    <div class="modal" id="legalModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>תקנון ומדיניות</h2>
+                <button class="close-btn" onclick="closeLegalModal()">×</button>
+            </div>
+            <div class="legal-modal-body">
+                <div class="legal-sidebar">
+                    <button class="legal-tab active" onclick="switchLegalTab('terms')">תנאי שימוש</button>
+                    <button class="legal-tab" onclick="switchLegalTab('privacy')">מדיניות פרטיות</button>
+                    <button class="legal-tab" onclick="switchLegalTab('security')">מדיניות תוכנה</button>
+                    <button class="legal-tab" onclick="switchLegalTab('accessibility')">נגישות</button>
+                </div>
+                <div class="legal-content-area" id="legalContentArea">
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
+        // Legal Policy Modal Logic
+        const legalData = {
+            terms: {
+                title: 'תנאי שימוש',
+                content: 'שירותי מערכת ניהול ובקרת החניונים מסופקים על ידי שיידט את בכמן ישראל. המערכת מיועדת לניהול מנויים, תגים וכלי רכב מורשים בלבד. השימוש במערכת כפוף להרשאות הגישה שהוקצו למשתמש. המערכת מסופקת כמות שהיא (As-Is). החברה עושה את מירב המאמצים להבטיח זמינות ותקינות רציפה, אך אינה נושאת באחריות לנזק ישיר או עקיף הנובע משימוש בלתי מורשה או מתקלות תקשורת צד-שלישי.'
+            },
+            privacy: {
+                title: 'מדיניות פרטיות',
+                content: 'המערכת אוספת ומעבדת נתונים הנדרשים לתפעול החניון בלבד, לרבות: שמות מנויים, מספרי לוחית רישוי (LPN), מספרי תגים, והיסטוריית כניסות/יציאות מהחניון. הנתונים נשמרים במאגרי המידע המאובטחים של שיידט את בכמן ישראל ואינם מועברים לכל גורם צד שלישי שלא לצורך תפעול המערכת או ללא דרישה על פי דין. המשתמש זכאי לעיין במידע הנוגע אליו בהתאם לחוק הגנת הפרטיות.'
+            },
+            security: {
+                title: 'מדיניות תוכנה ואבטחה',
+                content: 'המערכת פועלת בהתאם לתקני אבטחת המידע המחמירים בתעשייה. הגישה למערכת מוגנת באמצעות מנגנון הזדהות והרשאות דינמיות. כל התקשורת מול השרת מוצפנת בפרוטוקולי אבטחה מתקדמים (SSL/TLS). המערכת כוללת מנגנוני ניתוק אוטומטי לאחר חוסר פעילות להגנה על המידע.'
+            },
+            accessibility: {
+                title: 'הצהרת נגישות',
+                content: 'שיידט את בכמן ישראל רואה בחשיבות עליונה את הנגשת המערכת לכלל המשתמשים, כולל אנשים עם מוגבלויות. המערכת כוללת תפריט נגישות ייעודי, תמיכה בניגודיות גבוהה, סרגל התאמת גודל טקסט, ניווט מקלדת ותמיכה בקוראי מסך. נתקלתם בבעיית נגישות? ניתן לפנות לרכז הנגשת המערכת בכתובת המייל הרשמית של החברה.'
+            }
+        };
+
+        function openLegalModal(tabId) {
+            document.getElementById('legalModal').classList.add('show');
+            switchLegalTab(tabId);
+        }
+
+        function closeLegalModal() {
+            document.getElementById('legalModal').classList.remove('show');
+        }
+
+        function switchLegalTab(tabId) {
+            document.querySelectorAll('.legal-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelector(`.legal-tab[onclick="switchLegalTab('${tabId}')"]`).classList.add('active');
+            
+            const data = legalData[tabId];
+            document.getElementById('legalContentArea').innerHTML = `
+                <h3 style="margin-bottom: 15px; color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px;">${data.title}</h3>
+                <p style="line-height: 1.6;">${data.content}</p>
+            `;
+        }
+
         // Accessibility functions
         function toggleDarkMode() {
             document.body.classList.toggle('dark-mode');
@@ -593,7 +809,11 @@
                 autoClearTimeout = null;
             }
 
-            const licensePlate = document.getElementById('licensePlate').value.trim();
+            const licensePlateInput = document.getElementById('licensePlate');
+            const licensePlate = licensePlateInput.value.trim();
+
+            // Dismiss mobile keyboard so results are visible
+            licensePlateInput.blur();
 
             if (!licensePlate) {
                 showMessage('אנא הזן מספר רישוי', 'warning');
@@ -803,7 +1023,7 @@
             if (autoSearchTimeout) clearTimeout(autoSearchTimeout);
             if (autoClearTimeout) clearTimeout(autoClearTimeout);
             document.getElementById('licensePlate').value = '';
-            hideResults();
+            // We intentionally do NOT hide the results, so the last search stays visible
             document.getElementById('licensePlate').focus();
         }
 
