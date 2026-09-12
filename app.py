@@ -1604,7 +1604,7 @@ def get_user_parkings():
         
         # קבלת כל החניונים של החברה
         parkings_result = supabase.table('user_parkings').select(
-            'project_number, parking_name'
+            'project_number, parking_name, capacity, casual_capacity, subscribers_capacity, latitude, longitude'
         ).eq('company_type', user_data['company_type']).execute()
         
         # הסרת כפילויות
