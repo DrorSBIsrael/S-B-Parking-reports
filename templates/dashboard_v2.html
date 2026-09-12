@@ -10,101 +10,275 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
         :root {
             --primary: #007AFF;
             --primary-light: #5AC8FA;
             --primary-dark: #0051D5;
             --success: #34C759;
-            --danger: #FF3B30;
             --warning: #FF9500;
+            --danger: #FF3B30;
             --purple: #AF52DE;
-            --background: #F2F2F7;
-            --surface: #FFFFFF;
-            --text-primary: #000000;
-            --text-secondary: #6C6C70;
-            --text-tertiary: #8E8E93;
-            --border: #E5E5EA;
-            --shadow: 0 2px 15px rgba(0,0,0,0.08);
-            --shadow-hover: 0 8px 30px rgba(0,0,0,0.12);
+            --pink: #FF2D55;
+            --background: #E2E8F0; /* Clean Slate-200 background */
+            --surface: #FFFFFF;    /* Pure crisp white card surface */
+            --surface-hover: #F8FAFC;
+            --text-primary: #0F172A;
+            --text-secondary: #475569;
+            --text-tertiary: #94A3B8;
+            --border: #CBD5E1;     /* Slate-300: crisp contrast against #E2E8F0 */
+            --border-subtle: #E2E8F0;
+            
+            /* Realistic 3D Depth Shadows: Ambient Occlusion + Directional Elevation + Inset Specular Top Light */
+            --shadow: 
+                0 1px 2px 0 rgba(15, 23, 42, 0.05),
+                0 4px 6px -1px rgba(15, 23, 42, 0.07),
+                0 12px 24px -4px rgba(15, 23, 42, 0.09),
+                0 1px 0 0 rgba(255, 255, 255, 1) inset;
+                
+            --shadow-hover: 
+                0 4px 6px -1px rgba(15, 23, 42, 0.06),
+                0 10px 15px -3px rgba(15, 23, 42, 0.08),
+                0 20px 32px -6px rgba(15, 23, 42, 0.13),
+                0 1px 0 0 rgba(255, 255, 255, 1) inset;
+
             --radius: 16px;
-            --radius-small: 12px;
+            --radius-small: 10px;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        html, body {
+            background-color: #E2E8F0 !important;
+            background: #E2E8F0 !important;
+            color: #0F172A;
+            font-family: 'Heebo', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-font-smoothing: antialiased;
         }
 
-        body {
-            font-family: 'Heebo', 'Inter', 'Noto Sans Arabic', -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: var(--background);
-            color: var(--text-primary);
-            line-height: 1.6;
-            font-weight: 400;
-            transition: direction 0.2s ease;
+        .container {
+            background: transparent !important;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 24px 20px;
         }
 
-        /* Language selector */
-        .lang-selector {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-        }
-
-        .lang-selector select {
-            appearance: none;
-            -webkit-appearance: none;
+        .header {
             background: var(--surface);
             border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px 28px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--surface) !important;
+            border: 1px solid var(--border) !important;
+            border-radius: var(--radius) !important;
+            box-shadow: var(--shadow) !important;
+            padding: 22px 24px !important;
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease !important;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px) !important;
+            box-shadow: var(--shadow-hover) !important;
+            border-color: #94A3B8 !important;
+        }
+
+        .chart-section {
+            background: var(--surface) !important;
+            border: 1px solid var(--border) !important;
+            border-radius: var(--radius) !important;
+            box-shadow: var(--shadow) !important;
+            padding: 24px 28px !important;
+            margin-bottom: 24px !important;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease !important;
+        }
+
+        .chart-section:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: var(--shadow-hover) !important;
+            border-color: #94A3B8 !important;
+        }
+
+        /* AI Analysis Section */
+        .ai-section {
+            background: linear-gradient(135deg, #FFFFFF 0%, #F0FDF4 100%);
+            border: 1px solid #86EFAC;
+            border-radius: var(--radius);
+            padding: 22px 26px;
+            margin-bottom: 24px;
+            box-shadow: 
+                0 1px 2px 0 rgba(15, 23, 42, 0.05),
+                0 6px 16px -2px rgba(22, 101, 52, 0.08),
+                0 12px 24px -4px rgba(15, 23, 42, 0.06),
+                0 1px 0 0 rgba(255, 255, 255, 1) inset;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .ai-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 4px 6px -1px rgba(15, 23, 42, 0.06),
+                0 12px 24px -4px rgba(22, 101, 52, 0.12),
+                0 18px 30px -6px rgba(15, 23, 42, 0.08),
+                0 1px 0 0 rgba(255, 255, 255, 1) inset;
+        }
+
+        .ai-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            border-bottom: 1px solid rgba(187, 247, 208, 0.7);
+            padding-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .ai-title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .ai-chip {
+            background: #DCFCE7;
+            color: #15803D;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .ai-insight-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+            gap: 14px;
+        }
+
+        .ai-insight-card {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05), 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+            transition: all 0.2s ease;
+        }
+
+        .ai-insight-card:hover {
+            background: #FFFFFF;
+            border-color: #CBD5E1;
+            transform: translateY(-2px);
+        }
+
+        .ai-insight-icon {
+            font-size: 20px;
+            line-height: 1;
+            padding: 8px;
+            background: #F8FAFC;
+            border-radius: 10px;
+            border: 1px solid #EDF2F7;
+        }
+
+        /* Two Column Layout for Stacked Revenue & Occupancy */
+        .specifai-grid-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 1024px) {
+            .specifai-grid-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        
+        /* Neutral Top Action Buttons (No bright colors) */
+        .action-btn-neutral {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            background: #FFFFFF;
+            border: 1px solid #CBD5E1;
             border-radius: 8px;
-            padding: 6px 32px 6px 11px;
+            color: #334155;
             font-size: 13px;
-            font-weight: 500;
-            color: var(--text-primary);
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
             font-family: inherit;
-            min-width: 120px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
         }
 
-        .lang-selector select:hover {
-            border-color: rgba(0,0,0,0.2);
-            background: rgba(0,0,0,0.02);
+        .action-btn-neutral:hover {
+            background: #F8FAFC;
+            border-color: #94A3B8;
+            color: #0F172A;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.06);
         }
 
-        .lang-selector select:focus {
+        .action-btn-neutral.logout:hover {
+            background: #FEF2F2;
+            border-color: #FCA5A5;
+            color: #DC2626;
+        }
+
+        /* Circular Flags for Languages */
+        .flags-container {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #F8FAFC;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            border: 1px solid #E2E8F0;
+        }
+
+        .flag-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            cursor: pointer;
+            background: #FFFFFF;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(0,122,255,0.12);
+            padding: 0;
+            line-height: 1;
         }
 
-        .lang-selector::after {
-            content: '🌐';
-            position: absolute;
-            right: 9px;
-            top: 50%;
-            transform: translateY(-50%);
-            pointer-events: none;
-            font-size: 13px;
+        .flag-btn:hover {
+            transform: scale(1.15);
+            border-color: #94A3B8;
         }
 
-        [dir="ltr"] .lang-selector::after {
-            right: auto;
-            left: 9px;
+        .flag-btn.active {
+            border-color: #0284C7;
+            box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.35);
+            transform: scale(1.1);
         }
 
-        [dir="ltr"] .lang-selector select {
-            padding: 6px 11px 6px 32px;
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
         /* Header Styles */
         .header {
             background: var(--surface);
@@ -206,65 +380,65 @@
             box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
         }
         
-        /* Date picker icon positioning fix */
-        .date-wrapper {
-            position: relative;
-            display: inline-block;
-            width: 100%;
+        
+        /* Compact, neat date picker styling */
+        .date-control-group {
+            flex: 0 0 auto !important;
+            width: 155px !important;
+            min-width: 145px !important;
+            box-sizing: border-box !important;
         }
         
-        .date-wrapper::before {
-            content: "📅";
-            position: absolute;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 18px;
-            pointer-events: none;
-            z-index: 1;
-        }
-        
-        input[type="date"] {
-            position: relative;
-            padding-left: 36px !important;
-            direction: ltr;
-            text-align: right;
-            background-color: white;
-        }
-        
-        /* Hover effect for the date input */
-        input[type="date"]:hover {
-            background-position: 6px center;
-        }
-        
-        /* Style the native calendar picker */
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            position: absolute;
-            left: 6px;
-            cursor: pointer;
-            width: 24px;
-            height: 24px;
-            background: transparent;
-            color: transparent;
-            z-index: 2;
-        }
-        
-        /* Fix for Chrome to keep the picker visible */
-        input[type="date"]::-webkit-calendar-picker-indicator {
+        .date-control-group .control-label {
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            color: #475569 !important;
+            margin-bottom: 6px !important;
             display: block !important;
-            -webkit-appearance: none;
-            appearance: none;
+        }
+
+        .date-control-group .date-wrapper {
+            position: relative !important;
+            display: block !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
         }
         
-        /* Firefox support */
-        input[type="date"]::-moz-calendar-picker-indicator {
-            position: absolute;
-            left: 6px;
-            cursor: pointer;
-            width: 24px;
-            height: 24px;
-            background: transparent;
-            z-index: 2;
+        .date-control-group .control-input {
+            width: 100% !important;
+            height: 40px !important;
+            padding: 8px 10px !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            color: #0F172A !important;
+            border: 1.5px solid #CBD5E1 !important;
+            border-radius: 10px !important;
+            background: #FFFFFF !important;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
+            text-align: center !important;
+            direction: ltr !important;
+            cursor: pointer !important;
+            box-sizing: border-box !important;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+        }
+
+        .date-control-group .control-input:focus {
+            border-color: var(--primary) !important;
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15) !important;
+            outline: none !important;
+        }
+
+        /* Native calendar indicator - clearly visible and clickable */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            cursor: pointer !important;
+            opacity: 0.75 !important;
+            padding: 2px !important;
+            transition: opacity 0.2s ease, transform 0.2s ease !important;
+        }
+
+        input[type="date"]::-webkit-calendar-picker-indicator:hover {
+            opacity: 1 !important;
+            transform: scale(1.15) !important;
         }
         
         /* Primary action button (Load Data) - Apple blue */
@@ -806,7 +980,9 @@
         }
         
         .stay-duration-item {
-            background: var(--background);
+            background: #F8FAFC;
+            border: 1px solid #CBD5E1;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04), 0 1px 0 rgba(255, 255, 255, 0.8) inset;
             padding: 20px;
             border-radius: var(--radius-small);
             text-align: center;
@@ -899,28 +1075,59 @@
         <!-- Header -->
         <div class="header">
             <div class="header-top">
-                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; flex-wrap: wrap; gap: 20px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; flex-wrap: wrap; gap: 16px;">
+                    
+                    <!-- Right: Scheidt & Bachmann Israel + Title + User Info -->
                     <div style="display: flex; align-items: center; gap: 20px; flex: 1; min-width: 300px;">
-                        <h1 style="margin: 0;"><span data-i18n="dashboardTitle">לוח בקרה</span> - <span id="dashboardTitle"><span data-i18n="loading">טוען...</span></span></h1>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                                <div style="font-size: 12px; font-weight: 800; color: #0284C7; letter-spacing: 0.6px; text-transform: uppercase;">
+                                    SCHEIDT & BACHMANN ISRAEL
+                                </div>
+                                <span style="color: #CBD5E1;">•</span>
+                                <div style="font-size: 13.5px; color: var(--text-secondary); display: flex; align-items: center; gap: 5px;">
+                                    <span data-i18n="loggedInUser">משתמש מחובר:</span>
+                                    <span id="userName" style="font-weight: 700; color: #0F172A;">טוען...</span>
+                                </div>
+                            </div>
+                            <h1 style="margin: 0; font-size: clamp(22px, 3.5vw, 32px);">
+                                <span data-i18n="dashboardTitle">לוח בקרה</span> - <span id="dashboardTitle"><span data-i18n="loading">טוען...</span></span>
+                            </h1>
+                        </div>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <div style="text-align: right; color: var(--text-secondary); font-size: 13px; line-height: 1.3;">
-                            <div style="font-weight: 600; color: var(--text-primary);">S&B Parking</div>
-                            <div data-i18n="parkingMgmt">מערכת ניהול חניונים</div>
+
+                    <!-- Left: Action Buttons (No Colors) + Circular Flags -->
+                    <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                        
+                        <!-- Neutral Action Buttons: Export CSV, Print, Logout -->
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <button class="action-btn-neutral" onclick="exportToCSV()" title="יצוא CSV">
+                                <span>📥</span>
+                                <span data-i18n="exportCSV">יצוא CSV</span>
+                            </button>
+                            <button class="action-btn-neutral" onclick="printDashboard()" title="הדפסה">
+                                <span>🖨️</span>
+                                <span data-i18n="print">הדפסה</span>
+                            </button>
+                            <button class="action-btn-neutral logout" onclick="logout()" title="התנתק">
+                                <span>🚪</span>
+                                <span data-i18n="logout">התנתק</span>
+                            </button>
                         </div>
-                        <!-- Language Selector -->
-                        <div class="lang-selector">
-                            <select id="langSelect" onchange="applyLanguage(this.value)" title="Language / שפה">
-                                <option value="he">🇮🇱 עברית</option>
-                                <option value="en">🇺🇸 English</option>
-                                <option value="de">🇩🇪 Deutsch</option>
-                                <option value="ar">🇸🇦 العربية</option>
-                                <option value="fr">🇫🇷 Français</option>
-                                <option value="ru">🇷🇺 Русский</option>
-                            </select>
+
+                        <!-- Circular Flags for Language Selection -->
+                        <div class="flags-container" title="שפה / Language">
+                            <button class="flag-btn active" data-lang="he" onclick="applyLanguage('he')" title="עברית">🇮🇱</button>
+                            <button class="flag-btn" data-lang="en" onclick="applyLanguage('en')" title="English">🇬🇧</button>
+                            <button class="flag-btn" data-lang="de" onclick="applyLanguage('de')" title="Deutsch">🇩🇪</button>
+                            <button class="flag-btn" data-lang="ar" onclick="applyLanguage('ar')" title="العربية">🇸🇦</button>
+                            <button class="flag-btn" data-lang="fr" onclick="applyLanguage('fr')" title="Français">🇫🇷</button>
+                            <button class="flag-btn" data-lang="ru" onclick="applyLanguage('ru')" title="Русский">🇷🇺</button>
                         </div>
+
                     </div>
                 </div>
+            </div>
             
             <!-- Control Panel -->
             <div class="control-panel">
@@ -973,38 +1180,23 @@
     </button>
 </div>
                     
-                <!-- Date Range -->
-                <div class="control-group">
+                <!-- Date Range (Compact & Clean) -->
+                <div class="control-group date-control-group">
                     <label class="control-label" data-i18n="fromDate">מתאריך</label>
-                        <div class="date-wrapper">
-                    <input type="date" id="startDate" class="control-input">
-                        </div>
+                    <div class="date-wrapper">
+                        <input type="date" id="startDate" class="control-input" onclick="try{this.showPicker()}catch(e){}">
+                    </div>
                 </div>
                 
-                <div class="control-group">
+                <div class="control-group date-control-group">
                     <label class="control-label" data-i18n="toDate">עד תאריך</label>
-                        <div class="date-wrapper">
-                    <input type="date" id="endDate" class="control-input">
-                        </div>
+                    <div class="date-wrapper">
+                        <input type="date" id="endDate" class="control-input" onclick="try{this.showPicker()}catch(e){}">
+                    </div>
                 </div>
+            </div><!-- Close First Row -->
                     
-                <!-- Export/Print Buttons -->
-                <div style="display: flex; gap: 8px;">
-                   <button class="load-btn" onclick="exportToCSV()" style="background: linear-gradient(135deg, var(--success) 0%, #2DB553 100%);">
-                        <span>📥</span>
-                        <span data-i18n="exportCSV">יצוא CSV</span>
-                    </button>
-    
-                    <button class="load-btn" onclick="printDashboard()" style="background: linear-gradient(135deg, var(--purple) 0%, #C969FF 100%);">
-                    <span>🖨️</span>
-                    <span data-i18n="print">הדפסה</span>
-                    </button>
 
-                     <!-- Logout Button moved here -->
-                     <button class="logout-btn" onclick="logout()" data-i18n="logout" style="margin-right: auto;">
-                        התנתק
-                    </button>
-                </div>
 
                 <!-- Second Row - Quick Actions -->
                 <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; align-items: center;">
@@ -1046,13 +1238,8 @@
             </div>
         </div>
     </div>
-</div>
 
-            <!-- User Info -->
-            <div style="margin-top: 15px; padding: 10px 0; color: var(--text-secondary); font-size: 14px;">
-                <span data-i18n="loggedInUser">משתמש מחובר: </span>
-                <span id="userName" style="font-weight: 600;">טוען...</span>
-            </div>
+            
             
         <!-- Loading Overlay -->
         <div class="loading-overlay" id="loadingOverlay">
@@ -1076,73 +1263,45 @@
             </div>
             
             <!-- Alerts Section -->
-            <div class="alerts-section" id="alertsSection">
-                <div class="chart-header">
-                    <h2 class="chart-title">
-                        <span>⚡</span>
-                        <span data-i18n="alertsTrends">התראות ומגמות</span>
-                    </h2>
+            
+            <!-- AI Analysis Section (ניתוח AI ומגמות) -->
+            <div class="ai-section" id="aiAnalysisSection">
+                <div class="ai-header">
+                    <div class="ai-title-wrap">
+                        <div class="ai-chip">
+                            <span>✨</span>
+                            <span>ניתוח AI אוטומטי</span>
+                        </div>
+                        <h2 style="font-size: 18px; font-weight: 700; color: #166534; margin: 0;">
+                            תובנות והשוואות תקופתיות חכמות
+                        </h2>
+                    </div>
+                    <div style="font-size: 13px; color: #475569; font-weight: 600;" id="aiComparisonPeriodLabel">
+                        מנתח נתוני תקופה...
+                    </div>
                 </div>
-                <div id="alertsContainer">
-                    <!-- Dynamic alerts -->
+                <div class="ai-insight-grid" id="aiInsightsContainer">
+                    <!-- Dynamic automated insights rendered by JS -->
                 </div>
             </div>
-            
-            <!-- Charts Grid -->
-            <div class="charts-grid">
-                <!-- Revenue Trends Chart -->
+
+            <!-- Row 1: הכנסות לפי חניון (Revenue per Location) + השוואת חניונים -->
+            <div class="charts-grid multi-parking-only">
+                <!-- Stacked Revenue Bar Chart -->
                 <div class="chart-section">
                     <div class="chart-header">
                         <h2 class="chart-title">
-                            <span>📈</span>
-                            <span data-i18n="revenueTrend">מגמת הכנסות</span>
+                            <span>📊</span>
+                            <span>הכנסות לפי חניון (Revenue per Location)</span>
                         </h2>
                         <div class="chart-options">
-                            <button class="chart-option-btn" onclick="toggleChartType('revenue')">
-                                <span>🔄</span>
-                                <span data-i18n="switchType">החלף סוג</span>
-                            </button>
+                            <button class="chart-option-btn active" id="btnStackedRev" onclick="toggleStackedRev(true)">מוערם</button>
+                            <button class="chart-option-btn" id="btnGroupedRev" onclick="toggleStackedRev(false)">נפרד</button>
                         </div>
                     </div>
-                    <canvas id="revenueChart"></canvas>
+                    <canvas id="stackedRevenueChart" style="max-height: 350px;"></canvas>
                 </div>
-                
-                <!-- Payment Methods Chart -->
-                <div class="chart-section">
-                    <div class="chart-header">
-                        <h2 class="chart-title">
-                            <span>💳</span>
-                            <span data-i18n="paymentMethods">אמצעי תשלום</span>
-                        </h2>
-                    </div>
-                    <canvas id="paymentChart"></canvas>
-                </div>
-                
-                <!-- Entries Chart -->
-                <div class="chart-section">
-                    <div class="chart-header">
-                        <h2 class="chart-title">
-                            <span>🚗</span>
-                            <span data-i18n="entryTypes">סוגי כניסות</span>
-                        </h2>
-                    </div>
-                    <canvas id="entriesChart"></canvas>
-                </div>
-                
-                <!-- Period Comparison Chart -->
-                <div class="chart-section">
-                    <div class="chart-header">
-                        <h2 class="chart-title">
-                            <span>📅</span>
-                            <span id="comparisonTitle" data-i18n="dailyComparison">השוואה יומית</span>
-                        </h2>
-                    </div>
-                    <canvas id="dailyChart"></canvas>
-                </div>
-            </div>
-            
-            <!-- Multi-Parking Charts -->
-            <div class="charts-grid multi-parking-only">
+
                 <!-- Parking Comparison Chart -->
                 <div class="chart-section">
                     <div class="chart-header">
@@ -1172,9 +1331,12 @@
                         </div>
                     </div>
                 </div>
-                
+            </div>
+
+            <!-- Row 2: דירוג חניונים + מגמת הכנסות -->
+            <div class="charts-grid">
                 <!-- Parking Ranking -->
-                <div class="chart-section">
+                <div class="chart-section multi-parking-only">
                     <div class="chart-header">
                         <h2 class="chart-title">
                             <span>🏆</span>
@@ -1183,21 +1345,63 @@
                     </div>
                     <div id="parkingRanking"></div>
                 </div>
+
+                <!-- Revenue Trends Chart -->
+                <div class="chart-section">
+                    <div class="chart-header">
+                        <h2 class="chart-title">
+                            <span>📈</span>
+                            <span data-i18n="revenueTrend">מגמת הכנסות</span>
+                        </h2>
+                        <div class="chart-options">
+                            <button class="chart-option-btn" onclick="toggleChartType('revenue')">
+                                <span>🔄</span>
+                                <span data-i18n="switchType">החלף סוג</span>
+                            </button>
+                        </div>
+                    </div>
+                    <canvas id="revenueChart"></canvas>
+                </div>
             </div>
-            
-            <!-- Stay Duration Section -->
-            <div class="chart-section">
-                <div class="chart-header">
-                    <h2 class="chart-title">
+
+            <!-- Row 3: תפוסה מקסימלית + אמצעי תשלום -->
+            <div class="charts-grid">
+                <!-- Maximum Occupancy Line Chart (ts_per5 vs ts_per6) -->
+                <div class="chart-section">
+                    <div class="chart-header">
+                        <h2 class="chart-title">
+                            <span>📈</span>
+                            <span>תפוסה מקסימלית (ts_per5 / ts_per6)</span>
+                        </h2>
+                    </div>
+                    <canvas id="maxOccupancyChart" style="max-height: 350px;"></canvas>
+                </div>
+
+                <!-- Payment Methods Chart -->
+                <div class="chart-section">
+                    <div class="chart-header">
+                        <h2 class="chart-title">
+                            <span>💳</span>
+                            <span data-i18n="paymentMethods">אמצעי תשלום</span>
+                        </h2>
+                    </div>
+                    <canvas id="paymentChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Row 4: זמני שהייה לרוחב (Full Width - Compact & Proportional) -->
+            <div class="chart-section" id="stayDurationSection" style="width: 100%; max-width: 100%; box-sizing: border-box; margin-bottom: 24px; padding: 18px 24px !important;">
+                <div class="chart-header" style="margin-bottom: 14px;">
+                    <h2 class="chart-title" style="margin: 0; font-size: 19px;">
                         <span>⏱️</span>
                         <span data-i18n="stayTimes">זמני שהייה</span>
                     </h2>
                     <div class="chart-options">
-                        <button class="chart-option-btn active" onclick="toggleStayDurationView('cards')">
+                        <button class="chart-option-btn" onclick="toggleStayDurationView('cards')">
                             <span>🎯</span>
                             <span data-i18n="cards">כרטיסים</span>
                         </button>
-                        <button class="chart-option-btn" onclick="toggleStayDurationView('bar')">
+                        <button class="chart-option-btn active" onclick="toggleStayDurationView('bar')">
                             <span>📊</span>
                             <span data-i18n="bar">עמודות</span>
                         </button>
@@ -1205,16 +1409,19 @@
                             <span>🥧</span>
                             <span data-i18n="pie">עוגה</span>
                         </button>
+                    </div>
                 </div>
-                </div>
-                <div class="stay-duration-grid" id="stayDurationGrid">
+                <div class="stay-duration-grid" id="stayDurationGrid" style="display: none;">
                     <!-- Stay duration cards will be populated here -->
                 </div>
-                <canvas id="stayDurationChart" style="display: none; max-height: 350px;"></canvas>
+                <div id="stayDurationChartWrapper" style="position: relative; height: 170px; max-height: 180px; width: 100%; max-width: 950px; margin: 0 auto;">
+                    <canvas id="stayDurationChart"></canvas>
+                </div>
             </div>
-            
-            <!-- Barrier & Encoders Section -->
+
+            <!-- Row 5: פתיחות מחסום + נתוני מקודדים -->
             <div class="charts-grid">
+                <!-- Barrier Chart -->
                 <div class="chart-section">
                     <div class="chart-header">
                         <h2 class="chart-title">
@@ -1225,6 +1432,7 @@
                     <canvas id="barrierChart"></canvas>
                 </div>
                 
+                <!-- Encoders Info -->
                 <div class="chart-section">
                     <div class="chart-header">
                         <h2 class="chart-title">
@@ -1233,6 +1441,31 @@
                         </h2>
                     </div>
                     <div id="encodersInfo"></div>
+                </div>
+            </div>
+
+            <!-- Row 6: סוגי כניסות + השוואה יומית (בתחתית) -->
+            <div class="charts-grid">
+                <!-- Entries Chart -->
+                <div class="chart-section">
+                    <div class="chart-header">
+                        <h2 class="chart-title">
+                            <span>🚗</span>
+                            <span data-i18n="entryTypes">סוגי כניסות</span>
+                        </h2>
+                    </div>
+                    <canvas id="entriesChart"></canvas>
+                </div>
+                
+                <!-- Period Comparison Chart -->
+                <div class="chart-section">
+                    <div class="chart-header">
+                        <h2 class="chart-title">
+                            <span>📅</span>
+                            <span id="comparisonTitle" data-i18n="dailyComparison">השוואה יומית</span>
+                        </h2>
+                    </div>
+                    <canvas id="dailyChart"></canvas>
                 </div>
             </div>
         </div>
@@ -1617,6 +1850,9 @@ function applyLanguage(lang) {
     if (!translations[lang]) lang = 'he';
     currentLang = lang;
     localStorage.setItem('dashboardLang', lang);
+    document.querySelectorAll('.flag-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
+    });
 
     const tr = translations[lang];
     const html = document.getElementById('htmlRoot');
@@ -1675,7 +1911,7 @@ let groupName = '';
 let userParkings = [];
 let currentViewMode = 'daily'; // Track current view mode
 let chartTypes = { revenue: 'line', entries: 'bar', daily: 'bar' }; // Track chart types
-let stayDurationViewMode = 'cards'; // Track stay duration view mode
+let stayDurationViewMode = 'bar'; // Track stay duration view mode
 
 // Chart.js default configuration
 Chart.defaults.font.family = "'Heebo', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -1727,11 +1963,11 @@ await loadData();
 // Update period label after loading
 updateCurrentPeriodLabel();
 // Set default stay duration view to bar chart
-stayDurationViewMode = 'cards';
+stayDurationViewMode = 'bar';
 // No need to find by Hebrew text - use data-i18n
 const allStayBtns = document.querySelectorAll('.chart-section:has(#stayDurationGrid) .chart-option-btn');
 allStayBtns.forEach(btn => btn.classList.remove('active'));
-if (allStayBtns[0]) allStayBtns[0].classList.add('active'); // Cards is first button
+if (allStayBtns[1]) allStayBtns[1].classList.add('active'); // Bar is second button
 // Fix date picker display after everything is loaded
         setTimeout(() => {
         //    fixDatePickerFormat();
@@ -2286,6 +2522,15 @@ function updateStats() {
         </div>
         ` : ''}
         
+        
+        <div class="stat-card" data-stat-type="occupancy" ${isGroup && !isSingleParkingMode ? 'style="cursor: pointer;"' : ''}>
+            <div class="icon" style="background: linear-gradient(135deg, #0284C7, #38BDF8);">⚡</div>
+            <h3>תפוסת שיא כוללת</h3>
+            <div class="value" id="maxOccCardValue">טוען...</div>
+            <div class="change positive" id="maxOccCardPercent">מחושב מתוך קיבולת הרשת</div>
+            <div class="subtext">מזדמנים (ts_per5) + מנויים (ts_per6)</div>
+        </div>
+
         <div class="stat-card" data-stat-type="barriers" ${isGroup && !isSingleParkingMode ? 'style="cursor: pointer;"' : ''}>
             <div class="icon" style="background: linear-gradient(135deg, #FF3B30, #FF6961);">🚧</div>
             <h3>${t('barrierOpenings')}</h3>
@@ -3098,7 +3343,9 @@ const stayTitleElement = document.querySelector('#stayDurationGrid').parentEleme
     if (stayDurationViewMode === 'cards') {
         // Show cards view
         document.getElementById('stayDurationGrid').style.display = 'grid';
-        document.getElementById('stayDurationChart').style.display = 'none';
+        const _stayChartWrapper = document.getElementById('stayDurationChartWrapper');
+        if (_stayChartWrapper) _stayChartWrapper.style.display = 'none';
+        else if (document.getElementById('stayDurationChart')) document.getElementById('stayDurationChart').style.display = 'none';
         
         // Calculate total for percentages
         const total = Object.values(durations).reduce((sum, val) => sum + val, 0) + stay015; // Include stay015 in total to avoid double counting
@@ -3157,7 +3404,9 @@ const stayTitleElement = document.querySelector('#stayDurationGrid').parentEleme
     } else {
         // Show chart view - always start with bar chart
         document.getElementById('stayDurationGrid').style.display = 'none';
-        document.getElementById('stayDurationChart').style.display = 'block';
+        const _stayChartWrapper = document.getElementById('stayDurationChartWrapper');
+        if (_stayChartWrapper) _stayChartWrapper.style.display = 'block';
+        else if (document.getElementById('stayDurationChart')) document.getElementById('stayDurationChart').style.display = 'block';
         
         createStayDurationChart(durations, stayDurationViewMode, stay015, stay0to60);
     }
@@ -3205,7 +3454,8 @@ function createStayDurationChart(durations, chartType, stay015, stay0to60) {
                 borderColor: chartType === 'bar' ? 
                     labels.map(label => label.includes('0-15') ? '#007AFF' : '#fff') : 
                     '#fff',
-                borderRadius: chartType === 'bar' ? 8 : 0,
+                borderRadius: chartType === 'bar' ? 6 : 0,
+                maxBarThickness: chartType === 'bar' ? 42 : undefined,
                 borderDash: chartType === 'bar' ? 
                     labels.map(label => label.includes('0-15') ? [5, 5] : []) : 
                     undefined
@@ -3340,6 +3590,15 @@ function toggleStayDurationView(viewType) {
         });
     
     if (activeBtn) activeBtn.classList.add('active');
+    
+    const wrapper = document.getElementById('stayDurationChartWrapper');
+    if (wrapper) {
+        if (viewType === 'pie') {
+            wrapper.style.maxWidth = '450px';
+        } else {
+            wrapper.style.maxWidth = '950px';
+        }
+    }
     
     // Update display
     updateStayDuration();
@@ -3593,11 +3852,12 @@ function createParkingComparisonChart() {
     });
 }
 
-// Update parking ranking
+// Update parking ranking - PIE / DOUGHNUT CHART INSTEAD OF ROWS!
 function updateParkingRanking() {
-    // Calculate metrics for each parking
+    const rankingEl = document.getElementById('parkingRanking');
+    if (!rankingEl) return;
+
     const parkingMetrics = {};
-    
     currentData.forEach(d => {
         if (!parkingMetrics[d.parking_name]) {
             parkingMetrics[d.parking_name] = {
@@ -3611,55 +3871,121 @@ function updateParkingRanking() {
         parkingMetrics[d.parking_name].entries += d.t_entry_tot || 0;
         parkingMetrics[d.parking_name].days.add(d.report_date);
     });
-    
-    // Calculate averages and sort
+
     const rankings = Object.values(parkingMetrics).map(parking => ({
         name: parking.name,
         totalRevenue: parking.revenue,
         totalEntries: parking.entries,
         avgDailyRevenue: parking.revenue / parking.days.size,
-        avgDailyEntries: parking.entries / parking.days.size,
         activeDays: parking.days.size
     })).sort((a, b) => b.totalRevenue - a.totalRevenue);
-    
-    // Create ranking HTML
-    let rankingHTML = '';
-    rankings.forEach((parking, index) => {
-        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
-        
-        rankingHTML += `
-            <div class="ranking-item" style="
-                display: flex;
-                align-items: center;
-                padding: 20px;
-                margin-bottom: 12px;
-                background: ${index < 3 ? 'linear-gradient(135deg, rgba(0, 122, 255, 0.05) 0%, rgba(90, 200, 250, 0.05) 100%)' : 'var(--background)'};
-                border-radius: 12px;
-                transition: all 0.3s ease;
-            ">
-                <div style="
-                    font-size: 24px;
-                    font-weight: 700;
-                    margin-left: 20px;
-                    min-width: 40px;
-                ">
-                    ${medal}
-                </div>
-                <div style="flex: 1;">
-                    <div style="font-weight: 600; font-size: 18px; margin-bottom: 8px;">
-                        ${parking.name}
-                    </div>
-                    <div style="display: flex; gap: 20px; flex-wrap: wrap; color: var(--text-secondary); font-size: 14px;">
-                        <span>הכנסות: ₪${parking.totalRevenue.toLocaleString()}</span>
-                        <span>כניסות: ${parking.totalEntries.toLocaleString()}</span>
-                        <span>ממוצע יומי: ₪${Math.round(parking.avgDailyRevenue).toLocaleString()}</span>
-                    </div>
-                </div>
+
+    const totalRev = rankings.reduce((sum, p) => sum + p.totalRevenue, 0);
+
+    // Build Ranking HTML: Donut Chart on top, and clean summary table below!
+    rankingEl.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Donut Chart of Parking Shares -->
+            <div style="position: relative; min-height: 330px; background: var(--surface-subtle, #F8FAFC); border-radius: 16px; padding: 16px 14px 20px 14px;">
+                <canvas id="parkingRankingPieCanvas" style="min-height: 295px; width: 100%;"></canvas>
             </div>
-        `;
-    });
-    
-    document.getElementById('parkingRanking').innerHTML = rankingHTML;
+            
+            <!-- Compact Ranking Cards -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; max-height: 280px; overflow-y: auto; padding-left: 4px;">
+                ${rankings.map((p, index) => {
+                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+                    const pct = totalRev > 0 ? ((p.totalRevenue / totalRev) * 100).toFixed(1) : 0;
+                    return `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; box-shadow: 0 2px 5px rgba(15, 23, 42, 0.04), 0 1px 0 rgba(255, 255, 255, 0.8) inset; transition: transform 0.15s ease, box-shadow 0.15s ease;" onmouseenter="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(15, 23, 42, 0.08)';" onmouseleave="this.style.transform='none'; this.style.boxShadow='0 2px 5px rgba(15, 23, 42, 0.04)';" onclick="filterToSpecificParking('${p.name}')" title="לחץ לסינון">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-weight: 700; font-size: 15px;">${medal}</span>
+                                <span style="font-weight: 600; font-size: 13.5px; color: var(--text-primary);">${p.name}</span>
+                            </div>
+                            <div style="text-align: left;">
+                                <div style="font-weight: 700; color: #0284C7; font-size: 13.5px;">₪${Math.round(p.totalRevenue).toLocaleString()}</div>
+                                <div style="font-size: 11px; color: var(--text-secondary);">${pct}%</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+
+    // Render Donut Chart
+    setTimeout(() => {
+        const canvas = document.getElementById('parkingRankingPieCanvas');
+        if (canvas) {
+            if (window.rankingDonutChart) {
+                window.rankingDonutChart.destroy();
+                window.rankingDonutChart = null;
+            }
+            const colors = [
+                '#0284C7', '#0EA5E9', '#14B8A6', '#10B981', '#6366F1',
+                '#8B5CF6', '#A855F7', '#F59E0B', '#F97316', '#EF4444',
+                '#EC4899', '#64748B', '#06B6D4', '#84CC16'
+            ];
+
+            const totalR = rankings.reduce((sum, r) => sum + r.totalRevenue, 0);
+            window.rankingDonutChart = new Chart(canvas.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: rankings.map(r => r.name),
+                    datasets: [{
+                        data: rankings.map(r => Math.round(r.totalRevenue)),
+                        backgroundColor: colors.slice(0, rankings.length),
+                        borderWidth: 2,
+                        borderColor: '#FFFFFF'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    layout: {
+                        padding: {
+                            bottom: 12
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 8,
+                                padding: 8,
+                                font: { size: 10.5, family: "'Heebo', sans-serif" },
+                                generateLabels: function(chart) {
+                                    const data = chart.data;
+                                    if (data.labels.length && data.datasets.length) {
+                                        return data.labels.map((label, i) => {
+                                            const val = data.datasets[0].data[i];
+                                            const pct = totalR > 0 ? ((val / totalR) * 100).toFixed(1) : 0;
+                                            return {
+                                                text: `${label} (${pct}%)`,
+                                                fillStyle: data.datasets[0].backgroundColor[i],
+                                                hidden: false,
+                                                index: i
+                                            };
+                                        });
+                                    }
+                                    return [];
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    const val = ctx.raw;
+                                    const pct = totalR > 0 ? ((val / totalR) * 100).toFixed(1) : 0;
+                                    return ` ${ctx.label}: ₪${val.toLocaleString()} (${pct}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }, 20);
 }
 
 // Update encoders info
@@ -3672,10 +3998,13 @@ function updateEncodersInfo() {
     const encodersHTML = `
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
             <div style="
-                background: var(--background);
+                background: #F8FAFC;
                 padding: 24px;
-                border-radius: 12px;
+                border-radius: 14px;
                 text-align: center;
+                border: 1px solid #CBD5E1;
+                box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
             ">
                 <div style="color: var(--text-secondary); font-size: 14px; margin-bottom: 8px;">
                     ${t('encoder1')}
@@ -3686,10 +4015,13 @@ function updateEncodersInfo() {
             </div>
             
             <div style="
-                background: var(--background);
+                background: #F8FAFC;
                 padding: 24px;
-                border-radius: 12px;
+                border-radius: 14px;
                 text-align: center;
+                border: 1px solid #CBD5E1;
+                box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
             ">
                 <div style="color: var(--text-secondary); font-size: 14px; margin-bottom: 8px;">
                     ${t('encoder2')}
@@ -3700,10 +4032,13 @@ function updateEncodersInfo() {
             </div>
             
             <div style="
-                background: var(--background);
+                background: #F8FAFC;
                 padding: 24px;
-                border-radius: 12px;
+                border-radius: 14px;
                 text-align: center;
+                border: 1px solid #CBD5E1;
+                box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
             ">
                 <div style="color: var(--text-secondary); font-size: 14px; margin-bottom: 8px;">
                     ${t('encoder3')}
@@ -4500,7 +4835,20 @@ function setupStatCardHovers() {
             
             card.addEventListener('click', (e) => {
                 e.stopPropagation();
-                showStatTooltip(e, statType, true);
+                const tooltip = document.getElementById('statTooltip');
+                const isClicked = tooltip && tooltip.getAttribute('data-clicked') === 'true';
+                const activeStat = tooltip && tooltip.getAttribute('data-active-stat');
+                
+                // If same card clicked again while open -> Toggle Off (close)!
+                if (isClicked && activeStat === statType && tooltip.style.display !== 'none') {
+                    tooltip.setAttribute('data-clicked', 'false');
+                    tooltip.removeAttribute('data-active-stat');
+                    hideStatTooltip();
+                } else {
+                    tooltip.setAttribute('data-clicked', 'true');
+                    tooltip.setAttribute('data-active-stat', statType);
+                    showStatTooltip(e, statType, true);
+                }
             });
         }
     });
@@ -4662,7 +5010,15 @@ function showStatTooltip(event, statType, isClick = false) {
     const itemsToShow = sortedParkings.slice(0, maxItems);
     const hasMore = sortedParkings.length > maxItems;
     
-    content += '<div style="max-height: 280px; overflow-y: auto;">';
+    
+    // Add Donut Chart on top
+    content += `
+        <div style="position: relative; height: 230px; margin-bottom: 12px; background: #F8FAFC; border-radius: 12px; padding: 8px;">
+            <canvas id="tooltipDoughnutChart" style="max-height: 214px;"></canvas>
+        </div>
+    `;
+    content += '<div style="max-height: 240px; overflow-y: auto;">';
+
     itemsToShow.forEach(([parkingName, stats], index) => {
         let value;
         let percentage = 0;
@@ -4768,7 +5124,115 @@ function showStatTooltip(event, statType, isClick = false) {
     
     content += '</div>';
     
+    
     tooltip.innerHTML = content;
+
+    // Create Tooltip Doughnut Chart on top
+    setTimeout(() => {
+        const donutCanvas = document.getElementById('tooltipDoughnutChart');
+        if (donutCanvas) {
+            if (window.activeTooltipDoughnut) {
+                window.activeTooltipDoughnut.destroy();
+                window.activeTooltipDoughnut = null;
+            }
+            const pLabels = itemsToShow.map(([pName]) => pName);
+            const pValues = itemsToShow.map(([, s]) => {
+                switch(statType) {
+                    case 'revenue': return s.revenue;
+                    case 'entries': return s.entries;
+                    case 'barriers': return s.barriers;
+                    case 'casual': return s.casual;
+                    case 'members': return s.members;
+                    case 'app': return s.app;
+                    case 'cash': return s.cash;
+                    case 'credit': return s.credit;
+                    case 'pango': return s.pango;
+                    case 'cello': return s.cello;
+                    case 'avg-revenue': return Math.round(s.avgRevenue);
+                    default: return s.revenue;
+                }
+            });
+
+            const palette = [
+                '#0284C7', '#14B8A6', '#F59E0B', '#6366F1', '#EC4899',
+                '#10B981', '#F97316', '#8B5CF6', '#06B6D4', '#64748B',
+                '#EF4444', '#84CC16', '#EAB308', '#3B82F6'
+            ];
+
+            const totalVal = pValues.reduce((a, b) => a + b, 0);
+            window.activeTooltipDoughnut = new Chart(donutCanvas.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: pLabels,
+                    datasets: [{
+                        data: pValues,
+                        backgroundColor: palette.slice(0, pLabels.length),
+                        borderWidth: 2,
+                        borderColor: '#FFFFFF'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '54%',
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 10,
+                                font: { size: 11, family: "'Heebo', sans-serif" },
+                                generateLabels: function(chart) {
+                                    const data = chart.data;
+                                    if (data.labels.length && data.datasets.length) {
+                                        return data.labels.map((label, i) => {
+                                            const val = data.datasets[0].data[i];
+                                            const pct = totalVal > 0 ? ((val / totalVal) * 100).toFixed(1) : 0;
+                                            return {
+                                                text: `${label} (${pct}%)`,
+                                                fillStyle: data.datasets[0].backgroundColor[i],
+                                                hidden: false,
+                                                index: i
+                                            };
+                                        });
+                                    }
+                                    return [];
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    const val = ctx.raw;
+                                    const pct = totalVal > 0 ? ((val / totalVal) * 100).toFixed(1) : 0;
+                                    return ` ${ctx.label}: ${val.toLocaleString()} (${pct}%)`;
+                                }
+                            }
+                        }
+                    }
+                },
+                plugins: [{
+                    id: 'centerTotal',
+                    afterDraw(chart) {
+                        const { ctx, chartArea: { top, bottom, left, right, width, height } } = chart;
+                        ctx.save();
+                        ctx.font = 'bold 13px Heebo, sans-serif';
+                        ctx.fillStyle = '#1E293B';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        const centerX = (left + right) / 2;
+                        const centerY = top + (height / 2);
+                        // Only draw if there is space
+                        if (centerY > 0 && centerX > 0) {
+                            ctx.fillText(pLabels.length + ' חניונים', centerX, centerY);
+                        }
+                        ctx.restore();
+                    }
+                }]
+            });
+        }
+    }, 10);
+
     
     // Position tooltip
     const rect = card.getBoundingClientRect();
@@ -5035,6 +5499,10 @@ function printDashboard() {
         // Create print-specific styles - עיצוב מותאם להדפסה
         const printStyles = `
             <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
                 @media print {
                     * {
                         box-sizing: border-box;
@@ -5431,6 +5899,445 @@ function printDashboard() {
 // Initialize
 console.log('Apple Dashboard ready!');
 
+
+
+
+// =========================================================
+// AUTOMATED AI INSIGHTS & HISTORICAL COMPARISON ENGINE
+// =========================================================
+
+let previousPeriodData = [];
+let previousPeriodRange = null;
+let g_stackedRevenueChart = null;
+let g_maxOccupancyChart = null;
+let g_isStacked = true;
+
+// Helper: Calculate comparison date range
+function getComparisonDateRange(startDateStr, endDateStr) {
+    const s = new Date(startDateStr);
+    const e = new Date(endDateStr);
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
+
+    const diffMs = e.getTime() - s.getTime();
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1;
+
+    let prevStart, prevEnd;
+
+    if (diffDays <= 1) {
+        // Single day: exactly same day in previous week (e.g. Friday vs Friday)
+        prevStart = new Date(s);
+        prevStart.setDate(prevStart.getDate() - 7);
+        prevEnd = new Date(prevStart);
+    } else if (diffDays <= 8) {
+        // Week: previous 7 days
+        prevEnd = new Date(s);
+        prevEnd.setDate(prevEnd.getDate() - 1);
+        prevStart = new Date(prevEnd);
+        prevStart.setDate(prevStart.getDate() - diffDays + 1);
+    } else {
+        // Month / multi-week: previous period of identical length
+        prevEnd = new Date(s);
+        prevEnd.setDate(prevEnd.getDate() - 1);
+        prevStart = new Date(prevEnd);
+        prevStart.setDate(prevStart.getDate() - diffDays + 1);
+    }
+
+    const pad = n => String(n).padStart(2, '0');
+    const toISO = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+    return {
+        start: toISO(prevStart),
+        end: toISO(prevEnd),
+        displayStart: formatDateForDisplay(toISO(prevStart)),
+        displayEnd: formatDateForDisplay(toISO(prevEnd)),
+        diffDays
+    };
+}
+
+// Background fetch comparison data & update AI
+async function fetchComparisonData(startDate, endDate) {
+    const compRange = getComparisonDateRange(startDate, endDate);
+    if (!compRange) return;
+
+    previousPeriodRange = compRange;
+    const labelEl = document.getElementById('aiComparisonPeriodLabel');
+    if (labelEl) {
+        labelEl.textContent = `בהשוואה לתקופה מקבילה: ${compRange.displayStart} - ${compRange.displayEnd}`;
+    }
+
+    try {
+        const params = new URLSearchParams({
+            start_date: compRange.start,
+            end_date: compRange.end
+        });
+        const selectedParking = document.getElementById('parkingSelector').value;
+        if (selectedParking) params.append('parking_id', selectedParking);
+
+        const res = await fetch(`/api/parking-data?${params}`);
+        const result = await res.json();
+        if (result.success && result.data) {
+            previousPeriodData = result.data;
+        } else {
+            previousPeriodData = [];
+        }
+    } catch (e) {
+        console.warn('Could not load comparison data:', e);
+        previousPeriodData = [];
+    }
+
+    // Refresh AI insights and card arrows
+    renderAiAnalysis();
+    refreshCardPercentageArrows();
+}
+
+// Override calculateStatChanges to use REAL previous period comparison
+function calculateStatChanges() {
+    if (!previousPeriodData || previousPeriodData.length === 0) {
+        return { revenue: null, entries: null, barriers: null, casual: null, members: null };
+    }
+
+    const currRev = currentData.reduce((s, d) => s + (d.total_revenue_shekels || 0), 0);
+    const prevRev = previousPeriodData.reduce((s, d) => s + (d.total_revenue_shekels || 0), 0);
+
+    const currEnt = currentData.reduce((s, d) => s + (d.t_entry_tot || 0), 0);
+    const prevEnt = previousPeriodData.reduce((s, d) => s + (d.t_entry_tot || 0), 0);
+
+    const currBar = currentData.reduce((s, d) => s + (d.t_open_b || 0), 0);
+    const prevBar = previousPeriodData.reduce((s, d) => s + (d.t_open_b || 0), 0);
+
+    return {
+        revenue: prevRev > 0 ? ((currRev - prevRev) / prevRev) * 100 : null,
+        entries: prevEnt > 0 ? ((currEnt - prevEnt) / prevEnt) * 100 : null,
+        barriers: prevBar > 0 ? ((currBar - prevBar) / prevBar) * 100 : null,
+        prevRevenue: prevRev,
+        prevEntries: prevEnt,
+        prevBarriers: prevBar
+    };
+}
+
+// Refresh percentage badges on cards after comparison arrives
+function refreshCardPercentageArrows() {
+    const changes = calculateStatChanges();
+    if (changes.revenue === null) return;
+
+    // Update revenue card
+    const revCard = document.querySelector('.stat-card[data-stat-type="revenue"] .change');
+    if (revCard) {
+        revCard.className = `change ${changes.revenue >= 0 ? 'positive' : 'negative'}`;
+        revCard.innerHTML = `
+            <span>${changes.revenue >= 0 ? '▲' : '▼'}</span>
+            <span>${Math.abs(changes.revenue).toFixed(1)}%</span>
+            <span style="font-size: 11px; color: var(--text-secondary); font-weight: normal; margin-right: 4px;">
+                (לעומת ₪${Math.round(changes.prevRevenue).toLocaleString()})
+            </span>
+        `;
+    }
+
+    // Update entries card
+    const entCard = document.querySelector('.stat-card[data-stat-type="entries"] .change');
+    if (entCard) {
+        entCard.className = `change ${changes.entries >= 0 ? 'positive' : 'negative'}`;
+        entCard.innerHTML = `
+            <span>${changes.entries >= 0 ? '▲' : '▼'}</span>
+            <span>${Math.abs(changes.entries).toFixed(1)}%</span>
+            <span style="font-size: 11px; color: var(--text-secondary); font-weight: normal; margin-right: 4px;">
+                (לעומת ${changes.prevEntries.toLocaleString()} כניסות)
+            </span>
+        `;
+    }
+}
+
+// Generate Automated AI Insights
+function renderAiAnalysis() {
+    const container = document.getElementById('aiInsightsContainer');
+    if (!container || !currentData || currentData.length === 0) return;
+
+    const stats = calculateStats();
+    const changes = calculateStatChanges();
+
+    // Top parking
+    const parkMap = {};
+    currentData.forEach(d => {
+        parkMap[d.parking_name] = (parkMap[d.parking_name] || 0) + (d.total_revenue_shekels || 0);
+    });
+    const sorted = Object.entries(parkMap).sort((a, b) => b[1] - a[1]);
+    const topPark = sorted[0] || ['כללי', 0];
+    const topPct = stats.totalRevenue > 0 ? ((topPark[1] / stats.totalRevenue) * 100).toFixed(1) : 0;
+
+    // Max Occupancy calculation (ts_per5 + ts_per6)
+    let peakCasual = 0, peakSub = 0;
+    currentData.forEach(d => {
+        if ((d.ts_per5 || 0) > peakCasual) peakCasual = d.ts_per5;
+        if ((d.ts_per6 || 0) > peakSub) peakSub = d.ts_per6;
+    });
+    const totalPeak = peakCasual + peakSub;
+
+    let netCapacity = 0;
+    if (userParkings && userParkings.length > 0) {
+        userParkings.forEach(p => { netCapacity += (p.capacity || 0); });
+    }
+    if (netCapacity === 0) netCapacity = 14500;
+    const occPct = Math.round((totalPeak / netCapacity) * 100);
+
+    // Update Occupancy Card Value
+    const occValEl = document.getElementById('maxOccCardValue');
+    const occPctEl = document.getElementById('maxOccCardPercent');
+    if (occValEl) occValEl.textContent = totalPeak.toLocaleString() + ' רכבים';
+    if (occPctEl) occPctEl.textContent = occPct + '% מתוך קיבולת ' + netCapacity.toLocaleString();
+
+    const insights = [];
+
+    // Insight 1: Revenue trend vs previous period
+    if (changes.revenue !== null) {
+        const isUp = changes.revenue >= 0;
+        insights.push({
+            icon: isUp ? '📈' : '📉',
+            title: `מגמת הכנסות: ${isUp ? 'צמיחה' : 'ירידה'} של ${Math.abs(changes.revenue).toFixed(1)}%`,
+            text: `בתקופה זו הוכנסו ₪${stats.totalRevenue.toLocaleString()} בהשוואה ל-₪${changes.prevRevenue.toLocaleString()} בתקופה המקבילה.`
+        });
+    } else {
+        insights.push({
+            icon: '💰',
+            title: `סה"כ הכנסות לתקופה: ₪${stats.totalRevenue.toLocaleString()}`,
+            text: `ממוצע יומי עומד על ₪${stats.dailyAvgRevenue.toLocaleString()} לאורך ${stats.uniqueDays} ימי פעילות.`
+        });
+    }
+
+    // Insight 2: Traffic & Demographics
+    if (changes.entries !== null) {
+        const isUp = changes.entries >= 0;
+        insights.push({
+            icon: '🚗',
+            title: `תנועות: ${stats.totalEntries.toLocaleString()} כניסות (${isUp ? '+' : ''}${changes.entries.toFixed(1)}%)`,
+            text: `מזדמנים: ${stats.casualPercent.toFixed(1)}% (${stats.totalCasual.toLocaleString()}), מנויים: ${stats.memberPercent.toFixed(1)}% (${stats.totalMembers.toLocaleString()}).`
+        });
+    } else {
+        insights.push({
+            icon: '🚗',
+            title: `תנועות: ${stats.totalEntries.toLocaleString()} כניסות`,
+            text: `מזדמנים: ${stats.casualPercent.toFixed(1)}% מול ${stats.memberPercent.toFixed(1)}% מנויים. ממוצע יומי: ${stats.dailyAvgEntries.toLocaleString()} כניסות.`
+        });
+    }
+
+    // Insight 3: Top Parking
+    insights.push({
+        icon: '🏆',
+        title: `חניון מוביל ברשת: ${topPark[0]}`,
+        text: `הניב ₪${Math.round(topPark[1]).toLocaleString()} המהווים ${topPct}% מכלל הכנסות הרשת בטווח הנבחר.`
+    });
+
+    // Insight 4: Peak Occupancy (ts_per5 & ts_per6)
+    insights.push({
+        icon: '⚡',
+        title: `תפוסת שיא כוללת: ${totalPeak.toLocaleString()} רכבים (${occPct}% מקיבולת הרשת)`,
+        text: `שיא מזדמנים: ${peakCasual.toLocaleString()} רכבים, שיא מנויים: ${peakSub.toLocaleString()} רכבים מתוך קיבולת כוללת של ${netCapacity.toLocaleString()} חניות.`
+    });
+
+    // Insight 5: Barrier & Gate Security
+    const barrierRatio = stats.barrierPerEntry;
+    const isBarrierOk = barrierRatio <= 0.05;
+    insights.push({
+        icon: '🚧',
+        title: `פתיחות מחסום: ${stats.totalBarrier.toLocaleString()} (${barrierRatio.toFixed(2)} לרכב)`,
+        text: isBarrierOk ? 
+            `רמת פתיחות תקינה לחלוטין (${stats.barrierPercent.toFixed(1)}% מסך התנועות). אין התראות על תקלות שער.` :
+            `שיעור פתיחות מוגבר (${stats.barrierPercent.toFixed(1)}%). מומלץ לבדוק תקינות עיניות ושערי יציאה.`
+    });
+
+    container.innerHTML = insights.map(item => `
+        <div class="ai-insight-card">
+            <div class="ai-insight-icon">${item.icon}</div>
+            <div>
+                <div style="font-weight: 700; font-size: 14px; color: #1E293B; margin-bottom: 2px;">${item.title}</div>
+                <div style="font-size: 13px; color: #475569; line-height: 1.4;">${item.text}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// -------------------------------------------------------------
+// HELPER: GET PERIOD KEY FOR DATA GROUPING
+// -------------------------------------------------------------
+function getPeriodKey(d, mode) {
+    if (!d) return '';
+    const dateStr = d.report_date || '';
+    switch(mode) {
+        case 'daily':
+            return dateStr;
+        case 'weekly':
+            return typeof getWeekKey === 'function' ? getWeekKey(dateStr) : dateStr;
+        case 'monthly':
+            return typeof getMonthKey === 'function' ? getMonthKey(dateStr) : (dateStr.length >= 7 ? dateStr.substring(0, 7) : dateStr);
+        default:
+            return dateStr;
+    }
+}
+
+// -------------------------------------------------------------
+// RENDER SPECIF-AI CHARTS (Stacked Bar & Occupancy Line)
+// -------------------------------------------------------------
+function renderSpecifaiCharts() {
+    renderStackedRevenueChart();
+    renderMaxOccupancyChart();
+}
+
+function renderStackedRevenueChart() {
+    const canvas = document.getElementById('stackedRevenueChart');
+    if (!canvas || !currentData || currentData.length === 0) return;
+    const ctx = canvas.getContext('2d');
+    if (g_stackedRevenueChart) {
+        try { g_stackedRevenueChart.destroy(); } catch(e) {}
+        g_stackedRevenueChart = null;
+    }
+
+    const grouped = {};
+    const parkings = new Set();
+    currentData.forEach(d => {
+        const pKey = getPeriodKey(d, currentViewMode);
+        if (!pKey) return;
+        if (!grouped[pKey]) grouped[pKey] = {};
+        const pName = d.parking_name || 'כללי';
+        parkings.add(pName);
+        grouped[pKey][pName] = (grouped[pKey][pName] || 0) + (d.total_revenue_shekels || 0);
+    });
+
+    const periods = Object.keys(grouped).sort();
+    if (periods.length === 0) return;
+    const labels = periods.map(p => formatPeriodLabel(p, currentViewMode));
+
+    const colors = [
+        '#0284C7', '#0EA5E9', '#06B6D4', '#14B8A6', '#10B981',
+        '#6366F1', '#8B5CF6', '#A855F7', '#F59E0B', '#F97316',
+        '#EF4444', '#EC4899', '#64748B', '#475569'
+    ];
+
+    const datasets = Array.from(parkings).map((name, i) => ({
+        label: name,
+        data: periods.map(p => Math.round(grouped[p][name] || 0)),
+        backgroundColor: colors[i % colors.length],
+        borderRadius: 4,
+        stack: g_isStacked ? 'stack1' : undefined
+    }));
+
+    g_stackedRevenueChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { stacked: g_isStacked, grid: { display: false } },
+                y: {
+                    stacked: g_isStacked,
+                    ticks: { callback: v => '₪' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v) }
+                }
+            },
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11, family: "'Heebo', sans-serif" } } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ` ${ctx.dataset.label}: ₪${ctx.raw.toLocaleString()}`
+                    }
+                }
+            }
+        }
+    });
+}
+
+function toggleStackedRev(stacked) {
+    g_isStacked = stacked;
+    document.getElementById('btnStackedRev').classList.toggle('active', stacked);
+    document.getElementById('btnGroupedRev').classList.toggle('active', !stacked);
+    renderStackedRevenueChart();
+}
+
+function renderMaxOccupancyChart() {
+    const canvas = document.getElementById('maxOccupancyChart');
+    if (!canvas || !currentData || currentData.length === 0) return;
+    const ctx = canvas.getContext('2d');
+    if (g_maxOccupancyChart) g_maxOccupancyChart.destroy();
+
+    const occData = {};
+    currentData.forEach(d => {
+        const pKey = getPeriodKey(d, currentViewMode);
+        if (!occData[pKey]) occData[pKey] = { casual: 0, sub: 0 };
+        occData[pKey].casual = Math.max(occData[pKey].casual, (d.ts_per5 || 0));
+        occData[pKey].sub = Math.max(occData[pKey].sub, (d.ts_per6 || 0));
+    });
+
+    const periods = Object.keys(occData).sort();
+    const labels = periods.map(p => formatPeriodLabel(p, currentViewMode));
+
+    g_maxOccupancyChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'שיא מזדמנים (ts_per5)',
+                    data: periods.map(p => occData[p].casual),
+                    borderColor: '#10B981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                    fill: true,
+                    tension: 0.35,
+                    borderWidth: 2
+                },
+                {
+                    label: 'שיא מנויים (ts_per6)',
+                    data: periods.map(p => occData[p].sub),
+                    borderColor: '#0284C7',
+                    backgroundColor: 'rgba(2, 132, 199, 0.08)',
+                    fill: true,
+                    tension: 0.35,
+                    borderWidth: 2,
+                    borderDash: [5, 4]
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { boxWidth: 10, font: { size: 11 } } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ` ${ctx.dataset.label}: ${ctx.raw.toLocaleString()} רכבים`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { ticks: { callback: v => v.toLocaleString() } }
+            }
+        }
+    });
+}
+
+// Hook into updateCharts to render our new charts as well
+const originalUpdateCharts = updateCharts;
+updateCharts = function() {
+    originalUpdateCharts();
+    renderSpecifaiCharts();
+};
+
+// Hook into updateDashboard to render AI analysis immediately!
+const originalUpdateDashboard = updateDashboard;
+updateDashboard = function() {
+    originalUpdateDashboard();
+    renderAiAnalysis();
+};
+
+// Hook into loadData to trigger background comparison
+const originalLoadData = loadData;
+loadData = async function() {
+    await originalLoadData();
+    renderAiAnalysis(); // Immediate render with current stats
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    if (startDate && endDate) {
+        fetchComparisonData(startDate, endDate);
+    }
+};
 
 </script>
 
