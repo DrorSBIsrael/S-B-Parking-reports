@@ -9,8 +9,28 @@
     <title id="pageTitle">לוח בקרה - חניונים</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* Custom Leaflet Map styling */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.12), 0 8px 10px -6px rgba(0,0,0,0.08);
+            direction: rtl;
+            text-align: right;
+            font-family: 'Heebo', sans-serif;
+        }
+        .leaflet-popup-content {
+            margin: 12px 14px;
+            font-family: 'Heebo', sans-serif;
+            line-height: 1.4;
+        }
+        .parking-marker-custom {
+            background: transparent;
+            border: none;
+        }
+
         *, *::before, *::after {
             box-sizing: border-box;
         }
@@ -1286,6 +1306,32 @@
                 </div>
             </div>
 
+            <!-- Parking Map Section (מפת חניונים אינטראקטיבית) -->
+            <div class="chart-section" id="parkingMapSection" style="margin-bottom: 24px;">
+                <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="background: linear-gradient(135deg, #0284C7, #0369A1); color: white; width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);">
+                            🗺️
+                        </div>
+                        <div>
+                            <h2 class="chart-title" style="margin: 0; font-size: 18px; font-weight: 700; color: var(--text-primary);">
+                                מפת פריסת חניונים
+                            </h2>
+                            <p style="margin: 3px 0 0 0; font-size: 13px; color: var(--text-secondary);">
+                                לחץ על נעץ במפה לסינון נתוני הדשבורד עבור אותו חניון
+                            </p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span id="activeParkingBadge" style="display: none; background: #E0F2FE; color: #0369A1; font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 20px; border: 1px solid #BAE6FD;"></span>
+                        <button type="button" class="chart-option-btn" id="btnResetMapFilter" onclick="resetMapParkingFilter()" style="display: none; background: #F1F5F9; color: #334155; font-weight: 600; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer;">
+                            הצג את כל החניונים 🔄
+                        </button>
+                    </div>
+                </div>
+                <div id="parkingsMap" style="height: 420px; width: 100%; border-radius: 12px; border: 1px solid var(--border); z-index: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.05) inset;"></div>
+            </div>
+
             <!-- Row 1: הכנסות לפי חניון (Revenue per Location) + השוואת חניונים -->
             <div class="charts-grid multi-parking-only">
                 <!-- Stacked Revenue Bar Chart -->
@@ -1966,6 +2012,9 @@ async function initializeDashboard() {
         
         // Load parking list
         await loadParkingList();
+        if (typeof initOrUpdateParkingsMap === 'function') {
+            initOrUpdateParkingsMap();
+        }
         
 // Load initial data
 await loadData();
@@ -6378,6 +6427,9 @@ const originalUpdateDashboard = updateDashboard;
 updateDashboard = function() {
     originalUpdateDashboard();
     renderAiAnalysis();
+    if (typeof updateMapActiveMarker === 'function') {
+        updateMapActiveMarker();
+    }
 };
 
 // Hook into loadData to trigger background comparison
@@ -6385,12 +6437,264 @@ const originalLoadData = loadData;
 loadData = async function() {
     await originalLoadData();
     renderAiAnalysis(); // Immediate render with current stats
+    if (typeof updateMapActiveMarker === 'function') {
+        updateMapActiveMarker();
+    }
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
     if (startDate && endDate) {
         fetchComparisonData(startDate, endDate);
     }
 };
+
+// ==========================================
+// INTERACTIVE PARKINGS MAP (LEAFLET)
+// ==========================================
+let parkingsMapInstance = null;
+let parkingMarkersMap = {};
+let mapAllBounds = null;
+
+// Fallback coordinates for known parking lots in case not yet populated in DB
+const KNOWN_PARKING_COORDS = {
+    '471441446': { lat: 32.15570, lng: 34.89310, name: 'עזריאלי הוד השרון' },
+    '991961020': { lat: 32.07450, lng: 34.79220, name: 'עזריאלי תל אביב' },
+    '461001121': { lat: 31.75160, lng: 35.18730, name: 'עזריאלי מלחה' },
+    '470091025': { lat: 32.06730, lng: 34.81170, name: 'עזריאלי גבעתיים' },
+    '471231510': { lat: 32.07180, lng: 34.78940, name: 'עזריאלי שרונה' },
+    '471982000': { lat: 31.92950, lng: 34.86900, name: 'עזריאלי רמלה' },
+    '990031004': { lat: 31.24640, lng: 34.79720, name: 'עזריאלי באר שבע' },
+    '990251027': { lat: 31.89970, lng: 35.00760, name: 'עזריאלי מודיעין' },
+    '487811019': { lat: 32.16480, lng: 34.81050, name: 'עזריאלי ביזנס הרצליה' },
+    '471821183': { lat: 32.07840, lng: 34.79370, name: 'עזריאלי טאון' },
+    '471992000': { lat: 32.92720, lng: 35.08270, name: 'עזריאלי עכו' },
+    '461761186': { lat: 32.01350, lng: 34.79850, name: 'עזריאלי המנור' },
+    '471971198': { lat: 32.08980, lng: 34.86240, name: 'עזריאלי פתח תקווה' },
+    '460801090': { lat: 32.01250, lng: 34.80150, name: 'עזריאלי עסקים חולון' },
+    '486881013': { lat: 32.05150, lng: 34.76820, name: 'מבנה שמי בר' },
+    '477991091': { lat: 32.10640, lng: 34.95760, name: 'מבנה פארק אפק' },
+    '473223200': { lat: 32.07220, lng: 34.79810, name: 'מבנה סוללים' },
+    '473223100': { lat: 32.07150, lng: 34.79750, name: 'מבנה תל אביב' },
+    '460751071': { lat: 32.16450, lng: 34.80950, name: 'מבנה אקרשטיין' },
+    '400011001': { lat: 31.78920, lng: 35.18780, name: 'מבנה כנפי נשרים 24' },
+    '400021002': { lat: 31.78850, lng: 35.19150, name: 'מבנה כנפי נשרים 5-7' },
+    '40031003':  { lat: 32.76750, lng: 35.03450, name: 'מבנה תל חנן' },
+    '400041004': { lat: 32.00850, lng: 34.80200, name: 'מבנה בר און' },
+    '400051005': { lat: 32.17450, lng: 34.92500, name: 'מבנה כפר סבא' },
+    '472001210': { lat: 32.17640, lng: 34.92880, name: 'גזית כפר סבא' },
+    '471901044': { lat: 32.08770, lng: 34.79610, name: 'גזית צמרת' },
+    '471661170': { lat: 32.12640, lng: 34.80820, name: 'גזית מיקדו' },
+    '472402260': { lat: 32.19320, lng: 34.88720, name: 'אינפינטי מגדל' },
+    '472402580': { lat: 32.19400, lng: 34.88850, name: 'אינפינטי פארק' },
+    '472402570': { lat: 32.19250, lng: 34.88600, name: 'אינפינטי קאמפוס' },
+    '472402250': { lat: 32.19360, lng: 34.88790, name: 'אינפינטי פלאזה' },
+    '471041100': { lat: 32.19650, lng: 34.88450, name: 'פארק הייטק רעננה' },
+    '470282128': { lat: 31.90850, lng: 34.80920, name: 'אפלייד' },
+    '471043400': { lat: 31.90980, lng: 34.80750, name: 'פארק גב ים רחובות' },
+    '470241124': { lat: 31.90900, lng: 34.80800, name: 'שער המדע רחובות' },
+    '471801181': { lat: 32.06890, lng: 34.78450, name: 'קניון האופנה' },
+    '990902001': { lat: 32.78850, lng: 34.96050, name: 'מתם חיפה' },
+    '470982100': { lat: 31.98650, lng: 34.75700, name: 'הפניקס ראשון מתחם 1000' },
+    '478131051': { lat: 31.94820, lng: 34.88870, name: 'שיידט בדיקות' },
+    '470971197': { lat: 32.06580, lng: 34.78300, name: 'בנק הפועלים רובינשטין' },
+    '471562210': { lat: 31.79150, lng: 35.21050, name: 'אחוזת שנלר' },
+    '470232200': { lat: 32.09350, lng: 34.82100, name: 'מגדל אייקון' },
+    '470382338': { lat: 32.06550, lng: 34.78650, name: 'בסר מגרש 5' },
+    '472182301': { lat: 31.98950, lng: 34.76450, name: 'מאיה תור' },
+    '472363236': { lat: 31.75080, lng: 35.21550, name: 'התנופה ירושלים' },
+    '473301400': { lat: 32.07720, lng: 34.79950, name: 'ביונד' }
+};
+
+function createPinIcon(parkingName, isSelected) {
+    const bg = isSelected ? '#007AFF' : '#1E293B';
+    const border = isSelected ? '#FFFFFF' : '#FFFFFF';
+    const scale = isSelected ? 'transform: scale(1.15); z-index: 1000;' : '';
+    const shadow = isSelected ? '0 4px 14px rgba(0, 122, 255, 0.65)' : '0 2px 8px rgba(15, 23, 42, 0.3)';
+    
+    return L.divIcon({
+        className: 'parking-marker-custom',
+        html: `
+            <div style="display: flex; flex-direction: column; align-items: center; ${scale} transition: all 0.2s ease; cursor: pointer;">
+                <div style="background: ${bg}; color: #FFFFFF; font-weight: 700; font-size: 11px; padding: 5px 11px; border-radius: 20px; border: 2px solid ${border}; box-shadow: ${shadow}; white-space: nowrap; display: flex; align-items: center; gap: 5px; font-family: 'Heebo', sans-serif;">
+                    <span style="font-size: 12px;">🅿️</span>
+                    <span>${parkingName}</span>
+                </div>
+                <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 7px solid ${bg}; margin-top: -1px;"></div>
+            </div>
+        `,
+        iconSize: [120, 36],
+        iconAnchor: [60, 34],
+        popupAnchor: [0, -34]
+    });
+}
+
+function initOrUpdateParkingsMap() {
+    const mapEl = document.getElementById('parkingsMap');
+    if (!mapEl) return;
+    
+    if (typeof L === 'undefined') {
+        console.warn('Leaflet is not loaded yet');
+        return;
+    }
+    
+    // Initialize map instance if needed
+    if (!parkingsMapInstance) {
+        parkingsMapInstance = L.map('parkingsMap', {
+            center: [32.0853, 34.7818],
+            zoom: 9,
+            scrollWheelZoom: true
+        });
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(parkingsMapInstance);
+        
+        // Listen to dropdown change to keep map in sync
+        const selector = document.getElementById('parkingSelector');
+        if (selector) {
+            selector.addEventListener('change', function() {
+                updateMapActiveMarker();
+            });
+        }
+    }
+    
+    // Clear previous markers
+    for (const key in parkingMarkersMap) {
+        if (parkingMarkersMap[key].marker) {
+            parkingsMapInstance.removeLayer(parkingMarkersMap[key].marker);
+        }
+    }
+    parkingMarkersMap = {};
+    
+    const parkings = userParkings || [];
+    const boundsCoords = [];
+    const currentSelected = document.getElementById('parkingSelector') ? document.getElementById('parkingSelector').value : '';
+    
+    parkings.forEach(p => {
+        const projStr = String(p.project_number || '').trim();
+        let lat = p.latitude ? parseFloat(p.latitude) : null;
+        let lng = p.longitude ? parseFloat(p.longitude) : null;
+        
+        // Fallback to known coordinates dictionary
+        if ((!lat || !lng) && KNOWN_PARKING_COORDS[projStr]) {
+            lat = KNOWN_PARKING_COORDS[projStr].lat;
+            lng = KNOWN_PARKING_COORDS[projStr].lng;
+        }
+        
+        if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+            const isSelected = (currentSelected === projStr);
+            const marker = L.marker([lat, lng], {
+                icon: createPinIcon(p.parking_name || 'חניון', isSelected)
+            }).addTo(parkingsMapInstance);
+            
+            const capacityText = p.capacity ? `<div style="font-size: 12px; color: #64748B; margin-bottom: 8px;">קיבולת מקומות: <strong style="color: #0F172A;">${Number(p.capacity).toLocaleString()}</strong></div>` : '';
+            
+            const popupHtml = `
+                <div style="direction: rtl; text-align: right; font-family: 'Heebo', sans-serif; min-width: 190px;">
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                        <span style="font-size: 18px;">🅿️</span>
+                        <strong style="font-size: 15px; color: #0F172A;">${p.parking_name || 'חניון'}</strong>
+                    </div>
+                    <div style="font-size: 12px; color: #64748B; margin-bottom: 4px;">
+                        מספר פרויקט: <strong style="color: #334155;">${p.project_number}</strong>
+                    </div>
+                    ${capacityText}
+                    <button type="button" onclick="selectParkingFromMap('${projStr}')" style="width: 100%; margin-top: 6px; padding: 8px 12px; background: #007AFF; color: #ffffff; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 4px rgba(0, 122, 255, 0.25);">
+                        <span>🔍</span>
+                        <span>סנן דשבורד לחניון זה</span>
+                    </button>
+                </div>
+            `;
+            
+            marker.bindPopup(popupHtml);
+            
+            marker.on('click', function() {
+                selectParkingFromMap(projStr);
+            });
+            
+            parkingMarkersMap[projStr] = {
+                marker: marker,
+                lat: lat,
+                lng: lng,
+                name: p.parking_name || 'חניון'
+            };
+            
+            boundsCoords.push([lat, lng]);
+        }
+    });
+    
+    // Fit bounds to all markers if multiple
+    if (boundsCoords.length > 0) {
+        mapAllBounds = L.latLngBounds(boundsCoords);
+        if (!currentSelected) {
+            parkingsMapInstance.fitBounds(mapAllBounds, { padding: [40, 40], maxZoom: 14 });
+        }
+    }
+    
+    updateMapActiveMarker();
+    
+    setTimeout(() => {
+        if (parkingsMapInstance) {
+            parkingsMapInstance.invalidateSize();
+        }
+    }, 400);
+}
+
+function selectParkingFromMap(projectNumber) {
+    const selector = document.getElementById('parkingSelector');
+    if (!selector) return;
+    
+    selector.value = projectNumber;
+    updateMapActiveMarker();
+    loadData();
+}
+
+function resetMapParkingFilter() {
+    const selector = document.getElementById('parkingSelector');
+    if (!selector) return;
+    
+    selector.value = '';
+    updateMapActiveMarker();
+    loadData();
+    
+    if (mapAllBounds && parkingsMapInstance) {
+        parkingsMapInstance.fitBounds(mapAllBounds, { padding: [40, 40], maxZoom: 14 });
+    }
+}
+
+function updateMapActiveMarker() {
+    const selector = document.getElementById('parkingSelector');
+    const selectedProj = selector ? selector.value : '';
+    
+    const badge = document.getElementById('activeParkingBadge');
+    const resetBtn = document.getElementById('btnResetMapFilter');
+    
+    if (selectedProj && parkingMarkersMap[selectedProj]) {
+        const pInfo = parkingMarkersMap[selectedProj];
+        if (badge) {
+            badge.textContent = `מסונן: ${pInfo.name}`;
+            badge.style.display = 'inline-block';
+        }
+        if (resetBtn) resetBtn.style.display = 'inline-block';
+        
+        // Pan and open popup on selected marker
+        if (parkingsMapInstance) {
+            parkingsMapInstance.setView([pInfo.lat, pInfo.lng], 14, { animate: true });
+            pInfo.marker.openPopup();
+        }
+    } else {
+        if (badge) badge.style.display = 'none';
+        if (resetBtn) resetBtn.style.display = 'none';
+    }
+    
+    // Refresh pin styles (active vs normal)
+    for (const proj in parkingMarkersMap) {
+        const item = parkingMarkersMap[proj];
+        const isSelected = (selectedProj === proj);
+        item.marker.setIcon(createPinIcon(item.name, isSelected));
+    }
+}
+
 
 </script>
 
