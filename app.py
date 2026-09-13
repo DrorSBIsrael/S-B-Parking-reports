@@ -1493,6 +1493,19 @@ def test_email_system():
         })
 # ======================== נקודות קצה (Routes) ========================
 
+@app.route('/static/flags/<filename>')
+def serve_flag_file(filename):
+    """Serve local flag image or redirect to CDN fallback to avoid 404 errors"""
+    flag_name = filename.replace('.png', '').lower()
+    code_map = {'he': 'il', 'en': 'gb', 'ar': 'sa', 'de': 'de', 'fr': 'fr', 'ru': 'ru'}
+    cc = code_map.get(flag_name, flag_name)
+    try:
+        response = make_response(app.send_static_file(f'flags/{filename}'))
+        response.headers['Cache-Control'] = 'public, max-age=86400'
+        return response
+    except Exception:
+        return redirect(f'https://flagcdn.com/w80/{cc}.png', code=302)
+
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     """Serve static files with no-cache headers"""
@@ -1683,9 +1696,18 @@ def get_parking_data():
             if parking_id:
                 # אימות שהחניון שייך לחברה שלו
                 parking_check = supabase.table('user_parkings').select('project_number').eq(
-                    'project_number', parking_id
+                    'project_number', str(parking_id)
                 ).eq('company_type', user_data['company_type']).execute()
                 
+                if not parking_check.data:
+                    try:
+                        p_num = int(parking_id)
+                        parking_check = supabase.table('user_parkings').select('project_number').eq(
+                            'project_number', p_num
+                        ).eq('company_type', user_data['company_type']).execute()
+                    except (ValueError, TypeError):
+                        pass
+
                 if not parking_check.data:
                     return jsonify({'success': False, 'message': 'אין הרשאה לחניון זה'})
                 
