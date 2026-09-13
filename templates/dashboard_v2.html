@@ -920,11 +920,6 @@
         .single-parking-mode .multi-parking-only {
             display: none !important;
         }
-        .single-parking-mode #row2ChartsCol {
-            display: grid !important;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)) !important;
-            gap: 24px !important;
-        }
         
         /* Animations */
         @keyframes spin {
@@ -1979,7 +1974,6 @@ Chart.defaults.font.family = "'Heebo', -apple-system, BlinkMacSystemFont, sans-s
 Chart.defaults.color = '#6C6C70';
 Chart.defaults.plugins.legend.labels.usePointStyle = true;
 Chart.defaults.plugins.legend.labels.padding = 20;
-Chart.defaults.maintainAspectRatio = false;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
