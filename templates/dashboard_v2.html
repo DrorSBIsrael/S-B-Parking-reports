@@ -1334,63 +1334,56 @@
                 </div>
             </div>
 
-            <!-- Row 2: דירוג חניונים + מגמת הכנסות -->
-            <div class="charts-grid">
-                <!-- Parking Ranking -->
-                <div class="chart-section multi-parking-only">
+            <!-- Row 2: דירוג חניונים לצד מגמת הכנסות + תפוסה מקסימלית (2 עמודות מאוזנות) -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 24px; margin-bottom: 24px; align-items: stretch;">
+                <!-- Column Right (RTL): דירוג חניונים -->
+                <div class="chart-section multi-parking-only" style="margin-bottom: 0; display: flex; flex-direction: column;">
                     <div class="chart-header">
                         <h2 class="chart-title">
                             <span>🏆</span>
                             <span data-i18n="parkingRanking">דירוג חניונים</span>
                         </h2>
                     </div>
-                    <div id="parkingRanking"></div>
+                    <div id="parkingRanking" style="flex: 1; display: flex; flex-direction: column;"></div>
                 </div>
 
-                <!-- Revenue Trends Chart -->
-                <div class="chart-section">
-                    <div class="chart-header">
-                        <h2 class="chart-title">
-                            <span>📈</span>
-                            <span data-i18n="revenueTrend">מגמת הכנסות</span>
-                        </h2>
-                        <div class="chart-options">
-                            <button class="chart-option-btn" onclick="toggleChartType('revenue')">
-                                <span>🔄</span>
-                                <span data-i18n="switchType">החלף סוג</span>
-                            </button>
+                <!-- Column Left (RTL): 2 גרפים אחד מעל השני: מגמת הכנסות + תפוסה מקסימלית -->
+                <div style="display: flex; flex-direction: column; gap: 24px;">
+                    <!-- Revenue Trends Chart -->
+                    <div class="chart-section" style="margin-bottom: 0; flex: 1;">
+                        <div class="chart-header">
+                            <h2 class="chart-title">
+                                <span>📈</span>
+                                <span data-i18n="revenueTrend">מגמת הכנסות</span>
+                            </h2>
+                            <div class="chart-options">
+                                <button class="chart-option-btn" onclick="toggleChartType('revenue')">
+                                    <span>🔄</span>
+                                    <span data-i18n="switchType">החלף סוג</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div style="position: relative; height: 260px; width: 100%;">
+                            <canvas id="revenueChart"></canvas>
                         </div>
                     </div>
-                    <canvas id="revenueChart"></canvas>
+
+                    <!-- Maximum Occupancy Line Chart (ts_per5 vs ts_per6) -->
+                    <div class="chart-section" style="margin-bottom: 0; flex: 1;">
+                        <div class="chart-header">
+                            <h2 class="chart-title">
+                                <span>📈</span>
+                                <span>תפוסה מקסימלית (ts_per5 / ts_per6)</span>
+                            </h2>
+                        </div>
+                        <div style="position: relative; height: 260px; width: 100%;">
+                            <canvas id="maxOccupancyChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Row 3: תפוסה מקסימלית + אמצעי תשלום -->
-            <div class="charts-grid">
-                <!-- Maximum Occupancy Line Chart (ts_per5 vs ts_per6) -->
-                <div class="chart-section">
-                    <div class="chart-header">
-                        <h2 class="chart-title">
-                            <span>📈</span>
-                            <span>תפוסה מקסימלית (ts_per5 / ts_per6)</span>
-                        </h2>
-                    </div>
-                    <canvas id="maxOccupancyChart" style="max-height: 350px;"></canvas>
-                </div>
-
-                <!-- Payment Methods Chart -->
-                <div class="chart-section">
-                    <div class="chart-header">
-                        <h2 class="chart-title">
-                            <span>💳</span>
-                            <span data-i18n="paymentMethods">אמצעי תשלום</span>
-                        </h2>
-                    </div>
-                    <canvas id="paymentChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Row 4: זמני שהייה לרוחב (Full Width - Compact & Proportional) -->
+            <!-- Row 3: זמני שהייה לרוחב (עלה למעלה מעל פתיחות מחסום) -->
             <div class="chart-section" id="stayDurationSection" style="width: 100%; max-width: 100%; box-sizing: border-box; margin-bottom: 24px; padding: 18px 24px !important;">
                 <div class="chart-header" style="margin-bottom: 14px;">
                     <h2 class="chart-title" style="margin: 0; font-size: 19px;">
@@ -1420,7 +1413,7 @@
                 </div>
             </div>
 
-            <!-- Row 5: פתיחות מחסום + נתוני מקודדים -->
+            <!-- Row 4: פתיחות מחסום + נתוני מקודדים -->
             <div class="charts-grid">
                 <!-- Barrier Chart -->
                 <div class="chart-section">
@@ -1445,7 +1438,7 @@
                 </div>
             </div>
 
-            <!-- Row 6: סוגי כניסות + השוואה יומית (בתחתית) -->
+            <!-- Row 5: סוגי כניסות + השוואה יומית -->
             <div class="charts-grid">
                 <!-- Entries Chart -->
                 <div class="chart-section">
@@ -1467,6 +1460,22 @@
                         </h2>
                     </div>
                     <canvas id="dailyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Row 6: אמצעי תשלום (בתחתית הדף) -->
+            <div class="charts-grid" style="margin-bottom: 24px;">
+                <!-- Payment Methods Chart -->
+                <div class="chart-section" style="max-width: 650px; margin: 0 auto; width: 100%;">
+                    <div class="chart-header">
+                        <h2 class="chart-title">
+                            <span>💳</span>
+                            <span data-i18n="paymentMethods">אמצעי תשלום</span>
+                        </h2>
+                    </div>
+                    <div style="position: relative; height: 320px; width: 100%;">
+                        <canvas id="paymentChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -3807,14 +3816,14 @@ function updateParkingRanking() {
 
     // Build Ranking HTML: Donut Chart on top, and clean summary table below!
     rankingEl.innerHTML = `
-        <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div style="display: flex; flex-direction: column; gap: 18px; flex: 1;">
             <!-- Donut Chart of Parking Shares with On-Chart Callout Labels -->
-            <div style="position: relative; min-height: 420px; background: var(--surface-subtle, #F8FAFC); border-radius: 16px; padding: 20px 18px 24px 18px;">
-                <canvas id="parkingRankingPieCanvas" style="min-height: 380px; width: 100%;"></canvas>
+            <div style="position: relative; height: 360px; background: var(--surface-subtle, #F8FAFC); border-radius: 16px; padding: 12px 16px;">
+                <canvas id="parkingRankingPieCanvas" style="width: 100%; height: 100%;"></canvas>
             </div>
             
             <!-- Compact Ranking Cards -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; max-height: 280px; overflow-y: auto; padding-left: 4px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; max-height: 230px; overflow-y: auto; padding-left: 4px;">
                 ${rankings.map((p, index) => {
                     const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
                     const pct = totalRev > 0 ? ((p.totalRevenue / totalRev) * 100).toFixed(1) : 0;
@@ -3867,13 +3876,13 @@ function updateParkingRanking() {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    cutout: '58%',
+                    cutout: '52%',
                     layout: {
                         padding: {
-                            top: 25,
-                            bottom: 25,
-                            left: 30,
-                            right: 30
+                            top: 36,
+                            bottom: 36,
+                            left: 55,
+                            right: 55
                         }
                     },
                     plugins: {
@@ -3901,7 +3910,8 @@ function updateParkingRanking() {
                             },
                             anchor: 'end',
                             align: 'end',
-                            offset: 8,
+                            offset: 4,
+                            clamp: true,
                             font: {
                                 family: "'Heebo', sans-serif",
                                 size: 11,
