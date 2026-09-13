@@ -12,6 +12,7 @@
         <!-- GridStack.js for Dynamic Drag & Drop / Resizing -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@10/dist/gridstack.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/gridstack@10/dist/gridstack-all.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -659,7 +660,7 @@
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
+            gap: 0.25cm !important;
             margin-bottom: 40px;
             animation: fadeIn 0.8s ease;
         }
@@ -1127,6 +1128,36 @@
             width: 100% !important;
         }
 
+        
+        /* Stat Cards Drag & Drop in Edit Mode (gap 0.25cm) */
+        .stats-grid {
+            gap: 0.25cm !important;
+        }
+
+        .dashboard-editing-active #statsGrid .stat-card {
+            cursor: grab !important;
+            outline: 2px dashed #007AFF !important;
+            outline-offset: -2px;
+            user-select: none;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .dashboard-editing-active #statsGrid .stat-card:active {
+            cursor: grabbing !important;
+        }
+
+        .stat-card-ghost {
+            opacity: 0.35 !important;
+            background: #E0F2FE !important;
+            border: 2px dashed #0284C7 !important;
+            transform: scale(0.98);
+        }
+
+        .stat-card-chosen {
+            box-shadow: 0 14px 30px rgba(0, 122, 255, 0.28) !important;
+            border-color: #007AFF !important;
+        }
+
         /* Editing mode active visual styles */
         .dashboard-editing-active .grid-stack-item-content {
             outline: 2px dashed #007AFF !important;
@@ -1172,22 +1203,41 @@
             display: inline-flex;
         }
 
-        /* Layout editing toolbar buttons */
+        /* Layout editing toolbar buttons - Styled in Blue exactly like .load-btn */
         .layout-btn-edit {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 7px 14px;
-            font-size: 13px;
-            font-weight: 600;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-family: inherit;
-            border: 1px solid var(--border);
-            background: var(--surface);
-            color: var(--text-primary);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            padding: 9px 18px !important;
+            background: var(--primary) !important;
+            color: #FFFFFF !important;
+            border: none !important;
+            border-radius: 9px !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            font-family: inherit !important;
+            letter-spacing: -0.1px !important;
+            box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3) !important;
+        }
+
+        .layout-btn-edit:hover {
+            background: #0066D6 !important;
+            opacity: 0.92 !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 14px rgba(0, 122, 255, 0.42) !important;
+        }
+
+        .layout-btn-edit:active {
+            opacity: 0.75 !important;
+            transform: scale(0.98) !important;
+        }
+
+        .layout-btn-edit.active-editing {
+            background: #0051D5 !important;
+            box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.35) !important;
+            animation: pulseEdit 2s infinite ease-in-out;
         }
 
         .layout-btn-edit:hover {
@@ -1299,7 +1349,7 @@
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <button type="button" class="layout-btn-edit" id="btnToggleEditMode" onclick="toggleDashboardEditMode()" title="שינוי מיקום וגודל משבצות">
                                 <span id="btnEditIcon">✏️</span>
-                                <span id="btnEditText" data-i18n="editLayout">ערוך סידור</span>
+                                <span id="btnEditText" data-i18n="editLayout">ערך סידור גרפים</span>
                             </button>
                             <button type="button" class="layout-btn-reset" id="btnResetLayout" onclick="resetDashboardLayout()" title="איפוס הסידור לברירת מחדל">
                                 <span>↺</span>
@@ -1786,6 +1836,34 @@
 // ============================================================
 const translations = {
     he: {
+        editLayout: 'ערך סידור גרפים',
+        saveLayout: 'שמור סידור גרפים',
+        resetLayout: 'שחזר ברירת מחדל',
+        aiChip: 'ניתוח AI אוטומטי',
+        aiTitle: 'תובנות והשוואות תקופתיות חכמות',
+        aiAnalyzing: 'מנתח נתוני תקופה...',
+        aiRevGrowth: 'צמיחה',
+        aiRevDrop: 'ירידה',
+        aiRevTrendTitle: 'מגמת הכנסות: {trend} של {pct}%',
+        aiRevTrendText: 'בתקופה זו הוכנסו ₪{curr} בהשוואה ל-₪{prev} בתקופה המקבילה.',
+        aiTotalRevTitle: 'סה"כ הכנסות לתקופה: ₪{curr}',
+        aiTotalRevText: 'ממוצע יומי עומד על ₪{avg} לאורך {days} ימי פעילות.',
+        aiTrafficTitle: 'תנועות: {total} כניסות ({diff})',
+        aiTrafficText: 'מזדמנים: {casualPct}% ({casualTotal}), מנויים: {memberPct}% ({memberTotal}).',
+        aiTrafficTextNoDiff: 'מזדמנים: {casualPct}% מול {memberPct}% מנויים. ממוצע יומי: {avg} כניסות.',
+        aiYoYTitle: 'השוואה שנתית מול {ly}: {trend} של {pct}%',
+        aiYoYText: 'הכנסות: ₪{curr} (מול ₪{prev}). תנועות: {currEnt} (מול {prevEnt} כניסות בשנה שעברה).',
+        aiLastYear: 'שנה שעברה',
+        aiTopParkTitle: 'חניון מוביל ברשת: {name}',
+        aiTopParkText: 'הניב ₪{rev} המהווים {pct}% מכלל הכנסות הרשת בטווח הנבחר.',
+        aiPeakOccTitle: 'תפוסת שיא כוללת: {peak} רכבים ({pct}% מקיבולת הרשת)',
+        aiPeakOccText: 'שיא מזדמנים: {casual} רכבים, שיא מנויים: {sub} רכבים מתוך קיבולת כוללת של {cap} חניות.',
+        aiBarrierTitle: 'פתיחות מחסום: {total} ({ratio} לרכב)',
+        aiBarrierOk: 'רמת פתיחות תקינה לחלוטין ({pct}% מסך התנועות). אין התראות על תקלות שער.',
+        aiBarrierWarn: 'שיעור פתיחות מוגבר ({pct}%). מומלץ לבדוק תקינות עיניות ושערי יציאה.',
+        aiVehicles: 'רכבים',
+        aiOutOfCap: 'מתוך קיבולת',
+        aiGeneral: 'כללי',
         dir: 'rtl', lang: 'he',
         dashboardTitle: 'לוח בקרה',
         parkingMgmt: 'מערכת ניהול חניונים',
@@ -1852,6 +1930,34 @@ const translations = {
         noParking: 'לא נמצאו חניונים עבור משתמש זה',
     },
     en: {
+        editLayout: 'Edit Chart Layout',
+        saveLayout: 'Save Chart Layout',
+        resetLayout: 'Reset Layout',
+        aiChip: 'Automated AI Analysis',
+        aiTitle: 'Smart Insights & Periodic Comparisons',
+        aiAnalyzing: 'Analyzing period data...',
+        aiRevGrowth: 'Growth',
+        aiRevDrop: 'Decline',
+        aiRevTrendTitle: 'Revenue Trend: {trend} of {pct}%',
+        aiRevTrendText: 'In this period, ₪{curr} was generated compared to ₪{prev} in the corresponding period.',
+        aiTotalRevTitle: 'Total Revenue for Period: ₪{curr}',
+        aiTotalRevText: 'Daily average stands at ₪{avg} over {days} active days.',
+        aiTrafficTitle: 'Traffic: {total} entries ({diff})',
+        aiTrafficText: 'Casual: {casualPct}% ({casualTotal}), Subscribers: {memberPct}% ({memberTotal}).',
+        aiTrafficTextNoDiff: 'Casual: {casualPct}% vs {memberPct}% Subscribers. Daily average: {avg} entries.',
+        aiYoYTitle: 'Yearly Comparison vs {ly}: {trend} of {pct}%',
+        aiYoYText: 'Revenue: ₪{curr} (vs ₪{prev}). Entries: {currEnt} (vs {prevEnt} entries last year).',
+        aiLastYear: 'Last Year',
+        aiTopParkTitle: 'Leading Network Parking: {name}',
+        aiTopParkText: 'Generated ₪{rev} representing {pct}% of total network revenue in the selected range.',
+        aiPeakOccTitle: 'Total Peak Occupancy: {peak} vehicles ({pct}% of network capacity)',
+        aiPeakOccText: 'Casual peak: {casual} vehicles, Subscriber peak: {sub} vehicles out of {cap} total capacity.',
+        aiBarrierTitle: 'Barrier Openings: {total} ({ratio} per vehicle)',
+        aiBarrierOk: 'Completely normal opening rate ({pct}% of total traffic). No gate anomaly alerts.',
+        aiBarrierWarn: 'Elevated opening rate ({pct}%). Inspection of photocells and exit gates is recommended.',
+        aiVehicles: 'vehicles',
+        aiOutOfCap: 'out of capacity',
+        aiGeneral: 'General', 
         dir: 'ltr', lang: 'en',
         dashboardTitle: 'Dashboard',
         parkingMgmt: 'Parking Management System',
@@ -1918,6 +2024,34 @@ const translations = {
         noParking: 'No parkings found for this user',
     },
     de: {
+        editLayout: 'Diagramm-Layout bearbeiten',
+        saveLayout: 'Layout speichern',
+        resetLayout: 'Standard wiederherstellen',
+        aiChip: 'Automatische KI-Analyse',
+        aiTitle: 'Smarte Einblicke & Periodenvergleiche',
+        aiAnalyzing: 'Analysiere Periodendaten...',
+        aiRevGrowth: 'Wachstum',
+        aiRevDrop: 'Rückgang',
+        aiRevTrendTitle: 'Umsatztrend: {trend} von {pct}%',
+        aiRevTrendText: 'In dieser Periode wurden ₪{curr} erwirtschaftet, verglichen mit ₪{prev} im Vergleichszeitraum.',
+        aiTotalRevTitle: 'Gesamtumsatz für Periode: ₪{curr}',
+        aiTotalRevText: 'Tagesdurchschnitt liegt bei ₪{avg} über {days} aktive Tage.',
+        aiTrafficTitle: 'Verkehr: {total} Einfahrten ({diff})',
+        aiTrafficText: 'Kurzparker: {casualPct}% ({casualTotal}), Abonnenten: {memberPct}% ({memberTotal}).',
+        aiTrafficTextNoDiff: 'Kurzparker: {casualPct}% ggü. {memberPct}% Abonnenten. Tagesdurchschnitt: {avg} Einfahrten.',
+        aiYoYTitle: 'Jahresvergleich vs {ly}: {trend} von {pct}%',
+        aiYoYText: 'Umsatz: ₪{curr} (ggü. ₪{prev}). Einfahrten: {currEnt} (ggü. {prevEnt} im Vorjahr).',
+        aiLastYear: 'Vorjahr',
+        aiTopParkTitle: 'Führendes Parkhaus: {name}',
+        aiTopParkText: 'Erzielte ₪{rev} ({pct}% des gesamten Netzwerkumsatzes im gewählten Zeitraum).',
+        aiPeakOccTitle: 'Spitzenbelegung gesamt: {peak} Fahrzeuge ({pct}% der Kapazität)',
+        aiPeakOccText: 'Spitze Kurzparker: {casual} Fzg., Abonnenten: {sub} Fzg. aus {cap} Gesamtkapazität.',
+        aiBarrierTitle: 'Schrankenöffnungen: {total} ({ratio} pro Fzg.)',
+        aiBarrierOk: 'Vollkommen normale Öffnungsrate ({pct}% des Verkehrs). Keine Gate-Warnungen.',
+        aiBarrierWarn: 'Erhöhte Öffnungsrate ({pct}%). Überprüfung der Lichtschranken empfohlen.',
+        aiVehicles: 'Fahrzeuge',
+        aiOutOfCap: 'von Kapazität',
+        aiGeneral: 'Allgemein', 
         dir: 'ltr', lang: 'de',
         dashboardTitle: 'Dashboard',
         parkingMgmt: 'Parkverwaltungssystem',
@@ -1976,6 +2110,34 @@ const translations = {
         noParking: 'Keine Parkplätze für diesen Benutzer gefunden',
     },
     ar: {
+        editLayout: 'تعديل ترتيب الرسوم',
+        saveLayout: 'حفظ ترتيب الرسوم',
+        resetLayout: 'استعادة الافتراضي',
+        aiChip: 'تحليل ذكاء اصطناعي تلقائي',
+        aiTitle: 'رؤى ذكية ومقارنات دورية',
+        aiAnalyzing: 'جارٍ تحليل بيانات الفترة...',
+        aiRevGrowth: 'نمو',
+        aiRevDrop: 'انخفاض',
+        aiRevTrendTitle: 'اتجاه الإيرادات: {trend} بنسبة {pct}%',
+        aiRevTrendText: 'تم تحصيل ₪{curr} في هذه الفترة مقارنة بـ ₪{prev} في الفترة المماثلة.',
+        aiTotalRevTitle: 'إجمالي الإيرادات للفترة: ₪{curr}',
+        aiTotalRevText: 'المعدل اليومي ₪{avg} على مدار {days} أيام عمل.',
+        aiTrafficTitle: 'الحركات: {total} دخول ({diff})',
+        aiTrafficText: 'عاديون: {casualPct}% ({casualTotal})، مشتركون: {memberPct}% ({memberTotal}).',
+        aiTrafficTextNoDiff: 'عاديون: {casualPct}% مقابل {memberPct}% مشتركون. المعدل اليومي: {avg} دخول.',
+        aiYoYTitle: 'مقارنة سنوية مع {ly}: {trend} بنسبة {pct}%',
+        aiYoYText: 'الإيرادات: ₪{curr} (مقابل ₪{prev}). الحركات: {currEnt} (مقابل {prevEnt} دخول العام الماضي).',
+        aiLastYear: 'العام الماضي',
+        aiTopParkTitle: 'الموقف الرائد في الشبكة: {name}',
+        aiTopParkText: 'حقق ₪{rev} بما يشكل {pct}% من إجمالي إيرادات الشبكة في النطاق المحدد.',
+        aiPeakOccTitle: 'ذروة الإشغال الإجمالي: {peak} مركبة ({pct}% من سعة الشبكة)',
+        aiPeakOccText: 'ذروة العاديين: {casual}، ذروة المشتركين: {sub} من إجمالي سعة {cap} موقف.',
+        aiBarrierTitle: 'فتحات البوابة: {total} ({ratio} لكل مركبة)',
+        aiBarrierOk: 'معدل فتح طبيعي تماماً ({pct}% من إجمالي الحركات). لا توجد تنبيهات.',
+        aiBarrierWarn: 'معدل فتح مرتفع ({pct}%). يُنصح بفحص الحساسات وبوابات الخروج.',
+        aiVehicles: 'مركبة',
+        aiOutOfCap: 'من سعة',
+        aiGeneral: 'عام', 
         dir: 'rtl', lang: 'ar',
         dashboardTitle: 'لوحة التحكم',
         parkingMgmt: 'نظام إدارة المواقف',
@@ -2034,6 +2196,34 @@ const translations = {
         noParking: 'لا توجد مواقف لهذا المستخدم',
     },
     fr: {
+        editLayout: 'Modifier la disposition',
+        saveLayout: 'Enregistrer la disposition',
+        resetLayout: 'Rétablir par défaut',
+        aiChip: 'Analyse IA automatisée',
+        aiTitle: 'Aperçus intelligents & comparaisons',
+        aiAnalyzing: 'Analyse des données en cours...',
+        aiRevGrowth: 'Croissance',
+        aiRevDrop: 'Baisse',
+        aiRevTrendTitle: 'Tendance des revenus : {trend} de {pct}%',
+        aiRevTrendText: 'Durant cette période, ₪{curr} ont été générés contre ₪{prev} sur la période correspondante.',
+        aiTotalRevTitle: 'Revenu total de la période : ₪{curr}',
+        aiTotalRevText: 'La moyenne quotidienne est de ₪{avg} sur {days} jours actifs.',
+        aiTrafficTitle: 'Trafic : {total} entrées ({diff})',
+        aiTrafficText: 'Occasionnels : {casualPct}% ({casualTotal}), Abonnés : {memberPct}% ({memberTotal}).',
+        aiTrafficTextNoDiff: 'Occasionnels : {casualPct}% contre {memberPct}% Abonnés. Moyenne : {avg} entrées/jour.',
+        aiYoYTitle: 'Comparaison annuelle vs {ly} : {trend} de {pct}%',
+        aiYoYText: 'Revenus : ₪{curr} (vs ₪{prev}). Entrées : {currEnt} (vs {prevEnt} l\'année dernière).',
+        aiLastYear: 'Année dernière',
+        aiTopParkTitle: 'Parking leader du réseau : {name}',
+        aiTopParkText: 'A généré ₪{rev}, représentant {pct}% des revenus totaux du réseau.',
+        aiPeakOccTitle: 'Occupation maximale : {peak} véhicules ({pct}% de la capacité)',
+        aiPeakOccText: 'Pic occasionnels : {casual}, Abonnés : {sub} sur {cap} places au total.',
+        aiBarrierTitle: 'Ouvertures barrière : {total} ({ratio} par véhicule)',
+        aiBarrierOk: 'Taux d\'ouverture tout à fait normal ({pct}% du trafic). Aucune anomalie.',
+        aiBarrierWarn: 'Taux d\'ouverture élevé ({pct}%). Vérification des cellules recommandée.',
+        aiVehicles: 'véhicules',
+        aiOutOfCap: 'sur capacité',
+        aiGeneral: 'Général', 
         dir: 'ltr', lang: 'fr',
         dashboardTitle: 'Tableau de Bord',
         parkingMgmt: 'Système de Gestion de Parking',
@@ -2092,6 +2282,34 @@ const translations = {
         noParking: 'Aucun parking trouvé pour cet utilisateur',
     },
     ru: {
+        editLayout: 'Изменить расположение',
+        saveLayout: 'Сохранить расположение',
+        resetLayout: 'Сбросить по умолчанию',
+        aiChip: 'Автоматический ИИ-анализ',
+        aiTitle: 'Умная аналитика и периодические сравнения',
+        aiAnalyzing: 'Анализ данных периода...',
+        aiRevGrowth: 'Рост',
+        aiRevDrop: 'Снижение',
+        aiRevTrendTitle: 'Динамика выручки: {trend} на {pct}%',
+        aiRevTrendText: 'За этот период получено ₪{curr} по сравнению с ₪{prev} в аналогичном периоде.',
+        aiTotalRevTitle: 'Общая выручка за период: ₪{curr}',
+        aiTotalRevText: 'Среднедневной показатель составляет ₪{avg} за {days} активных дней.',
+        aiTrafficTitle: 'Трафик: {total} въездов ({diff})',
+        aiTrafficText: 'Разовые: {casualPct}% ({casualTotal}), Абонементы: {memberPct}% ({memberTotal}).',
+        aiTrafficTextNoDiff: 'Разовые: {casualPct}% против {memberPct}% абонементов. В среднем: {avg} въездов/день.',
+        aiYoYTitle: 'Годовое сравнение с {ly}: {trend} на {pct}%',
+        aiYoYText: 'Выручка: ₪{curr} (против ₪{prev}). Въезды: {currEnt} (против {prevEnt} в прошлом году).',
+        aiLastYear: 'Прошлый год',
+        aiTopParkTitle: 'Лидирующая парковка сети: {name}',
+        aiTopParkText: 'Принесла ₪{rev}, что составляет {pct}% от общей выручки сети за выбранный диапазон.',
+        aiPeakOccTitle: 'Пиковая занятость: {peak} авто ({pct}% от вместимости сети)',
+        aiPeakOccText: 'Пик разовых: {casual} авто, абонементов: {sub} авто из {cap} общей вместимости.',
+        aiBarrierTitle: 'Открытия шлагбаума: {total} ({ratio} на авто)',
+        aiBarrierOk: 'Абсолютно нормальный уровень открытий ({pct}% от общего трафика). Сбоев нет.',
+        aiBarrierWarn: 'Повышенный уровень открытий ({pct}%). Рекомендуется проверить датчики.',
+        aiVehicles: 'авто',
+        aiOutOfCap: 'из вместимости',
+        aiGeneral: 'Общий', 
         dir: 'ltr', lang: 'ru',
         dashboardTitle: 'Панель управления',
         parkingMgmt: 'Система управления парковками',
@@ -2214,6 +2432,9 @@ function applyLanguage(lang) {
         updateStats();
         updateCharts();
         updateAlerts();
+        if (typeof renderAiAnalysis === 'function') {
+            renderAiAnalysis();
+        }
     }
 }
 
@@ -2715,125 +2936,155 @@ function updateStats() {
     const stats = calculateStats();
     const changes = calculateStatChanges(); // Calculate percentage changes
     
-    const statsHTML = `
-        <div class="stat-card" data-stat-type="revenue">
-            <div class="icon" style="background: linear-gradient(135deg, #007AFF, #5AC8FA);">💰</div>
-            <h3>${t('totalRevenue')}</h3>
-            <div class="value">₪${stats.totalRevenue.toLocaleString()}</div>
-            ${changes.revenue !== null ? `
-            <div class="change ${changes.revenue >= 0 ? 'positive' : 'negative'}">
-                <span>${changes.revenue >= 0 ? '▲' : '▼'}</span>
-                <span>${Math.abs(changes.revenue).toFixed(1)}%</span>
-            </div>
-            ` : `<div class="change neutral">${t('noData2')}</div>`}
-            <div class="subtext">${t('fromAllPayments')}</div>
-            <div class="tsper1-line">₪${(stats.totalTsper1 || 0).toLocaleString()}</div>
-            ${(stats.totalTsper1 || 0) > 0 ? `<div style="color: var(--danger); font-size: 11px; margin-top: 4px; font-weight: 500;">${t('discountCredit')}</div>` : ''}
-        </div>
+    // Build dictionary of all individual stat cards
+    const cardDefs = {
+        'revenue': `
+            <div class="stat-card" data-stat-type="revenue">
+                <div class="icon" style="background: linear-gradient(135deg, #007AFF, #5AC8FA);">💰</div>
+                <h3>${t('totalRevenue')}</h3>
+                <div class="value">₪${stats.totalRevenue.toLocaleString()}</div>
+                ${changes.revenue !== null ? `
+                <div class="change ${changes.revenue >= 0 ? 'positive' : 'negative'}">
+                    <span>${changes.revenue >= 0 ? '▲' : '▼'}</span>
+                    <span>${Math.abs(changes.revenue).toFixed(1)}%</span>
+                </div>
+                ` : `<div class="change neutral">${t('noData2')}</div>`}
+                <div class="subtext">${t('fromAllPayments')}</div>
+                <div class="tsper1-line">₪${(stats.totalTsper1 || 0).toLocaleString()}</div>
+                ${(stats.totalTsper1 || 0) > 0 ? `<div style="color: var(--danger); font-size: 11px; margin-top: 4px; font-weight: 500;">${t('discountCredit')}</div>` : ''}
+            </div>`,
         
-        <div class="stat-card" data-stat-type="entries">
-            <div class="icon" style="background: linear-gradient(135deg, #34C759, #30D158);">🚗</div>
-            <h3>${t('totalEntries')}</h3>
-            <div class="value">${stats.totalEntries.toLocaleString()}</div>
-            ${changes.entries !== null ? `
-            <div class="change ${changes.entries >= 0 ? 'positive' : 'negative'}">
-                <span>${changes.entries >= 0 ? '▲' : '▼'}</span>
-                <span>${Math.abs(changes.entries).toFixed(1)}%</span>
-            </div>
-            ` : `<div class="change neutral">${t('noData2')}</div>`}
-            <div class="subtext">${stats.dailyAvgEntries.toLocaleString()} ${t('avgEntriesPerDay')}</div>
-            <div class="exit-line">${t('exits')}: ${(stats.totalExits || 0).toLocaleString()}</div>
-        </div>
+        'entries': `
+            <div class="stat-card" data-stat-type="entries">
+                <div class="icon" style="background: linear-gradient(135deg, #34C759, #30D158);">🚗</div>
+                <h3>${t('totalEntries')}</h3>
+                <div class="value">${stats.totalEntries.toLocaleString()}</div>
+                ${changes.entries !== null ? `
+                <div class="change ${changes.entries >= 0 ? 'positive' : 'negative'}">
+                    <span>${changes.entries >= 0 ? '▲' : '▼'}</span>
+                    <span>${Math.abs(changes.entries).toFixed(1)}%</span>
+                </div>
+                ` : `<div class="change neutral">${t('noData2')}</div>`}
+                <div class="subtext">${stats.dailyAvgEntries.toLocaleString()} ${t('avgEntriesPerDay')}</div>
+                <div class="exit-line">${t('exits')}: ${(stats.totalExits || 0).toLocaleString()}</div>
+            </div>`,
         
-        <div class="stat-card" data-stat-type="casual">
-            <div class="icon" style="background: linear-gradient(135deg, #5856D6, #6E6CE3);">👤</div>
-            <h3>${t('casual')}</h3>
-            <div class="value">${stats.totalCasual.toLocaleString()}</div>
-            <div class="change neutral">${stats.casualPercent.toFixed(1)}% ${t('fromRevenue')}</div>
-            <div class="subtext">${t('entryNoSub')}</div>
-            <div class="exit-line">${t('exits')}: ${(stats.totalExitsCasual || 0).toLocaleString()}</div>
-        </div>
+        'casual': `
+            <div class="stat-card" data-stat-type="casual">
+                <div class="icon" style="background: linear-gradient(135deg, #5856D6, #6E6CE3);">👤</div>
+                <h3>${t('casual')}</h3>
+                <div class="value">${stats.totalCasual.toLocaleString()}</div>
+                <div class="change neutral">${stats.casualPercent.toFixed(1)}% ${t('fromRevenue')}</div>
+                <div class="subtext">${t('entryNoSub')}</div>
+                <div class="exit-line">${t('exits')}: ${(stats.totalExitsCasual || 0).toLocaleString()}</div>
+            </div>`,
         
-        <div class="stat-card" data-stat-type="members">
-            <div class="icon" style="background: linear-gradient(135deg, #FF9500, #FF9F0A);">⭐</div>
-            <h3>${t('members')}</h3>
-            <div class="value">${stats.totalMembers.toLocaleString()}</div>
-            <div class="change neutral">${stats.memberPercent.toFixed(1)}% ${t('fromRevenue')}</div>
-            <div class="subtext">${t('entryWithSub')}</div>
-            <div class="exit-line">${t('exits')}: ${(stats.totalExitsMembers || 0).toLocaleString()}</div>
-        </div>
+        'members': `
+            <div class="stat-card" data-stat-type="members">
+                <div class="icon" style="background: linear-gradient(135deg, #FF9500, #FF9F0A);">⭐</div>
+                <h3>${t('members')}</h3>
+                <div class="value">${stats.totalMembers.toLocaleString()}</div>
+                <div class="change neutral">${stats.memberPercent.toFixed(1)}% ${t('fromRevenue')}</div>
+                <div class="subtext">${t('entryWithSub')}</div>
+                <div class="exit-line">${t('exits')}: ${(stats.totalExitsMembers || 0).toLocaleString()}</div>
+            </div>`,
         
-        ${stats.totalApp > 0 ? `
-        <div class="stat-card" data-stat-type="app">
-            <div class="icon" style="background: linear-gradient(135deg, #AF52DE, #C969FF);">📱</div>
-            <h3>${t('app')}</h3>
-            <div class="value">${stats.totalApp.toLocaleString()}</div>
-            <div class="change neutral">${stats.appPercent.toFixed(1)}% ${t('fromRevenue')}</div>
-            <div class="subtext">${t('entryViaApp')}</div>
-        </div>
-        ` : ''}
+        'app': (stats.totalApp > 0 || true) ? `
+            <div class="stat-card" data-stat-type="app">
+                <div class="icon" style="background: linear-gradient(135deg, #AF52DE, #C969FF);">📱</div>
+                <h3>${t('app')}</h3>
+                <div class="value">${stats.totalApp.toLocaleString()}</div>
+                <div class="change neutral">${stats.appPercent.toFixed(1)}% ${t('fromRevenue')}</div>
+                <div class="subtext">${t('entryViaApp')}</div>
+            </div>` : '',
         
+        'occupancy': `
+            <div class="stat-card" data-stat-type="occupancy" ${isGroup && !isSingleParkingMode ? 'style="cursor: pointer;"' : ''}>
+                <div class="icon" style="background: linear-gradient(135deg, #0284C7, #38BDF8);">⚡</div>
+                <h3>${t('peakOccupancy') || 'תפוסת שיא כוללת'}</h3>
+                <div class="value" id="maxOccCardValue">טוען...</div>
+                <div class="change positive" id="maxOccCardPercent">מחושב מתוך קיבולת הרשת</div>
+                <div class="subtext">מזדמנים (ts_per5) + מנויים (ts_per6)</div>
+            </div>`,
         
-        <div class="stat-card" data-stat-type="occupancy" ${isGroup && !isSingleParkingMode ? 'style="cursor: pointer;"' : ''}>
-            <div class="icon" style="background: linear-gradient(135deg, #0284C7, #38BDF8);">⚡</div>
-            <h3>תפוסת שיא כוללת</h3>
-            <div class="value" id="maxOccCardValue">טוען...</div>
-            <div class="change positive" id="maxOccCardPercent">מחושב מתוך קיבולת הרשת</div>
-            <div class="subtext">מזדמנים (ts_per5) + מנויים (ts_per6)</div>
-        </div>
+        'barriers': `
+            <div class="stat-card" data-stat-type="barriers" ${isGroup && !isSingleParkingMode ? 'style="cursor: pointer;"' : ''}>
+                <div class="icon" style="background: linear-gradient(135deg, #FF3B30, #FF6961);">🚧</div>
+                <h3>${t('barrierOpenings')}</h3>
+                <div class="value">${stats.totalBarrier.toLocaleString()}</div>
+                <div class="change ${stats.barrierPercent > 5 ? 'negative' : 'positive'}">
+                    ${stats.barrierPercent.toFixed(1)}% ${t('fromRevenue')}
+                </div>
+                <div class="subtext">${stats.barrierPerEntry.toFixed(2)} ${t('perEntry')}</div>
+            </div>`,
+        
+        'cash': `
+            <div class="stat-card" data-stat-type="cash">
+                <div class="icon" style="background: linear-gradient(135deg, #30D158, #34C759);">💵</div>
+                <h3>${t('cash')}</h3>
+                <div class="value">₪${stats.totalCash.toLocaleString()}</div>
+                <div class="change neutral">${stats.cashPercent.toFixed(1)}%</div>
+                <div class="subtext">${t('fromRevenue')}</div>
+            </div>`,
+        
+        'credit': `
+            <div class="stat-card" data-stat-type="credit">
+                <div class="icon" style="background: linear-gradient(135deg, #007AFF, #0051D5);">💳</div>
+                <h3>${t('credit')}</h3>
+                <div class="value">₪${stats.totalCredit.toLocaleString()}</div>
+                <div class="change neutral">${stats.creditPercent.toFixed(1)}%</div>
+                <div class="subtext">${t('fromRevenue')}</div>
+            </div>`,
+        
+        'pango': `
+            <div class="stat-card" data-stat-type="pango">
+                <div class="icon" style="background: linear-gradient(135deg, #5856D6, #AF52DE);">📲</div>
+                <h3>${t('pango')}</h3>
+                <div class="value">₪${stats.totalPango.toLocaleString()}</div>
+                <div class="change neutral">${stats.pangoPercent.toFixed(1)}%</div>
+                <div class="subtext">${t('fromRevenue')}</div>
+            </div>`,
+        
+        'cello': `
+            <div class="stat-card" data-stat-type="cello">
+                <div class="icon" style="background: linear-gradient(135deg, #FF9500, #FF3B30);">📞</div>
+                <h3>${t('cello')}</h3>
+                <div class="value">₪${stats.totalCello.toLocaleString()}</div>
+                <div class="change neutral">${stats.celloPercent.toFixed(1)}%</div>
+                <div class="subtext">${t('fromRevenue')}</div>
+            </div>`,
+        
+        'avg-revenue': `
+            <div class="stat-card" data-stat-type="avg-revenue">
+                <div class="icon" style="background: linear-gradient(135deg, #00C7BE, #30D158);">📊</div>
+                <h3>${t('dailyAvg')}</h3>
+                <div class="value">₪${stats.dailyAvgRevenue.toLocaleString()}</div>
+                <div class="change neutral">${stats.uniqueDays} ${t('days')}</div>
+                <div class="subtext">${t('dailyAvgRevenue')}</div>
+            </div>`
+    };
 
-        <div class="stat-card" data-stat-type="barriers" ${isGroup && !isSingleParkingMode ? 'style="cursor: pointer;"' : ''}>
-            <div class="icon" style="background: linear-gradient(135deg, #FF3B30, #FF6961);">🚧</div>
-            <h3>${t('barrierOpenings')}</h3>
-            <div class="value">${stats.totalBarrier.toLocaleString()}</div>
-            <div class="change ${stats.barrierPercent > 5 ? 'negative' : 'positive'}">
-                ${stats.barrierPercent.toFixed(1)}% ${t('fromRevenue')}
-            </div>
-            <div class="subtext">${stats.barrierPerEntry.toFixed(2)} ${t('perEntry')}</div>
-        </div>
-        
-        <div class="stat-card" data-stat-type="cash">
-            <div class="icon" style="background: linear-gradient(135deg, #30D158, #34C759);">💵</div>
-            <h3>${t('cash')}</h3>
-            <div class="value">₪${stats.totalCash.toLocaleString()}</div>
-            <div class="change neutral">${stats.cashPercent.toFixed(1)}%</div>
-            <div class="subtext">${t('fromRevenue')}</div>
-        </div>
-        
-        <div class="stat-card" data-stat-type="credit">
-            <div class="icon" style="background: linear-gradient(135deg, #007AFF, #0051D5);">💳</div>
-            <h3>${t('credit')}</h3>
-            <div class="value">₪${stats.totalCredit.toLocaleString()}</div>
-            <div class="change neutral">${stats.creditPercent.toFixed(1)}%</div>
-            <div class="subtext">${t('fromRevenue')}</div>
-        </div>
-        
-        <div class="stat-card" data-stat-type="pango">
-            <div class="icon" style="background: linear-gradient(135deg, #5856D6, #AF52DE);">📲</div>
-            <h3>${t('pango')}</h3>
-            <div class="value">₪${stats.totalPango.toLocaleString()}</div>
-            <div class="change neutral">${stats.pangoPercent.toFixed(1)}%</div>
-            <div class="subtext">${t('fromRevenue')}</div>
-        </div>
-        
-        <div class="stat-card" data-stat-type="cello">
-            <div class="icon" style="background: linear-gradient(135deg, #FF9500, #FF3B30);">📞</div>
-            <h3>${t('cello')}</h3>
-            <div class="value">₪${stats.totalCello.toLocaleString()}</div>
-            <div class="change neutral">${stats.celloPercent.toFixed(1)}%</div>
-            <div class="subtext">${t('fromRevenue')}</div>
-        </div>
-        
-        <div class="stat-card" data-stat-type="avg-revenue">
-            <div class="icon" style="background: linear-gradient(135deg, #00C7BE, #30D158);">📊</div>
-            <h3>${t('dailyAvg')}</h3>
-            <div class="value">₪${stats.dailyAvgRevenue.toLocaleString()}</div>
-            <div class="change neutral">${stats.uniqueDays} ${t('days')}</div>
-            <div class="subtext">${t('dailyAvgRevenue')}</div>
-        </div>
-    `;
-    
-    document.getElementById('statsGrid').innerHTML = statsHTML;
+    // Render in user's custom saved order or default order
+    const order = getSavedStatCardsOrder();
+    let statsHTML = '';
+    order.forEach(type => {
+        if (cardDefs[type]) {
+            statsHTML += cardDefs[type];
+        }
+    });
+
+    // Append any cards not yet in the saved order
+    Object.keys(cardDefs).forEach(type => {
+        if (!order.includes(type) && cardDefs[type]) {
+            statsHTML += cardDefs[type];
+        }
+    });
+
+    const gridEl = document.getElementById('statsGrid');
+    if (gridEl) {
+        gridEl.innerHTML = statsHTML;
+        initStatsSortable();
+    }
     
     // Add hover functionality for group users
     if (isGroup && !isSingleParkingMode) {
@@ -6411,7 +6662,7 @@ function renderAiAnalysis() {
         parkMap[d.parking_name] = (parkMap[d.parking_name] || 0) + (d.total_revenue_shekels || 0);
     });
     const sorted = Object.entries(parkMap).sort((a, b) => b[1] - a[1]);
-    const topPark = sorted[0] || ['כללי', 0];
+    const topPark = sorted[0] || [t('aiGeneral') || 'כללי', 0];
     const topPct = stats.totalRevenue > 0 ? ((topPark[1] / stats.totalRevenue) * 100).toFixed(1) : 0;
 
     // Max Occupancy calculation (ts_per5 + ts_per6)
@@ -6432,45 +6683,74 @@ function renderAiAnalysis() {
     // Update Occupancy Card Value
     const occValEl = document.getElementById('maxOccCardValue');
     const occPctEl = document.getElementById('maxOccCardPercent');
-    if (occValEl) occValEl.textContent = totalPeak.toLocaleString() + ' רכבים';
-    if (occPctEl) occPctEl.textContent = occPct + '% מתוך קיבולת ' + netCapacity.toLocaleString();
+    const vehiclesWord = t('aiVehicles') || 'רכבים';
+    const outOfCapWord = t('aiOutOfCap') || 'מתוך קיבולת';
+    if (occValEl) occValEl.textContent = totalPeak.toLocaleString() + ' ' + vehiclesWord;
+    if (occPctEl) occPctEl.textContent = occPct + '% ' + outOfCapWord + ' ' + netCapacity.toLocaleString();
 
     const insights = [];
+
+    // Helper to format template string with variables
+    function fmt(template, vars) {
+        return template.replace(/\{(\w+)\}/g, function(_, k) {
+            return vars[k] !== undefined ? vars[k] : '{' + k + '}';
+        });
+    }
 
     // Insight 1: Revenue trend vs previous period
     if (changes.revenue !== null) {
         const isUp = changes.revenue >= 0;
+        const trendWord = isUp ? (t('aiRevGrowth') || 'צמיחה') : (t('aiRevDrop') || 'ירידה');
+        const titleTpl = t('aiRevTrendTitle') || 'מגמת הכנסות: {trend} של {pct}%';
+        const textTpl = t('aiRevTrendText') || 'בתקופה זו הוכנסו ₪{curr} בהשוואה ל-₪{prev} בתקופה המקבילה.';
+        
         insights.push({
             icon: isUp ? '📈' : '📉',
-            title: `מגמת הכנסות: ${isUp ? 'צמיחה' : 'ירידה'} של ${Math.abs(changes.revenue).toFixed(1)}%`,
-            text: `בתקופה זו הוכנסו ₪${stats.totalRevenue.toLocaleString()} בהשוואה ל-₪${changes.prevRevenue.toLocaleString()} בתקופה המקבילה.`
+            title: fmt(titleTpl, { trend: trendWord, pct: Math.abs(changes.revenue).toFixed(1) }),
+            text: fmt(textTpl, { curr: stats.totalRevenue.toLocaleString(), prev: changes.prevRevenue.toLocaleString() })
         });
     } else {
+        const titleTpl = t('aiTotalRevTitle') || 'סה"כ הכנסות לתקופה: ₪{curr}';
+        const textTpl = t('aiTotalRevText') || 'ממוצע יומי עומד על ₪{avg} לאורך {days} ימי פעילות.';
         insights.push({
             icon: '💰',
-            title: `סה"כ הכנסות לתקופה: ₪${stats.totalRevenue.toLocaleString()}`,
-            text: `ממוצע יומי עומד על ₪${stats.dailyAvgRevenue.toLocaleString()} לאורך ${stats.uniqueDays} ימי פעילות.`
+            title: fmt(titleTpl, { curr: stats.totalRevenue.toLocaleString() }),
+            text: fmt(textTpl, { avg: stats.dailyAvgRevenue.toLocaleString(), days: stats.uniqueDays })
         });
     }
 
     // Insight 2: Traffic & Demographics
     if (changes.entries !== null) {
         const isUp = changes.entries >= 0;
+        const diffStr = (isUp ? '+' : '') + changes.entries.toFixed(1) + '%';
+        const titleTpl = t('aiTrafficTitle') || 'תנועות: {total} כניסות ({diff})';
+        const textTpl = t('aiTrafficText') || 'מזדמנים: {casualPct}% ({casualTotal}), מנויים: {memberPct}% ({memberTotal}).';
         insights.push({
             icon: '🚗',
-            title: `תנועות: ${stats.totalEntries.toLocaleString()} כניסות (${isUp ? '+' : ''}${changes.entries.toFixed(1)}%)`,
-            text: `מזדמנים: ${stats.casualPercent.toFixed(1)}% (${stats.totalCasual.toLocaleString()}), מנויים: ${stats.memberPercent.toFixed(1)}% (${stats.totalMembers.toLocaleString()}).`
+            title: fmt(titleTpl, { total: stats.totalEntries.toLocaleString(), diff: diffStr }),
+            text: fmt(textTpl, {
+                casualPct: stats.casualPercent.toFixed(1),
+                casualTotal: stats.totalCasual.toLocaleString(),
+                memberPct: stats.memberPercent.toFixed(1),
+                memberTotal: stats.totalMembers.toLocaleString()
+            })
         });
     } else {
+        const titleTpl = t('aiTrafficTitle') || 'תנועות: {total} כניסות ({diff})';
+        const textTpl = t('aiTrafficTextNoDiff') || 'מזדמנים: {casualPct}% מול {memberPct}% מנויים. ממוצע יומי: {avg} כניסות.';
         insights.push({
             icon: '🚗',
-            title: `תנועות: ${stats.totalEntries.toLocaleString()} כניסות`,
-            text: `מזדמנים: ${stats.casualPercent.toFixed(1)}% מול ${stats.memberPercent.toFixed(1)}% מנויים. ממוצע יומי: ${stats.dailyAvgEntries.toLocaleString()} כניסות.`
+            title: fmt(titleTpl, { total: stats.totalEntries.toLocaleString(), diff: '' }),
+            text: fmt(textTpl, {
+                casualPct: stats.casualPercent.toFixed(1),
+                memberPct: stats.memberPercent.toFixed(1),
+                avg: stats.dailyAvgEntries.toLocaleString()
+            })
         });
     }
 
     // Insight 3: Year-over-Year (YoY) Comparison if available
-    if (lastYearPeriodData && lastYearPeriodData.length > 0) {
+    if (typeof lastYearPeriodData !== 'undefined' && lastYearPeriodData && lastYearPeriodData.length > 0) {
         const currRev = currentData.reduce((s, d) => s + (d.total_revenue_shekels || 0), 0);
         const lyRev = lastYearPeriodData.reduce((s, d) => s + (d.total_revenue_shekels || 0), 0);
         const currEnt = currentData.reduce((s, d) => s + (d.t_entry_tot || 0), 0);
@@ -6479,54 +6759,61 @@ function renderAiAnalysis() {
         if (lyRev > 0) {
             const yoyRevDiff = ((currRev - lyRev) / lyRev) * 100;
             const isGrowth = yoyRevDiff >= 0;
-            const lyName = previousPeriodRange && previousPeriodRange.lastYearRange ? previousPeriodRange.lastYearRange.monthName : 'שנה שעברה';
+            const trendWord = isGrowth ? (t('aiRevGrowth') || 'צמיחה') : (t('aiRevDrop') || 'ירידה');
+            const lyName = (typeof previousPeriodRange !== 'undefined' && previousPeriodRange && previousPeriodRange.lastYearRange) ? previousPeriodRange.lastYearRange.monthName : (t('aiLastYear') || 'שנה שעברה');
+            const titleTpl = t('aiYoYTitle') || 'השוואה שנתית מול {ly}: {trend} של {pct}%';
+            const textTpl = t('aiYoYText') || 'הכנסות: ₪{curr} (מול ₪{prev}). תנועות: {currEnt} (מול {prevEnt} כניסות בשנה שעברה).';
             insights.push({
                 icon: '📅',
-                title: `השוואה שנתית מול ${lyName}: ${isGrowth ? 'צמיחה' : 'ירידה'} של ${Math.abs(yoyRevDiff).toFixed(1)}%`,
-                text: `הכנסות: ₪${Math.round(currRev).toLocaleString()} (מול ₪${Math.round(lyRev).toLocaleString()}). תנועות: ${currEnt.toLocaleString()} (מול ${lyEnt.toLocaleString()} כניסות בשנה שעברה).`
+                title: fmt(titleTpl, { ly: lyName, trend: trendWord, pct: Math.abs(yoyRevDiff).toFixed(1) }),
+                text: fmt(textTpl, { curr: Math.round(currRev).toLocaleString(), prev: Math.round(lyRev).toLocaleString(), currEnt: currEnt.toLocaleString(), prevEnt: lyEnt.toLocaleString() })
             });
         }
     }
 
     // Insight: Top Parking
+    const topParkTitleTpl = t('aiTopParkTitle') || 'חניון מוביל ברשת: {name}';
+    const topParkTextTpl = t('aiTopParkText') || 'הניב ₪{rev} המהווים {pct}% מכלל הכנסות הרשת בטווח הנבחר.';
     insights.push({
         icon: '🏆',
-        title: `חניון מוביל ברשת: ${topPark[0]}`,
-        text: `הניב ₪${Math.round(topPark[1]).toLocaleString()} המהווים ${topPct}% מכלל הכנסות הרשת בטווח הנבחר.`
+        title: fmt(topParkTitleTpl, { name: topPark[0] }),
+        text: fmt(topParkTextTpl, { rev: Math.round(topPark[1]).toLocaleString(), pct: topPct })
     });
 
     // Insight 4: Peak Occupancy (ts_per5 & ts_per6)
+    const occTitleTpl = t('aiPeakOccTitle') || 'תפוסת שיא כוללת: {peak} רכבים ({pct}% מקיבולת הרשת)';
+    const occTextTpl = t('aiPeakOccText') || 'שיא מזדמנים: {casual} רכבים, שיא מנויים: {sub} רכבים מתוך קיבולת כוללת של {cap} חניות.';
     insights.push({
         icon: '⚡',
-        title: `תפוסת שיא כוללת: ${totalPeak.toLocaleString()} רכבים (${occPct}% מקיבולת הרשת)`,
-        text: `שיא מזדמנים: ${peakCasual.toLocaleString()} רכבים, שיא מנויים: ${peakSub.toLocaleString()} רכבים מתוך קיבולת כוללת של ${netCapacity.toLocaleString()} חניות.`
+        title: fmt(occTitleTpl, { peak: totalPeak.toLocaleString(), pct: occPct }),
+        text: fmt(occTextTpl, { casual: peakCasual.toLocaleString(), sub: peakSub.toLocaleString(), cap: netCapacity.toLocaleString() })
     });
 
     // Insight 5: Barrier & Gate Security
     const barrierRatio = stats.barrierPerEntry;
     const isBarrierOk = barrierRatio <= 0.05;
+    const barrierTitleTpl = t('aiBarrierTitle') || 'פתיחות מחסום: {total} ({ratio} לרכב)';
+    const barrierText = isBarrierOk ? 
+        fmt(t('aiBarrierOk') || 'רמת פתיחות תקינה לחלוטין ({pct}% מסך התנועות). אין התראות על תקלות שער.', { pct: stats.barrierPercent.toFixed(1) }) :
+        fmt(t('aiBarrierWarn') || 'שיעור פתיחות מוגבר ({pct}%). מומלץ לבדוק תקינות עיניות ושערי יציאה.', { pct: stats.barrierPercent.toFixed(1) });
+    
     insights.push({
         icon: '🚧',
-        title: `פתיחות מחסום: ${stats.totalBarrier.toLocaleString()} (${barrierRatio.toFixed(2)} לרכב)`,
-        text: isBarrierOk ? 
-            `רמת פתיחות תקינה לחלוטין (${stats.barrierPercent.toFixed(1)}% מסך התנועות). אין התראות על תקלות שער.` :
-            `שיעור פתיחות מוגבר (${stats.barrierPercent.toFixed(1)}%). מומלץ לבדוק תקינות עיניות ושערי יציאה.`
+        title: fmt(barrierTitleTpl, { total: stats.totalBarrier.toLocaleString(), ratio: barrierRatio.toFixed(2) }),
+        text: barrierText
     });
 
-    container.innerHTML = insights.map(item => `
-        <div class="ai-insight-card">
-            <div class="ai-insight-icon">${item.icon}</div>
-            <div>
-                <div style="font-weight: 700; font-size: 14px; color: #1E293B; margin-bottom: 2px;">${item.title}</div>
-                <div style="font-size: 13px; color: #475569; line-height: 1.4;">${item.text}</div>
-            </div>
-        </div>
-    `).join('');
+    container.innerHTML = insights.map(function(item) {
+        return '<div class="ai-insight-card">' +
+            '<div class="ai-insight-icon">' + item.icon + '</div>' +
+            '<div>' +
+                '<div style="font-weight: 700; font-size: 14px; color: #1E293B; margin-bottom: 2px;">' + item.title + '</div>' +
+                '<div style="font-size: 13px; color: #475569; line-height: 1.4;">' + item.text + '</div>' +
+            '</div>' +
+        '</div>';
+    }).join('');
 }
 
-// -------------------------------------------------------------
-// HELPER: GET PERIOD KEY FOR DATA GROUPING
-// -------------------------------------------------------------
 function getPeriodKey(d, mode) {
     if (!d) return '';
     const dateStr = d.report_date || '';
@@ -7057,20 +7344,70 @@ function saveDashboardLayout() {
     }
 }
 
-function resetDashboardLayout() {
-    if (!dashboardGrid) return;
+let statsSortable = null;
+const STATS_CARDS_STORAGE_KEY = 'dashboard_v2_stats_cards_order_v1';
+
+function getSavedStatCardsOrder() {
     try {
+        const saved = localStorage.getItem(STATS_CARDS_STORAGE_KEY);
+        if (saved) {
+            const arr = JSON.parse(saved);
+            if (Array.isArray(arr) && arr.length > 0) return arr;
+        }
+    } catch(e) {}
+    return ['revenue', 'entries', 'casual', 'members', 'app', 'occupancy', 'barriers', 'cash', 'credit', 'pango', 'cello', 'avg-revenue'];
+}
+
+function saveStatCardsOrder() {
+    const gridEl = document.getElementById('statsGrid');
+    if (!gridEl) return;
+    const cards = Array.from(gridEl.querySelectorAll('.stat-card'));
+    const order = cards.map(function(c) { return c.getAttribute('data-stat-type'); }).filter(Boolean);
+    if (order.length > 0) {
+        localStorage.setItem(STATS_CARDS_STORAGE_KEY, JSON.stringify(order));
+        console.log('Saved stat cards order:', order);
+    }
+}
+
+function initStatsSortable() {
+    const gridEl = document.getElementById('statsGrid');
+    if (!gridEl || typeof Sortable === 'undefined') return;
+    
+    if (statsSortable) {
+        try { statsSortable.destroy(); } catch(e) {}
+    }
+    
+    statsSortable = Sortable.create(gridEl, {
+        animation: 200,
+        disabled: !isDashboardEditMode,
+        ghostClass: 'stat-card-ghost',
+        chosenClass: 'stat-card-chosen',
+        onEnd: function() {
+            saveStatCardsOrder();
+        }
+    });
+}
+
+function resetDashboardLayout() {
+    try {
+        // Reset GridStack layout
         localStorage.removeItem(DASHBOARD_GRID_STORAGE_KEY);
-        dashboardGrid.load(DEFAULT_GRID_LAYOUT, false);
+        if (dashboardGrid) {
+            dashboardGrid.load(DEFAULT_GRID_LAYOUT, false);
+        }
+        
+        // Reset Stat cards order
+        localStorage.removeItem(STATS_CARDS_STORAGE_KEY);
+        updateStats();
+
         refreshChartsAndMapAfterLayoutChange();
-        showDashboardToast('הסידור אופס לברירת המחדל');
+        showDashboardToast(t('resetLayout') || 'הסידור אופס לברירת המחדל');
     } catch (e) {
         console.error('Error resetting dashboard layout:', e);
     }
 }
 
 function toggleDashboardEditMode() {
-    if (!dashboardGrid) return;
     isDashboardEditMode = !isDashboardEditMode;
     
     const container = document.getElementById('dashboardContent');
@@ -7079,29 +7416,36 @@ function toggleDashboardEditMode() {
     const btnText = document.getElementById('btnEditText');
     const resetBtn = document.getElementById('btnResetLayout');
     
+    if (dashboardGrid) {
+        dashboardGrid.setStatic(!isDashboardEditMode);
+    }
+
+    if (statsSortable) {
+        statsSortable.option('disabled', !isDashboardEditMode);
+    }
+    
     if (isDashboardEditMode) {
-        dashboardGrid.setStatic(false);
         if (container) container.classList.add('dashboard-editing-active');
         if (btn) {
             btn.classList.add('active-editing');
             if (btnIcon) btnIcon.textContent = '💾';
-            if (btnText) btnText.textContent = (typeof t === 'function' && t('saveLayout')) ? t('saveLayout') : 'שמור סידור';
+            if (btnText) btnText.textContent = (typeof t === 'function' && t('saveLayout')) ? t('saveLayout') : 'שמור סידור גרפים';
         }
         if (resetBtn) resetBtn.style.display = 'inline-flex';
-        showDashboardToast('מצב עריכה הופעל: גרור ושנה גדלים בחופשיות');
+        showDashboardToast('מצב עריכה הופעל: גרור קוביות וגרפים לסידור מחדש');
     } else {
-        dashboardGrid.setStatic(true);
         if (container) container.classList.remove('dashboard-editing-active');
         if (btn) {
             btn.classList.remove('active-editing');
             if (btnIcon) btnIcon.textContent = '✏️';
-            if (btnText) btnText.textContent = (typeof t === 'function' && t('editLayout')) ? t('editLayout') : 'ערוך סידור';
+            if (btnText) btnText.textContent = (typeof t === 'function' && t('editLayout')) ? t('editLayout') : 'ערך סידור גרפים';
         }
         if (resetBtn) resetBtn.style.display = 'none';
         
         saveDashboardLayout();
+        saveStatCardsOrder();
         refreshChartsAndMapAfterLayoutChange();
-        showDashboardToast('סידור הדשבורד נשמר בהצלחה');
+        showDashboardToast('סידור הדשבורד והגרפים נשמר בהצלחה');
     }
 }
 
