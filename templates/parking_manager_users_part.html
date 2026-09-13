@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ניהול משתמשים מערכת שיידט את בכמן - מנהל חברות 200-300
+    </title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 28px;
+        }
+
+        .parking-info {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .parking-info h2 {
+            color: #495057;
+            margin-bottom: 10px;
+        }
+
+        .parking-details {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 15px;
+        }
+
+        .parking-detail {
+            text-align: center;
+        }
+
+        .parking-detail .label {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .parking-detail .value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .create-user-section,
+        .users-list-section {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-title {
+            color: #495057;
+            font-size: 22px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+
+        .btn-edit {
+            background: #ffc107;
+            color: #212529;
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+            margin-left: 5px;
+        }
+
+        .btn-edit:hover {
+            background: #e0a800;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .users-table th,
+        .users-table td {
+            padding: 8px;
+            text-align: right;
+            border-bottom: 1px solid #dee2e6;
+            font-size: 13px;
+        }
+
+        .users-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .users-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-temp {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .info-note {
+            background: #e7f3ff;
+            border: 1px solid #b3d7ff;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            color: #004085;
+        }
+
+        .permissions-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .permission-item {
+            display: flex;
+            align-items: center;
+            font-weight: normal;
+            padding: 8px;
+            border-radius: 4px;
+            background: #f8f9fa;
+            transition: background 0.2s;
+        }
+
+        .permission-item:hover {
+            background: #e9ecef;
+        }
+
+        .permission-item input[type="checkbox"] {
+            width: auto;
+            margin-left: 8px;
+            margin-right: 0;
+        }
+
+        .permission-basic {
+            background: #d4edda !important;
+            border: 1px solid #c3e6cb;
+        }
+
+        .edit-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .edit-modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .edit-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+
+        .close-modal {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .close-modal:hover {
+            background: #5a6268;
+        }
+
+        @media (max-width: 768px) {
+            .parking-details {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .users-table {
+                font-size: 14px;
+            }
+
+            .users-table th,
+            .users-table td {
+                padding: 8px;
+            }
+
+            .permissions-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🅿️ ניהול משתמשים - מנהל חניון</h1>
+        </div>
+
+        <!-- מידע על החניון -->
+        <div class="parking-info">
+            <h2 id="parkingTitle">📄 טוען נתוני חניון...</h2>
+            <div class="parking-details" id="parkingDetails" style="display: none;">
+                <div class="parking-detail">
+                    <div class="label">מספר פרויקט</div>
+                    <div class="value" id="projectNumber">-</div>
+                </div>
+                <div class="parking-detail">
+                    <div class="label">שם חניון</div>
+                    <div class="value" id="parkingName">-</div>
+                </div>
+                <div class="parking-detail">
+                    <div class="label">סוג חברה</div>
+                    <div class="value" id="companyType">-</div>
+                </div>
+                <div class="parking-detail">
+                    <div class="label">מכסת רכבים כוללת</div>
+                    <div class="value" id="countingBalance">-</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- יצירת משתמש חדש -->
+            <div class="create-user-section">
+                <h2 class="section-title">➕ הוספת משתמש לחניון</h2>
+
+                <div class="info-note">
+                    💡 <strong>הערה:</strong> המשתמש החדש יתווסף לחברות שלך בלבד ויקבל גישה לנתונים של החברה הזה.
+                </div>
+
+                <div id="createAlert" style="display: none;"></div>
+
+                <form id="createUserForm">
+                    <div class="form-group">
+                        <label for="username">שם משתמש *</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">כתובת אימייל *</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="companyList">רשימת מספרי חברות</label>
+                        <input type="text" id="companyList" name="companyList" placeholder="לדוגמא: 100,2-5">
+                        <small style="color: #6c757d; font-size: 12px;">
+                            הזינו מספרי חברות מופרדים במקף (-) או (,) בלבד. השאירו ריק אם לא רלוונטי.
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="counting">מגבלת כמות רכבים (0 = ללא הגבלה)</label>
+                        <input type="number" id="counting" name="counting" min="0" value="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="accessLevel">רמת גישה</label>
+                        <select id="accessLevel" name="accessLevel">
+                            <option value="single_parking">גישה לחניון בלבד</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>הרשאות משתמש</label>
+                        <div class="permissions-grid">
+                            <label class="permission-item permission-basic">
+                                <input type="checkbox" name="permissions" value="B" checked>
+                                <span>B - בסיס (צפייה ועריכה בסיסית)</span>
+                            </label>
+                            <label class="permission-item permission-basic">
+                                <input type="checkbox" name="permissions" value="2" checked>
+                                <span>2 - עריכת רכבים 1-2</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="permissions" value="G">
+                                <span>G - יצירת אורחים</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="permissions" value="N">
+                                <span>N - יצירת מנויים חדשים</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="permissions" value="P">
+                                <span>P - עדכון פרופילים</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="permissions" value="R">
+                                <span>R - צפייה בדוחות</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="permissions" value="T">
+                                <span>T - עריכת מספר תג</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="permissions" value="1">
+                                <span>1 - עריכת רכב 1 בלבד</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="permissions" value="3">
+                                <span>3 - עריכת כל הרכבים</span>
+                            </label>
+                        </div>
+                        <small style="color: #6c757d; font-size: 12px; margin-top: 10px; display: block;">
+                            ברירת המחדל: B (בסיס) + 2 (עריכת רכבים 1-2). ניתן לבחור הרשאות נוספות.
+                        </small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="createBtn">
+                        ✅ הוסף משתמש לחניון
+                    </button>
+                </form>
+            </div>
+
+        <!-- רשימת משתמשי החניון -->
+            <div class="users-list-section">
+                <h2 class="section-title">👥 משתמשי החניון</h2>
+
+                <input type="text" class="search-box" id="searchBox" placeholder="🔍 חפש לפי שם משתמש או אימייל...">
+
+                <div id="usersLoading" class="loading">📄 טוען רשימת משתמשים...</div>
+                <div id="usersContent" style="display: none;">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>שם משתמש</th>
+                                <th>אימייל</th>
+                                <th>חברה</th>
+                                <th>הרשאות</th>
+                                <th>מכסת רכבים</th>
+                                <th>סטטוס</th>
+                                <th>תאריך יצירה</th>
+                                <th>עריכה</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- ניהול תפוסת חברות (Pooling) -->
+            <div class="users-list-section" style="margin-top: 30px;">
+                <h2 class="section-title">📊 ניהול תפוסה מורחב (פרופילים וחניונים)</h2>
+                <div class="info-note">
+                    💡 <strong>הערה:</strong> באפשרותך לערוך מכסות תפוסה לחברה (Contract) לפי פרופילים וחניונים ספציפיים.
+                </div>
+                <div style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 20px;">
+                    <div class="form-group" style="margin-bottom: 0; flex: 1; max-width: 300px;">
+                        <label for="poolingContractId">מספר חברה (Contract ID)</label>
+                        <input type="number" id="poolingContractId" placeholder="לדוגמא: 2">
+                    </div>
+                    <button class="btn btn-primary" style="flex: 0 0 auto; width: auto;" onclick="openPoolingModal()">
+                        ⚙️ נהל תפוסה לחברה זו
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal עריכת משתמש -->
+        <div id="editModal" class="edit-modal">
+            <div class="edit-modal-content">
+                <div class="edit-modal-header">
+                    <h2>✏️ עריכת משתמש</h2>
+                    <button class="close-modal" onclick="closeEditModal()">✖️</button>
+                </div>
+
+                <div id="editAlert" style="display: none;"></div>
+
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId" name="userId">
+
+                    <div class="form-group">
+                        <label for="editUsername">שם משתמש *</label>
+                        <input type="text" id="editUsername" name="username" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editEmail">כתובת אימייל *</label>
+                        <input type="email" id="editEmail" name="email" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editCompanyList">רשימת מספרי חברות</label>
+                        <input type="text" id="editCompanyList" name="companyList" placeholder="לדוגמא: 100,2-55">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editCounting">מגבלת כמות רכבים (0 = ללא הגבלה)</label>
+                        <input type="number" id="editCounting" name="counting" min="0" value="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editAccessLevel">רמת גישה</label>
+                        <select id="editAccessLevel" name="accessLevel">
+                            <option value="single_parking">גישה לחניון בלבד</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>הרשאות משתמש</label>
+                        <div class="permissions-grid" id="editPermissionsGrid">
+                            <label class="permission-item permission-basic">
+                                <input type="checkbox" name="editPermissions" value="B">
+                                <span>B - בסיס (צפייה ועריכה בסיסית)</span>
+                            </label>
+                            <label class="permission-item permission-basic">
+                                <input type="checkbox" name="editPermissions" value="2">
+                                <span>2 - עריכת רכבים 1-2</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="editPermissions" value="G">
+                                <span>G - יצירת אורחים</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="editPermissions" value="N">
+                                <span>N - יצירת מנויים חדשים</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="editPermissions" value="P">
+                                <span>P - עדכון פרופילים</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="editPermissions" value="R">
+                                <span>R - צפייה בדוחות</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="editPermissions" value="T">
+                                <span>T - עריכת מספר תג</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="editPermissions" value="1">
+                                <span>1 - עריכת רכב 1 בלבד</span>
+                            </label>
+                            <label class="permission-item">
+                                <input type="checkbox" name="editPermissions" value="3">
+                                <span>3 - עריכת כל הרכבים</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" class="btn btn-primary" id="editBtn" style="flex: 1;">
+                            ✅ עדכן משתמש
+                        </button>
+                        <button type="button" class="btn close-modal" onclick="closeEditModal()"
+                            style="flex: 0 0 auto;">
+                            ביטול
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal ניהול תפוסת חברה -->
+        <div id="poolingModal" class="edit-modal">
+            <div class="edit-modal-content" style="max-width: 800px; width: 95%;">
+                <div class="edit-modal-header">
+                    <h2 id="poolingModalTitle">📊 ניהול תפוסה לחברה</h2>
+                    <button class="close-modal" onclick="closePoolingModal()">✖️</button>
+                </div>
+                
+                <div id="poolingAlert" style="display: none;" class="alert"></div>
+                <div id="poolingLoading" class="loading" style="display: none;">טוען נתוני תפוסה מהחניון...</div>
+                
+                <div id="poolingContent" style="display: none;">
+                    <form id="poolingForm">
+                        <table class="users-table" id="poolingTable">
+                            <thead>
+                                <tr>
+                                    <th>שם חניון</th>
+                                    <th>שם פרופיל</th>
+                                    <th>רכבים בפנים</th>
+                                    <th>מכסה מקסימלית (Max Limit)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="poolingTableBody">
+                                <!-- יאוכלס דינמית -->
+                            </tbody>
+                        </table>
+                        
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button type="button" class="btn btn-primary" id="savePoolingBtn" style="flex: 1;" onclick="savePoolingData()">
+                                💾 שמור שינויים בחניון
+                            </button>
+                            <button type="button" class="btn close-modal" onclick="closePoolingModal()" style="flex: 0 0 auto;">
+                                סגור
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Inject manager's allowed company list from Flask
+        const MANAGER_COMPANY_LIMIT = "{{ manager_company_list }}";
+        const MANAGER_COUNTING_LIMIT = parseInt("{{ manager_counting }}") || 0;
+
+        // Update placeholders to show allowed limit
+        document.addEventListener('DOMContentLoaded', function () {
+            const placeholderText = MANAGER_COMPANY_LIMIT ? `לדוגמא: ${MANAGER_COMPANY_LIMIT}` : 'לדוגמא: 100,200-300';
+            const createInput = document.querySelector('input[name="companyList"]');
+            const editInput = document.getElementById('editCompanyList');
+
+            if (createInput) createInput.placeholder = placeholderText;
+            if (editInput) editInput.placeholder = placeholderText;
+        });
+
+        let parkingInfo = null;
+        let allUsers = [];
+        let CURRENT_USER_ID = null;
+
+        // --- Helper: Update Parking Contract via Proxy ---
+        async function updateParkingContract(contractId, countingValue) {
+            if (!contractId || isNaN(contractId) || countingValue < 0) return;
+
+            console.log(`🔌 Syncing contract ${contractId} with counting ${countingValue}...`);
+            showAlert('createAlert', 'info', 'מעדכן מערכת חניון...');
+
+            try {
+                // Determine contract ID
+                const payload = {
+                    endpoint: `contracts/${contractId}/detail`,
+                    method: 'PUT',
+                    parking_id: parkingInfo.project_number, // ✅ Must include parking ID for proxy
+                    payload: {
+                        id: contractId,
+                        counting: countingValue
+                    }
+                };
+
+                const response = await fetch('/api/company-manager/proxy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    console.log('✅ Parking update success', data);
+                    showAlert('createAlert', 'success', 'עודכן בהצלחה במסד הנתונים ובמערכת החניון');
+                } else {
+                    console.error('❌ Parking update failed', data);
+                    const errorMsg = data.message || (data.data && data.data.raw) || 'Unknown error';
+                    showAlert('createAlert', 'warning', `עודכן במסד הנתונים אך נכשל בחניון: ${errorMsg}`);
+                }
+            } catch (error) {
+                console.error('❌ Parking update exception', error);
+                showAlert('createAlert', 'warning', `עודכן במסד הנתונים אך שגיאת תקשורת עם החניון`);
+            }
+        }
+
+        // Validation helper: Check if a company ID is allowed
+        function isCompanyAllowed(targetCompanyStr, allowedRangeStr) {
+            // If no limit defined, assume allowed (or you could block, but typically empty means no restriction or not set)
+            if (!allowedRangeStr || allowedRangeStr.trim() === '') {
+                console.log("No company limit set for manager, allowing.");
+                return true;
+            }
+
+            // Parse Allowed Range (e.g. "200-300" or "200-300, 400-500")
+            // We'll normalize it into a list of {min, max} objects
+            const allowedRanges = allowedRangeStr.split(',').map(part => {
+                const [start, end] = part.split('-').map(s => parseInt(s.trim()));
+                return {
+                    min: isNaN(start) ? -1 : start,
+                    max: isNaN(end) ? (isNaN(start) ? -1 : start) : end
+                };
+            }).filter(r => r.min !== -1);
+
+            // Parse Target Inputs (e.g. "250" or "200, 205")
+            // Supports ranges in input too? The prompt implies simple number selection "Choose 200", 
+            // but the input field is "companyList" which usually implies multiple.
+            // We will check EVERY number in the target string.
+            const targetParts = targetCompanyStr.split(',');
+
+            for (let part of targetParts) {
+                part = part.trim();
+                if (!part) continue;
+
+                // Handle if user enters a range like "210-220" - check both ends?
+                // Or if they just enter "210".
+                const [tStart, tEnd] = part.split('-').map(s => parseInt(s.trim()));
+                const valsToCheck = [];
+                if (!isNaN(tStart)) valsToCheck.push(tStart);
+                if (!isNaN(tEnd)) valsToCheck.push(tEnd); // Checks end of range too if exists
+
+                if (valsToCheck.length === 0) return false; // Invalid input
+
+                // Check if ALL values fall within AT LEAST ONE allowed range
+                for (let val of valsToCheck) {
+                    let valAllowed = false;
+                    for (let range of allowedRanges) {
+                        if (val >= range.min && val <= range.max) {
+                            valAllowed = true;
+                            break;
+                        }
+                    }
+                    if (!valAllowed) return false; // Found a disallowed value
+                }
+            }
+            return true;
+        }
+
+        // Format permissions for display
+        function formatPermissions(permissions) {
+            if (!permissions || permissions === 'B') {
+                return 'B (בסיס)';
+            }
+
+            const permMap = {
+                'G': 'אורח',
+                'N': 'מנוי חדש',
+                'P': 'פרופיל',
+                'R': 'דוחות',
+                'T': 'תג',
+                '1': 'רכב 1',
+                '2': 'רכבים 1-2',
+                '3': 'כל הרכבים',
+                'B': 'בסיס'
+            };
+
+
+            const permArray = permissions.split('');
+            const formatted = permArray.map(p => permMap[p] || p).join(', ');
+            return formatted;
+        }
+
+        // טעינת נתוני החניון ורשימת המשתמשים - חזרה לקוד המקורי שעובד
+        async function loadParkingInfo() {
+            try {
+                const response = await fetch('/api/parking-manager/get-parking-info');
+                const data = await response.json();
+
+                if (data.success) {
+                    parkingInfo = data.parking_info;
+                    allUsers = data.users;
+                    CURRENT_USER_ID = data.current_user_id; // Capture ID
+
+                    // הצגת פרטי החניון
+                    document.getElementById('parkingTitle').textContent = `החניון שלך: ${parkingInfo.parking_name}`;
+                    document.getElementById('projectNumber').textContent = parkingInfo.project_number;
+                    document.getElementById('parkingName').textContent = parkingInfo.parking_name;
+                    document.getElementById('parkingName').textContent = parkingInfo.parking_name;
+                    document.getElementById('companyType').textContent = parkingInfo.company_type || 'לא צוין';
+
+                    // Show counting balance - EXCLUDING SELF
+                    if (MANAGER_COUNTING_LIMIT > 0) {
+                        const currentUsage = allUsers.reduce((sum, u) => {
+                            // Filter out self logic - String comparison logic
+                            const isSelf = String(u.user_id) === String(CURRENT_USER_ID);
+                            const val = (u.counting || 0);
+
+                            if (isSelf) return sum;
+                            return sum + val;
+                        }, 0);
+
+                        document.getElementById('countingBalance').textContent = `${currentUsage} / ${MANAGER_COUNTING_LIMIT}`;
+
+                        // Color warning if near limit
+                        if (currentUsage >= MANAGER_COUNTING_LIMIT) {
+                            document.getElementById('countingBalance').classList.add('text-danger');
+                        } else {
+                            document.getElementById('countingBalance').classList.remove('text-danger');
+                        }
+                    } else {
+                        document.getElementById('countingBalance').textContent = 'ללא הגבלה';
+                    }
+
+                    document.getElementById('parkingDetails').style.display = 'flex';
+
+                    // הצגת רשימת המשתמשים
+                    displayUsers(allUsers);
+                    document.getElementById('usersLoading').style.display = 'none';
+                    document.getElementById('usersContent').style.display = 'block';
+                } else {
+                    showAlert('createAlert', 'error', data.message);
+                }
+            } catch (error) {
+                showAlert('createAlert', 'error', 'שגיאה בטעינת נתוני החניון');
+            }
+        }
+
+        // הצגת משתמשים
+        function displayUsers(users) {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #6c757d;">אין משתמשים עדיין בחניון זה</td></tr>';
+                return;
+            }
+
+            users.forEach(user => {
+                const row = document.createElement('tr');
+
+                // Highlight self
+                if (String(user.user_id) === String(CURRENT_USER_ID)) {
+                    row.style.backgroundColor = '#f8f9fa';
+                }
+
+                const statusClass = user.is_temp_password ? 'status-temp' : 'status-active';
+                const statusText = user.is_temp_password ? 'סיסמה זמנית' : 'פעיל';
+
+                const createdDate = new Date(user.created_at).toLocaleDateString('he-IL');
+
+                // Format permissions display
+                const permissions = user.permissions || 'B';
+                const permissionDisplay = formatPermissions(permissions);
+
+                // Counting display
+                const countingVal = (user.counting !== undefined && user.counting !== null) ? user.counting : '-';
+
+                row.innerHTML = `
+                    <td>${user.username}</td>
+                    <td>${user.email}</td>
+                    <td>${companyList}</td> <!-- Company List Column -->
+                    <td dir="ltr" style="text-align: right;">${permissionDisplay}</td>
+                    <td>${countingVal}</td> <!-- Counting Column -->
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    <td>${createdDate}</td>
+                    <td>
+                        <button class="btn-icon" onclick='openEditModal(${JSON.stringify(user)})' title="ערוך">
+                            ✏️
+                        </button>
+                    </td>
+                `;
+
+                tbody.appendChild(row);
+            });
+        }
+
+        // חיפוש משתמשים
+        document.getElementById('searchBox').addEventListener('input', function (e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const filteredUsers = allUsers.filter(user =>
+                user.username.toLowerCase().includes(searchTerm) ||
+                user.email.toLowerCase().includes(searchTerm)
+            );
+            displayUsers(filteredUsers);
+        });
+
+        // וידוא שתמיד B ו-2 מסומנים כברירת מחדל
+        document.addEventListener('change', function (e) {
+            if (e.target.name === 'permissions' || e.target.name === 'editPermissions') {
+                const bCheckbox = document.querySelector(`input[name="${e.target.name}"][value="B"]`);
+                const twoCheckbox = document.querySelector(`input[name="${e.target.name}"][value="2"]`);
+                const checkedBoxes = document.querySelectorAll(`input[name="${e.target.name}"]:checked`);
+
+                // אם אין שום הרשאה מסומנת, סמן B ו-2
+                if (checkedBoxes.length === 0) {
+                    if (bCheckbox) bCheckbox.checked = true;
+                    if (twoCheckbox) twoCheckbox.checked = true;
+                }
+            }
+        });
+
+        // פונקציית עריכת משתמש
+        // פונקציית עריכת משתמש - החדשה (Modals)
+        function openEditModal(user) {
+            // Ensure we have ID
+            document.getElementById('editUserId').value = user.user_id || user.id || user.ID;
+            document.getElementById('editUsername').value = user.username;
+            document.getElementById('editEmail').value = user.email;
+            document.getElementById('editCompanyList').value = user.company_list || '';
+            document.getElementById('editCounting').value = (user.counting !== undefined && user.counting !== null) ? user.counting : 0;
+            document.getElementById('editAccessLevel').value = 'single_parking'; // תמיד גישה לחניון בלבד
+
+            // Handle Self-Editing Restriction
+            const isSelf = (String(user.user_id || user.id || user.ID) === String(CURRENT_USER_ID));
+            const editComp = document.getElementById('editCompanyList');
+            const editCount = document.getElementById('editCounting');
+
+            if (isSelf) {
+                editComp.disabled = true;
+                editCount.disabled = true;
+                editComp.style.backgroundColor = '#e9ecef'; // Shaded
+                editCount.style.backgroundColor = '#e9ecef'; // Shaded
+                editComp.title = "לא ניתן לערוך את החברות של עצמך";
+            } else {
+                editComp.disabled = false;
+                editCount.disabled = false;
+                editComp.style.backgroundColor = '';
+                editCount.style.backgroundColor = '';
+                editComp.title = "";
+            }
+
+            // Set Checkboxes
+            const perms = user.permissions || '';
+            const checkboxes = document.querySelectorAll('input[name="editPermissions"]');
+            checkboxes.forEach(cb => {
+                if (perms.includes(cb.value)) {
+                    cb.checked = true;
+                } else {
+                    cb.checked = false;
+                }
+            });
+
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        // סגירת מודל העריכה
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            document.getElementById('editAlert').style.display = 'none';
+        }
+
+        // יצירת משתמש חדש
+        document.getElementById('createUserForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const createBtn = document.getElementById('createBtn');
+            const originalText = createBtn.textContent;
+            createBtn.textContent = '📄 מוסיף משתמש...';
+            createBtn.disabled = true;
+
+            const formData = new FormData(e.target);
+
+            // Collect selected permissions
+            const permissions = [];
+            const permissionCheckboxes = document.querySelectorAll('input[name="permissions"]:checked');
+            permissionCheckboxes.forEach(checkbox => {
+                permissions.push(checkbox.value);
+            });
+
+            // If no permissions selected, default to 'B2'
+            let permissionsString = permissions.length > 0 ? permissions.join('') : 'B2';
+
+            // וידוא שB תמיד כלול
+            if (!permissionsString.includes('B')) {
+                permissionsString = 'B' + permissionsString;
+            }
+
+            const companyList = formData.get('companyList');
+
+            // Validation: Check company limits
+            if (!isCompanyAllowed(companyList, MANAGER_COMPANY_LIMIT)) {
+                showAlert('createAlert', 'error', `חריגה מהרשאות ניהול. מותר לך לנהל רק חברות בטווח: ${MANAGER_COMPANY_LIMIT}`);
+                createBtn.textContent = originalText;
+                createBtn.disabled = false;
+                return;
+            }
+
+            const userData = {
+                username: formData.get('username'),
+                email: formData.get('email'),
+                access_level: formData.get('accessLevel'),
+                company_list: companyList,
+                permissions: permissionsString,
+                counting: formData.get('counting')
+            };
+
+            try {
+                const response = await fetch('/api/parking-manager/create-user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('createAlert', 'success', data.message);
+                    e.target.reset();
+                    // החזר B ו-2 להיות מסומנים
+                    document.querySelector('input[value="B"]').checked = true;
+                    document.querySelector('input[value="2"]').checked = true;
+                    loadParkingInfo(); // רענון רשימת המשתמשים
+                } else {
+                    showAlert('createAlert', 'error', data.message);
+                }
+            } catch (error) {
+                showAlert('createAlert', 'error', 'שגיאה בהוספת משתמש');
+            }
+
+            createBtn.textContent = originalText;
+            createBtn.disabled = false;
+        });
+
+        // עדכון משתמש
+        document.getElementById('editUserForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            console.log('🔄 Starting user update...');
+
+            const editBtn = document.getElementById('editBtn');
+            const originalText = editBtn.textContent;
+            editBtn.textContent = '📄 מעדכן משתמש...';
+            editBtn.disabled = true;
+
+            const formData = new FormData(e.target);
+
+            // Collect selected permissions
+            const permissions = [];
+            const permissionCheckboxes = document.querySelectorAll('input[name="editPermissions"]:checked');
+            permissionCheckboxes.forEach(checkbox => {
+                permissions.push(checkbox.value);
+            });
+
+            // וידוא שB תמיד כלול
+            if (!permissions.includes('B')) {
+                permissions.unshift('B');
+            }
+
+            // Note: If disabled, companyList is null
+            const companyList = formData.get('companyList') || '';
+
+            // Validation: Check company limits
+            if (companyList && !isCompanyAllowed(companyList, MANAGER_COMPANY_LIMIT)) {
+                showAlert('editAlert', 'error', `חריגה מהרשאות ניהול. מותר לך לנהל רק חברות בטווח: ${MANAGER_COMPANY_LIMIT}`);
+                editBtn.textContent = originalText;
+                editBtn.disabled = false;
+                return;
+            }
+
+            const userData = {
+                user_id: formData.get('userId') || '',
+                username: formData.get('username') || '',
+                email: formData.get('email') || '',
+                access_level: formData.get('accessLevel') || 'single_parking',
+                company_list: companyList,
+                permissions: permissions.join('') || 'B2',
+                counting: formData.get('counting')
+            };
+
+            console.log('📤 Sending update data:', userData);
+
+            try {
+                const response = await fetch('/api/parking-manager/update-user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+
+                const data = await response.json();
+                console.log('📥 Update response:', data);
+
+                if (data.success) {
+                    showAlert('editAlert', 'success', data.message);
+                    setTimeout(() => {
+                        closeEditModal();
+                        loadParkingInfo(); // רענון רשימת המשתמשים
+                    }, 1500);
+                } else {
+                    showAlert('editAlert', 'error', data.message);
+                }
+            } catch (error) {
+                console.error('❌ Update error:', error);
+                showAlert('editAlert', 'error', 'שגיאה בעדכון משתמש: ' + error.message);
+            }
+
+            editBtn.textContent = originalText;
+            editBtn.disabled = false;
+        });
+
+        // הצגת התראות
+        function showAlert(elementId, type, message) {
+            const alertDiv = document.getElementById(elementId);
+            alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'}`;
+            alertDiv.textContent = message;
+            alertDiv.style.display = 'block';
+
+            setTimeout(() => {
+                alertDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // הוספת פונקציות לסקופ הגלובלי
+        window.openEditModal = openEditModal;
+        window.closeEditModal = closeEditModal;
+
+        // טעינה ראשונית
+        window.addEventListener('load', loadParkingInfo);
+        // === Pooling (Occupancy) Management Logic ===
+        let currentPoolingData = [];
+        let currentContractId = null;
+
+        async function openPoolingModal() {
+            const contractInput = document.getElementById('poolingContractId');
+            const contractId = contractInput.value.trim();
+            
+            if (!contractId) {
+                alert('נא להזין מספר חברה (Contract ID)');
+                return;
+            }
+            
+            // Check if manager is allowed to edit this company
+            if (!isCompanyAllowed(contractId, MANAGER_COMPANY_LIMIT)) {
+                alert(`אין לך הרשאה לגשת לחברה ${contractId}. החברות המותרות שלך: ${MANAGER_COMPANY_LIMIT || 'הכל'}`);
+                return;
+            }
+            
+            currentContractId = contractId;
+            document.getElementById('poolingModalTitle').innerText = `📊 ניהול תפוסה לחברה ${contractId}`;
+            document.getElementById('poolingModal').style.display = 'block';
+            document.getElementById('poolingContent').style.display = 'none';
+            document.getElementById('poolingAlert').style.display = 'none';
+            document.getElementById('poolingLoading').style.display = 'block';
+            
+            try {
+                const response = await fetch(`/api/company-manager/contract-pooling?parkingId=${parkingInfo.project_number}&contractId=${contractId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentPoolingData = data.data;
+                    renderPoolingTable();
+                    document.getElementById('poolingLoading').style.display = 'none';
+                    document.getElementById('poolingContent').style.display = 'block';
+                } else {
+                    showPoolingAlert('error', data.message || 'שגיאה בטעינת הנתונים מהחניון');
+                    document.getElementById('poolingLoading').style.display = 'none';
+                }
+            } catch (err) {
+                console.error(err);
+                showPoolingAlert('error', 'שגיאת תקשורת עם השרת');
+                document.getElementById('poolingLoading').style.display = 'none';
+            }
+        }
+
+        function closePoolingModal() {
+            document.getElementById('poolingModal').style.display = 'none';
+            currentPoolingData = [];
+            currentContractId = null;
+        }
+
+        function showPoolingAlert(type, message) {
+            const alertBox = document.getElementById('poolingAlert');
+            alertBox.style.display = 'block';
+            alertBox.innerText = message;
+            if (type === 'error') {
+                alertBox.className = 'alert alert-danger';
+            } else {
+                alertBox.className = 'alert alert-success';
+            }
+        }
+
+        function renderPoolingTable() {
+            const tbody = document.getElementById('poolingTableBody');
+            tbody.innerHTML = '';
+            
+            if (currentPoolingData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">לא נמצאו נתוני תפוסה (Pooling) עבור חברה זו.</td></tr>';
+                return;
+            }
+            
+            // Sort to make Facility 0 and Profile 0 appear at the top
+            currentPoolingData.sort((a, b) => {
+                if (a.facilityId === '0' && b.facilityId !== '0') return -1;
+                if (b.facilityId === '0' && a.facilityId !== '0') return 1;
+                if (a.profileId === '0' && b.profileId !== '0') return -1;
+                if (b.profileId === '0' && a.profileId !== '0') return 1;
+                return 0;
+            });
+            
+            let lastFacilityWasZero = null;
+
+            currentPoolingData.forEach((row, index) => {
+                const isReadOnly = (row.facilityId === '0' && row.profileId === '0');
+                
+                if (lastFacilityWasZero === true && row.facilityId !== '0') {
+                    const spacer = document.createElement('tr');
+                    spacer.innerHTML = '<td colspan="4" style="height: 25px; border-bottom: 1px solid #dee2e6; background-color: transparent;"></td>';
+                    tbody.appendChild(spacer);
+                }
+                lastFacilityWasZero = (row.facilityId === '0');
+
+                const tr = document.createElement('tr');
+                if (isReadOnly) {
+                    tr.style.backgroundColor = '#e9ecef';
+                    tr.title = "פרופיל ראשי - לקריאה בלבד";
+                }
+                
+                const maxInput = isReadOnly 
+                    ? `<span>${row.maxCounter}</span>` 
+                    : `<input type="number" min="0" value="${row.maxCounter}" class="pooling-input" data-index="${index}" style="width: 80px; padding: 4px; text-align: center;" onchange="validatePoolingInputs()">`;
+                
+                let displayNameFacility = `${row.facilityName} <small style="color: gray;">(${row.facilityId})</small>`;
+                let displayNameProfile = `${row.profileName} <small style="color: gray;">(${row.profileId})</small>`;
+
+                if (row.facilityId === '0' && row.profileId === '0') {
+                    displayNameFacility = `חניון ראשי`;
+                    displayNameProfile = `מכסה כללית לחברה`;
+                } else if (row.facilityId === '0' && row.profileId !== '0') {
+                    displayNameFacility = `פרופיל`;
+                } else if (row.facilityId !== '0' && row.profileId === '0') {
+                    displayNameProfile = `חניון`;
+                }
+
+                tr.innerHTML = `
+                    <td>${displayNameFacility}</td>
+                    <td>${displayNameProfile}</td>
+                    <td style="font-weight: bold; ${row.presentCounter > row.maxCounter ? 'color: red;' : ''}">${row.presentCounter}</td>
+                    <td>${maxInput}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        function validatePoolingInputs() {
+            // Check limits dynamically
+            const inputs = document.querySelectorAll('.pooling-input');
+            const newLimits = {};
+            
+            inputs.forEach(inp => {
+                const idx = inp.getAttribute('data-index');
+                const val = parseInt(inp.value) || 0;
+                const row = currentPoolingData[idx];
+                newLimits[`${row.facilityId}_${row.profileId}`] = val;
+            });
+            
+            // Get global max
+            const globalRow = currentPoolingData.find(r => r.facilityId === '0' && r.profileId === '0');
+            const globalMax = globalRow ? globalRow.maxCounter : 0;
+            
+            let subProfilesSum = 0;
+            let facSum = 0;
+            
+            // Reconstruct data to check
+            currentPoolingData.forEach((row, idx) => {
+                const isReadOnly = (row.facilityId === '0' && row.profileId === '0');
+                let val = isReadOnly ? row.maxCounter : (newLimits[`${row.facilityId}_${row.profileId}`] !== undefined ? newLimits[`${row.facilityId}_${row.profileId}`] : row.maxCounter);
+                
+                if (row.facilityId === '0' && row.profileId !== '0') subProfilesSum += val;
+                if (row.facilityId !== '0' && row.profileId === '0') facSum += val;
+            });
+            
+            const btn = document.getElementById('savePoolingBtn');
+            const alertBox = document.getElementById('poolingAlert');
+            
+            if (subProfilesSum > globalMax) {
+                showPoolingAlert('error', `סכום הפרופילים (${subProfilesSum}) עולה על המקסימום המותר (${globalMax})`);
+                btn.disabled = true;
+            } else if (facSum > globalMax) {
+                showPoolingAlert('error', `סכום החניונים (${facSum}) עולה על המקסימום המותר (${globalMax})`);
+                btn.disabled = true;
+            } else {
+                alertBox.style.display = 'none';
+                btn.disabled = false;
+            }
+        }
+
+        async function savePoolingData() {
+            const btn = document.getElementById('savePoolingBtn');
+            btn.disabled = true;
+            btn.innerText = 'שומר...';
+            
+            const inputs = document.querySelectorAll('.pooling-input');
+            const updates = [];
+            
+            inputs.forEach(inp => {
+                const idx = inp.getAttribute('data-index');
+                const val = parseInt(inp.value) || 0;
+                const row = currentPoolingData[idx];
+                if (row.maxCounter !== val) {
+                    updates.push({
+                        facilityId: row.facilityId,
+                        profileId: row.profileId,
+                        maxCounter: val
+                    });
+                }
+            });
+            
+            if (updates.length === 0) {
+                showPoolingAlert('success', 'לא בוצעו שינויים');
+                btn.disabled = false;
+                btn.innerText = '💾 שמור שינויים בחניון';
+                return;
+            }
+            
+            try {
+                const payload = {
+                    parkingId: parkingInfo.project_number,
+                    contractId: currentContractId,
+                    updates: updates
+                };
+                
+                const response = await fetch('/api/company-manager/contract-pooling/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showPoolingAlert('success', 'התפוסה עודכנה בהצלחה במערכת החניון!');
+                    // Reload data to show updated state
+                    setTimeout(() => openPoolingModal(), 1500);
+                } else {
+                    showPoolingAlert('error', data.message || 'שגיאה בעדכון הנתונים');
+                }
+            } catch (err) {
+                console.error(err);
+                showPoolingAlert('error', 'שגיאת תקשורת בנסיון השמירה');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = '💾 שמור שינויים בחניון';
+            }
+        }
+    </script>
+</body>
+
+</html>
