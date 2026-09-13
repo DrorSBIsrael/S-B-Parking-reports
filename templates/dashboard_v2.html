@@ -8,6 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <title id="pageTitle">לוח בקרה - חניונים</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after {
@@ -1295,8 +1296,8 @@
                             <span>הכנסות לפי חניון (Revenue per Location)</span>
                         </h2>
                         <div class="chart-options">
-                            <button class="chart-option-btn active" id="btnStackedRev" onclick="toggleStackedRev(true)">מוערם</button>
-                            <button class="chart-option-btn" id="btnGroupedRev" onclick="toggleStackedRev(false)">נפרד</button>
+                            <button class="chart-option-btn" id="btnStackedRev" onclick="toggleStackedRev(true)">מוערם</button>
+                            <button class="chart-option-btn active" id="btnGroupedRev" onclick="toggleStackedRev(false)">נפרד</button>
                         </div>
                     </div>
                     <canvas id="stackedRevenueChart" style="max-height: 350px;"></canvas>
@@ -1414,7 +1415,7 @@
                 <div class="stay-duration-grid" id="stayDurationGrid" style="display: none;">
                     <!-- Stay duration cards will be populated here -->
                 </div>
-                <div id="stayDurationChartWrapper" style="position: relative; height: 170px; max-height: 180px; width: 100%; max-width: 950px; margin: 0 auto;">
+                <div id="stayDurationChartWrapper" style="position: relative; height: 340px; max-height: 360px; width: 100%; max-width: 950px; margin: 0 auto;">
                     <canvas id="stayDurationChart"></canvas>
                 </div>
             </div>
@@ -2343,6 +2344,16 @@ async function loadDataForGroup(startDate, endDate) {
 
 // Update dashboard with current data
 function updateDashboard() {
+    // Deduplicate records to prevent duplicate rows from inflating totals
+    if (Array.isArray(currentData) && currentData.length > 0) {
+        const seenRecords = new Set();
+        currentData = currentData.filter(d => {
+            const key = (d.id != null) ? d.id : `${d.project_number}_${d.report_date}`;
+            if (seenRecords.has(key)) return false;
+            seenRecords.add(key);
+            return true;
+        });
+    }
     if (currentData.length === 0) {
         showError('לא נמצאו נתונים לתקופה המבוקשת');
         return;
@@ -3797,9 +3808,9 @@ function updateParkingRanking() {
     // Build Ranking HTML: Donut Chart on top, and clean summary table below!
     rankingEl.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 20px;">
-            <!-- Donut Chart of Parking Shares -->
-            <div style="position: relative; min-height: 330px; background: var(--surface-subtle, #F8FAFC); border-radius: 16px; padding: 16px 14px 20px 14px;">
-                <canvas id="parkingRankingPieCanvas" style="min-height: 295px; width: 100%;"></canvas>
+            <!-- Donut Chart of Parking Shares with On-Chart Callout Labels -->
+            <div style="position: relative; min-height: 420px; background: var(--surface-subtle, #F8FAFC); border-radius: 16px; padding: 20px 18px 24px 18px;">
+                <canvas id="parkingRankingPieCanvas" style="min-height: 380px; width: 100%;"></canvas>
             </div>
             
             <!-- Compact Ranking Cards -->
@@ -3839,8 +3850,11 @@ function updateParkingRanking() {
             ];
 
             const totalR = rankings.reduce((sum, r) => sum + r.totalRevenue, 0);
+            const pluginsList = typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : [];
+
             window.rankingDonutChart = new Chart(canvas.getContext('2d'), {
                 type: 'doughnut',
+                plugins: pluginsList,
                 data: {
                     labels: rankings.map(r => r.name),
                     datasets: [{
@@ -3853,36 +3867,52 @@ function updateParkingRanking() {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    cutout: '60%',
+                    cutout: '58%',
                     layout: {
                         padding: {
-                            bottom: 12
+                            top: 25,
+                            bottom: 25,
+                            left: 30,
+                            right: 30
                         }
                     },
                     plugins: {
                         legend: {
-                            position: 'bottom',
-                            labels: {
-                                boxWidth: 8,
-                                padding: 8,
-                                font: { size: 10.5, family: "'Heebo', sans-serif" },
-                                generateLabels: function(chart) {
-                                    const data = chart.data;
-                                    if (data.labels.length && data.datasets.length) {
-                                        return data.labels.map((label, i) => {
-                                            const val = data.datasets[0].data[i];
-                                            const pct = totalR > 0 ? ((val / totalR) * 100).toFixed(1) : 0;
-                                            return {
-                                                text: `${label} (${pct}%)`,
-                                                fillStyle: data.datasets[0].backgroundColor[i],
-                                                hidden: false,
-                                                index: i
-                                            };
-                                        });
-                                    }
-                                    return [];
-                                }
-                            }
+                            display: false // User requested labels next to slice instead of bottom list!
+                        },
+                        datalabels: {
+                            display: function(ctx) {
+                                const val = ctx.dataset.data[ctx.dataIndex];
+                                const pct = totalR > 0 ? (val / totalR) * 100 : 0;
+                                return pct >= 2.0; // Display for slices >= 2% to avoid overlapping tiny segments
+                            },
+                            color: '#1E293B',
+                            backgroundColor: 'rgba(255, 255, 255, 0.94)',
+                            borderColor: function(ctx) {
+                                return ctx.dataset.backgroundColor[ctx.dataIndex];
+                            },
+                            borderWidth: 1.5,
+                            borderRadius: 6,
+                            padding: {
+                                top: 3,
+                                bottom: 3,
+                                left: 6,
+                                right: 6
+                            },
+                            anchor: 'end',
+                            align: 'end',
+                            offset: 8,
+                            font: {
+                                family: "'Heebo', sans-serif",
+                                size: 11,
+                                weight: '600'
+                            },
+                            formatter: function(value, ctx) {
+                                const label = ctx.chart.data.labels[ctx.dataIndex];
+                                const pct = totalR > 0 ? ((value / totalR) * 100).toFixed(1) : 0;
+                                return `${label}\n(${pct}%)`;
+                            },
+                            textAlign: 'center'
                         },
                         tooltip: {
                             callbacks: {
@@ -5824,7 +5854,7 @@ let previousPeriodData = [];
 let previousPeriodRange = null;
 let g_stackedRevenueChart = null;
 let g_maxOccupancyChart = null;
-let g_isStacked = true;
+let g_isStacked = false;
 
 // Helper: Calculate comparison date range (Supports Day, Month, and YoY)
 function getComparisonDateRange(startDateStr, endDateStr) {
@@ -5927,7 +5957,13 @@ async function fetchComparisonData(startDate, endDate) {
         const res = await fetch(`/api/parking-data?${params}`);
         const result = await res.json();
         if (result.success && Array.isArray(result.data)) {
-            previousPeriodData = result.data;
+            const seenPrev = new Set();
+            previousPeriodData = result.data.filter(d => {
+                const key = (d.id != null) ? d.id : `${d.project_number}_${d.report_date}`;
+                if (seenPrev.has(key)) return false;
+                seenPrev.add(key);
+                return true;
+            });
         } else {
             previousPeriodData = [];
         }
@@ -5948,7 +5984,13 @@ async function fetchComparisonData(startDate, endDate) {
             const lyRes = await fetch(`/api/parking-data?${lyParams}`);
             const lyResult = await lyRes.json();
             if (lyResult.success && Array.isArray(lyResult.data) && lyResult.data.length > 0) {
-                lastYearPeriodData = lyResult.data;
+                const seenLy = new Set();
+                lastYearPeriodData = lyResult.data.filter(d => {
+                    const key = (d.id != null) ? d.id : `${d.project_number}_${d.report_date}`;
+                    if (seenLy.has(key)) return false;
+                    seenLy.add(key);
+                    return true;
+                });
                 console.log('Loaded last year comparison data:', lastYearPeriodData.length, 'records');
                 if (labelEl) {
                     labelEl.textContent += ` | כולל נתוני ${compRange.lastYearRange.monthName}`;
@@ -6188,15 +6230,19 @@ function renderStackedRevenueChart() {
     }
 
     const grouped = {};
-    const parkings = new Set();
+    const parkingTotals = {};
     currentData.forEach(d => {
         const pKey = getPeriodKey(d, currentViewMode);
         if (!pKey) return;
         if (!grouped[pKey]) grouped[pKey] = {};
         const pName = d.parking_name || 'כללי';
-        parkings.add(pName);
-        grouped[pKey][pName] = (grouped[pKey][pName] || 0) + (d.total_revenue_shekels || 0);
+        const rev = (d.total_revenue_shekels || 0);
+        parkingTotals[pName] = (parkingTotals[pName] || 0) + rev;
+        grouped[pKey][pName] = (grouped[pKey][pName] || 0) + rev;
     });
+
+    // Sort parkings by total revenue descending (highest to lowest)
+    const sortedParkings = Object.keys(parkingTotals).sort((a, b) => parkingTotals[b] - parkingTotals[a]);
 
     const periods = Object.keys(grouped).sort();
     if (periods.length === 0) return;
@@ -6208,7 +6254,7 @@ function renderStackedRevenueChart() {
         '#EF4444', '#EC4899', '#64748B', '#475569'
     ];
 
-    const datasets = Array.from(parkings).map((name, i) => ({
+    const datasets = sortedParkings.map((name, i) => ({
         label: name,
         data: periods.map(p => Math.round(grouped[p][name] || 0)),
         backgroundColor: colors[i % colors.length],
