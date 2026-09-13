@@ -283,14 +283,12 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 15px;
             cursor: pointer;
-            background: #FFFFFF;
-            transition: all 0.2s ease;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            background: transparent;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             outline: none;
             padding: 0;
-            line-height: 1;
+            overflow: hidden;
         }
 
         .flag-btn:hover {
@@ -299,9 +297,19 @@
         }
 
         .flag-btn.active {
-            border-color: #0284C7;
-            box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.35);
+            border-color: #007AFF;
+            box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.35);
             transform: scale(1.1);
+        }
+
+        .flag-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+            pointer-events: none;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
 
         /* Header Styles */
@@ -1359,12 +1367,24 @@
 
                         <!-- Circular Flags for Language Selection -->
                         <div class="flags-container" title="שפה / Language">
-                            <button class="flag-btn active" data-lang="he" onclick="applyLanguage('he')" title="עברית">🇮🇱</button>
-                            <button class="flag-btn" data-lang="en" onclick="applyLanguage('en')" title="English">🇬🇧</button>
-                            <button class="flag-btn" data-lang="de" onclick="applyLanguage('de')" title="Deutsch">🇩🇪</button>
-                            <button class="flag-btn" data-lang="ar" onclick="applyLanguage('ar')" title="العربية">🇸🇦</button>
-                            <button class="flag-btn" data-lang="fr" onclick="applyLanguage('fr')" title="Français">🇫🇷</button>
-                            <button class="flag-btn" data-lang="ru" onclick="applyLanguage('ru')" title="Русский">🇷🇺</button>
+                            <button class="flag-btn active" data-lang="he" onclick="applyLanguage('he')" title="עברית">
+                                <img src="/static/flags/he.png" alt="עברית" class="flag-img" onerror="this.src='https://flagcdn.com/w80/il.png'">
+                            </button>
+                            <button class="flag-btn" data-lang="en" onclick="applyLanguage('en')" title="English">
+                                <img src="/static/flags/en.png" alt="English" class="flag-img" onerror="this.src='https://flagcdn.com/w80/gb.png'">
+                            </button>
+                            <button class="flag-btn" data-lang="de" onclick="applyLanguage('de')" title="Deutsch">
+                                <img src="/static/flags/de.png" alt="Deutsch" class="flag-img" onerror="this.src='https://flagcdn.com/w80/de.png'">
+                            </button>
+                            <button class="flag-btn" data-lang="ar" onclick="applyLanguage('ar')" title="العربية">
+                                <img src="/static/flags/ar.png" alt="العربية" class="flag-img" onerror="this.src='https://flagcdn.com/w80/sa.png'">
+                            </button>
+                            <button class="flag-btn" data-lang="fr" onclick="applyLanguage('fr')" title="Français">
+                                <img src="/static/flags/fr.png" alt="Français" class="flag-img" onerror="this.src='https://flagcdn.com/w80/fr.png'">
+                            </button>
+                            <button class="flag-btn" data-lang="ru" onclick="applyLanguage('ru')" title="Русский">
+                                <img src="/static/flags/ru.png" alt="Русский" class="flag-img" onerror="this.src='https://flagcdn.com/w80/ru.png'">
+                            </button>
                         </div>
 
                     </div>
@@ -1836,6 +1856,7 @@
 // ============================================================
 const translations = {
     he: {
+        peakOccupancy: 'תפוסה',
         editLayout: 'ערך סידור גרפים',
         saveLayout: 'שמור סידור גרפים',
         resetLayout: 'שחזר ברירת מחדל',
@@ -1930,6 +1951,7 @@ const translations = {
         noParking: 'לא נמצאו חניונים עבור משתמש זה',
     },
     en: {
+        peakOccupancy: 'Occupancy',
         editLayout: 'Edit Chart Layout',
         saveLayout: 'Save Chart Layout',
         resetLayout: 'Reset Layout',
@@ -2024,6 +2046,7 @@ const translations = {
         noParking: 'No parkings found for this user',
     },
     de: {
+        peakOccupancy: 'Auslastung',
         editLayout: 'Diagramm-Layout bearbeiten',
         saveLayout: 'Layout speichern',
         resetLayout: 'Standard wiederherstellen',
@@ -2110,6 +2133,7 @@ const translations = {
         noParking: 'Keine Parkplätze für diesen Benutzer gefunden',
     },
     ar: {
+        peakOccupancy: 'الإشغال',
         editLayout: 'تعديل ترتيب الرسوم',
         saveLayout: 'حفظ ترتيب الرسوم',
         resetLayout: 'استعادة الافتراضي',
@@ -2196,6 +2220,7 @@ const translations = {
         noParking: 'لا توجد مواقف لهذا المستخدم',
     },
     fr: {
+        peakOccupancy: 'Occupation',
         editLayout: 'Modifier la disposition',
         saveLayout: 'Enregistrer la disposition',
         resetLayout: 'Rétablir par défaut',
@@ -2282,6 +2307,7 @@ const translations = {
         noParking: 'Aucun parking trouvé pour cet utilisateur',
     },
     ru: {
+        peakOccupancy: 'Занятость',
         editLayout: 'Изменить расположение',
         saveLayout: 'Сохранить расположение',
         resetLayout: 'Сбросить по умолчанию',
@@ -3001,7 +3027,7 @@ function updateStats() {
         'occupancy': `
             <div class="stat-card" data-stat-type="occupancy" ${isGroup && !isSingleParkingMode ? 'style="cursor: pointer;"' : ''}>
                 <div class="icon" style="background: linear-gradient(135deg, #0284C7, #38BDF8);">⚡</div>
-                <h3>${t('peakOccupancy') || 'תפוסת שיא כוללת'}</h3>
+                <h3>${t('peakOccupancy') || 'תפוסה'}</h3>
                 <div class="value" id="maxOccCardValue">טוען...</div>
                 <div class="change positive" id="maxOccCardPercent">מחושב מתוך קיבולת הרשת</div>
                 <div class="subtext">מזדמנים (ts_per5) + מנויים (ts_per6)</div>
