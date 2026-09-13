@@ -1114,9 +1114,27 @@
         }
 
         .grid-stack-item-content {
-            inset: 0 !important;
+            inset: 0.125cm !important;
             overflow: hidden !important;
             background: transparent !important;
+        }
+
+        /* Tooltip on hovering parking P pin */
+        .parking-map-tooltip {
+            background: #0F172A !important;
+            color: #FFFFFF !important;
+            font-family: 'Heebo', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            font-weight: 600 !important;
+            font-size: 13px !important;
+            padding: 6px 12px !important;
+            border-radius: 8px !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28) !important;
+            white-space: nowrap !important;
+            direction: rtl !important;
+        }
+        .parking-map-tooltip::before {
+            border-top-color: #0F172A !important;
         }
 
         .grid-stack-item {
@@ -1595,7 +1613,7 @@
                 </div>
 
                 <!-- 2. Parking Map Section (מפת פריסת חניונים) -->
-                <div class="grid-stack-item" gs-id="widget-parking-map" gs-x="0" gs-y="4" gs-w="12" gs-h="7" gs-min-w="6" gs-min-h="5">
+                <div class="grid-stack-item" gs-id="widget-parking-map" gs-x="0" gs-y="4" gs-w="12" gs-h="9" gs-min-w="6" gs-min-h="6">
                     <div class="grid-stack-item-content">
                         <div class="chart-section" id="parkingMapSection" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
                             <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 12px;">
@@ -1620,13 +1638,13 @@
                                     </button>
                                 </div>
                             </div>
-                            <div id="parkingsMap" style="flex: 1; min-height: 320px; width: 100%; border-radius: 12px; border: 1px solid var(--border); z-index: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.05) inset;"></div>
+                            <div id="parkingsMap" style="flex: 1; min-height: 400px; width: 100%; border-radius: 12px; border: 1px solid var(--border); z-index: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.05) inset;"></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- 3. Stacked Revenue Bar Chart (הכנסות לפי חניון) -->
-                <div class="grid-stack-item multi-parking-only" gs-id="widget-stacked-revenue" gs-x="0" gs-y="11" gs-w="6" gs-h="6" gs-min-w="4" gs-min-h="4">
+                <div class="grid-stack-item multi-parking-only" gs-id="widget-stacked-revenue" gs-x="0" gs-y="13" gs-w="6" gs-h="6" gs-min-w="4" gs-min-h="4">
                     <div class="grid-stack-item-content">
                         <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
                             <div class="chart-header">
@@ -1648,7 +1666,7 @@
                 </div>
 
                 <!-- 4. Parking Comparison Chart (השוואת חניונים) -->
-                <div class="grid-stack-item multi-parking-only" gs-id="widget-parking-comparison" gs-x="6" gs-y="11" gs-w="6" gs-h="6" gs-min-w="4" gs-min-h="4">
+                <div class="grid-stack-item multi-parking-only" gs-id="widget-parking-comparison" gs-x="6" gs-y="13" gs-w="6" gs-h="6" gs-min-w="4" gs-min-h="4">
                     <div class="grid-stack-item-content">
                         <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
                             <div class="chart-header">
@@ -1686,7 +1704,7 @@
                 </div>
 
                 <!-- 5. Parking Ranking (דירוג חניונים) -->
-                <div class="grid-stack-item multi-parking-only" gs-id="widget-parking-ranking" gs-x="0" gs-y="17" gs-w="6" gs-h="8" gs-min-w="4" gs-min-h="4">
+                <div class="grid-stack-item multi-parking-only" gs-id="widget-parking-ranking" gs-x="0" gs-y="19" gs-w="6" gs-h="8" gs-min-w="4" gs-min-h="4">
                     <div class="grid-stack-item-content">
                         <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
                             <div class="chart-header">
@@ -1702,7 +1720,7 @@
                 </div>
 
                 <!-- 6. Revenue Trends Chart (מגמת הכנסות) -->
-                <div class="grid-stack-item" gs-id="widget-revenue-trend" gs-x="6" gs-y="17" gs-w="6" gs-h="4" gs-min-w="4" gs-min-h="3">
+                <div class="grid-stack-item" gs-id="widget-revenue-trend" gs-x="6" gs-y="19" gs-w="6" gs-h="4" gs-min-w="4" gs-min-h="3">
                     <div class="grid-stack-item-content">
                         <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
                             <div class="chart-header">
@@ -1726,7 +1744,7 @@
                 </div>
 
                 <!-- 7. Maximum Occupancy Line Chart (תפוסה מקסימלית) -->
-                <div class="grid-stack-item" gs-id="widget-max-occupancy" gs-x="6" gs-y="21" gs-w="6" gs-h="4" gs-min-w="4" gs-min-h="3">
+                <div class="grid-stack-item" gs-id="widget-max-occupancy" gs-x="6" gs-y="23" gs-w="6" gs-h="4" gs-min-w="4" gs-min-h="3">
                     <div class="grid-stack-item-content">
                         <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
                             <div class="chart-header">
@@ -1744,7 +1762,7 @@
                 </div>
 
                 <!-- 8. Stay Duration (זמני שהייה) -->
-                <div class="grid-stack-item" gs-id="widget-stay-duration" gs-x="0" gs-y="25" gs-w="12" gs-h="6" gs-min-w="6" gs-min-h="4">
+                <div class="grid-stack-item" gs-id="widget-stay-duration" gs-x="0" gs-y="27" gs-w="12" gs-h="6" gs-min-w="6" gs-min-h="4">
                     <div class="grid-stack-item-content">
                         <div class="chart-section" id="stayDurationSection" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column; padding: 18px 24px !important;">
                             <div class="chart-header" style="margin-bottom: 14px;">
@@ -1777,7 +1795,7 @@
                 </div>
 
                 <!-- 9. Barrier Chart (פתיחות מחסום) -->
-                <div class="grid-stack-item" gs-id="widget-barrier" gs-x="0" gs-y="31" gs-w="6" gs-h="5" gs-min-w="4" gs-min-h="3">
+                <div class="grid-stack-item" gs-id="widget-barrier" gs-x="0" gs-y="33" gs-w="6" gs-h="5" gs-min-w="4" gs-min-h="3">
                     <div class="grid-stack-item-content">
                         <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
                             <div class="chart-header">
@@ -1795,7 +1813,7 @@
                 </div>
 
                 <!-- 10. Encoders Info (נתוני מקודדים) -->
-                <div class="grid-stack-item" gs-id="widget-encoders" gs-x="6" gs-y="31" gs-w="6" gs-h="5" gs-min-w="4" gs-min-h="3">
+                <div class="grid-stack-item" gs-id="widget-encoders" gs-x="6" gs-y="33" gs-w="6" gs-h="5" gs-min-w="4" gs-min-h="3">
                     <div class="grid-stack-item-content">
                         <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
                             <div class="chart-header">
@@ -1811,7 +1829,7 @@
                 </div>
 
                 <!-- 11. Entries Chart (סוגי כניסות) -->
-                <div class="grid-stack-item" gs-id="widget-entries" gs-x="0" gs-y="36" gs-w="6" gs-h="5" gs-min-w="4" gs-min-h="3">
+                <div class="grid-stack-item" gs-id="widget-entries" gs-x="0" gs-y="38" gs-w="6" gs-h="5" gs-min-w="4" gs-min-h="3">
                     <div class="grid-stack-item-content">
                         <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
                             <div class="chart-header">
@@ -1829,7 +1847,7 @@
                 </div>
 
                 <!-- 12. Period Comparison Chart (השוואה יומית) -->
-                <div class="grid-stack-item" gs-id="widget-daily" gs-x="6" gs-y="36" gs-w="6" gs-h="5" gs-min-w="4" gs-min-h="3">
+                <div class="grid-stack-item" gs-id="widget-daily" gs-x="6" gs-y="38" gs-w="6" gs-h="5" gs-min-w="4" gs-min-h="3">
                     <div class="grid-stack-item-content">
                         <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
                             <div class="chart-header">
@@ -1847,7 +1865,7 @@
                 </div>
 
                 <!-- 13. Payment Methods (אמצעי תשלום) -->
-                <div class="grid-stack-item" gs-id="widget-payment" gs-x="0" gs-y="41" gs-w="12" gs-h="6" gs-min-w="6" gs-min-h="4">
+                <div class="grid-stack-item" gs-id="widget-payment" gs-x="0" gs-y="43" gs-w="12" gs-h="6" gs-min-w="6" gs-min-h="4">
                     <div class="grid-stack-item-content">
                         <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden;">
                             <div class="chart-header">
@@ -7378,24 +7396,23 @@ const KNOWN_PARKING_COORDS = {
 
 function createPinIcon(parkingName, isSelected) {
     const bg = isSelected ? '#007AFF' : '#1E293B';
-    const border = isSelected ? '#FFFFFF' : '#FFFFFF';
-    const scale = isSelected ? 'transform: scale(1.15); z-index: 1000;' : '';
-    const shadow = isSelected ? '0 4px 14px rgba(0, 122, 255, 0.65)' : '0 2px 8px rgba(15, 23, 42, 0.3)';
+    const border = '#FFFFFF';
+    const scale = isSelected ? 'transform: scale(1.22); z-index: 1000;' : '';
+    const shadow = isSelected ? '0 4px 14px rgba(0, 122, 255, 0.75)' : '0 2px 8px rgba(15, 23, 42, 0.35)';
     
     return L.divIcon({
         className: 'parking-marker-custom',
         html: `
-            <div style="display: flex; flex-direction: column; align-items: center; ${scale} transition: all 0.2s ease; cursor: pointer;">
-                <div style="background: ${bg}; color: #FFFFFF; font-weight: 700; font-size: 11px; padding: 5px 11px; border-radius: 20px; border: 2px solid ${border}; box-shadow: ${shadow}; white-space: nowrap; display: flex; align-items: center; gap: 5px; font-family: 'Heebo', sans-serif;">
-                    <span style="font-size: 12px;">🅿️</span>
-                    <span>${parkingName}</span>
+            <div style="display: flex; flex-direction: column; align-items: center; ${scale} transition: transform 0.2s ease; cursor: pointer;" title="${parkingName}">
+                <div style="background: ${bg}; color: #FFFFFF; font-weight: 800; font-size: 14px; width: 32px; height: 32px; border-radius: 50%; border: 2.5px solid ${border}; box-shadow: ${shadow}; display: flex; align-items: center; justify-content: center; font-family: 'Inter', -apple-system, sans-serif; letter-spacing: -0.5px;">
+                    P
                 </div>
-                <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 7px solid ${bg}; margin-top: -1px;"></div>
+                <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid ${bg}; margin-top: -1px;"></div>
             </div>
         `,
-        iconSize: [120, 36],
-        iconAnchor: [60, 34],
-        popupAnchor: [0, -34]
+        iconSize: [34, 40],
+        iconAnchor: [17, 38],
+        popupAnchor: [0, -38]
     });
 }
 
@@ -7478,6 +7495,15 @@ function initOrUpdateParkingsMap() {
             const marker = L.marker([lat, lng], {
                 icon: createPinIcon(p.parking_name || 'חניון', isSelected)
             }).addTo(parkingsMapInstance);
+            
+            // Hover tooltip: displays parking name when hovering over 'P'
+            marker.bindTooltip(p.parking_name || 'חניון', {
+                direction: 'top',
+                offset: [0, -34],
+                className: 'parking-map-tooltip',
+                permanent: false,
+                sticky: false
+            });
             
             const currentDir = (typeof translations !== 'undefined' && translations[currentLang] && translations[currentLang].dir) ? translations[currentLang].dir : 'rtl';
             const textAlign = currentDir === 'ltr' ? 'left' : 'right';
@@ -7601,22 +7627,22 @@ function updateMapActiveMarker() {
 let dashboardGrid = null;
 let isDashboardEditMode = false;
 let lastFullGridLayout = null;
-const DASHBOARD_GRID_STORAGE_KEY = 'dashboard_v2_grid_layout_v6';
+const DASHBOARD_GRID_STORAGE_KEY = 'dashboard_v2_grid_layout_v7';
 
 const DEFAULT_GRID_LAYOUT = [
     { id: 'widget-ai-analysis', x: 0, y: 0, w: 12, h: 4 },
-    { id: 'widget-parking-map', x: 0, y: 4, w: 12, h: 7 },
-    { id: 'widget-stacked-revenue', x: 0, y: 11, w: 6, h: 6 },
-    { id: 'widget-parking-comparison', x: 6, y: 11, w: 6, h: 6 },
-    { id: 'widget-parking-ranking', x: 0, y: 17, w: 6, h: 8 },
-    { id: 'widget-revenue-trend', x: 6, y: 17, w: 6, h: 4 },
-    { id: 'widget-max-occupancy', x: 6, y: 21, w: 6, h: 4 },
-    { id: 'widget-stay-duration', x: 0, y: 25, w: 12, h: 6 },
-    { id: 'widget-barrier', x: 0, y: 31, w: 6, h: 5 },
-    { id: 'widget-encoders', x: 6, y: 31, w: 6, h: 5 },
-    { id: 'widget-entries', x: 0, y: 36, w: 6, h: 5 },
-    { id: 'widget-daily', x: 6, y: 36, w: 6, h: 5 },
-    { id: 'widget-payment', x: 0, y: 41, w: 12, h: 6 }
+    { id: 'widget-parking-map', x: 0, y: 4, w: 12, h: 9 },
+    { id: 'widget-stacked-revenue', x: 0, y: 13, w: 6, h: 6 },
+    { id: 'widget-parking-comparison', x: 6, y: 13, w: 6, h: 6 },
+    { id: 'widget-parking-ranking', x: 0, y: 19, w: 6, h: 8 },
+    { id: 'widget-revenue-trend', x: 6, y: 19, w: 6, h: 4 },
+    { id: 'widget-max-occupancy', x: 6, y: 23, w: 6, h: 4 },
+    { id: 'widget-stay-duration', x: 0, y: 27, w: 12, h: 6 },
+    { id: 'widget-barrier', x: 0, y: 33, w: 6, h: 5 },
+    { id: 'widget-encoders', x: 6, y: 33, w: 6, h: 5 },
+    { id: 'widget-entries', x: 0, y: 38, w: 6, h: 5 },
+    { id: 'widget-daily', x: 6, y: 38, w: 6, h: 5 },
+    { id: 'widget-payment', x: 0, y: 43, w: 12, h: 6 }
 ];
 
 function initDashboardGridStack() {
@@ -7633,7 +7659,7 @@ function initDashboardGridStack() {
         dashboardGrid = GridStack.init({
             column: 12,
             cellHeight: 70,
-            margin: 12,
+            margin: '0.25cm',
             animate: true,
             staticGrid: true, // Initially locked for normal viewing
             float: false, // Prevents items overlapping and eliminates vertical gaps
