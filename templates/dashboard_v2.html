@@ -1115,8 +1115,26 @@
 
         .grid-stack-item-content {
             inset: 0 !important;
-            overflow: visible !important;
+            overflow: hidden !important;
             background: transparent !important;
+        }
+
+        .grid-stack-item {
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            z-index: 1;
+        }
+
+        .dashboard-editing-active .grid-stack-item:hover {
+            z-index: 15 !important;
+        }
+
+        .dashboard-editing-active .grid-stack-item.ui-draggable-dragging,
+        .dashboard-editing-active .grid-stack-item.ui-resizable-resizing {
+            z-index: 100 !important;
+        }
+
+        .ui-resizable-handle {
+            z-index: 50 !important;
         }
 
         .grid-stack-item .chart-section,
@@ -3853,6 +3871,8 @@ function createEntriesChart() {
         data: chartData,
         options: {
             responsive: true,
+            maintainAspectRatio: false,
+            radius: '50%', // Reduce pie size by 50% as requested
             plugins: {
                 legend: {
                     position: 'bottom',
@@ -4648,14 +4668,14 @@ function updateParkingRanking() {
 
     // Build Ranking HTML: Donut Chart on top, and clean summary table below!
     rankingEl.innerHTML = `
-        <div style="display: flex; flex-direction: column; gap: 18px; flex: 1;">
+        <div style="display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; overflow: hidden;">
             <!-- Donut Chart of Parking Shares with On-Chart Callout Labels -->
-            <div style="position: relative; height: 360px; background: var(--surface-subtle, #F8FAFC); border-radius: 16px; padding: 12px 16px;">
-                <canvas id="parkingRankingPieCanvas" style="width: 100%; height: 100%;"></canvas>
+            <div style="position: relative; height: 200px; min-height: 180px; background: var(--surface-subtle, #F8FAFC); border-radius: 14px; padding: 8px 12px; display: flex; align-items: center; justify-content: center;">
+                <canvas id="parkingRankingPieCanvas" style="max-height: 185px; width: 100%;"></canvas>
             </div>
             
             <!-- Compact Ranking Cards -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; max-height: 230px; overflow-y: auto; padding-left: 4px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; max-height: 190px; overflow-y: auto; padding-left: 4px;">
                 ${rankings.map((p, index) => {
                     const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
                     const pct = totalRev > 0 ? ((p.totalRevenue / totalRev) * 100).toFixed(1) : 0;
@@ -7387,23 +7407,17 @@ function setMapTileLayerForLanguage(lang) {
         try { parkingsMapInstance.removeLayer(currentMapTileLayer); } catch(e) {}
     }
     
-    // For Arabic, OSM provides full Arabic labels across Middle East.
-    // For all other languages (Hebrew, English, German, French, Russian), CartoDB Voyager
-    // renders clean Hebrew/English in Israel and English everywhere outside Israel!
-    let tileUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-    let attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
-    let subdomains = 'abcd';
+    // Google Maps tile layer with dynamic language support (hl parameter)
+    // Works reliably with no API key required, crisp resolution, no watermarks
+    let hl = (lang === 'he') ? 'iw' : (lang || 'iw');
+    if (!['iw', 'en', 'de', 'ar', 'fr', 'ru'].includes(hl)) hl = 'iw';
     
-    if (lang === 'ar') {
-        tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-        attribution = '&copy; OpenStreetMap contributors';
-        subdomains = 'abc';
-    }
+    const googleTileUrl = `https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=${hl}`;
     
-    currentMapTileLayer = L.tileLayer(tileUrl, {
-        attribution: attribution,
-        maxZoom: 19,
-        subdomains: subdomains
+    currentMapTileLayer = L.tileLayer(googleTileUrl, {
+        subdomains: ['0', '1', '2', '3'],
+        maxZoom: 20,
+        attribution: '&copy; Google Maps'
     }).addTo(parkingsMapInstance);
 }
 
@@ -7587,7 +7601,7 @@ function updateMapActiveMarker() {
 let dashboardGrid = null;
 let isDashboardEditMode = false;
 let lastFullGridLayout = null;
-const DASHBOARD_GRID_STORAGE_KEY = 'dashboard_v2_grid_layout_v5';
+const DASHBOARD_GRID_STORAGE_KEY = 'dashboard_v2_grid_layout_v6';
 
 const DEFAULT_GRID_LAYOUT = [
     { id: 'widget-ai-analysis', x: 0, y: 0, w: 12, h: 4 },
@@ -7622,8 +7636,8 @@ function initDashboardGridStack() {
             margin: 12,
             animate: true,
             staticGrid: true, // Initially locked for normal viewing
-            float: false, // Keeps items tightly packed upwards with no vertical gaps
-            rtl: true, // Full RTL support
+            float: false, // Prevents items overlapping and eliminates vertical gaps
+            rtl: 'auto', // Detects RTL from html dir attribute automatically
             handle: '.chart-header, .ai-header', // Drag from card headers
             resizable: {
                 handles: 'sw, se, s'
