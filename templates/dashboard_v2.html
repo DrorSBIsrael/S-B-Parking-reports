@@ -9,6 +9,9 @@
     <title id="pageTitle">לוח בקרה - חניונים</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+        <!-- GridStack.js for Dynamic Drag & Drop / Resizing -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@10/dist/gridstack.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/gridstack@10/dist/gridstack-all.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -1089,6 +1092,162 @@
         ::-webkit-scrollbar-thumb:hover {
             background: var(--text-tertiary);
         }
+
+        /* ============================================================
+           GRIDSTACK.JS DASHBOARD DRAG & RESIZE STYLING
+           ============================================================ */
+        .grid-stack {
+            margin-bottom: 24px;
+        }
+
+        .grid-stack-item {
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+
+        .grid-stack-item-content {
+            inset: 0 !important;
+            overflow: visible !important;
+            background: transparent !important;
+        }
+
+        .grid-stack-item .chart-section,
+        .grid-stack-item .ai-section {
+            height: 100% !important;
+            margin-bottom: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+        }
+
+        .grid-stack-item .chart-section > div[style*="position: relative"],
+        .grid-stack-item .chart-section > canvas {
+            flex: 1;
+            min-height: 180px;
+            width: 100% !important;
+        }
+
+        /* Editing mode active visual styles */
+        .dashboard-editing-active .grid-stack-item-content {
+            outline: 2px dashed #007AFF !important;
+            outline-offset: -2px;
+            border-radius: var(--radius) !important;
+            animation: pulseOutline 2s infinite ease-in-out;
+        }
+
+        @keyframes pulseOutline {
+            0%, 100% { outline-color: #007AFF; }
+            50% { outline-color: #5AC8FA; }
+        }
+
+        .dashboard-editing-active .grid-stack-item .chart-section,
+        .dashboard-editing-active .grid-stack-item .ai-section {
+            box-shadow: 0 8px 24px rgba(0, 122, 255, 0.15) !important;
+        }
+
+        .dashboard-editing-active .chart-header,
+        .dashboard-editing-active .ai-header {
+            cursor: move !important;
+            user-select: none;
+            background: rgba(0, 122, 255, 0.04);
+            border-radius: 8px 8px 0 0;
+            padding: 4px 6px;
+        }
+
+        .grid-drag-indicator {
+            display: none;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: #007AFF;
+            background: rgba(0, 122, 255, 0.1);
+            border: 1px solid rgba(0, 122, 255, 0.25);
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .dashboard-editing-active .grid-drag-indicator {
+            display: inline-flex;
+        }
+
+        /* Layout editing toolbar buttons */
+        .layout-btn-edit {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+
+        .layout-btn-edit:hover {
+            background: #F1F5F9;
+            border-color: #94A3B8;
+        }
+
+        .layout-btn-edit.active-editing {
+            background: #007AFF !important;
+            color: #FFFFFF !important;
+            border-color: #0062CC !important;
+            box-shadow: 0 4px 14px rgba(0, 122, 255, 0.4) !important;
+        }
+
+        .layout-btn-reset {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            border: 1px solid #CBD5E1;
+            background: var(--surface);
+            color: #475569;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+
+        .layout-btn-reset:hover {
+            background: #FEF2F2;
+            color: #DC2626;
+            border-color: #FCA5A5;
+        }
+
+        .dashboard-editing-active .layout-btn-reset {
+            display: inline-flex;
+        }
+
+        /* Edit Mode Banner */
+        .edit-mode-banner {
+            display: none;
+            background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+            border: 1px solid #BFDBFE;
+            border-radius: 12px;
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.1);
+            animation: fadeIn 0.3s ease;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .dashboard-editing-active .edit-mode-banner {
+            display: flex;
+        }
     </style>
 </head>
 <body>
@@ -1133,6 +1292,18 @@
                             <button class="action-btn-neutral logout" onclick="logout()" title="התנתק">
                                 <span>🚪</span>
                                 <span data-i18n="logout">התנתק</span>
+                            </button>
+                        </div>
+
+                        <!-- Dashboard Layout Edit Controls -->
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <button type="button" class="layout-btn-edit" id="btnToggleEditMode" onclick="toggleDashboardEditMode()" title="שינוי מיקום וגודל משבצות">
+                                <span id="btnEditIcon">✏️</span>
+                                <span id="btnEditText" data-i18n="editLayout">ערוך סידור</span>
+                            </button>
+                            <button type="button" class="layout-btn-reset" id="btnResetLayout" onclick="resetDashboardLayout()" title="איפוס הסידור לברירת מחדל">
+                                <span>↺</span>
+                                <span data-i18n="resetLayout">שחזר ברירת מחדל</span>
                             </button>
                         </div>
 
@@ -1283,248 +1454,330 @@
                 <!-- Dynamic content -->
             </div>
             
-            <!-- Alerts Section -->
-            
-            <!-- AI Analysis Section (ניתוח AI ומגמות) -->
-            <div class="ai-section" id="aiAnalysisSection">
-                <div class="ai-header">
-                    <div class="ai-title-wrap">
-                        <div class="ai-chip">
-                            <span>✨</span>
-                            <span>ניתוח AI אוטומטי</span>
-                        </div>
-                        <h2 style="font-size: 18px; font-weight: 700; color: #166534; margin: 0;">
-                            תובנות והשוואות תקופתיות חכמות
-                        </h2>
-                    </div>
-                    <div style="font-size: 13px; color: #475569; font-weight: 600;" id="aiComparisonPeriodLabel">
-                        מנתח נתוני תקופה...
+            <!-- Edit Mode Banner -->
+            <div class="edit-mode-banner" id="editModeBanner">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <div style="font-size: 26px;">🎛️</div>
+                    <div>
+                        <div style="font-weight: 700; color: #1E40AF; font-size: 15px;">מצב עריכת סידור פעיל</div>
+                        <div style="font-size: 13px; color: #3B82F6;">באפשרותך לגרור כרטיסים להזזה (באמצעות כותרת הכרטיס) ולגרור את פינותיהם לשינוי גודל.</div>
                     </div>
                 </div>
-                <div class="ai-insight-grid" id="aiInsightsContainer">
-                    <!-- Dynamic automated insights rendered by JS -->
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button type="button" class="layout-btn-reset" onclick="resetDashboardLayout()" style="display: inline-flex;">
+                        <span>↺</span>
+                        <span>איפוס לברירת מחדל</span>
+                    </button>
+                    <button type="button" class="layout-btn-edit active-editing" onclick="toggleDashboardEditMode()">
+                        <span>💾</span>
+                        <span>סיום ושמירה</span>
+                    </button>
                 </div>
             </div>
 
-            <!-- Parking Map Section (מפת חניונים אינטראקטיבית) -->
-            <div class="chart-section" id="parkingMapSection" style="margin-bottom: 24px;">
-                <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="background: linear-gradient(135deg, #0284C7, #0369A1); color: white; width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);">
-                            🗺️
-                        </div>
-                        <div>
-                            <h2 class="chart-title" style="margin: 0; font-size: 18px; font-weight: 700; color: var(--text-primary);">
-                                מפת פריסת חניונים
-                            </h2>
-                            <p style="margin: 3px 0 0 0; font-size: 13px; color: var(--text-secondary);">
-                                לחץ על נעץ במפה לסינון נתוני הדשבורד עבור אותו חניון
-                            </p>
-                        </div>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <span id="activeParkingBadge" style="display: none; background: #E0F2FE; color: #0369A1; font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 20px; border: 1px solid #BAE6FD;"></span>
-                        <button type="button" class="chart-option-btn" id="btnResetMapFilter" onclick="resetMapParkingFilter()" style="display: none; background: #F1F5F9; color: #334155; font-weight: 600; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer;">
-                            הצג את כל החניונים 🔄
-                        </button>
-                    </div>
-                </div>
-                <div id="parkingsMap" style="height: 420px; width: 100%; border-radius: 12px; border: 1px solid var(--border); z-index: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.05) inset;"></div>
-            </div>
+            <!-- GridStack Dynamic Layout Container -->
+            <div class="grid-stack" id="dashboardGridStack">
 
-            <!-- Row 1: הכנסות לפי חניון (Revenue per Location) + השוואת חניונים -->
-            <div class="charts-grid multi-parking-only">
-                <!-- Stacked Revenue Bar Chart -->
-                <div class="chart-section">
-                    <div class="chart-header">
-                        <h2 class="chart-title">
-                            <span>📊</span>
-                            <span>הכנסות לפי חניון (Revenue per Location)</span>
-                        </h2>
-                        <div class="chart-options">
-                            <button class="chart-option-btn" id="btnStackedRev" onclick="toggleStackedRev(true)">מוערם</button>
-                            <button class="chart-option-btn active" id="btnGroupedRev" onclick="toggleStackedRev(false)">נפרד</button>
-                        </div>
-                    </div>
-                    <canvas id="stackedRevenueChart" style="max-height: 350px;"></canvas>
-                </div>
-
-                <!-- Parking Comparison Chart -->
-                <div class="chart-section">
-                    <div class="chart-header">
-                        <h2 class="chart-title">
-                            <span>🏂</span>
-                            <span data-i18n="parkingComparison">השוואת חניונים</span>
-                        </h2>
-                        <p style="margin: 0; font-size: 14px; color: var(--text-secondary); font-weight: 400;" data-i18n="clickForDetails">לחץ על חניון לפירוט מלא</p>
-                    </div>
-                    <canvas id="parkingComparisonChart"></canvas>
-                    
-                    <!-- Parking Details Section (for group users) -->
-                    <div id="parkingDetailsSection" style="display: none; margin-top: 20px; padding: 20px; background: var(--background); border-radius: 12px;">
-                        <div id="parkingDetailsHeader" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                            <h3 id="parkingDetailsTitle" style="font-size: 20px; font-weight: 600;"></h3>
-                            <button onclick="closeParkingDetails()" style="
-                                background: none;
-                                border: none;
-                                font-size: 24px;
-                                cursor: pointer;
-                                color: var(--text-secondary);
-                                padding: 5px;
-                            ">×</button>
-                        </div>
-                        <div id="parkingDetailsContent">
-                            <!-- Details will be filled here -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Row 2: דירוג חניונים לצד מגמת הכנסות + תפוסה מקסימלית (2 עמודות מאוזנות) -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 24px; margin-bottom: 24px; align-items: stretch;">
-                <!-- Column Right (RTL): דירוג חניונים -->
-                <div class="chart-section multi-parking-only" style="margin-bottom: 0; display: flex; flex-direction: column;">
-                    <div class="chart-header">
-                        <h2 class="chart-title">
-                            <span>🏆</span>
-                            <span data-i18n="parkingRanking">דירוג חניונים</span>
-                        </h2>
-                    </div>
-                    <div id="parkingRanking" style="flex: 1; display: flex; flex-direction: column;"></div>
-                </div>
-
-                <!-- Column Left (RTL): 2 גרפים אחד מעל השני: מגמת הכנסות + תפוסה מקסימלית -->
-                <div id="row2ChartsCol" style="display: flex; flex-direction: column; gap: 24px;">
-                    <!-- Revenue Trends Chart -->
-                    <div class="chart-section" style="margin-bottom: 0; flex: 1;">
-                        <div class="chart-header">
-                            <h2 class="chart-title">
-                                <span>📈</span>
-                                <span data-i18n="revenueTrend">מגמת הכנסות</span>
-                            </h2>
-                            <div class="chart-options">
-                                <button class="chart-option-btn" onclick="toggleChartType('revenue')">
-                                    <span>🔄</span>
-                                    <span data-i18n="switchType">החלף סוג</span>
-                                </button>
+                <!-- 1. AI Analysis Section (ניתוח AI ומגמות) -->
+                <div class="grid-stack-item" gs-id="widget-ai-analysis" gs-x="0" gs-y="0" gs-w="12" gs-h="4" gs-min-w="6" gs-min-h="2">
+                    <div class="grid-stack-item-content">
+                        <div class="ai-section" id="aiAnalysisSection" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
+                            <div class="ai-header">
+                                <div class="ai-title-wrap">
+                                    <div class="ai-chip">
+                                        <span>✨</span>
+                                        <span>ניתוח AI אוטומטי</span>
+                                    </div>
+                                    <h2 style="font-size: 18px; font-weight: 700; color: #166534; margin: 0;">
+                                        תובנות והשוואות תקופתיות חכמות
+                                    </h2>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span class="grid-drag-indicator">⋮⋮ גרור כרטיס</span>
+                                    <div style="font-size: 13px; color: #475569; font-weight: 600;" id="aiComparisonPeriodLabel">
+                                        מנתח נתוני תקופה...
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ai-insight-grid" id="aiInsightsContainer" style="flex: 1; overflow-y: auto;">
+                                <!-- Dynamic automated insights rendered by JS -->
                             </div>
                         </div>
-                        <div style="position: relative; height: 260px; width: 100%;">
-                            <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 2. Parking Map Section (מפת פריסת חניונים) -->
+                <div class="grid-stack-item" gs-id="widget-parking-map" gs-x="0" gs-y="4" gs-w="12" gs-h="7" gs-min-w="6" gs-min-h="5">
+                    <div class="grid-stack-item-content">
+                        <div class="chart-section" id="parkingMapSection" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
+                            <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 12px;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="background: linear-gradient(135deg, #0284C7, #0369A1); color: white; width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);">
+                                        🗺️
+                                    </div>
+                                    <div>
+                                        <h2 class="chart-title" style="margin: 0; font-size: 18px; font-weight: 700; color: var(--text-primary);">
+                                            מפת פריסת חניונים
+                                        </h2>
+                                        <p style="margin: 3px 0 0 0; font-size: 13px; color: var(--text-secondary);">
+                                            לחץ על נעץ במפה לסינון נתוני הדשבורד עבור אותו חניון
+                                        </p>
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span class="grid-drag-indicator">⋮⋮ גרור כרטיס</span>
+                                    <span id="activeParkingBadge" style="display: none; background: #E0F2FE; color: #0369A1; font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 20px; border: 1px solid #BAE6FD;"></span>
+                                    <button type="button" class="chart-option-btn" id="btnResetMapFilter" onclick="resetMapParkingFilter()" style="display: none; background: #F1F5F9; color: #334155; font-weight: 600; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer;">
+                                        הצג את כל החניונים 🔄
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="parkingsMap" style="flex: 1; min-height: 320px; width: 100%; border-radius: 12px; border: 1px solid var(--border); z-index: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.05) inset;"></div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Maximum Occupancy Line Chart (ts_per5 vs ts_per6) -->
-                    <div class="chart-section" style="margin-bottom: 0; flex: 1;">
-                        <div class="chart-header">
-                            <h2 class="chart-title">
-                                <span>📈</span>
-                                <span>תפוסה מקסימלית (ts_per5 / ts_per6)</span>
-                            </h2>
+                <!-- 3. Stacked Revenue Bar Chart (הכנסות לפי חניון) -->
+                <div class="grid-stack-item multi-parking-only" gs-id="widget-stacked-revenue" gs-x="0" gs-y="11" gs-w="6" gs-h="6" gs-min-w="4" gs-min-h="4">
+                    <div class="grid-stack-item-content">
+                        <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
+                            <div class="chart-header">
+                                <h2 class="chart-title">
+                                    <span>📊</span>
+                                    <span>הכנסות לפי חניון (Revenue per Location)</span>
+                                </h2>
+                                <div class="chart-options">
+                                    <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                                    <button class="chart-option-btn" id="btnStackedRev" onclick="toggleStackedRev(true)">מוערם</button>
+                                    <button class="chart-option-btn active" id="btnGroupedRev" onclick="toggleStackedRev(false)">נפרד</button>
+                                </div>
+                            </div>
+                            <div style="position: relative; flex: 1; min-height: 220px; width: 100%;">
+                                <canvas id="stackedRevenueChart"></canvas>
+                            </div>
                         </div>
-                        <div style="position: relative; height: 260px; width: 100%;">
-                            <canvas id="maxOccupancyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 4. Parking Comparison Chart (השוואת חניונים) -->
+                <div class="grid-stack-item multi-parking-only" gs-id="widget-parking-comparison" gs-x="6" gs-y="11" gs-w="6" gs-h="6" gs-min-w="4" gs-min-h="4">
+                    <div class="grid-stack-item-content">
+                        <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
+                            <div class="chart-header">
+                                <h2 class="chart-title">
+                                    <span>🏂</span>
+                                    <span data-i18n="parkingComparison">השוואת חניונים</span>
+                                </h2>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                                    <p style="margin: 0; font-size: 13px; color: var(--text-secondary); font-weight: 400;" data-i18n="clickForDetails">לחץ על חניון לפירוט מלא</p>
+                                </div>
+                            </div>
+                            <div style="position: relative; flex: 1; min-height: 220px; width: 100%;">
+                                <canvas id="parkingComparisonChart"></canvas>
+                            </div>
+                            <!-- Parking Details Section (for group users) -->
+                            <div id="parkingDetailsSection" style="display: none; margin-top: 15px; padding: 15px; background: var(--background); border-radius: 12px; max-height: 220px; overflow-y: auto;">
+                                <div id="parkingDetailsHeader" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                    <h3 id="parkingDetailsTitle" style="font-size: 18px; font-weight: 600;"></h3>
+                                    <button onclick="closeParkingDetails()" style="
+                                        background: none;
+                                        border: none;
+                                        font-size: 24px;
+                                        cursor: pointer;
+                                        color: var(--text-secondary);
+                                        padding: 5px;
+                                    ">×</button>
+                                </div>
+                                <div id="parkingDetailsContent">
+                                    <!-- Details will be filled here -->
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Row 3: זמני שהייה לרוחב (עלה למעלה מעל פתיחות מחסום) -->
-            <div class="chart-section" id="stayDurationSection" style="width: 100%; max-width: 100%; box-sizing: border-box; margin-bottom: 24px; padding: 18px 24px !important;">
-                <div class="chart-header" style="margin-bottom: 14px;">
-                    <h2 class="chart-title" style="margin: 0; font-size: 19px;">
-                        <span>⏱️</span>
-                        <span data-i18n="stayTimes">זמני שהייה</span>
-                    </h2>
-                    <div class="chart-options">
-                        <button class="chart-option-btn" onclick="toggleStayDurationView('cards')">
-                            <span>🎯</span>
-                            <span data-i18n="cards">כרטיסים</span>
-                        </button>
-                        <button class="chart-option-btn active" onclick="toggleStayDurationView('bar')">
-                            <span>📊</span>
-                            <span data-i18n="bar">עמודות</span>
-                        </button>
-                        <button class="chart-option-btn" onclick="toggleStayDurationView('pie')">
-                            <span>🥧</span>
-                            <span data-i18n="pie">עוגה</span>
-                        </button>
+                <!-- 5. Parking Ranking (דירוג חניונים) -->
+                <div class="grid-stack-item multi-parking-only" gs-id="widget-parking-ranking" gs-x="0" gs-y="17" gs-w="6" gs-h="8" gs-min-w="4" gs-min-h="4">
+                    <div class="grid-stack-item-content">
+                        <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
+                            <div class="chart-header">
+                                <h2 class="chart-title">
+                                    <span>🏆</span>
+                                    <span data-i18n="parkingRanking">דירוג חניונים</span>
+                                </h2>
+                                <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                            </div>
+                            <div id="parkingRanking" style="flex: 1; display: flex; flex-direction: column; overflow-y: auto;"></div>
+                        </div>
                     </div>
                 </div>
-                <div class="stay-duration-grid" id="stayDurationGrid" style="display: none;">
-                    <!-- Stay duration cards will be populated here -->
-                </div>
-                <div id="stayDurationChartWrapper" style="position: relative; height: 340px; max-height: 360px; width: 100%; max-width: 950px; margin: 0 auto;">
-                    <canvas id="stayDurationChart"></canvas>
-                </div>
-            </div>
 
-            <!-- Row 4: פתיחות מחסום + נתוני מקודדים -->
-            <div class="charts-grid">
-                <!-- Barrier Chart -->
-                <div class="chart-section">
-                    <div class="chart-header">
-                        <h2 class="chart-title">
-                            <span>🚧</span>
-                            <span data-i18n="barrierOpenings">פתיחות מחסום</span>
-                        </h2>
+                <!-- 6. Revenue Trends Chart (מגמת הכנסות) -->
+                <div class="grid-stack-item" gs-id="widget-revenue-trend" gs-x="6" gs-y="17" gs-w="6" gs-h="4" gs-min-w="4" gs-min-h="3">
+                    <div class="grid-stack-item-content">
+                        <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
+                            <div class="chart-header">
+                                <h2 class="chart-title">
+                                    <span>📈</span>
+                                    <span data-i18n="revenueTrend">מגמת הכנסות</span>
+                                </h2>
+                                <div class="chart-options">
+                                    <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                                    <button class="chart-option-btn" onclick="toggleChartType('revenue')">
+                                        <span>🔄</span>
+                                        <span data-i18n="switchType">החלף סוג</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div style="position: relative; flex: 1; min-height: 180px; width: 100%;">
+                                <canvas id="revenueChart"></canvas>
+                            </div>
+                        </div>
                     </div>
-                    <canvas id="barrierChart"></canvas>
                 </div>
-                
-                <!-- Encoders Info -->
-                <div class="chart-section">
-                    <div class="chart-header">
-                        <h2 class="chart-title">
-                            <span>🔢</span>
-                            <span data-i18n="encoderData">נתוני מקודדים</span>
-                        </h2>
-                    </div>
-                    <div id="encodersInfo"></div>
-                </div>
-            </div>
 
-            <!-- Row 5: סוגי כניסות + השוואה יומית -->
-            <div class="charts-grid">
-                <!-- Entries Chart -->
-                <div class="chart-section">
-                    <div class="chart-header">
-                        <h2 class="chart-title">
-                            <span>🚗</span>
-                            <span data-i18n="entryTypes">סוגי כניסות</span>
-                        </h2>
+                <!-- 7. Maximum Occupancy Line Chart (תפוסה מקסימלית) -->
+                <div class="grid-stack-item" gs-id="widget-max-occupancy" gs-x="6" gs-y="21" gs-w="6" gs-h="4" gs-min-w="4" gs-min-h="3">
+                    <div class="grid-stack-item-content">
+                        <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
+                            <div class="chart-header">
+                                <h2 class="chart-title">
+                                    <span>📈</span>
+                                    <span>תפוסה מקסימלית (ts_per5 / ts_per6)</span>
+                                </h2>
+                                <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                            </div>
+                            <div style="position: relative; flex: 1; min-height: 180px; width: 100%;">
+                                <canvas id="maxOccupancyChart"></canvas>
+                            </div>
+                        </div>
                     </div>
-                    <canvas id="entriesChart"></canvas>
                 </div>
-                
-                <!-- Period Comparison Chart -->
-                <div class="chart-section">
-                    <div class="chart-header">
-                        <h2 class="chart-title">
-                            <span>📅</span>
-                            <span id="comparisonTitle" data-i18n="dailyComparison">השוואה יומית</span>
-                        </h2>
-                    </div>
-                    <canvas id="dailyChart"></canvas>
-                </div>
-            </div>
 
-            <!-- Row 6: אמצעי תשלום (בתחתית הדף) -->
-            <div class="charts-grid" style="margin-bottom: 24px;">
-                <!-- Payment Methods Chart -->
-                <div class="chart-section" style="max-width: 650px; margin: 0 auto; width: 100%; overflow: hidden;">
-                    <div class="chart-header">
-                        <h2 class="chart-title">
-                            <span>💳</span>
-                            <span data-i18n="paymentMethods">אמצעי תשלום</span>
-                        </h2>
-                    </div>
-                    <div style="position: relative; height: 350px; width: 100%; max-width: 480px; margin: 0 auto;">
-                        <canvas id="paymentChart"></canvas>
+                <!-- 8. Stay Duration (זמני שהייה) -->
+                <div class="grid-stack-item" gs-id="widget-stay-duration" gs-x="0" gs-y="25" gs-w="12" gs-h="6" gs-min-w="6" gs-min-h="4">
+                    <div class="grid-stack-item-content">
+                        <div class="chart-section" id="stayDurationSection" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column; padding: 18px 24px !important;">
+                            <div class="chart-header" style="margin-bottom: 14px;">
+                                <h2 class="chart-title" style="margin: 0; font-size: 19px;">
+                                    <span>⏱️</span>
+                                    <span data-i18n="stayTimes">זמני שהייה</span>
+                                </h2>
+                                <div class="chart-options">
+                                    <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                                    <button class="chart-option-btn" onclick="toggleStayDurationView('cards')">
+                                        <span>🎯</span>
+                                        <span data-i18n="cards">כרטיסים</span>
+                                    </button>
+                                    <button class="chart-option-btn active" onclick="toggleStayDurationView('bar')">
+                                        <span>📊</span>
+                                        <span data-i18n="bar">עמודות</span>
+                                    </button>
+                                    <button class="chart-option-btn" onclick="toggleStayDurationView('pie')">
+                                        <span>🥧</span>
+                                        <span data-i18n="pie">עוגה</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="stay-duration-grid" id="stayDurationGrid" style="display: none; flex: 1; overflow-y: auto;"></div>
+                            <div id="stayDurationChartWrapper" style="position: relative; flex: 1; min-height: 250px; width: 100%; max-width: 950px; margin: 0 auto;">
+                                <canvas id="stayDurationChart"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
+
+                <!-- 9. Barrier Chart (פתיחות מחסום) -->
+                <div class="grid-stack-item" gs-id="widget-barrier" gs-x="0" gs-y="31" gs-w="6" gs-h="5" gs-min-w="4" gs-min-h="3">
+                    <div class="grid-stack-item-content">
+                        <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
+                            <div class="chart-header">
+                                <h2 class="chart-title">
+                                    <span>🚧</span>
+                                    <span data-i18n="barrierOpenings">פתיחות מחסום</span>
+                                </h2>
+                                <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                            </div>
+                            <div style="position: relative; flex: 1; min-height: 200px; width: 100%;">
+                                <canvas id="barrierChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 10. Encoders Info (נתוני מקודדים) -->
+                <div class="grid-stack-item" gs-id="widget-encoders" gs-x="6" gs-y="31" gs-w="6" gs-h="5" gs-min-w="4" gs-min-h="3">
+                    <div class="grid-stack-item-content">
+                        <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
+                            <div class="chart-header">
+                                <h2 class="chart-title">
+                                    <span>🔢</span>
+                                    <span data-i18n="encoderData">נתוני מקודדים</span>
+                                </h2>
+                                <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                            </div>
+                            <div id="encodersInfo" style="flex: 1; overflow-y: auto;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 11. Entries Chart (סוגי כניסות) -->
+                <div class="grid-stack-item" gs-id="widget-entries" gs-x="0" gs-y="36" gs-w="6" gs-h="5" gs-min-w="4" gs-min-h="3">
+                    <div class="grid-stack-item-content">
+                        <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
+                            <div class="chart-header">
+                                <h2 class="chart-title">
+                                    <span>🚗</span>
+                                    <span data-i18n="entryTypes">סוגי כניסות</span>
+                                </h2>
+                                <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                            </div>
+                            <div style="position: relative; flex: 1; min-height: 200px; width: 100%;">
+                                <canvas id="entriesChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 12. Period Comparison Chart (השוואה יומית) -->
+                <div class="grid-stack-item" gs-id="widget-daily" gs-x="6" gs-y="36" gs-w="6" gs-h="5" gs-min-w="4" gs-min-h="3">
+                    <div class="grid-stack-item-content">
+                        <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column;">
+                            <div class="chart-header">
+                                <h2 class="chart-title">
+                                    <span>📅</span>
+                                    <span id="comparisonTitle" data-i18n="dailyComparison">השוואה יומית</span>
+                                </h2>
+                                <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                            </div>
+                            <div style="position: relative; flex: 1; min-height: 200px; width: 100%;">
+                                <canvas id="dailyChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 13. Payment Methods (אמצעי תשלום) -->
+                <div class="grid-stack-item" gs-id="widget-payment" gs-x="0" gs-y="41" gs-w="12" gs-h="6" gs-min-w="6" gs-min-h="4">
+                    <div class="grid-stack-item-content">
+                        <div class="chart-section" style="height: 100%; margin-bottom: 0; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden;">
+                            <div class="chart-header">
+                                <h2 class="chart-title">
+                                    <span>💳</span>
+                                    <span data-i18n="paymentMethods">אמצעי תשלום</span>
+                                </h2>
+                                <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                            </div>
+                            <div style="position: relative; flex: 1; min-height: 240px; max-height: 380px; width: 100%; max-width: 480px; margin: 0 auto;">
+                                <canvas id="paymentChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- Close GridStack -->
+</div>
     </div>
 
 <script>
@@ -1548,6 +1801,9 @@ const translations = {
         loading: 'טוען נתונים...',
         errorLoading: 'שגיאה בטעינת הנתונים',
         alertsTrends: 'התראות ומגמות',
+        editLayout: 'ערוך סידור',
+        saveLayout: 'שמור סידור',
+        resetLayout: 'שחזר ברירת מחדל',
         revenueTrend: 'מגמת הכנסות', switchType: 'החלף סוג',
         paymentMethods: 'אמצעי תשלום',
         entryTypes: 'סוגי כניסות',
@@ -1611,6 +1867,9 @@ const translations = {
         loading: 'Loading data...',
         errorLoading: 'Error loading data',
         alertsTrends: 'Alerts & Trends',
+        editLayout: 'Edit Layout',
+        saveLayout: 'Save Layout',
+        resetLayout: 'Reset Layout',
         revenueTrend: 'Revenue Trend', switchType: 'Switch Type',
         paymentMethods: 'Payment Methods',
         entryTypes: 'Entry Types',
@@ -2018,6 +2277,9 @@ async function initializeDashboard() {
         
 // Load initial data
 await loadData();
+        if (typeof initDashboardGridStack === 'function') {
+            initDashboardGridStack();
+        }
 
 // Update period label after loading
 updateCurrentPeriodLabel();
@@ -2433,8 +2695,10 @@ function updateDashboard() {
     
     if (isSingleParkingMode) {
         document.body.classList.add('single-parking-mode');
+        if (typeof updateGridStackSingleParkingMode === 'function') updateGridStackSingleParkingMode(true);
     } else {
         document.body.classList.remove('single-parking-mode');
+        if (typeof updateGridStackSingleParkingMode === 'function') updateGridStackSingleParkingMode(false);
     }
     
     // Update all components
@@ -6702,6 +6966,201 @@ function updateMapActiveMarker() {
     }
 }
 
+
+
+// ============================================================
+// GRIDSTACK.JS DYNAMIC DASHBOARD CONTROLLER (STAGE B)
+// ============================================================
+let dashboardGrid = null;
+let isDashboardEditMode = false;
+const DASHBOARD_GRID_STORAGE_KEY = 'dashboard_v2_grid_layout_v2';
+
+const DEFAULT_GRID_LAYOUT = [
+    { id: 'widget-ai-analysis', x: 0, y: 0, w: 12, h: 4 },
+    { id: 'widget-parking-map', x: 0, y: 4, w: 12, h: 7 },
+    { id: 'widget-stacked-revenue', x: 0, y: 11, w: 6, h: 6 },
+    { id: 'widget-parking-comparison', x: 6, y: 11, w: 6, h: 6 },
+    { id: 'widget-parking-ranking', x: 0, y: 17, w: 6, h: 8 },
+    { id: 'widget-revenue-trend', x: 6, y: 17, w: 6, h: 4 },
+    { id: 'widget-max-occupancy', x: 6, y: 21, w: 6, h: 4 },
+    { id: 'widget-stay-duration', x: 0, y: 25, w: 12, h: 6 },
+    { id: 'widget-barrier', x: 0, y: 31, w: 6, h: 5 },
+    { id: 'widget-encoders', x: 6, y: 31, w: 6, h: 5 },
+    { id: 'widget-entries', x: 0, y: 36, w: 6, h: 5 },
+    { id: 'widget-daily', x: 6, y: 36, w: 6, h: 5 },
+    { id: 'widget-payment', x: 0, y: 41, w: 12, h: 6 }
+];
+
+function initDashboardGridStack() {
+    if (typeof GridStack === 'undefined') {
+        console.warn('GridStack library not loaded yet');
+        return;
+    }
+    
+    if (dashboardGrid) {
+        return; // Already initialized
+    }
+    
+    try {
+        dashboardGrid = GridStack.init({
+            column: 12,
+            cellHeight: 70,
+            margin: 12,
+            animate: true,
+            staticGrid: true, // Initially locked for normal viewing
+            float: false,
+            rtl: true, // Full Hebrew RTL support
+            handle: '.chart-header, .ai-header', // Drag from card headers
+            resizable: {
+                handles: 'sw, se, s'
+            }
+        }, '#dashboardGridStack');
+
+        // Restore user layout from localStorage
+        loadSavedDashboardLayout();
+
+        // Listen to resize and drag events
+        dashboardGrid.on('resizestop dragstop', function(event, element) {
+            saveDashboardLayout();
+            refreshChartsAndMapAfterLayoutChange();
+        });
+
+        console.log('✅ GridStack dashboard initialized successfully');
+    } catch (e) {
+        console.error('Error initializing GridStack:', e);
+    }
+}
+
+function loadSavedDashboardLayout() {
+    if (!dashboardGrid) return;
+    try {
+        const saved = localStorage.getItem(DASHBOARD_GRID_STORAGE_KEY);
+        if (saved) {
+            const layoutData = JSON.parse(saved);
+            if (Array.isArray(layoutData) && layoutData.length > 0) {
+                dashboardGrid.load(layoutData, false);
+                console.log('Loaded saved dashboard layout from localStorage');
+            }
+        }
+    } catch (e) {
+        console.warn('Could not load saved dashboard layout:', e);
+    }
+}
+
+function saveDashboardLayout() {
+    if (!dashboardGrid) return;
+    try {
+        const items = dashboardGrid.save(false);
+        localStorage.setItem(DASHBOARD_GRID_STORAGE_KEY, JSON.stringify(items));
+    } catch (e) {
+        console.warn('Could not save dashboard layout:', e);
+    }
+}
+
+function resetDashboardLayout() {
+    if (!dashboardGrid) return;
+    try {
+        localStorage.removeItem(DASHBOARD_GRID_STORAGE_KEY);
+        dashboardGrid.load(DEFAULT_GRID_LAYOUT, false);
+        refreshChartsAndMapAfterLayoutChange();
+        showDashboardToast('הסידור אופס לברירת המחדל');
+    } catch (e) {
+        console.error('Error resetting dashboard layout:', e);
+    }
+}
+
+function toggleDashboardEditMode() {
+    if (!dashboardGrid) return;
+    isDashboardEditMode = !isDashboardEditMode;
+    
+    const container = document.getElementById('dashboardContent');
+    const btn = document.getElementById('btnToggleEditMode');
+    const btnIcon = document.getElementById('btnEditIcon');
+    const btnText = document.getElementById('btnEditText');
+    const resetBtn = document.getElementById('btnResetLayout');
+    
+    if (isDashboardEditMode) {
+        dashboardGrid.setStatic(false);
+        if (container) container.classList.add('dashboard-editing-active');
+        if (btn) {
+            btn.classList.add('active-editing');
+            if (btnIcon) btnIcon.textContent = '💾';
+            if (btnText) btnText.textContent = (typeof t === 'function' && t('saveLayout')) ? t('saveLayout') : 'שמור סידור';
+        }
+        if (resetBtn) resetBtn.style.display = 'inline-flex';
+        showDashboardToast('מצב עריכה הופעל: גרור ושנה גדלים בחופשיות');
+    } else {
+        dashboardGrid.setStatic(true);
+        if (container) container.classList.remove('dashboard-editing-active');
+        if (btn) {
+            btn.classList.remove('active-editing');
+            if (btnIcon) btnIcon.textContent = '✏️';
+            if (btnText) btnText.textContent = (typeof t === 'function' && t('editLayout')) ? t('editLayout') : 'ערוך סידור';
+        }
+        if (resetBtn) resetBtn.style.display = 'none';
+        
+        saveDashboardLayout();
+        refreshChartsAndMapAfterLayoutChange();
+        showDashboardToast('סידור הדשבורד נשמר בהצלחה');
+    }
+}
+
+let refreshLayoutTimer = null;
+function refreshChartsAndMapAfterLayoutChange() {
+    clearTimeout(refreshLayoutTimer);
+    refreshLayoutTimer = setTimeout(() => {
+        // 1. Refresh Chart.js charts
+        if (typeof Chart !== 'undefined' && Chart.instances) {
+            Object.values(Chart.instances).forEach(chart => {
+                try {
+                    chart.resize();
+                } catch (e) {}
+            });
+        }
+        
+        // 2. Refresh Leaflet map
+        if (parkingsMapInstance) {
+            try {
+                parkingsMapInstance.invalidateSize();
+                if (mapAllBounds) {
+                    parkingsMapInstance.fitBounds(mapAllBounds, { padding: [25, 25] });
+                }
+            } catch (e) {}
+        }
+    }, 150);
+}
+
+function showDashboardToast(msg) {
+    let toast = document.getElementById('dashboardToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'dashboardToast';
+        toast.style.cssText = 'position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: #0F172A; color: white; padding: 12px 24px; border-radius: 50px; font-weight: 600; font-size: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.25); z-index: 99999; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); opacity: 0; pointer-events: none; direction: rtl;';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(20px)';
+    }, 2800);
+}
+
+function updateGridStackSingleParkingMode(isSingle) {
+    if (!dashboardGrid) return;
+    const multiWidgets = document.querySelectorAll('.grid-stack-item.multi-parking-only');
+    multiWidgets.forEach(w => {
+        if (isSingle) {
+            dashboardGrid.removeWidget(w, false);
+            w.style.display = 'none';
+        } else {
+            w.style.display = '';
+            dashboardGrid.makeWidget(w);
+        }
+    });
+    dashboardGrid.compact();
+}
 
 </script>
 
