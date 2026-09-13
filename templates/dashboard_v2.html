@@ -920,6 +920,11 @@
         .single-parking-mode .multi-parking-only {
             display: none !important;
         }
+        .single-parking-mode #row2ChartsCol {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)) !important;
+            gap: 24px !important;
+        }
         
         /* Animations */
         @keyframes spin {
@@ -1394,7 +1399,7 @@
                 </div>
 
                 <!-- Column Left (RTL): 2 גרפים אחד מעל השני: מגמת הכנסות + תפוסה מקסימלית -->
-                <div style="display: flex; flex-direction: column; gap: 24px;">
+                <div id="row2ChartsCol" style="display: flex; flex-direction: column; gap: 24px;">
                     <!-- Revenue Trends Chart -->
                     <div class="chart-section" style="margin-bottom: 0; flex: 1;">
                         <div class="chart-header">
@@ -1512,14 +1517,14 @@
             <!-- Row 6: אמצעי תשלום (בתחתית הדף) -->
             <div class="charts-grid" style="margin-bottom: 24px;">
                 <!-- Payment Methods Chart -->
-                <div class="chart-section" style="max-width: 650px; margin: 0 auto; width: 100%;">
+                <div class="chart-section" style="max-width: 650px; margin: 0 auto; width: 100%; overflow: hidden;">
                     <div class="chart-header">
                         <h2 class="chart-title">
                             <span>💳</span>
                             <span data-i18n="paymentMethods">אמצעי תשלום</span>
                         </h2>
                     </div>
-                    <div style="position: relative; height: 320px; width: 100%;">
+                    <div style="position: relative; height: 350px; width: 100%; max-width: 480px; margin: 0 auto;">
                         <canvas id="paymentChart"></canvas>
                     </div>
                 </div>
@@ -1974,6 +1979,7 @@ Chart.defaults.font.family = "'Heebo', -apple-system, BlinkMacSystemFont, sans-s
 Chart.defaults.color = '#6C6C70';
 Chart.defaults.plugins.legend.labels.usePointStyle = true;
 Chart.defaults.plugins.legend.labels.padding = 20;
+Chart.defaults.maintainAspectRatio = false;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
@@ -2386,6 +2392,12 @@ async function loadDataForGroup(startDate, endDate) {
     
     // Process results
     if (loadedData !== null) {
+        if (selectedParking && Array.isArray(loadedData)) {
+            const filtered = loadedData.filter(d => String(d.project_number) === String(selectedParking));
+            if (filtered.length > 0) {
+                loadedData = filtered;
+            }
+        }
         currentData = loadedData;
         hideError();
         try {
@@ -2561,16 +2573,6 @@ function updateStats() {
             <div class="change neutral">${stats.uniqueDays} ${t('days')}</div>
             <div class="subtext">${t('dailyAvgRevenue')}</div>
         </div>
-        
-        ${!isSingleParkingMode ? `
-        <div class="stat-card multi-parking-only" data-stat-type="parkings">
-            <div class="icon" style="background: linear-gradient(135deg, #FF3B30, #FF9500);">🏢</div>
-            <h3>${t('activeParkings')}</h3>
-            <div class="value">${stats.uniqueParkings}</div>
-            <div class="change neutral">${t('from') || 'מתוך'} ${userParkings.length - 1}</div>
-            <div class="subtext">${t('allParkings')}</div>
-        </div>
-        ` : ''}
     `;
     
     document.getElementById('statsGrid').innerHTML = statsHTML;
@@ -2868,36 +2870,40 @@ function createRevenueChart() {
     // Format labels for display
     const formattedLabels = periods.map(period => formatPeriodLabel(period, currentViewMode));
     
+    // If only 1 period is present (e.g. single day selected), default to 'bar' so it doesn't render an empty line
+    const effectiveType = (periods.length <= 1) ? 'bar' : (chartTypes.revenue || 'line');
+    
     if (charts.revenue) charts.revenue.destroy();
     
     charts.revenue = new Chart(ctx, {
-        type: chartTypes.revenue || 'line',
+        type: effectiveType,
         data: {
             labels: formattedLabels,
             datasets: [{
                 label: 'הכנסות',
                 data: revenues,
                 borderColor: '#007AFF',
-                backgroundColor: chartTypes.revenue === 'bar' ? 'rgba(0, 122, 255, 0.8)' : 'rgba(0, 122, 255, 0.1)',
-                tension: 0.4,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-                borderRadius: chartTypes.revenue === 'bar' ? 8 : 0,
+                backgroundColor: effectiveType === 'bar' ? 'rgba(0, 122, 255, 0.85)' : 'rgba(0, 122, 255, 0.12)',
+                tension: 0.35,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                borderRadius: effectiveType === 'bar' ? 6 : 0,
                 yAxisID: 'y'
             }, {
                 label: 'כניסות',
                 data: entries,
                 borderColor: '#5AC8FA',
-                backgroundColor: chartTypes.revenue === 'bar' ? 'rgba(90, 200, 250, 0.8)' : 'rgba(90, 200, 250, 0.1)',
-                tension: 0.4,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-                borderRadius: chartTypes.revenue === 'bar' ? 8 : 0,
+                backgroundColor: effectiveType === 'bar' ? 'rgba(90, 200, 250, 0.85)' : 'rgba(90, 200, 250, 0.12)',
+                tension: 0.35,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                borderRadius: effectiveType === 'bar' ? 6 : 0,
                 yAxisID: 'y1'
             }]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             interaction: {
                 mode: 'index',
                 intersect: false,
@@ -2917,7 +2923,6 @@ function createRevenueChart() {
                     displayColors: true,
                     callbacks: {
                         title: function(tooltipItems) {
-                            // Ensure date is shown in DD/MM/YYYY format
                             return tooltipItems[0].label;
                         },
                         label: function(context) {
@@ -2935,6 +2940,7 @@ function createRevenueChart() {
                     type: 'linear',
                     display: true,
                     position: 'right',
+                    beginAtZero: true,
                     grid: {
                         display: true,
                         color: 'rgba(0, 0, 0, 0.05)'
@@ -2949,6 +2955,7 @@ function createRevenueChart() {
                     type: 'linear',
                     display: true,
                     position: 'left',
+                    beginAtZero: true,
                     grid: {
                         display: false
                     }
@@ -2992,18 +2999,24 @@ function createPaymentChart() {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: { top: 5, bottom: 5, left: 10, right: 10 }
+            },
             plugins: {
                 legend: {
                     position: 'bottom',
                     labels: {
-                        padding: 20,
+                        padding: 12,
+                        boxWidth: 12,
+                        font: { size: 12, family: "'Heebo', sans-serif" },
                         generateLabels: function(chart) {
                             const data = chart.data;
                             if (data.labels.length && data.datasets.length) {
                                 const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
                                 return data.labels.map((label, i) => {
                                     const value = data.datasets[0].data[i];
-                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
                                     return {
                                         text: `${label}: ₪${Math.round(value).toLocaleString()} (${percentage}%)`,
                                         fillStyle: data.datasets[0].backgroundColor[i],
