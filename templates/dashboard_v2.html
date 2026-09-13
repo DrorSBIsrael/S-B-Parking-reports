@@ -1426,7 +1426,7 @@
         white-space: nowrap;
         min-width: 80px;
         text-align: center;
-    " id="currentPeriodLabel">
+    " id="currentPeriodLabel" data-i18n="currentPeriod">
         תקופה נוכחית
     </div>
     
@@ -1529,18 +1529,18 @@
                 <div style="display: flex; align-items: center; gap: 14px;">
                     <div style="font-size: 26px;">🎛️</div>
                     <div>
-                        <div style="font-weight: 700; color: #1E40AF; font-size: 15px;">מצב עריכת סידור פעיל</div>
-                        <div style="font-size: 13px; color: #3B82F6;">באפשרותך לגרור כרטיסים להזזה (באמצעות כותרת הכרטיס) ולגרור את פינותיהם לשינוי גודל.</div>
+                        <div style="font-weight: 700; color: #1E40AF; font-size: 15px;" data-i18n="editModeActive">מצב עריכת סידור פעיל</div>
+                        <div style="font-size: 13px; color: #3B82F6;" data-i18n="editModeDesc">באפשרותך לגרור כרטיסים להזזה (באמצעות כותרת הכרטיס) ולגרור את פינותיהם לשינוי גודל.</div>
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <button type="button" class="layout-btn-reset" onclick="resetDashboardLayout()" style="display: inline-flex;">
                         <span>↺</span>
-                        <span>איפוס לברירת מחדל</span>
+                        <span data-i18n="resetDefault">איפוס לברירת מחדל</span>
                     </button>
                     <button type="button" class="layout-btn-edit active-editing" onclick="toggleDashboardEditMode()">
                         <span>💾</span>
-                        <span>סיום ושמירה</span>
+                        <span data-i18n="finishAndSave">סיום ושמירה</span>
                     </button>
                 </div>
             </div>
@@ -1556,15 +1556,15 @@
                                 <div class="ai-title-wrap">
                                     <div class="ai-chip">
                                         <span>✨</span>
-                                        <span>ניתוח AI אוטומטי</span>
+                                        <span data-i18n="aiChip">ניתוח AI אוטומטי</span>
                                     </div>
-                                    <h2 style="font-size: 18px; font-weight: 700; color: #166534; margin: 0;">
+                                    <h2 style="font-size: 18px; font-weight: 700; color: #166534; margin: 0;" data-i18n="aiTitle">
                                         תובנות והשוואות תקופתיות חכמות
                                     </h2>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 10px;">
-                                    <span class="grid-drag-indicator">⋮⋮ גרור כרטיס</span>
-                                    <div style="font-size: 13px; color: #475569; font-weight: 600;" id="aiComparisonPeriodLabel">
+                                    <span class="grid-drag-indicator" data-i18n="dragCard">⋮⋮ גרור כרטיס</span>
+                                    <div style="font-size: 13px; color: #475569; font-weight: 600;" id="aiComparisonPeriodLabel" data-i18n="aiAnalyzing">
                                         מנתח נתוני תקופה...
                                     </div>
                                 </div>
@@ -1586,18 +1586,18 @@
                                         🗺️
                                     </div>
                                     <div>
-                                        <h2 class="chart-title" style="margin: 0; font-size: 18px; font-weight: 700; color: var(--text-primary);">
+                                        <h2 class="chart-title" style="margin: 0; font-size: 18px; font-weight: 700; color: var(--text-primary);" data-i18n="parkingMapTitle">
                                             מפת פריסת חניונים
                                         </h2>
-                                        <p style="margin: 3px 0 0 0; font-size: 13px; color: var(--text-secondary);">
+                                        <p style="margin: 3px 0 0 0; font-size: 13px; color: var(--text-secondary);" data-i18n="parkingMapSubtitle">
                                             לחץ על נעץ במפה לסינון נתוני הדשבורד עבור אותו חניון
                                         </p>
                                     </div>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 10px;">
-                                    <span class="grid-drag-indicator">⋮⋮ גרור כרטיס</span>
+                                    <span class="grid-drag-indicator" data-i18n="dragCard">⋮⋮ גרור כרטיס</span>
                                     <span id="activeParkingBadge" style="display: none; background: #E0F2FE; color: #0369A1; font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 20px; border: 1px solid #BAE6FD;"></span>
-                                    <button type="button" class="chart-option-btn" id="btnResetMapFilter" onclick="resetMapParkingFilter()" style="display: none; background: #F1F5F9; color: #334155; font-weight: 600; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer;">
+                                    <button type="button" class="chart-option-btn" id="btnResetMapFilter" onclick="resetMapParkingFilter()" style="display: none; background: #F1F5F9; color: #334155; font-weight: 600; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer;" data-i18n="showAllParkingsMap">
                                         הצג את כל החניונים 🔄
                                     </button>
                                 </div>
@@ -1614,12 +1614,12 @@
                             <div class="chart-header">
                                 <h2 class="chart-title">
                                     <span>📊</span>
-                                    <span>הכנסות לפי חניון (Revenue per Location)</span>
+                                    <span data-i18n="stackedRevTitle">הכנסות לפי חניון (Revenue per Location)</span>
                                 </h2>
                                 <div class="chart-options">
-                                    <span class="grid-drag-indicator">⋮⋮ גרור</span>
-                                    <button class="chart-option-btn" id="btnStackedRev" onclick="toggleStackedRev(true)">מוערם</button>
-                                    <button class="chart-option-btn active" id="btnGroupedRev" onclick="toggleStackedRev(false)">נפרד</button>
+                                    <span class="grid-drag-indicator" data-i18n="drag">⋮⋮ גרור</span>
+                                    <button class="chart-option-btn" id="btnStackedRev" onclick="toggleStackedRev(true)" data-i18n="stacked">מוערם</button>
+                                    <button class="chart-option-btn active" id="btnGroupedRev" onclick="toggleStackedRev(false)" data-i18n="grouped">נפרד</button>
                                 </div>
                             </div>
                             <div style="position: relative; flex: 1; min-height: 220px; width: 100%;">
@@ -1639,7 +1639,7 @@
                                     <span data-i18n="parkingComparison">השוואת חניונים</span>
                                 </h2>
                                 <div style="display: flex; align-items: center; gap: 8px;">
-                                    <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                                    <span class="grid-drag-indicator" data-i18n="drag">⋮⋮ גרור</span>
                                     <p style="margin: 0; font-size: 13px; color: var(--text-secondary); font-weight: 400;" data-i18n="clickForDetails">לחץ על חניון לפירוט מלא</p>
                                 </div>
                             </div>
@@ -1676,7 +1676,7 @@
                                     <span>🏆</span>
                                     <span data-i18n="parkingRanking">דירוג חניונים</span>
                                 </h2>
-                                <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                                <span class="grid-drag-indicator" data-i18n="drag">⋮⋮ גרור</span>
                             </div>
                             <div id="parkingRanking" style="flex: 1; display: flex; flex-direction: column; overflow-y: auto;"></div>
                         </div>
@@ -1693,7 +1693,7 @@
                                     <span data-i18n="revenueTrend">מגמת הכנסות</span>
                                 </h2>
                                 <div class="chart-options">
-                                    <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                                    <span class="grid-drag-indicator" data-i18n="drag">⋮⋮ גרור</span>
                                     <button class="chart-option-btn" onclick="toggleChartType('revenue')">
                                         <span>🔄</span>
                                         <span data-i18n="switchType">החלף סוג</span>
@@ -1714,9 +1714,9 @@
                             <div class="chart-header">
                                 <h2 class="chart-title">
                                     <span>📈</span>
-                                    <span>תפוסה מקסימלית (ts_per5 / ts_per6)</span>
+                                    <span data-i18n="maxOccupancyTitle">תפוסה מקסימלית (ts_per5 / ts_per6)</span>
                                 </h2>
-                                <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                                <span class="grid-drag-indicator" data-i18n="drag">⋮⋮ גרור</span>
                             </div>
                             <div style="position: relative; flex: 1; min-height: 180px; width: 100%;">
                                 <canvas id="maxOccupancyChart"></canvas>
@@ -1735,7 +1735,7 @@
                                     <span data-i18n="stayTimes">זמני שהייה</span>
                                 </h2>
                                 <div class="chart-options">
-                                    <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                                    <span class="grid-drag-indicator" data-i18n="drag">⋮⋮ גרור</span>
                                     <button class="chart-option-btn" onclick="toggleStayDurationView('cards')">
                                         <span>🎯</span>
                                         <span data-i18n="cards">כרטיסים</span>
@@ -1767,7 +1767,7 @@
                                     <span>🚧</span>
                                     <span data-i18n="barrierOpenings">פתיחות מחסום</span>
                                 </h2>
-                                <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                                <span class="grid-drag-indicator" data-i18n="drag">⋮⋮ גרור</span>
                             </div>
                             <div style="position: relative; flex: 1; min-height: 200px; width: 100%;">
                                 <canvas id="barrierChart"></canvas>
@@ -1785,7 +1785,7 @@
                                     <span>🔢</span>
                                     <span data-i18n="encoderData">נתוני מקודדים</span>
                                 </h2>
-                                <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                                <span class="grid-drag-indicator" data-i18n="drag">⋮⋮ גרור</span>
                             </div>
                             <div id="encodersInfo" style="flex: 1; overflow-y: auto;"></div>
                         </div>
@@ -1801,7 +1801,7 @@
                                     <span>🚗</span>
                                     <span data-i18n="entryTypes">סוגי כניסות</span>
                                 </h2>
-                                <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                                <span class="grid-drag-indicator" data-i18n="drag">⋮⋮ גרור</span>
                             </div>
                             <div style="position: relative; flex: 1; min-height: 200px; width: 100%;">
                                 <canvas id="entriesChart"></canvas>
@@ -1819,7 +1819,7 @@
                                     <span>📅</span>
                                     <span id="comparisonTitle" data-i18n="dailyComparison">השוואה יומית</span>
                                 </h2>
-                                <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                                <span class="grid-drag-indicator" data-i18n="drag">⋮⋮ גרור</span>
                             </div>
                             <div style="position: relative; flex: 1; min-height: 200px; width: 100%;">
                                 <canvas id="dailyChart"></canvas>
@@ -1837,7 +1837,7 @@
                                     <span>💳</span>
                                     <span data-i18n="paymentMethods">אמצעי תשלום</span>
                                 </h2>
-                                <span class="grid-drag-indicator">⋮⋮ גרור</span>
+                                <span class="grid-drag-indicator" data-i18n="drag">⋮⋮ גרור</span>
                             </div>
                             <div style="position: relative; flex: 1; min-height: 240px; max-height: 380px; width: 100%; max-width: 480px; margin: 0 auto;">
                                 <canvas id="paymentChart"></canvas>
@@ -1856,6 +1856,33 @@
 // ============================================================
 const translations = {
     he: {
+        projectNumber: 'מספר פרויקט:',
+        capacitySpaces: 'קיבולת מקומות:',
+        filterDashboardForParking: 'סנן דשבורד לחניון זה',
+
+        editModeActive: 'מצב עריכת סידור פעיל',
+        editModeDesc: 'באפשרותך לגרור כרטיסים להזזה (באמצעות כותרת הכרטיס) ולגרור את פינותיהם לשינוי גודל.',
+        resetDefault: 'איפוס לברירת מחדל',
+        finishAndSave: 'סיום ושמירה',
+        parkingMapTitle: 'מפת פריסת חניונים',
+        parkingMapSubtitle: 'לחץ על נעץ במפה לסינון נתוני הדשבורד עבור אותו חניון',
+        showAllParkingsMap: 'הצג את כל החניונים 🔄',
+        stackedRevTitle: 'הכנסות לפי חניון (Revenue per Location)',
+        stacked: 'מוערם',
+        grouped: 'נפרד',
+        maxOccupancyTitle: 'תפוסה מקסימלית (ts_per5 / ts_per6)',
+        dragCard: '⋮⋮ גרור כרטיס',
+        drag: '⋮⋮ גרור',
+        currentPeriod: 'תקופה נוכחית',
+        comparedToDayLastWeek: 'בהשוואה ליום מקביל שבוע שעבר:',
+        comparedToPreviousMonth: 'בהשוואה לחודש קודם:',
+        comparedToEquivalentPeriod: 'בהשוואה לתקופה מקבילה:',
+        includingData: 'כולל נתוני',
+        filtered: 'מסונן',
+        editModeActiveToast: 'מצב עריכה הופעל: גרור קוביות וגרפים לסידור מחדש',
+        layoutSavedToast: 'סידור הדשבורד והגרפים נשמר בהצלחה',
+        resetLayoutToast: 'הסידור אופס לברירת המחדל',
+
         peakOccupancy: 'תפוסה',
         editLayout: 'ערך סידור גרפים',
         saveLayout: 'שמור סידור גרפים',
@@ -1951,6 +1978,33 @@ const translations = {
         noParking: 'לא נמצאו חניונים עבור משתמש זה',
     },
     en: {
+        projectNumber: 'Project Number:',
+        capacitySpaces: 'Spaces Capacity:',
+        filterDashboardForParking: 'Filter Dashboard for this Parking',
+
+        editModeActive: 'Dashboard Layout Editing Mode Active',
+        editModeDesc: 'You can drag cards by their header to reposition and drag corners to resize.',
+        resetDefault: 'Reset to Default',
+        finishAndSave: 'Done & Save',
+        parkingMapTitle: 'Parking Locations Map',
+        parkingMapSubtitle: 'Click a pin on the map to filter dashboard data for that parking',
+        showAllParkingsMap: 'Show All Parkings 🔄',
+        stackedRevTitle: 'Revenue per Location',
+        stacked: 'Stacked',
+        grouped: 'Grouped',
+        maxOccupancyTitle: 'Peak Occupancy (ts_per5 / ts_per6)',
+        dragCard: '⋮⋮ Drag Card',
+        drag: '⋮⋮ Drag',
+        currentPeriod: 'Current Period',
+        comparedToDayLastWeek: 'Compared to same day last week:',
+        comparedToPreviousMonth: 'Compared to previous month:',
+        comparedToEquivalentPeriod: 'Compared to equivalent period:',
+        includingData: 'including data of',
+        filtered: 'Filtered',
+        editModeActiveToast: 'Edit mode activated: drag and resize cards to rearrange',
+        layoutSavedToast: 'Dashboard layout saved successfully',
+        resetLayoutToast: 'Layout reset to default',
+
         peakOccupancy: 'Occupancy',
         editLayout: 'Edit Chart Layout',
         saveLayout: 'Save Chart Layout',
@@ -2046,6 +2100,46 @@ const translations = {
         noParking: 'No parkings found for this user',
     },
     de: {
+        projectNumber: 'Projektnummer:',
+        capacitySpaces: 'Kapazität Plätze:',
+        filterDashboardForParking: 'Dashboard für diesen Parkplatz filtern',
+
+        editModeActive: 'Layout-Bearbeitungsmodus aktiv',
+        editModeDesc: 'Ziehen Sie Karten an der Kopfzeile zum Verschieben und Ecken zum Ändern der Größe.',
+        resetDefault: 'Auf Standard zurücksetzen',
+        finishAndSave: 'Fertig & Speichern',
+        parkingMapTitle: 'Parkplatz-Standortkarte',
+        parkingMapSubtitle: 'Klicken Sie auf eine Stecknadel, um die Dashboard-Daten für diesen Parkplatz zu filtern',
+        showAllParkingsMap: 'Alle Parkplätze anzeigen 🔄',
+        stackedRevTitle: 'Einnahmen pro Parkplatz',
+        stacked: 'Gestapelt',
+        grouped: 'Gruppiert',
+        maxOccupancyTitle: 'Spitzenbelegung (ts_per5 / ts_per6)',
+        dragCard: '⋮⋮ Karte ziehen',
+        drag: '⋮⋮ Ziehen',
+        currentPeriod: 'Aktueller Zeitraum',
+        comparedToDayLastWeek: 'Im Vergleich zum gleichen Tag der Vorwoche:',
+        comparedToPreviousMonth: 'Im Vergleich zum Vormonat:',
+        comparedToEquivalentPeriod: 'Im Vergleich zum Vergleichszeitraum:',
+        includingData: 'einschließlich Daten von',
+        filtered: 'Gefiltert',
+        editModeActiveToast: 'Bearbeitungsmodus aktiviert: Ziehen Sie Karten zum Neuanordnen',
+        layoutSavedToast: 'Dashboard-Layout erfolgreich gespeichert',
+        resetLayoutToast: 'Layout auf Standard zurückgesetzt',
+        from: 'von',
+        minutes: 'Minuten',
+        hours: 'Stunden',
+        stay060: '0-60 Min.',
+        stay015: '0-15 Min.',
+        stayUpTo2: 'Bis 2 Std.',
+        stayUpTo3: 'Bis 3 Std.',
+        stayUpTo4: 'Bis 4 Std.',
+        stayUpTo5: 'Bis 5 Std.',
+        stayUpTo6: 'Bis 6 Std.',
+        stay724: '7-24 Std.',
+        stay015partOf060: '0-15 Min. (Teil von 0-60)',
+        avgStayLabel: 'Durchschnittliche Verweildauer',
+
         peakOccupancy: 'Auslastung',
         editLayout: 'Diagramm-Layout bearbeiten',
         saveLayout: 'Layout speichern',
@@ -2133,6 +2227,46 @@ const translations = {
         noParking: 'Keine Parkplätze für diesen Benutzer gefunden',
     },
     ar: {
+        projectNumber: 'رقم المشروع:',
+        capacitySpaces: 'سعة الأماكن:',
+        filterDashboardForParking: 'تصفية لوحة التحكم لهذا الموقف',
+
+        editModeActive: 'وضع تعديل تخطيط لوحة التحكم نشط',
+        editModeDesc: 'يمكنك سحب البطاقات من رأسها لتحريكها وسحب الزوايا لتغيير الحجم.',
+        resetDefault: 'إعادة تعيين للافتراضي',
+        finishAndSave: 'إنهاء وحفظ',
+        parkingMapTitle: 'خريطة مواقع المواقف',
+        parkingMapSubtitle: 'انقر فوق دبوس على الخريطة لتصفية بيانات لوحة التحكم لهذا الموقف',
+        showAllParkingsMap: 'عرض جميع المواقف 🔄',
+        stackedRevTitle: 'الإيرادات حسب الموقف',
+        stacked: 'مكدس',
+        grouped: 'منفصل',
+        maxOccupancyTitle: 'أقصى نسبة إشغال (ts_per5 / ts_per6)',
+        dragCard: '⋮⋮ سحب البطاقة',
+        drag: '⋮⋮ سحب',
+        currentPeriod: 'الفترة الحالية',
+        comparedToDayLastWeek: 'مقارنة بنفس اليوم من الأسبوع الماضي:',
+        comparedToPreviousMonth: 'مقارنة بالشهر السابق:',
+        comparedToEquivalentPeriod: 'مقارنة بالفترة المماثلة:',
+        includingData: 'يشمل بيانات',
+        filtered: 'تمت التصفية',
+        editModeActiveToast: 'تم تفعيل وضع التعديل: اسحب البطاقات لتغيير ترتيبها',
+        layoutSavedToast: 'تم حفظ تخطيط لوحة التحكم بنجاح',
+        resetLayoutToast: 'تمت استعادة التخطيط الافتراضي',
+        from: 'من',
+        minutes: 'دقائق',
+        hours: 'ساعات',
+        stay060: '0-60 دقيقة',
+        stay015: '0-15 دقيقة',
+        stayUpTo2: 'حتى ساعتين',
+        stayUpTo3: 'حتى 3 ساعات',
+        stayUpTo4: 'حتى 4 ساعات',
+        stayUpTo5: 'حتى 5 ساعات',
+        stayUpTo6: 'حتى 6 ساعات',
+        stay724: '7-24 ساعة',
+        stay015partOf060: '0-15 دقيقة (جزء من 0-60)',
+        avgStayLabel: 'متوسط وقت المكوث',
+
         peakOccupancy: 'الإشغال',
         editLayout: 'تعديل ترتيب الرسوم',
         saveLayout: 'حفظ ترتيب الرسوم',
@@ -2220,6 +2354,46 @@ const translations = {
         noParking: 'لا توجد مواقف لهذا المستخدم',
     },
     fr: {
+        projectNumber: 'Numéro de projet :',
+        capacitySpaces: 'Capacité en places :',
+        filterDashboardForParking: 'Filtrer le tableau de bord pour ce parking',
+
+        editModeActive: 'Mode d’édition de disposition actif',
+        editModeDesc: 'Faites glisser les cartes par l’en-tête pour les déplacer et les coins pour redimensionner.',
+        resetDefault: 'Rétablir par défaut',
+        finishAndSave: 'Terminer et enregistrer',
+        parkingMapTitle: 'Carte des emplacements de stationnement',
+        parkingMapSubtitle: 'Cliquez sur une épingle pour filtrer les données du tableau de bord pour ce parking',
+        showAllParkingsMap: 'Afficher tous les parkings 🔄',
+        stackedRevTitle: 'Revenus par parking',
+        stacked: 'Empilé',
+        grouped: 'Groupé',
+        maxOccupancyTitle: 'Occupation maximale (ts_per5 / ts_per6)',
+        dragCard: '⋮⋮ Glisser carte',
+        drag: '⋮⋮ Glisser',
+        currentPeriod: 'Période actuelle',
+        comparedToDayLastWeek: 'Par rapport au même jour la semaine dernière :',
+        comparedToPreviousMonth: 'Par rapport au mois précédent :',
+        comparedToEquivalentPeriod: 'Par rapport à la période équivalente :',
+        includingData: 'incluant les données de',
+        filtered: 'Filtré',
+        editModeActiveToast: 'Mode édition activé : faites glisser et redimensionnez les cartes',
+        layoutSavedToast: 'Disposition du tableau de bord enregistrée',
+        resetLayoutToast: 'Disposition réinitialisée par défaut',
+        from: 'de',
+        minutes: 'minutes',
+        hours: 'heures',
+        stay060: '0-60 min',
+        stay015: '0-15 min',
+        stayUpTo2: 'Jusqu’à 2 h',
+        stayUpTo3: 'Jusqu’à 3 h',
+        stayUpTo4: 'Jusqu’à 4 h',
+        stayUpTo5: 'Jusqu’à 5 h',
+        stayUpTo6: 'Jusqu’à 6 h',
+        stay724: '7-24 h',
+        stay015partOf060: '0-15 min (partie de 0-60)',
+        avgStayLabel: 'Durée moyenne de séjour',
+
         peakOccupancy: 'Occupation',
         editLayout: 'Modifier la disposition',
         saveLayout: 'Enregistrer la disposition',
@@ -2307,6 +2481,46 @@ const translations = {
         noParking: 'Aucun parking trouvé pour cet utilisateur',
     },
     ru: {
+        projectNumber: 'Номер проекта:',
+        capacitySpaces: 'Вместимость мест:',
+        filterDashboardForParking: 'Отфильтровать панель для этой парковки',
+
+        editModeActive: 'Режим редактирования макета активен',
+        editModeDesc: 'Перетаскивайте карточки за заголовок и тяните за углы для изменения размера.',
+        resetDefault: 'Сбросить по умолчанию',
+        finishAndSave: 'Готово и сохранить',
+        parkingMapTitle: 'Карта расположения парковок',
+        parkingMapSubtitle: 'Нажмите на метку на карте, чтобы отфильтровать данные панели для этой парковки',
+        showAllParkingsMap: 'Показать все парковки 🔄',
+        stackedRevTitle: 'Доход по парковкам',
+        stacked: 'С накоплением',
+        grouped: 'Раздельно',
+        maxOccupancyTitle: 'Пиковая заполненность (ts_per5 / ts_per6)',
+        dragCard: '⋮⋮ Перетащить',
+        drag: '⋮⋮ Перетащить',
+        currentPeriod: 'Текущий период',
+        comparedToDayLastWeek: 'По сравнению с аналогичным днем прошлой недели:',
+        comparedToPreviousMonth: 'По сравнению с предыдущим месяцем:',
+        comparedToEquivalentPeriod: 'По сравнению с аналогичным периодом:',
+        includingData: 'включая данные за',
+        filtered: 'Отфильтровано',
+        editModeActiveToast: 'Режим редактирования активирован: перетаскивайте карточки',
+        layoutSavedToast: 'Расположение дашборда успешно сохранено',
+        resetLayoutToast: 'Расположение сброшено по умолчанию',
+        from: 'от',
+        minutes: 'минут',
+        hours: 'часов',
+        stay060: '0-60 мин',
+        stay015: '0-15 мин',
+        stayUpTo2: 'До 2 ч',
+        stayUpTo3: 'До 3 ч',
+        stayUpTo4: 'До 4 ч',
+        stayUpTo5: 'До 5 ч',
+        stayUpTo6: 'До 6 ч',
+        stay724: '7-24 ч',
+        stay015partOf060: '0-15 мин (часть от 0-60)',
+        avgStayLabel: 'Среднее время пребывания',
+
         peakOccupancy: 'Занятость',
         editLayout: 'Изменить расположение',
         saveLayout: 'Сохранить расположение',
@@ -2452,6 +2666,27 @@ function applyLanguage(lang) {
             before.style.setProperty('--date-icon-side', 'left');
         }
     });
+
+        // Sync edit button text
+    const btnEditText = document.getElementById('btnEditText');
+    if (btnEditText) {
+        btnEditText.textContent = isDashboardEditMode ? (tr.saveLayout || 'שמור סידור') : (tr.editLayout || 'ערך סידור גרפים');
+    }
+
+    // Update map tile language
+    if (typeof setMapTileLayerForLanguage === 'function') {
+        setMapTileLayerForLanguage(lang);
+    }
+
+    // Update active pin badge
+    if (typeof updateMapActiveMarker === 'function') {
+        updateMapActiveMarker();
+    }
+
+    // Update AI comparison period label
+    if (typeof updateAiComparisonPeriodLabel === 'function') {
+        updateAiComparisonPeriodLabel();
+    }
 
     // Re-render dynamic dashboard content if data is loaded
     if (currentData && currentData.length > 0) {
@@ -6493,6 +6728,8 @@ function getComparisonDateRange(startDateStr, endDateStr) {
             start: toISO(lyStart),
             end: toISO(lyEnd),
             display: `${formatDateForDisplay(toISO(lyStart))} - ${formatDateForDisplay(toISO(lyEnd))}`,
+            monthIndex: s.getMonth(),
+            year: s.getFullYear() - 1,
             monthName: getHebrewMonthName(s.getMonth()) + ' ' + (s.getFullYear() - 1)
         };
     } else if (diffDays <= 8) {
@@ -6533,6 +6770,45 @@ function getHebrewMonthName(monthIdx) {
 let lastYearPeriodData = [];
 
 // Background fetch comparison data (Prior Period + Prior Year) & update AI
+
+let currentComparisonRange = null;
+let currentLastYearLoaded = false;
+
+function updateAiComparisonPeriodLabel() {
+    const labelEl = document.getElementById('aiComparisonPeriodLabel');
+    if (!labelEl) return;
+    if (!currentComparisonRange) {
+        labelEl.textContent = (typeof t === 'function' && t('aiAnalyzing')) ? t('aiAnalyzing') : 'מנתח נתוני תקופה...';
+        return;
+    }
+    
+    const compRange = currentComparisonRange;
+    let baseText = '';
+    if (compRange.isSingleDay) {
+        const prefix = (typeof t === 'function' && t('comparedToDayLastWeek')) ? t('comparedToDayLastWeek') : 'בהשוואה ליום מקביל שבוע שעבר:';
+        baseText = `${prefix} ${compRange.displayStart}`;
+    } else if (compRange.isMonthMode) {
+        const prefix = (typeof t === 'function' && t('comparedToPreviousMonth')) ? t('comparedToPreviousMonth') : 'בהשוואה לחודש קודם:';
+        baseText = `${prefix} ${compRange.displayStart} - ${compRange.displayEnd}`;
+    } else {
+        const prefix = (typeof t === 'function' && t('comparedToEquivalentPeriod')) ? t('comparedToEquivalentPeriod') : 'בהשוואה לתקופה מקבילה:';
+        baseText = `${prefix} ${compRange.displayStart} - ${compRange.displayEnd}`;
+    }
+    
+    if (currentLastYearLoaded && compRange.lastYearRange) {
+        let mName = compRange.lastYearRange.monthName;
+        if (typeof currentLang !== 'undefined' && translations[currentLang]) {
+            const mList = translations[currentLang].monthNames;
+            if (Array.isArray(mList) && compRange.lastYearRange.monthIndex !== undefined) {
+                mName = mList[compRange.lastYearRange.monthIndex] + ' ' + compRange.lastYearRange.year;
+            }
+        }
+        const incPrefix = (typeof t === 'function' && t('includingData')) ? t('includingData') : 'כולל נתוני';
+        baseText += ` | ${incPrefix} ${mName}`;
+    }
+    labelEl.textContent = baseText;
+}
+
 async function fetchComparisonData(startDate, endDate) {
     const compRange = getComparisonDateRange(startDate, endDate);
     if (!compRange) return;
@@ -6540,16 +6816,9 @@ async function fetchComparisonData(startDate, endDate) {
     previousPeriodRange = compRange;
     lastYearPeriodData = [];
     
-    const labelEl = document.getElementById('aiComparisonPeriodLabel');
-    if (labelEl) {
-        if (compRange.isSingleDay) {
-            labelEl.textContent = `בהשוואה ליום מקביל שבוע שעבר: ${compRange.displayStart}`;
-        } else if (compRange.isMonthMode) {
-            labelEl.textContent = `בהשוואה לחודש קודם: ${compRange.displayStart} - ${compRange.displayEnd}`;
-        } else {
-            labelEl.textContent = `בהשוואה לתקופה מקבילה: ${compRange.displayStart} - ${compRange.displayEnd}`;
-        }
-    }
+    currentComparisonRange = compRange;
+    currentLastYearLoaded = false;
+    updateAiComparisonPeriodLabel();
 
     const selectedParking = document.getElementById('parkingSelector') ? document.getElementById('parkingSelector').value : '';
 
@@ -6599,9 +6868,8 @@ async function fetchComparisonData(startDate, endDate) {
                     return true;
                 });
                 console.log('Loaded last year comparison data:', lastYearPeriodData.length, 'records');
-                if (labelEl) {
-                    labelEl.textContent += ` | כולל נתוני ${compRange.lastYearRange.monthName}`;
-                }
+                currentLastYearLoaded = true;
+                updateAiComparisonPeriodLabel();
             }
         } catch (lyErr) {
             console.warn('Could not load last year comparison data:', lyErr);
@@ -7111,6 +7379,34 @@ function createPinIcon(parkingName, isSelected) {
     });
 }
 
+
+let currentMapTileLayer = null;
+function setMapTileLayerForLanguage(lang) {
+    if (!parkingsMapInstance || typeof L === 'undefined') return;
+    if (currentMapTileLayer) {
+        try { parkingsMapInstance.removeLayer(currentMapTileLayer); } catch(e) {}
+    }
+    
+    // For Arabic, OSM provides full Arabic labels across Middle East.
+    // For all other languages (Hebrew, English, German, French, Russian), CartoDB Voyager
+    // renders clean Hebrew/English in Israel and English everywhere outside Israel!
+    let tileUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+    let attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+    let subdomains = 'abcd';
+    
+    if (lang === 'ar') {
+        tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        attribution = '&copy; OpenStreetMap contributors';
+        subdomains = 'abc';
+    }
+    
+    currentMapTileLayer = L.tileLayer(tileUrl, {
+        attribution: attribution,
+        maxZoom: 19,
+        subdomains: subdomains
+    }).addTo(parkingsMapInstance);
+}
+
 function initOrUpdateParkingsMap() {
     const mapEl = document.getElementById('parkingsMap');
     if (!mapEl) return;
@@ -7128,10 +7424,8 @@ function initOrUpdateParkingsMap() {
             scrollWheelZoom: true
         });
         
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
-            maxZoom: 19
-        }).addTo(parkingsMapInstance);
+        // Initialize tile layer based on current language
+        setMapTileLayerForLanguage(typeof currentLang !== 'undefined' ? currentLang : 'he');
         
         // Listen to dropdown change to keep map in sync
         const selector = document.getElementById('parkingSelector');
@@ -7171,21 +7465,27 @@ function initOrUpdateParkingsMap() {
                 icon: createPinIcon(p.parking_name || 'חניון', isSelected)
             }).addTo(parkingsMapInstance);
             
-            const capacityText = p.capacity ? `<div style="font-size: 12px; color: #64748B; margin-bottom: 8px;">קיבולת מקומות: <strong style="color: #0F172A;">${Number(p.capacity).toLocaleString()}</strong></div>` : '';
+            const currentDir = (typeof translations !== 'undefined' && translations[currentLang] && translations[currentLang].dir) ? translations[currentLang].dir : 'rtl';
+            const textAlign = currentDir === 'ltr' ? 'left' : 'right';
+            const capLabel = (typeof t === 'function' && t('capacitySpaces')) ? t('capacitySpaces') : 'קיבולת מקומות:';
+            const projLabel = (typeof t === 'function' && t('projectNumber')) ? t('projectNumber') : 'מספר פרויקט:';
+            const filterLabel = (typeof t === 'function' && t('filterDashboardForParking')) ? t('filterDashboardForParking') : 'סנן דשבורד לחניון זה';
+
+            const capacityText = p.capacity ? `<div style="font-size: 12px; color: #64748B; margin-bottom: 8px;">${capLabel} <strong style="color: #0F172A;">${Number(p.capacity).toLocaleString()}</strong></div>` : '';
             
             const popupHtml = `
-                <div style="direction: rtl; text-align: right; font-family: 'Heebo', sans-serif; min-width: 190px;">
+                <div style="direction: ${currentDir}; text-align: ${textAlign}; font-family: 'Heebo', sans-serif; min-width: 190px;">
                     <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
                         <span style="font-size: 18px;">🅿️</span>
                         <strong style="font-size: 15px; color: #0F172A;">${p.parking_name || 'חניון'}</strong>
                     </div>
                     <div style="font-size: 12px; color: #64748B; margin-bottom: 4px;">
-                        מספר פרויקט: <strong style="color: #334155;">${p.project_number}</strong>
+                        ${projLabel} <strong style="color: #334155;">${p.project_number}</strong>
                     </div>
                     ${capacityText}
                     <button type="button" onclick="selectParkingFromMap('${projStr}')" style="width: 100%; margin-top: 6px; padding: 8px 12px; background: #007AFF; color: #ffffff; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 4px rgba(0, 122, 255, 0.25);">
                         <span>🔍</span>
-                        <span>סנן דשבורד לחניון זה</span>
+                        <span>${filterLabel}</span>
                     </button>
                 </div>
             `;
@@ -7256,7 +7556,7 @@ function updateMapActiveMarker() {
     if (selectedProj && parkingMarkersMap[selectedProj]) {
         const pInfo = parkingMarkersMap[selectedProj];
         if (badge) {
-            badge.textContent = `מסונן: ${pInfo.name}`;
+            badge.textContent = `${(typeof t === 'function' && t('filtered')) ? t('filtered') : 'מסונן'}: ${pInfo.name}`;
             badge.style.display = 'inline-block';
         }
         if (resetBtn) resetBtn.style.display = 'inline-block';
@@ -7286,7 +7586,8 @@ function updateMapActiveMarker() {
 // ============================================================
 let dashboardGrid = null;
 let isDashboardEditMode = false;
-const DASHBOARD_GRID_STORAGE_KEY = 'dashboard_v2_grid_layout_v2';
+let lastFullGridLayout = null;
+const DASHBOARD_GRID_STORAGE_KEY = 'dashboard_v2_grid_layout_v5';
 
 const DEFAULT_GRID_LAYOUT = [
     { id: 'widget-ai-analysis', x: 0, y: 0, w: 12, h: 4 },
@@ -7321,19 +7622,21 @@ function initDashboardGridStack() {
             margin: 12,
             animate: true,
             staticGrid: true, // Initially locked for normal viewing
-            float: false,
-            rtl: true, // Full Hebrew RTL support
+            float: false, // Keeps items tightly packed upwards with no vertical gaps
+            rtl: true, // Full RTL support
             handle: '.chart-header, .ai-header', // Drag from card headers
             resizable: {
                 handles: 'sw, se, s'
             }
         }, '#dashboardGridStack');
 
-        // Restore user layout from localStorage
+        // Restore user layout from localStorage or default
         loadSavedDashboardLayout();
+        dashboardGrid.compact('compact', true);
 
         // Listen to resize and drag events
         dashboardGrid.on('resizestop dragstop', function(event, element) {
+            dashboardGrid.compact('compact', true);
             saveDashboardLayout();
             refreshChartsAndMapAfterLayoutChange();
         });
@@ -7352,19 +7655,25 @@ function loadSavedDashboardLayout() {
             const layoutData = JSON.parse(saved);
             if (Array.isArray(layoutData) && layoutData.length > 0) {
                 dashboardGrid.load(layoutData, false);
+                lastFullGridLayout = layoutData;
                 console.log('Loaded saved dashboard layout from localStorage');
+                return;
             }
         }
     } catch (e) {
         console.warn('Could not load saved dashboard layout:', e);
     }
+    lastFullGridLayout = DEFAULT_GRID_LAYOUT;
 }
 
 function saveDashboardLayout() {
-    if (!dashboardGrid) return;
+    if (!dashboardGrid || isSingleParkingMode) return; // Never overwrite full layout during single parking filter
     try {
         const items = dashboardGrid.save(false);
-        localStorage.setItem(DASHBOARD_GRID_STORAGE_KEY, JSON.stringify(items));
+        if (Array.isArray(items) && items.length >= 10) {
+            lastFullGridLayout = items;
+            localStorage.setItem(DASHBOARD_GRID_STORAGE_KEY, JSON.stringify(items));
+        }
     } catch (e) {
         console.warn('Could not save dashboard layout:', e);
     }
@@ -7416,18 +7725,18 @@ function initStatsSortable() {
 
 function resetDashboardLayout() {
     try {
-        // Reset GridStack layout
         localStorage.removeItem(DASHBOARD_GRID_STORAGE_KEY);
         if (dashboardGrid) {
             dashboardGrid.load(DEFAULT_GRID_LAYOUT, false);
+            dashboardGrid.compact('compact', true);
+            lastFullGridLayout = DEFAULT_GRID_LAYOUT;
         }
         
-        // Reset Stat cards order
         localStorage.removeItem(STATS_CARDS_STORAGE_KEY);
         updateStats();
 
         refreshChartsAndMapAfterLayoutChange();
-        showDashboardToast(t('resetLayout') || 'הסידור אופס לברירת המחדל');
+        showDashboardToast((typeof t === 'function' && t('resetLayoutToast')) ? t('resetLayoutToast') : 'הסידור אופס לברירת המחדל');
     } catch (e) {
         console.error('Error resetting dashboard layout:', e);
     }
@@ -7444,6 +7753,9 @@ function toggleDashboardEditMode() {
     
     if (dashboardGrid) {
         dashboardGrid.setStatic(!isDashboardEditMode);
+        if (!isDashboardEditMode) {
+            dashboardGrid.compact('compact', true);
+        }
     }
 
     if (statsSortable) {
@@ -7458,7 +7770,7 @@ function toggleDashboardEditMode() {
             if (btnText) btnText.textContent = (typeof t === 'function' && t('saveLayout')) ? t('saveLayout') : 'שמור סידור גרפים';
         }
         if (resetBtn) resetBtn.style.display = 'inline-flex';
-        showDashboardToast('מצב עריכה הופעל: גרור קוביות וגרפים לסידור מחדש');
+        showDashboardToast((typeof t === 'function' && t('editModeActiveToast')) ? t('editModeActiveToast') : 'מצב עריכה הופעל: גרור קוביות וגרפים לסידור מחדש');
     } else {
         if (container) container.classList.remove('dashboard-editing-active');
         if (btn) {
@@ -7471,7 +7783,7 @@ function toggleDashboardEditMode() {
         saveDashboardLayout();
         saveStatCardsOrder();
         refreshChartsAndMapAfterLayoutChange();
-        showDashboardToast('סידור הדשבורד והגרפים נשמר בהצלחה');
+        showDashboardToast((typeof t === 'function' && t('layoutSavedToast')) ? t('layoutSavedToast') : 'סידור הדשבורד והגרפים נשמר בהצלחה');
     }
 }
 
@@ -7520,16 +7832,31 @@ function showDashboardToast(msg) {
 function updateGridStackSingleParkingMode(isSingle) {
     if (!dashboardGrid) return;
     const multiWidgets = document.querySelectorAll('.grid-stack-item.multi-parking-only');
-    multiWidgets.forEach(w => {
-        if (isSingle) {
+    
+    if (isSingle) {
+        // Save current full layout before removing multi widgets
+        try {
+            const currentFull = dashboardGrid.save(false);
+            if (Array.isArray(currentFull) && currentFull.length >= 10) {
+                lastFullGridLayout = currentFull;
+            }
+        } catch (e) {}
+
+        multiWidgets.forEach(w => {
             dashboardGrid.removeWidget(w, false);
             w.style.display = 'none';
-        } else {
+        });
+        dashboardGrid.compact('compact', true);
+    } else {
+        // Restore all widgets to their exact designated coordinates
+        multiWidgets.forEach(w => {
             w.style.display = '';
-            dashboardGrid.makeWidget(w);
-        }
-    });
-    dashboardGrid.compact();
+        });
+        const layoutToRestore = lastFullGridLayout || DEFAULT_GRID_LAYOUT;
+        dashboardGrid.load(layoutToRestore, false);
+        dashboardGrid.compact('compact', true);
+    }
+    refreshChartsAndMapAfterLayoutChange();
 }
 
 </script>
