@@ -1602,10 +1602,16 @@ def get_user_parkings():
         if user_data['access_level'] != 'group_manager' and user_data['access_level'] != 'group_access':
             return jsonify({'success': False, 'message': 'אין הרשאה לצפייה בחניונים מרובים'})
         
-        # קבלת כל החניונים של החברה
+        # קבלת כל החניונים של החברה (סינון לפי code_type = dashboard למניעת כפילויות)
         parkings_result = supabase.table('user_parkings').select(
             'project_number, parking_name, capacity, casual_capacity, subscribers_capacity, latitude, longitude'
-        ).eq('company_type', user_data['company_type']).execute()
+        ).eq('company_type', user_data['company_type']).eq('code_type', 'dashboard').execute()
+
+        # גיבוי למקרה שאין רשומות עם code_type = dashboard
+        if not parkings_result.data:
+            parkings_result = supabase.table('user_parkings').select(
+                'project_number, parking_name, capacity, casual_capacity, subscribers_capacity, latitude, longitude'
+            ).eq('company_type', user_data['company_type']).execute()
         
         # הסרת כפילויות
         unique_parkings = {}
@@ -1685,10 +1691,16 @@ def get_parking_data():
                 
                 query = query.eq('project_number', parking_id)
             else:
-                # כל החניונים של החברה
+                # כל החניונים של החברה (סינון לפי code_type = dashboard למניעת כפילויות)
                 company_parkings = supabase.table('user_parkings').select('project_number').eq(
                     'company_type', user_data['company_type']
-                ).execute()
+                ).eq('code_type', 'dashboard').execute()
+
+                # גיבוי למקרה שאין רשומות עם code_type = dashboard
+                if not company_parkings.data:
+                    company_parkings = supabase.table('user_parkings').select('project_number').eq(
+                        'company_type', user_data['company_type']
+                    ).execute()
                 
                 parking_numbers = [p['project_number'] for p in company_parkings.data]
                 
