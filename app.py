@@ -1573,7 +1573,7 @@ def get_user_info():
         
         # קבלת נתוני המשתמש
         user_result = supabase.table('user_parkings').select(
-            'username, email, role, project_number, parking_name, company_type, access_level'
+            'username, email, role, project_number, parking_name, company_type, access_level, capacity, casual_capacity, subscribers_capacity'
         ).eq('email', email).execute()
         
         if not user_result.data:
@@ -1756,6 +1756,22 @@ def get_parking_data():
             print(f"Warning: Could not load parking names mapping: {str(e)}")
         
         # עיבוד הנתונים
+        def _safe_int(val, default=0):
+            if val is None or val == '':
+                return default
+            try:
+                return int(float(str(val)))
+            except (ValueError, TypeError):
+                return default
+
+        def _safe_float(val, default=0.0):
+            if val is None or val == '':
+                return default
+            try:
+                return float(str(val))
+            except (ValueError, TypeError):
+                return default
+
         processed_data = []
         for row in result.data:
             # וידוא שכל השדות הנדרשים קיימים
@@ -1765,40 +1781,42 @@ def get_parking_data():
                 'report_date': row.get('report_date'),
                 'project_number': row.get('project_number'),
                 'parking_name': parking_names_map.get(row.get('project_number'), '') or row.get('parking_name', ''),  # שם חניון מהמיפוי
-                'total_revenue_shekels': float(row.get('total_revenue_shekels', 0)),
-                'net_revenue_shekels': float(row.get('net_revenue_shekels', 0)),
-                's_cash_shekels': float(row.get('s_cash_shekels', 0)),
-                's_credit_shekels': float(row.get('s_credit_shekels', 0)),
-                's_pango_shekels': float(row.get('s_pango_shekels', 0)),
-                's_celo_shekels': float(row.get('s_celo_shekels', 0)),
-                's_encoder1': int(row.get('s_encoder1', 0)),  # הוסף מקודד 1
-                's_encoder2': int(row.get('s_encoder2', 0)),  # הוסף מקודד 2
-                's_encoder3': int(row.get('s_encoder3', 0)),  # הוסף מקודד 3
-                'sencodertot': int(row.get('sencodertot', 0)),  # הוסף סה"כ מקודדים
-                't_entry_tot': int(row.get('t_entry_tot', 0)),
-                't_exit_tot': int(row.get('t_exit_tot', 0)),
-                't_exit_s': int(row.get('t_exit_s', 0)),
-                't_exit_p': int(row.get('t_exit_p', 0)),
-                't_entry_s': int(row.get('t_entry_s', 0)),  # מזדמנים
-                't_entry_p': int(row.get('t_entry_p', 0)),  # מנויים
-                't_entry_ap': int(row.get('t_entry_ap', 0)),  # אפליקציה
-                't_open_b': int(row.get('t_open_b', 0)),  # פתיחות מחסום
-                'ts_per1': int(row.get('ts_per1', 0)),
-                'ts_per2': int(row.get('ts_per2', 0)),
-                'ts_per3': int(row.get('ts_per3', 0)),
-                'ts_per4': int(row.get('ts_per4', 0)),
-                'ts_per5': int(row.get('ts_per5', 0)),
-                'ts_per6': int(row.get('ts_per6', 0)),
-                'stay_015': int(row.get('stay_015', 0)),
-                'stay_030': int(row.get('stay_030', 0)),
-                'stay_045': int(row.get('stay_045', 0)),
-                'stay_060': int(row.get('stay_060', 0)),
-                'stay_2': int(row.get('stay_2', 0)),
-                'stay_3': int(row.get('stay_3', 0)),
-                'stay_4': int(row.get('stay_4', 0)),
-                'stay_5': int(row.get('stay_5', 0)),
-                'stay_6': int(row.get('stay_6', 0)),
-                'stay_724': int(row.get('stay_724', 0))
+                'total_revenue_shekels': _safe_float(row.get('total_revenue_shekels')),
+                'net_revenue_shekels': _safe_float(row.get('net_revenue_shekels')),
+                's_cash_shekels': _safe_float(row.get('s_cash_shekels')),
+                's_credit_shekels': _safe_float(row.get('s_credit_shekels')),
+                's_pango_shekels': _safe_float(row.get('s_pango_shekels')),
+                's_celo_shekels': _safe_float(row.get('s_celo_shekels')),
+                's_encoder1': _safe_int(row.get('s_encoder1')),
+                's_encoder2': _safe_int(row.get('s_encoder2')),
+                's_encoder3': _safe_int(row.get('s_encoder3')),
+                'sencodertot': _safe_int(row.get('sencodertot')),
+                't_entry_tot': _safe_int(row.get('t_entry_tot')),
+                't_exit_tot': _safe_int(row.get('t_exit_tot')),
+                't_exit_s': _safe_int(row.get('t_exit_s')),
+                't_exit_p': _safe_int(row.get('t_exit_p')),
+                't_entry_s': _safe_int(row.get('t_entry_s')),  # מזדמנים
+                't_entry_p': _safe_int(row.get('t_entry_p')),  # מנויים
+                't_entry_ap': _safe_int(row.get('t_entry_ap')),  # אפליקציה
+                't_open_b': _safe_int(row.get('t_open_b')),  # פתיחות מחסום
+                'ts_per1': _safe_int(row.get('ts_per1') if row.get('ts_per1') is not None else row.get('tsper1')),
+                'ts_per2': _safe_int(row.get('ts_per2') if row.get('ts_per2') is not None else row.get('tsper2')),
+                'ts_per3': _safe_int(row.get('ts_per3') if row.get('ts_per3') is not None else row.get('tsper3')),
+                'ts_per4': _safe_int(row.get('ts_per4') if row.get('ts_per4') is not None else row.get('tsper4')),
+                'ts_per5': _safe_int(row.get('ts_per5') if row.get('ts_per5') is not None else row.get('tsper5')),
+                'ts_per6': _safe_int(row.get('ts_per6') if row.get('ts_per6') is not None else row.get('tsper6')),
+                'tsper5': _safe_int(row.get('ts_per5') if row.get('ts_per5') is not None else row.get('tsper5')),
+                'tsper6': _safe_int(row.get('ts_per6') if row.get('ts_per6') is not None else row.get('tsper6')),
+                'stay_015': _safe_int(row.get('stay_015')),
+                'stay_030': _safe_int(row.get('stay_030')),
+                'stay_045': _safe_int(row.get('stay_045')),
+                'stay_060': _safe_int(row.get('stay_060')),
+                'stay_2': _safe_int(row.get('stay_2')),
+                'stay_3': _safe_int(row.get('stay_3')),
+                'stay_4': _safe_int(row.get('stay_4')),
+                'stay_5': _safe_int(row.get('stay_5')),
+                'stay_6': _safe_int(row.get('stay_6')),
+                'stay_724': _safe_int(row.get('stay_724'))
             }
             processed_data.append(processed_row)
         
