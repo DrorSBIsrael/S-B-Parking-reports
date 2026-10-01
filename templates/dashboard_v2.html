@@ -508,6 +508,52 @@
             transform: scale(0.98);
         }
         
+        /* Day of Week Filter */
+        .day-filter-control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            justify-content: flex-end;
+        }
+        .days-of-week-picker {
+            display: inline-flex;
+            background: #f8fafc;
+            padding: 3px;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            gap: 4px;
+            align-items: center;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+        }
+        .dow-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 7px;
+            border: 1px solid transparent;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.18s ease;
+            background: transparent;
+            color: #64748b;
+            user-select: none;
+            padding: 0;
+            font-family: inherit;
+        }
+        .dow-btn.active {
+            background: #0284c7;
+            color: #ffffff;
+            border-color: #0284c7;
+            box-shadow: 0 1px 3px rgba(2, 132, 199, 0.35);
+        }
+        .dow-btn:hover:not(.active) {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+        
         /* Quick Range Buttons */
         .quick-ranges {
             display: flex;
@@ -1504,6 +1550,23 @@
                         <input type="date" id="endDate" class="control-input" onclick="try{this.showPicker()}catch(e){}">
                     </div>
                 </div>
+
+                <!-- Day of Week Filter -->
+                <div class="control-group day-filter-control-group" id="dayFilterGroup">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                        <label class="control-label" style="margin: 0; font-size: 13px; font-weight: 600;" data-i18n="filterDays">ימים בשבוע</label>
+                        <button type="button" class="day-filter-toggle-all" onclick="toggleAllDaysOfWeek()" style="background: none; border: none; font-size: 11px; color: var(--primary); cursor: pointer; padding: 0 4px; font-weight: 600; text-decoration: underline;" id="btnToggleAllDays" data-i18n="weekdaysOnly">ימי חול</button>
+                    </div>
+                    <div class="days-of-week-picker" id="daysOfWeekPicker">
+                        <button type="button" class="dow-btn active" data-dow="0" onclick="toggleDayOfWeek(0)" title="ראשון">א</button>
+                        <button type="button" class="dow-btn active" data-dow="1" onclick="toggleDayOfWeek(1)" title="שני">ב</button>
+                        <button type="button" class="dow-btn active" data-dow="2" onclick="toggleDayOfWeek(2)" title="שלישי">ג</button>
+                        <button type="button" class="dow-btn active" data-dow="3" onclick="toggleDayOfWeek(3)" title="רביעי">ד</button>
+                        <button type="button" class="dow-btn active" data-dow="4" onclick="toggleDayOfWeek(4)" title="חמישי">ה</button>
+                        <button type="button" class="dow-btn active" data-dow="5" onclick="toggleDayOfWeek(5)" title="שישי">ו</button>
+                        <button type="button" class="dow-btn active" data-dow="6" onclick="toggleDayOfWeek(6)" title="שבת">ש</button>
+                    </div>
+                </div>
             </div><!-- Close First Row -->
                     
 
@@ -1762,7 +1825,7 @@
                             <div class="chart-header">
                                 <h2 class="chart-title">
                                     <span>📈</span>
-                                    <span data-i18n="maxOccupancyTitle">תפוסה מקסימלית (ts_per5 / ts_per6)</span>
+                                    <span data-i18n="maxOccupancyTitle">תפוסה מקסימלית</span>
                                 </h2>
                                 <span class="grid-drag-indicator" data-i18n="drag">⋮⋮ גרור</span>
                             </div>
@@ -1918,7 +1981,15 @@ const translations = {
         stackedRevTitle: 'הכנסות לפי חניון (Revenue per Location)',
         stacked: 'מוערם',
         grouped: 'נפרד',
-        maxOccupancyTitle: 'תפוסה מקסימלית (ts_per5 / ts_per6)',
+        maxOccupancyTitle: 'תפוסה מקסימלית',
+        filterDays: 'ימים בשבוע',
+        allDays: 'הכל',
+        weekdaysOnly: 'ימי חול',
+        peakCasual: 'שיא מזדמנים',
+        peakSub: 'שיא מנויים',
+        casualPlusSub: 'מזדמנים + מנויים',
+        daysShort: ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'],
+        daysLong: ['יום ראשון', 'יום שני', 'יום שלישי', 'יום רביעי', 'יום חמישי', 'יום שישי', 'יום שבת'],
         dragCard: '⋮⋮ גרור כרטיס',
         drag: '⋮⋮ גרור',
         currentPeriod: 'תקופה נוכחית',
@@ -2040,7 +2111,15 @@ const translations = {
         stackedRevTitle: 'Revenue per Location',
         stacked: 'Stacked',
         grouped: 'Grouped',
-        maxOccupancyTitle: 'Peak Occupancy (ts_per5 / ts_per6)',
+        maxOccupancyTitle: 'Peak Occupancy',
+        filterDays: 'Days of Week',
+        allDays: 'All',
+        weekdaysOnly: 'Weekdays',
+        peakCasual: 'Peak Casual',
+        peakSub: 'Peak Subscribers',
+        casualPlusSub: 'Casual + Subscribers',
+        daysShort: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
+        daysLong: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
         dragCard: '⋮⋮ Drag Card',
         drag: '⋮⋮ Drag',
         currentPeriod: 'Current Period',
@@ -2162,7 +2241,15 @@ const translations = {
         stackedRevTitle: 'Einnahmen pro Parkplatz',
         stacked: 'Gestapelt',
         grouped: 'Gruppiert',
-        maxOccupancyTitle: 'Spitzenbelegung (ts_per5 / ts_per6)',
+        maxOccupancyTitle: 'Spitzenbelegung',
+        filterDays: 'Wochentage',
+        allDays: 'Alle',
+        weekdaysOnly: 'Werktage',
+        peakCasual: 'Spitze Kurzparker',
+        peakSub: 'Spitze Dauerparker',
+        casualPlusSub: 'Kurzparker + Dauerparker',
+        daysShort: ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'],
+        daysLong: ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'],
         dragCard: '⋮⋮ Karte ziehen',
         drag: '⋮⋮ Ziehen',
         currentPeriod: 'Aktueller Zeitraum',
@@ -2289,7 +2376,15 @@ const translations = {
         stackedRevTitle: 'الإيرادات حسب الموقف',
         stacked: 'مكدس',
         grouped: 'منفصل',
-        maxOccupancyTitle: 'أقصى نسبة إشغال (ts_per5 / ts_per6)',
+        maxOccupancyTitle: 'أقصى نسبة إشغال',
+        filterDays: 'أيام الأسبوع',
+        allDays: 'الكل',
+        weekdaysOnly: 'أيام العمل',
+        peakCasual: 'ذروة الزوار',
+        peakSub: 'ذروة المشتركين',
+        casualPlusSub: 'زوار + مشتركون',
+        daysShort: ['أ', 'إ', 'ث', 'أ', 'خ', 'ج', 'س'],
+        daysLong: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
         dragCard: '⋮⋮ سحب البطاقة',
         drag: '⋮⋮ سحب',
         currentPeriod: 'الفترة الحالية',
@@ -2416,7 +2511,15 @@ const translations = {
         stackedRevTitle: 'Revenus par parking',
         stacked: 'Empilé',
         grouped: 'Groupé',
-        maxOccupancyTitle: 'Occupation maximale (ts_per5 / ts_per6)',
+        maxOccupancyTitle: 'Occupation maximale',
+        filterDays: 'Jours de la semaine',
+        allDays: 'Tous',
+        weekdaysOnly: 'Jours ouvrés',
+        peakCasual: 'Pic occasionnels',
+        peakSub: 'Pic abonnés',
+        casualPlusSub: 'Occasionnels + Abonnés',
+        daysShort: ['Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa'],
+        daysLong: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'],
         dragCard: '⋮⋮ Glisser carte',
         drag: '⋮⋮ Glisser',
         currentPeriod: 'Période actuelle',
@@ -2543,7 +2646,15 @@ const translations = {
         stackedRevTitle: 'Доход по парковкам',
         stacked: 'С накоплением',
         grouped: 'Раздельно',
-        maxOccupancyTitle: 'Пиковая заполненность (ts_per5 / ts_per6)',
+        maxOccupancyTitle: 'Пиковая заполненность',
+        filterDays: 'Дни недели',
+        allDays: 'Все',
+        weekdaysOnly: 'Будни',
+        peakCasual: 'Пик разовые',
+        peakSub: 'Пик абонементы',
+        casualPlusSub: 'Разовые + Абонементы',
+        daysShort: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+        daysLong: ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'],
         dragCard: '⋮⋮ Перетащить',
         drag: '⋮⋮ Перетащить',
         currentPeriod: 'Текущий период',
@@ -2736,6 +2847,11 @@ function applyLanguage(lang) {
         updateAiComparisonPeriodLabel();
     }
 
+    // Update Day Filter UI with current language
+    if (typeof updateDayFilterUI === 'function') {
+        updateDayFilterUI();
+    }
+
     // Re-render dynamic dashboard content if data is loaded
     if (currentData && currentData.length > 0) {
         updateStats();
@@ -2748,7 +2864,9 @@ function applyLanguage(lang) {
 }
 
 // Global variables
-let currentData = [];
+let allLoadedData = []; // Full loaded data before day filter
+let currentData = [];   // Filtered data displayed across the dashboard
+let selectedDaysOfWeek = [0, 1, 2, 3, 4, 5, 6]; // 0=Sunday ... 6=Saturday. All days active by default
 let charts = {};
 let isSingleParkingMode = false;
 let isGroup = false;
@@ -2757,6 +2875,97 @@ let userParkings = [];
 let currentViewMode = 'daily'; // Track current view mode
 let chartTypes = { revenue: 'line', entries: 'bar', daily: 'bar' }; // Track chart types
 let stayDurationViewMode = 'bar'; // Track stay duration view mode
+
+// Day of week helper functions
+function getDayOfWeekFromDateStr(dateStr) {
+    if (!dateStr) return -1;
+    const cleanStr = String(dateStr).trim();
+    if (cleanStr.includes('/')) {
+        const parts = cleanStr.split('/');
+        if (parts.length === 3) {
+            const d = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10);
+            const y = parseInt(parts[2], 10);
+            return new Date(y, m - 1, d).getDay();
+        }
+    } else if (cleanStr.includes('-')) {
+        const parts = cleanStr.split(/[-T ]/);
+        if (parts.length >= 3) {
+            const y = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10);
+            const d = parseInt(parts[2], 10);
+            return new Date(y, m - 1, d).getDay();
+        }
+    }
+    const parsed = new Date(cleanStr);
+    return isNaN(parsed) ? -1 : parsed.getDay();
+}
+
+function applyDayFilter() {
+    if (!Array.isArray(allLoadedData) || allLoadedData.length === 0) {
+        currentData = [];
+        return;
+    }
+    if (selectedDaysOfWeek.length === 7) {
+        currentData = [...allLoadedData];
+    } else {
+        currentData = allLoadedData.filter(row => {
+            const dow = getDayOfWeekFromDateStr(row.report_date);
+            return dow === -1 || selectedDaysOfWeek.includes(dow);
+        });
+    }
+}
+
+function toggleDayOfWeek(dow) {
+    dow = parseInt(dow, 10);
+    if (selectedDaysOfWeek.includes(dow)) {
+        if (selectedDaysOfWeek.length === 1) {
+            // Keep at least one day selected
+            return;
+        }
+        selectedDaysOfWeek = selectedDaysOfWeek.filter(d => d !== dow);
+    } else {
+        selectedDaysOfWeek.push(dow);
+        selectedDaysOfWeek.sort();
+    }
+    updateDayFilterUI();
+    applyDayFilter();
+    updateDashboard();
+}
+
+function toggleAllDaysOfWeek() {
+    if (selectedDaysOfWeek.length === 7) {
+        selectedDaysOfWeek = [0, 1, 2, 3, 4]; // Weekdays (Sunday to Thursday)
+    } else {
+        selectedDaysOfWeek = [0, 1, 2, 3, 4, 5, 6]; // All days
+    }
+    updateDayFilterUI();
+    applyDayFilter();
+    updateDashboard();
+}
+
+function updateDayFilterUI() {
+    const tr = (typeof translations !== 'undefined' && translations[currentLang]) ? translations[currentLang] : (translations?.he || {});
+    const daysShort = tr.daysShort || ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
+    const daysLong = tr.daysLong || ['יום ראשון', 'יום שני', 'יום שלישי', 'יום רביעי', 'יום חמישי', 'יום שישי', 'יום שבת'];
+    
+    document.querySelectorAll('.dow-btn').forEach(btn => {
+        const dow = parseInt(btn.getAttribute('data-dow'), 10);
+        const isActive = selectedDaysOfWeek.includes(dow);
+        btn.classList.toggle('active', isActive);
+        if (daysShort[dow] !== undefined) {
+            btn.textContent = daysShort[dow];
+        }
+        if (daysLong[dow] !== undefined) {
+            btn.title = daysLong[dow];
+        }
+    });
+
+    const toggleAllBtn = document.getElementById('btnToggleAllDays');
+    if (toggleAllBtn) {
+        toggleAllBtn.textContent = (selectedDaysOfWeek.length === 7) ? (tr.weekdaysOnly || 'ימי חול') : (tr.allDays || 'הכל');
+    }
+}
 
 // Chart.js default configuration
 Chart.defaults.font.family = "'Heebo', -apple-system, BlinkMacSystemFont, sans-serif";
@@ -2901,6 +3110,7 @@ async function loadUserInfo() {
                 });
             } else {
                 isGroup = false;
+                userParkings = [result.user];
                 document.getElementById('dashboardTitle').textContent = result.user.parking_name || t('allParkings');
             }
         }
@@ -3079,8 +3289,20 @@ async function loadDataStandard(startDate, endDate) {
         }
     
     // Process and display data
-    currentData = result.data || [];
-    console.log('Loaded data:', currentData.length, 'records');
+    let raw = result.data || [];
+    if (Array.isArray(raw) && raw.length > 0) {
+        const seenRecords = new Set();
+        raw = raw.filter(d => {
+            const key = (d.id != null) ? d.id : `${d.project_number}_${d.report_date}`;
+            if (seenRecords.has(key)) return false;
+            seenRecords.add(key);
+            return true;
+        });
+    }
+    allLoadedData = raw;
+    applyDayFilter();
+    updateDayFilterUI();
+    console.log('Loaded data:', allLoadedData.length, 'records, Filtered:', currentData.length);
     
     // Debug: show unique parkings in the data
     if (currentData.length > 0) {
@@ -3184,7 +3406,19 @@ async function loadDataForGroup(startDate, endDate) {
                 loadedData = filtered;
             }
         }
-        currentData = loadedData;
+        let raw = loadedData || [];
+        if (Array.isArray(raw) && raw.length > 0) {
+            const seenRecords = new Set();
+            raw = raw.filter(d => {
+                const key = (d.id != null) ? d.id : `${d.project_number}_${d.report_date}`;
+                if (seenRecords.has(key)) return false;
+                seenRecords.add(key);
+                return true;
+            });
+        }
+        allLoadedData = raw;
+        applyDayFilter();
+        updateDayFilterUI();
         hideError();
         try {
             updateDashboard();
@@ -3200,20 +3434,12 @@ async function loadDataForGroup(startDate, endDate) {
 
 // Update dashboard with current data
 function updateDashboard() {
-    // Deduplicate records to prevent duplicate rows from inflating totals
-    if (Array.isArray(currentData) && currentData.length > 0) {
-        const seenRecords = new Set();
-        currentData = currentData.filter(d => {
-            const key = (d.id != null) ? d.id : `${d.project_number}_${d.report_date}`;
-            if (seenRecords.has(key)) return false;
-            seenRecords.add(key);
-            return true;
-        });
-    }
-    if (currentData.length === 0) {
-        showError('לא נמצאו נתונים לתקופה המבוקשת');
+    if (!currentData || currentData.length === 0) {
+        showError(t('noData2') || 'לא נמצאו נתונים לתקופה או לימים שנבחרו');
+        document.getElementById('dashboardContent').style.display = 'none';
         return;
     }
+    hideError();
     
     // Debug: log first data item to see field names
     console.log('Sample data item:', currentData[0]);
@@ -3310,10 +3536,10 @@ function updateStats() {
         'occupancy': `
             <div class="stat-card" data-stat-type="occupancy" ${isGroup && !isSingleParkingMode ? 'style="cursor: pointer;"' : ''}>
                 <div class="icon" style="background: linear-gradient(135deg, #0284C7, #38BDF8);">⚡</div>
-                <h3>${t('peakOccupancy') || 'תפוסה'}</h3>
-                <div class="value" id="maxOccCardValue">טוען...</div>
-                <div class="change positive" id="maxOccCardPercent">מחושב מתוך קיבולת הרשת</div>
-                <div class="subtext">מזדמנים (ts_per5) + מנויים (ts_per6)</div>
+                <h3>${t('maxOccupancyTitle') || t('peakOccupancy') || 'תפוסה מקסימלית'}</h3>
+                <div class="value" id="maxOccCardValue">${(stats.totalPeak || 0).toLocaleString()} ${t('aiVehicles') || 'רכבים'}</div>
+                <div class="change positive" id="maxOccCardPercent">${stats.occPct || 0}% ${t('aiOutOfCap') || 'מתוך קיבולת'} ${stats.netCapacity ? stats.netCapacity.toLocaleString() : ''}</div>
+                <div class="subtext">${t('casual') || 'מזדמנים'}: ${(stats.peakCasual || 0).toLocaleString()}${stats.casualCapacity > 0 ? ` (${stats.casualOccPct}%)` : ''} | ${t('members') || 'מנויים'}: ${(stats.peakSub || 0).toLocaleString()}${stats.subscribersCapacity > 0 ? ` (${stats.subOccPct}%)` : ''}</div>
             </div>`,
         
         'barriers': `
@@ -3494,6 +3720,69 @@ function calculateStats() {
         parkingNames: [...new Set(currentData.map(d => d.parking_name))]
     });
     
+    // Calculate Peak Occupancy using capacity, casual_capacity, subscribers_capacity
+    const selectedParkingVal = document.getElementById('parkingSelector') ? document.getElementById('parkingSelector').value : '';
+    let netCapacity = 0;
+    let casualCapacity = 0;
+    let subscribersCapacity = 0;
+
+    if (selectedParkingVal && Array.isArray(userParkings) && userParkings.length > 0) {
+        const targetP = userParkings.find(p => String(p.project_number) === String(selectedParkingVal));
+        if (targetP) {
+            netCapacity = Number(targetP.capacity || 0);
+            casualCapacity = Number(targetP.casual_capacity || 0);
+            subscribersCapacity = Number(targetP.subscribers_capacity || 0);
+        }
+    } else if (Array.isArray(userParkings) && userParkings.length > 0) {
+        userParkings.forEach(p => {
+            netCapacity += Number(p.capacity || 0);
+            casualCapacity += Number(p.casual_capacity || 0);
+            subscribersCapacity += Number(p.subscribers_capacity || 0);
+        });
+    }
+    if (netCapacity === 0) netCapacity = 14500;
+
+    // Group peaks by date to handle both single day and multiple days correctly
+    const dayPeaks = {};
+    let maxCasual = 0;
+    let maxSub = 0;
+    currentData.forEach(d => {
+        const cVal = Number(d.ts_per5 || d.tsper5 || 0);
+        const sVal = Number(d.ts_per6 || d.tsper6 || 0);
+        const dt = d.report_date || 'unknown';
+        if (!dayPeaks[dt]) {
+            dayPeaks[dt] = { casual: 0, sub: 0 };
+        }
+        dayPeaks[dt].casual += cVal;
+        dayPeaks[dt].sub += sVal;
+        if (cVal > maxCasual) maxCasual = cVal;
+        if (sVal > maxSub) maxSub = sVal;
+    });
+
+    let totalPeak = 0;
+    let peakCasual = 0;
+    let peakSub = 0;
+    const dayPeakKeys = Object.keys(dayPeaks);
+    if (dayPeakKeys.length > 0) {
+        dayPeakKeys.forEach(dt => {
+            const sumDay = dayPeaks[dt].casual + dayPeaks[dt].sub;
+            if (sumDay > totalPeak) {
+                totalPeak = sumDay;
+                peakCasual = dayPeaks[dt].casual;
+                peakSub = dayPeaks[dt].sub;
+            }
+        });
+    }
+    if (totalPeak === 0) {
+        peakCasual = maxCasual;
+        peakSub = maxSub;
+        totalPeak = peakCasual + peakSub;
+    }
+
+    const occPct = netCapacity > 0 ? Math.round((totalPeak / netCapacity) * 100) : 0;
+    const casualOccPct = casualCapacity > 0 ? Math.round((peakCasual / casualCapacity) * 100) : (netCapacity > 0 ? Math.round((peakCasual / netCapacity) * 100) : 0);
+    const subOccPct = subscribersCapacity > 0 ? Math.round((peakSub / subscribersCapacity) * 100) : (netCapacity > 0 ? Math.round((peakSub / netCapacity) * 100) : 0);
+
     return {
         totalRevenue,
         totalCash,
@@ -3511,6 +3800,17 @@ function calculateStats() {
         totalBarrier,
         uniqueDays,
         uniqueParkings,
+        
+        // Occupancy & Capacity stats
+        totalPeak,
+        peakCasual,
+        peakSub,
+        netCapacity,
+        casualCapacity,
+        subscribersCapacity,
+        occPct,
+        casualOccPct,
+        subOccPct,
         
         // Percentages
         cashPercent: totalRevenue > 0 ? (totalCash / totalRevenue) * 100 : 0,
@@ -6243,6 +6543,9 @@ function exportToCSV() {
             'יציאות מנויים',
             'סה"כ יציאות',
             'פתיחות מחסום',
+            'מקסימום מזדמנים (ts_per5)',
+            'מקסימום מנויים (ts_per6)',
+            'סה"כ תפוסה מקסימלית',
             '0-15 דקות',
             '15-30 דקות',
             '30-45 דקות',
@@ -6259,6 +6562,9 @@ function exportToCSV() {
         let csvContent = headers.join(',') + '\n';
         
         currentData.forEach(row => {
+            const pCasual = Number(row.ts_per5 || row.tsper5 || 0);
+            const pSub = Number(row.ts_per6 || row.tsper6 || 0);
+            const pTotal = pCasual + pSub;
             const csvRow = [
                 formatDateForDisplay(row.report_date),
                 `"${row.parking_name || ''}"`,
@@ -6276,6 +6582,9 @@ function exportToCSV() {
                 row.t_exit_p || 0,
                 row.t_exit_tot || 0,
                 row.t_open_b || 0,
+                pCasual,
+                pSub,
+                pTotal,
                 row.stay_015 || 0,
                 row.stay_030 || 0,
                 row.stay_045 || 0,
@@ -7009,20 +7318,12 @@ function renderAiAnalysis() {
     const topPark = sorted[0] || [t('aiGeneral') || 'כללי', 0];
     const topPct = stats.totalRevenue > 0 ? ((topPark[1] / stats.totalRevenue) * 100).toFixed(1) : 0;
 
-    // Max Occupancy calculation (ts_per5 + ts_per6)
-    let peakCasual = 0, peakSub = 0;
-    currentData.forEach(d => {
-        if ((d.ts_per5 || 0) > peakCasual) peakCasual = d.ts_per5;
-        if ((d.ts_per6 || 0) > peakSub) peakSub = d.ts_per6;
-    });
-    const totalPeak = peakCasual + peakSub;
-
-    let netCapacity = 0;
-    if (userParkings && userParkings.length > 0) {
-        userParkings.forEach(p => { netCapacity += (p.capacity || 0); });
-    }
-    if (netCapacity === 0) netCapacity = 14500;
-    const occPct = Math.round((totalPeak / netCapacity) * 100);
+    // Max Occupancy calculation (from unified stats)
+    const totalPeak = stats.totalPeak || 0;
+    const peakCasual = stats.peakCasual || 0;
+    const peakSub = stats.peakSub || 0;
+    const netCapacity = stats.netCapacity || 14500;
+    const occPct = stats.occPct || 0;
 
     // Update Occupancy Card Value
     const occValEl = document.getElementById('maxOccCardValue');
@@ -7265,12 +7566,15 @@ function renderMaxOccupancyChart() {
     currentData.forEach(d => {
         const pKey = getPeriodKey(d, currentViewMode);
         if (!occData[pKey]) occData[pKey] = { casual: 0, sub: 0 };
-        occData[pKey].casual = Math.max(occData[pKey].casual, (d.ts_per5 || 0));
-        occData[pKey].sub = Math.max(occData[pKey].sub, (d.ts_per6 || 0));
+        occData[pKey].casual += Number(d.ts_per5 || d.tsper5 || 0);
+        occData[pKey].sub += Number(d.ts_per6 || d.tsper6 || 0);
     });
 
     const periods = Object.keys(occData).sort();
     const labels = periods.map(p => formatPeriodLabel(p, currentViewMode));
+
+    const casualLabel = t('peakCasual') || 'שיא מזדמנים';
+    const subLabel = t('peakSub') || 'שיא מנויים';
 
     g_maxOccupancyChart = new Chart(ctx, {
         type: 'line',
@@ -7278,7 +7582,7 @@ function renderMaxOccupancyChart() {
             labels,
             datasets: [
                 {
-                    label: 'שיא מזדמנים (ts_per5)',
+                    label: casualLabel,
                     data: periods.map(p => occData[p].casual),
                     borderColor: '#10B981',
                     backgroundColor: 'rgba(16, 185, 129, 0.12)',
@@ -7287,7 +7591,7 @@ function renderMaxOccupancyChart() {
                     borderWidth: 2
                 },
                 {
-                    label: 'שיא מנויים (ts_per6)',
+                    label: subLabel,
                     data: periods.map(p => occData[p].sub),
                     borderColor: '#0284C7',
                     backgroundColor: 'rgba(2, 132, 199, 0.08)',
@@ -7305,7 +7609,7 @@ function renderMaxOccupancyChart() {
                 legend: { position: 'top', labels: { boxWidth: 10, font: { size: 11 } } },
                 tooltip: {
                     callbacks: {
-                        label: ctx => ` ${ctx.dataset.label}: ${ctx.raw.toLocaleString()} רכבים`
+                        label: ctx => ` ${ctx.dataset.label}: ${ctx.raw.toLocaleString()} ${t('aiVehicles') || 'רכבים'}`
                     }
                 }
             },
@@ -7527,7 +7831,13 @@ function initOrUpdateParkingsMap() {
             const projLabel = (typeof t === 'function' && t('projectNumber')) ? t('projectNumber') : 'מספר פרויקט:';
             const filterLabel = (typeof t === 'function' && t('filterDashboardForParking')) ? t('filterDashboardForParking') : 'סנן דשבורד לחניון זה';
 
-            const capacityText = p.capacity ? `<div style="font-size: 12px; color: #64748B; margin-bottom: 8px;">${capLabel} <strong style="color: #0F172A;">${Number(p.capacity).toLocaleString()}</strong></div>` : '';
+            const capacityText = p.capacity ? `<div style="font-size: 12px; color: #64748B; margin-bottom: 4px;">${capLabel} <strong style="color: #0F172A;">${Number(p.capacity).toLocaleString()}</strong></div>` : '';
+            let capacityBreakdown = '';
+            if (p.casual_capacity || p.subscribers_capacity) {
+                const cText = p.casual_capacity ? `<span>${t('casual') || 'מזדמנים'}: <strong>${Number(p.casual_capacity).toLocaleString()}</strong></span>` : '';
+                const sText = p.subscribers_capacity ? `<span>${t('members') || 'מנויים'}: <strong>${Number(p.subscribers_capacity).toLocaleString()}</strong></span>` : '';
+                capacityBreakdown = `<div style="font-size: 11px; color: #64748B; margin-bottom: 8px;">${cText}${(cText && sText) ? ' | ' : ''}${sText}</div>`;
+            }
             
             const popupHtml = `
                 <div style="direction: ${currentDir}; text-align: ${textAlign}; font-family: 'Heebo', sans-serif; min-width: 190px;">
@@ -7539,6 +7849,7 @@ function initOrUpdateParkingsMap() {
                         ${projLabel} <strong style="color: #334155;">${p.project_number}</strong>
                     </div>
                     ${capacityText}
+                    ${capacityBreakdown}
                     <button type="button" onclick="selectParkingFromMap('${projStr}')" style="width: 100%; margin-top: 6px; padding: 8px 12px; background: #007AFF; color: #ffffff; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 4px rgba(0, 122, 255, 0.25);">
                         <span>🔍</span>
                         <span>${filterLabel}</span>
