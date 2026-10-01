@@ -37,21 +37,15 @@ class ParkingUIIntegrationXML {
         if (!this.currentContract || !this.currentContract.id) return;
         try {
             const cacheKey = 'skidata_cache_company_' + this.currentContract.id;
-            const cached = localStorage.getItem(cacheKey);
-            if (cached) {
-                const parsedData = JSON.parse(cached);
-                // כאן מגדירים לכמה ימים הזיכרון נחשב תקין כדי להרשות לעדכן אותו
-                const CACHE_VALID_DAYS = 5; 
-                const cacheAgeMs = Date.now() - (parsedData.timestamp || 0);
-                const isCacheValid = cacheAgeMs < (CACHE_VALID_DAYS * 24 * 60 * 60 * 1000);
-                
-                if (parsedData && isCacheValid) {
-                    parsedData.subscribers = this.subscribers;
-                    localStorage.setItem(cacheKey, JSON.stringify(parsedData));
-                    console.log('Synchronized local cache with UI state');
-                }
-            }
-        } catch(e) {}
+            const payload = {
+                timestamp: Date.now(),
+                subscribers: this.subscribers
+            };
+            localStorage.setItem(cacheKey, JSON.stringify(payload));
+            console.log(`[Cache] Synchronized local cache for company ${this.currentContract.id} (${this.subscribers.length} items)`);
+        } catch(e) {
+            console.warn('[Cache] Could not sync cache:', e);
+        }
     }
 
     /**
@@ -1578,6 +1572,9 @@ class ParkingUIIntegrationXML {
                         Object.assign(subscriber, {
                             ...detail,
                             ...preservedFields,  // This must come AFTER detail to preserve our fields
+                            firstName: detail.person?.firstName || detail.firstName || subscriber.firstName || '',
+                            lastName: detail.person?.surname || detail.lastName || subscriber.lastName || '',
+                            name: detail.person?.surname || detail.lastName || subscriber.name || '',
                             // Map profile correctly
                             profile: detail.identification?.usageProfile?.id || detail.profile || subscriber.profile,
                             profileName: detail.identification?.usageProfile?.name || detail.profileName || subscriber.profileName,
@@ -2151,11 +2148,25 @@ class ParkingUIIntegrationXML {
                     subscriber.subscriberNum
                 );
 
-                if (result.success) {
+                if (result.success && result.data) {
                     const detail = result.data;
+                    const person = detail.person || {};
+                    const ident = detail.identification || {};
+                    const usageProf = ident.usageProfile || {};
 
+                    const fname = person.firstName || detail.firstName || subscriber.firstName || '';
+                    const lname = person.surname || detail.lastName || subscriber.lastName || '';
+                    const tag = ident.cardno || detail.tagNum || detail.cardno || subscriber.tagNum || '';
+                    const profId = usageProf.id || detail.profile || detail.profileId || subscriber.profile || '1';
+                    const profName = usageProf.name || detail.profileName || subscriber.profileName || '';
+                    const vFrom = ident.validFrom || detail.validFrom || subscriber.validFrom;
+                    const vUntil = ident.validUntil || detail.validUntil || subscriber.validUntil;
+                    const isPres = ident.present === 'true' || ident.present === true || subscriber.presence || false;
+                    const l1 = detail.lpn1 || subscriber.vehicle1 || '';
+                    const l2 = detail.lpn2 || subscriber.vehicle2 || '';
+                    const l3 = detail.lpn3 || subscriber.vehicle3 || '';
 
-                    // Preserve important fields and map correctly
+                    // Preserve important fields
                     const preservedFields = {
                         companyName: subscriber.companyName,
                         companyNum: subscriber.companyNum,
@@ -2167,34 +2178,39 @@ class ParkingUIIntegrationXML {
                     // Update subscriber with full details - map fields properly
                     Object.assign(subscriber, {
                         ...detail,
-                        ...preservedFields,  // Preserve our fields
-                        // Map profile correctly from identification.usageProfile
-                        profile: detail.identification?.usageProfile?.id || detail.profile || detail.extCardProfile || subscriber.profile,
-                        profileName: detail.identification?.usageProfile?.name || detail.profileName || subscriber.profileName,
-                        extCardProfile: detail.identification?.usageProfile?.id || detail.extCardProfile || subscriber.extCardProfile,
-                        // Map dates correctly
-                        validFrom: detail.identification?.validFrom || detail.validFrom || subscriber.validFrom,
-                        validUntil: detail.identification?.validUntil || detail.validUntil || subscriber.validUntil,
-                        // Map vehicles
-                        vehicle1: detail.lpn1 || subscriber.vehicle1 || '',
-                        vehicle2: detail.lpn2 || subscriber.vehicle2 || '',
-                        vehicle3: detail.lpn3 || subscriber.vehicle3 || '',
-                        // Map presence correctly
-                        presence: detail.identification?.present === 'true' || detail.presence,
-                        // Mark as having full details
+                        ...preservedFields,
+                        firstName: fname,
+                        lastName: lname,
+                        name: lname,
+                        tagNum: tag,
+                        cardno: tag,
+                        profile: profId,
+                        profileId: profId,
+                        profileName: profName,
+                        extCardProfile: profId,
+                        validFrom: vFrom,
+                        validUntil: vUntil,
+                        xValidFrom: vFrom,
+                        xValidUntil: vUntil,
+                        vehicle1: l1,
+                        vehicle2: l2,
+                        vehicle3: l3,
+                        lpn1: l1,
+                        lpn2: l2,
+                        lpn3: l3,
+                        presence: isPres,
+                        present: isPres,
                         hasFullDetails: true
                     });
 
-                    // Update the row in the table
+                    // Update the row in the table and local array
                     const index = this.subscribers.findIndex(s =>
-                        s.subscriberNum === subscriber.subscriberNum
+                        String(s.subscriberNum) === String(subscriber.subscriberNum) ||
+                        String(s.id) === String(subscriber.subscriberNum)
                     );
                     if (index !== -1) {
+                        this.subscribers[index] = subscriber;
                         this.updateSubscriberRow(subscriber, index);
-                    }
-
-                    if (subscriber.isLargeCompany) {
-                        // Full details loaded successfully
                     }
                 }
             } catch (error) {
@@ -2292,6 +2308,11 @@ class ParkingUIIntegrationXML {
                 const firstName = rawFirstName || ' '; // If empty, set to space to force update
                 const fullName = `${lastName} ${firstName}`.trim();
 
+                // Preserve tagNum: if empty from form, fallback to existing subscriber's tagNum/cardno
+                const tagNum = (subscriberData.tagNum && subscriberData.tagNum.trim() !== '')
+                    ? subscriberData.tagNum.trim()
+                    : (currentSubscriber?.tagNum || currentSubscriber?.cardno || '');
+
                 consumerData = {
                     consumer: {
                         id: subscriberData.subscriberNum,
@@ -2308,7 +2329,7 @@ class ParkingUIIntegrationXML {
                     },
                     identification: {
                         ptcptType: '2',  // Required field from documentation
-                        cardno: subscriberData.tagNum || '',
+                        cardno: tagNum,
                         cardclass: '1',  // Keep as 1
                         identificationType: '54',  // Back to 54 as per your requirement
                         validFrom: formatDateWithTimezone(subscriberData.validFrom),
@@ -2518,15 +2539,16 @@ class ParkingUIIntegrationXML {
                     if (isLargeCompany) {
                         // Large company detected
 
-                        // For large companies, try WITHOUT identification at all
+                        // For large companies, try WITHOUT identification block
                         const minimalData = {
-                            firstName: consumerData.person.firstName,
-                            surname: consumerData.person.surname,
+                            person: {
+                                firstName: consumerData.person.firstName,
+                                surname: consumerData.person.surname
+                            },
+                            consumer: consumerData.consumer,
                             lpn1: consumerData.lpn1 || ' ',
                             lpn2: consumerData.lpn2 || ' ',
-                            lpn3: consumerData.lpn3 || ' ',
-                            consumer: consumerData.consumer
-                            // NO identification block at all for large companies
+                            lpn3: consumerData.lpn3 || ' '
                         };
 
                         // Trying with minimal data
@@ -2548,15 +2570,14 @@ class ParkingUIIntegrationXML {
 
                         // Create a copy without identification
                         const dataWithoutIdentification = {
-                            firstName: consumerData.firstName || consumerData.surname || 'Unknown',
-                            surname: consumerData.surname || consumerData.firstName || 'Unknown',
+                            person: {
+                                firstName: consumerData.person?.firstName || ' ',
+                                surname: consumerData.person?.surname || ' '
+                            },
+                            consumer: consumerData.consumer,
                             lpn1: consumerData.lpn1 || '',
-                            // Only include lpn2 if not empty
                             ...(consumerData.lpn2 ? { lpn2: consumerData.lpn2 } : {}),
-                            // Only include lpn3 if lpn2 exists
-                            ...(consumerData.lpn2 && consumerData.lpn3 ? { lpn3: consumerData.lpn3 } : {}),
-                            consumer: consumerData.consumer
-                            // NO identification at all
+                            ...(consumerData.lpn2 && consumerData.lpn3 ? { lpn3: consumerData.lpn3 } : {})
                         };
 
                         result = await this.api.updateConsumer(
@@ -2589,18 +2610,12 @@ class ParkingUIIntegrationXML {
                     // Convert to string for comparison
                     const subscriberNumStr = String(subscriberData.subscriberNum);
 
-                    // Looking for subscriber in array
-
                     const index = this.subscribers.findIndex(s =>
                         String(s.subscriberNum) === subscriberNumStr ||
                         String(s.id) === subscriberNumStr
                     );
 
-                    // Found subscriber
-
                     if (index !== -1) {
-                        // Updating subscriber
-
                         // Update local data - preserve important fields
                         const updatedSubscriber = {
                             ...this.subscribers[index],
@@ -2617,8 +2632,8 @@ class ParkingUIIntegrationXML {
                             validUntil: subscriberData.validUntil,
                             xValidFrom: subscriberData.validFrom,
                             xValidUntil: subscriberData.validUntil,
-                            tagNum: subscriberData.tagNum,
-                            cardno: subscriberData.tagNum,
+                            tagNum: subscriberData.tagNum || tagNum || this.subscribers[index].tagNum || '',
+                            cardno: subscriberData.tagNum || tagNum || this.subscribers[index].cardno || '',
                             profile: subscriberData.profileId,
                             profileName: subscriberData.profile,
                             // Keep current presence - it will be updated from server on next load
@@ -2628,7 +2643,7 @@ class ParkingUIIntegrationXML {
                             companyName: this.subscribers[index].companyName,
                             isLargeCompany: this.subscribers[index].isLargeCompany,
                             loadingStrategy: this.subscribers[index].loadingStrategy,
-                            hasFullDetails: false  // Reset to force reload on next edit
+                            hasFullDetails: true  // Retain full details so subsequent edits don't lose data
                         };
 
                         // CRITICAL: Actually update the subscriber in the array!

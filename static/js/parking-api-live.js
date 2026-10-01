@@ -305,12 +305,12 @@ class ParkingAPIXML {
                 if (cached) {
                     const parsedData = JSON.parse(cached);
                     // כאן מגדירים לכמה ימים לשמור את הנתונים בזיכרון המקומי
-                    const CACHE_VALID_DAYS = 5; 
+                    const CACHE_VALID_DAYS = 7; 
                     const cacheAgeMs = Date.now() - (parsedData.timestamp || 0);
                     const isCacheValid = cacheAgeMs < (CACHE_VALID_DAYS * 24 * 60 * 60 * 1000);
                     
-                    if (isCacheValid && parsedData.subscribers) {
-                        console.log('Loaded from cache for company ' + companyId);
+                    if (isCacheValid && parsedData.subscribers && parsedData.subscribers.length > 0) {
+                        console.log(`[Cache] Loaded ${parsedData.subscribers.length} subscribers from cache for company ${companyId}`);
                         
                         // Force update company number and name to fix any previously corrupted cache
                         parsedData.subscribers = parsedData.subscribers.map(sub => ({
@@ -318,11 +318,12 @@ class ParkingAPIXML {
                             companyNum: companyId,
                             contractId: companyId,
                             companyName: callbacks.companyName || sub.companyName,
-                            hasFullDetails: true
+                            hasFullDetails: true,
+                            isLargeCompany: parsedData.subscribers.length > 300
                         }));
                         
                         onBasicLoaded(parsedData.subscribers);
-                        if (onProgress) onProgress({ percent: 100 });
+                        if (onProgress) onProgress({ percent: 100, message: 'הנתונים נטענו מזיכרון מקומי' });
                         return { success: true, data: parsedData.subscribers, fromCache: true };
                     } else {
                         localStorage.removeItem(cacheKey);
@@ -373,8 +374,7 @@ class ParkingAPIXML {
             const finalConsumers = Array.isArray(consumers) ? consumers : [consumers];
             // PERFORMANCE OPTIMIZATION: Smart loading based on company size
             const INSTANT_LOAD_THRESHOLD = 30;    // Load all at once (1 batch)
-            const BATCH_LOAD_THRESHOLD = 300;     // Load in batches of 50
-            const ON_DEMAND_THRESHOLD = 300;      // Load on hover only (>300)
+            const BATCH_LOAD_THRESHOLD = 300;     // Load in batches of 25 (up to 300)
             
             const subscriberCount = finalConsumers.length;
             let loadingStrategy = 'instant';
@@ -391,6 +391,8 @@ class ParkingAPIXML {
                 loadingStrategy = 'background-cache';
             }
             
+            const isLargeCompany = subscriberCount > BATCH_LOAD_THRESHOLD;
+
             // Map ALL available data from consumer list
             let basicSubscribers = finalConsumers.map(consumer => ({
                 // IDs
@@ -403,7 +405,7 @@ class ParkingAPIXML {
                 // Names - don't duplicate if only last name exists
                 firstName: consumer.firstName || '',
                 lastName: consumer.lastName || consumer.name || '',
-                name: consumer.name || '',
+                name: consumer.name || consumer.lastName || '',
                 
                 // Vehicles
                 vehicleNum: consumer.vehicleNum || consumer.lpn1 || '',
@@ -421,9 +423,11 @@ class ParkingAPIXML {
                 xValidUntil: consumer.xValidUntil || consumer.validUntil || '2030-12-31',
                 
                 // Other fields
-                tagNum: consumer.tagNum || consumer.cardNum || '',
-                profile: consumer.profile || consumer.extCardProfile || '0',
-                extCardProfile: consumer.extCardProfile || consumer.profile || '0',
+                tagNum: consumer.tagNum || consumer.cardNum || consumer.cardno || '',
+                cardno: consumer.tagNum || consumer.cardNum || consumer.cardno || '',
+                profile: consumer.profile || consumer.extCardProfile || '1',
+                profileId: consumer.profile || consumer.extCardProfile || '1',
+                extCardProfile: consumer.extCardProfile || consumer.profile || '1',
                 facility: consumer.facility || '0',
                 filialId: consumer.filialId || '2240',
                 
@@ -432,11 +436,8 @@ class ParkingAPIXML {
                 ignorePresence: consumer.ignorePresence || false,
                 hasFullDetails: false,  // Will be set to true after loading details
                 loadingStrategy: loadingStrategy,
-                isLargeCompany: loadingStrategy === 'on-demand'
+                isLargeCompany: isLargeCompany
             }));
-            
-            // Skip heavy debug logs for performance
-            // Loading strategy determined
             
             // Return basic data immediately
             onBasicLoaded(basicSubscribers);
@@ -455,33 +456,54 @@ class ParkingAPIXML {
                             
                             if (detailResult.success && detailResult.data) {
                                 const detail = detailResult.data;
+                                const person = detail.person || {};
+                                const ident = detail.identification || {};
+                                const usageProf = ident.usageProfile || {};
+
+                                const fname = person.firstName || detail.firstName || subscriber.firstName || '';
+                                const lname = person.surname || detail.lastName || subscriber.lastName || '';
+                                const tag = ident.cardno || detail.tagNum || detail.cardno || subscriber.tagNum || '';
+                                const profId = usageProf.id || detail.profile || detail.profileId || subscriber.profile || '1';
+                                const profName = usageProf.name || detail.profileName || subscriber.profileName || '';
+                                const vFrom = ident.validFrom || detail.validFrom || subscriber.validFrom;
+                                const vUntil = ident.validUntil || detail.validUntil || subscriber.validUntil;
+                                const isPres = ident.present === 'true' || ident.present === true || subscriber.presence || false;
+                                const l1 = detail.lpn1 || subscriber.vehicle1 || '';
+                                const l2 = detail.lpn2 || subscriber.vehicle2 || '';
+                                const l3 = detail.lpn3 || subscriber.vehicle3 || '';
                                 
                                 return {
                                     ...subscriber,
                                     companyName: callbacks.companyName || subscriber.companyName,
-                                    tagNum: detail.identification?.cardno || '',
-                                    cardno: detail.identification?.cardno || '',
-                                    firstName: detail.person?.firstName || detail.firstName || subscriber.firstName,
-                                    lastName: detail.person?.surname || detail.surname || subscriber.lastName,
-                                    lpn1: detail.lpn1 || '',
-                                    lpn2: detail.lpn2 || '',
-                                    lpn3: detail.lpn3 || '',
-                                    vehicle1: detail.lpn1 || '',
-                                    vehicle2: detail.lpn2 || '',
-                                    vehicle3: detail.lpn3 || '',
-                                    profile: detail.identification?.usageProfile?.id || '',
-                                    profileName: detail.identification?.usageProfile?.name || '',
-                                    validFrom: detail.identification?.validFrom || detail.validFrom || subscriber.validFrom,
-                                    validUntil: detail.identification?.validUntil || detail.validUntil || subscriber.validUntil,
-                                    present: detail.identification?.present === 'true',
-                                    presence: detail.identification?.present === 'true',
-                                    ignorePresence: detail.identification?.ignorePresence === '1' || 
-                                                   detail.identification?.ignorePresence === 'true' || 
-                                                   detail.identification?.ignorePresence === true ||
+                                    tagNum: tag,
+                                    cardno: tag,
+                                    firstName: fname,
+                                    lastName: lname,
+                                    name: lname,
+                                    lpn1: l1,
+                                    lpn2: l2,
+                                    lpn3: l3,
+                                    vehicle1: l1,
+                                    vehicle2: l2,
+                                    vehicle3: l3,
+                                    profile: profId,
+                                    profileId: profId,
+                                    profileName: profName,
+                                    extCardProfile: profId,
+                                    validFrom: vFrom,
+                                    validUntil: vUntil,
+                                    xValidFrom: vFrom,
+                                    xValidUntil: vUntil,
+                                    present: isPres,
+                                    presence: isPres,
+                                    ignorePresence: ident.ignorePresence === '1' || 
+                                                   ident.ignorePresence === 'true' || 
+                                                   ident.ignorePresence === true ||
                                                    detail.ignorePresence === '1' ||
                                                    detail.ignorePresence === 'true' ||
                                                    detail.ignorePresence === true,
-                                    hasFullDetails: true
+                                    hasFullDetails: true,
+                                    isLargeCompany: isLargeCompany
                                 };
                             }
                             return subscriber;
@@ -525,13 +547,10 @@ class ParkingAPIXML {
                         // Load in batches of 25 for companies up to 300 subscribers
                         const BATCH_SIZE = 25;
                         const totalBatches = Math.ceil(basicSubscribers.length / BATCH_SIZE);
-                        // Loading subscribers in batches
                         let allUpdated = [];
                         
                         for (let i = 0; i < basicSubscribers.length; i += BATCH_SIZE) {
                             const batch = basicSubscribers.slice(i, Math.min(i + BATCH_SIZE, basicSubscribers.length));
-                            const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-                            // Loading batch
                             
                             const batchPromises = batch.map(processSubscriber);
                             const batchResults = await Promise.all(batchPromises);
@@ -559,44 +578,72 @@ class ParkingAPIXML {
                             
                             // Small delay between batches to let UI breathe
                             if (i + BATCH_SIZE < basicSubscribers.length) {
-                                await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
+                                await new Promise(resolve => setTimeout(resolve, 150));
                             }
                         }
                         
                         basicSubscribers = allUpdated;
-                        // All details loaded successfully
                     } else if (loadingStrategy === 'background-cache') {
-                        // Load in background sequentially (one by one) to prevent network/browser stalling
+                        // Load in background in concurrent batches (15 at a time) for speed and responsiveness
+                        const BATCH_SIZE = 15;
                         let allUpdated = [];
+                        const totalSubscribers = basicSubscribers.length;
                         
-                        for (let i = 0; i < basicSubscribers.length; i++) {
-                            try {
-                                const updated = await processSubscriber(basicSubscribers[i]);
-                                allUpdated.push(updated);
-                            } catch (e) {
-                                allUpdated.push(basicSubscribers[i]);
+                        if (callbacks.onProgress) {
+                            callbacks.onProgress({ 
+                                percent: 0,
+                                current: 0,
+                                total: totalSubscribers,
+                                message: `חברה גדולה (${totalSubscribers} מנויים) - טוען פרטים ברקע...`
+                            });
+                        }
+                        
+                        for (let i = 0; i < totalSubscribers; i += BATCH_SIZE) {
+                            const batch = basicSubscribers.slice(i, Math.min(i + BATCH_SIZE, totalSubscribers));
+                            const batchPromises = batch.map(processSubscriber);
+                            const batchResults = await Promise.all(batchPromises);
+                            
+                            allUpdated = allUpdated.concat(batchResults);
+                            
+                            // Update UI row-by-row live as each batch completes
+                            batchResults.forEach((updated, idx) => {
+                                const originalIndex = i + idx;
+                                if (callbacks.onDetailLoaded) {
+                                    callbacks.onDetailLoaded(updated, originalIndex);
+                                }
+                            });
+                            
+                            // Report progress
+                            const progress = Math.round((allUpdated.length / totalSubscribers) * 100);
+                            if (callbacks.onProgress) {
+                                callbacks.onProgress({
+                                    percent: progress,
+                                    current: allUpdated.length,
+                                    total: totalSubscribers,
+                                    message: `חברה גדולה: טוען פרטי מנויים... ${allUpdated.length} מתוך ${totalSubscribers} (${progress}%)`
+                                });
                             }
                             
-                            // Let the browser breathe every 5 items to guarantee UI responsiveness
-                            if (i % 5 === 0) {
-                                await new Promise(resolve => setTimeout(resolve, 20));
+                            // Small pause between batches
+                            if (i + BATCH_SIZE < totalSubscribers) {
+                                await new Promise(resolve => setTimeout(resolve, 80));
                             }
                         }
                         
                         basicSubscribers = allUpdated;
-                        // Save to cache for the rest of the day
+                        
+                        // Save to cache for 7 days
                         try {
                             const payload = {
                                 timestamp: Date.now(),
                                 subscribers: basicSubscribers
                             };
                             localStorage.setItem(cacheKey, JSON.stringify(payload));
-                            console.log('Background loading finished and saved to cache for company ' + companyId);
+                            console.log(`[Cache] Background loading finished and cached ${basicSubscribers.length} subscribers for 7 days (company ${companyId})`);
                         } catch(e) {
-                            console.warn('Could not save to localStorage, might be full or disabled');
+                            console.warn('[Cache] Could not save to localStorage:', e);
                         }
                         
-                        // Only when fully done - update the UI once to show all details
                         if (callbacks.onBasicLoaded) {
                             callbacks.onBasicLoaded(basicSubscribers);
                         }
