@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מערכת דוחות חניונים S&B</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-blue: #1E40AF;
+            --primary-orange: #EA580C;
+            --secondary-blue: #3B82F6;
+            --accent-gold: #F59E0B;
+            --success-green: #10B981;
+            --error-red: #DC2626;
+            --gray-50: #F9FAFB;
+            --gray-100: #F3F4F6;
+            --gray-200: #E5E7EB;
+            --gray-300: #D1D5DB;
+            --gray-600: #4B5563;
+            --gray-700: #374151;
+            --gray-900: #111827;
+            --white: #FFFFFF;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans Hebrew', sans-serif;
+            background: linear-gradient(135deg, var(--gray-50) 0%, #E0E7FF 50%, var(--gray-100) 100%);
+            min-height: 100vh;
+            color: var(--gray-900);
+            line-height: 1.6;
+            direction: rtl;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--white) 0%, #F8FAFC 100%);
+            border-bottom: 1px solid var(--gray-200);
+            padding: 1.2rem 0;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+        }
+
+        .header-logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-orange));
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            box-shadow: var(--shadow);
+        }
+
+        .header-logo-main {
+            font-size: 0.9rem;
+            line-height: 1;
+            letter-spacing: 1px;
+        }
+
+        .header-logo-sub {
+            font-size: 0.5rem;
+            opacity: 0.9;
+        }
+
+        .header-text h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 2px;
+        }
+
+        .header-text p {
+            font-size: 0.9rem;
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+        }
+
+        .user-info {
+            text-align: left;
+            padding: 0.8rem 1rem;
+            background: var(--gray-50);
+            border-radius: 12px;
+            border: 1px solid var(--gray-200);
+        }
+
+        .user-name {
+            font-weight: 700;
+            color: var(--gray-900);
+            font-size: 0.95rem;
+        }
+
+        .user-role {
+            font-size: 0.8rem;
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            font-family: inherit;
+        }
+
+        .btn-outline {
+            background: var(--white);
+            color: var(--gray-700);
+            border: 2px solid var(--gray-300);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-outline:hover {
+            background: var(--gray-50);
+            border-color: var(--primary-blue);
+            color: var(--primary-blue);
+            transform: translateY(-1px);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2.5rem 1.5rem;
+        }
+
+        .card {
+            background: linear-gradient(135deg, var(--white) 0%, #FAFBFF 100%);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--gray-200);
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-orange));
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            font-weight: 500;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
+            color: #065F46;
+            border: 1px solid #34D399;
+        }
+
+        .alert-error {
+            background: linear-gradient(135deg, #FEE2E2, #FECACA);
+            color: #991B1B;
+            border: 1px solid #F87171;
+        }
+
+        .text-center { text-align: center; }
+        .hidden { display: none !important; }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            .container {
+                padding: 1.5rem 1rem;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- כותרת עליונה -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-logo">
+                <div class="header-logo-icon">
+                    <div class="header-logo-main">S&B</div>
+                    <div class="header-logo-sub">PARKING</div>
+                </div>
+                <div class="header-text">
+                    <h1>S&B Parking Reports</h1>
+                    <p>מערכת דוחות חניונים מתקדמת</p>
+                </div>
+            </div>
+            
+            <div class="user-section">
+                <button class="btn btn-outline" onclick="refreshPage()">
+                    <span>🔄</span>
+                    <span>רענן</span>
+                </button>
+                <div class="user-info">
+                    <div class="user-name">משתמש דמו</div>
+                    <div class="user-role">לקוח S&B</div>
+                </div>
+                <button class="btn btn-outline" onclick="logout()">
+                    <span>↩️</span>
+                    <span>התנתק</span>
+                </button>
+            </div>
+        </div>
+    </header>
+    
+    <div class="container">
+        <!-- דוגמה לתוכן -->
+        <div class="card fade-in">
+            <h2>🏠 בסיס HTML מוכן!</h2>
+            <p>זוהי תבנית הבסיס המעוצבת שלנו עם:</p>
+            <ul style="margin: 1rem 0; padding-right: 2rem;">
+                <li>עיצוב מקצועי בסגנון Apple/S&B</li>
+                <li>כותרת עליונה עם לוגו</li>
+                <li>צבעים ואנימציות</li>
+                <li>תגובתי למובייל</li>
+            </ul>
+            
+            <div class="alert alert-success">
+                <span>✅</span>
+                <span>תבנית הבסיס מוכנה לשימוש!</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function refreshPage() {
+            location.reload();
+        }
+
+        function logout() {
+            alert('פונקציית יציאה - תתחבר לשרת Flask');
+        }
+
+        // אפקטים על כפתורים
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-1px)';
+            });
+            btn.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+    </script>
+</body>
+</html>
