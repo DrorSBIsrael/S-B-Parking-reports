@@ -1440,9 +1440,6 @@
                             <th data-translate="profile">
                                 <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">פרופיל</div>
                             </th>
-                            <th data-translate="validFrom" data-sort="validFrom" class="sortable">
-                                <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">תחילת תוקף <span class="sort-icon">⇅</span></div>
-                            </th>
                             <th data-translate="presence" data-sort="presence" class="sortable">
                                 <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">נוכחות <span class="sort-icon">⇅</span></div>
                             </th>
@@ -1461,6 +1458,15 @@
                 <div class="modal-header">
                     <h2 class="modal-title" data-translate="editSubscriber">עריכת מנוי</h2>
                     <button class="close-btn" onclick="closeModal()">&times;</button>
+                </div>
+
+                <div class="modal-actions-top">
+                    <button type="button" class="btn btn-secondary" id="cancelTopBtn" onclick="closeModal()">
+                        <span data-translate="cancel">ביטול</span>
+                    </button>
+                    <button type="button" class="btn btn-primary" id="saveTopBtn" onclick="saveSubscriber()">
+                        <span data-translate="save">שמור שינויים</span>
+                    </button>
                 </div>
 
                 <form id="editForm">
@@ -2249,7 +2255,6 @@
                     <td>${subscriber.vehicle3 || ''}</td>
                     <td class="${isExpired ? 'status-inactive' : 'status-active'}">${formatDate(subscriber.validUntil) || ''}</td>
                     <td>${subscriber.profile || ''}</td>
-                    <td>${formatDate(subscriber.validFrom) || ''}</td>
                     <td style="text-align: center;">${subscriber.presence ? '<span class="status-active" style="padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: bold;">' + (translations[currentLang].present || 'Present') + '</span>' : '<span class="status-inactive" style="padding: 4px 10px; border-radius: 6px; font-size: 0.85em; font-weight: bold;">' + (translations[currentLang].absent || 'Absent') + '</span>'}</td>
                 `;
                 tbody.appendChild(row);
@@ -4200,8 +4205,8 @@
     </script>
 
     <script src="/static/js/config.js?v=20260930_large_company_fix"></script>
-    <script src="/static/js/parking-api-live.js?v=20261001_large_company_save_fix"></script>
-    <script src="/static/js/parking-ui-live.js?v=20261001_large_company_save_fix"></script>
+    <script src="/static/js/parking-api-live.js?v=20261001_v3_validity_fix"></script>
+    <script src="/static/js/parking-ui-live.js?v=20261001_v3_validity_fix"></script>
 
     <script>
         // Override init function to use XML API
