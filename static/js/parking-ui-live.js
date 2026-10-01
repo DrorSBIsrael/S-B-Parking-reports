@@ -2258,6 +2258,12 @@ class ParkingUIIntegrationXML {
             return;
         }
 
+        // Define tagNum safely at function scope so it's accessible throughout saveSubscriber
+        // tagNum is completely optional and fallback is automatic
+        const tagNum = (subscriberData.tagNum && subscriberData.tagNum.trim() !== '')
+            ? subscriberData.tagNum.trim()
+            : (currentSubscriber?.tagNum || currentSubscriber?.cardno || '');
+
         this.setLoading(true);
 
         try {
@@ -2308,10 +2314,7 @@ class ParkingUIIntegrationXML {
                 const firstName = rawFirstName || ' '; // If empty, set to space to force update
                 const fullName = `${lastName} ${firstName}`.trim();
 
-                // Preserve tagNum: if empty from form, fallback to existing subscriber's tagNum/cardno
-                const tagNum = (subscriberData.tagNum && subscriberData.tagNum.trim() !== '')
-                    ? subscriberData.tagNum.trim()
-                    : (currentSubscriber?.tagNum || currentSubscriber?.cardno || '');
+                // tagNum is already safely resolved at function level
 
                 consumerData = {
                     consumer: {
@@ -3144,14 +3147,19 @@ class ParkingUIIntegrationXML {
                         document.getElementById('editModal')?.classList.contains('guest-mode')
                 };
 
-                // Save via API
-                const success = await this.saveSubscriber(formData);
+                try {
+                    // Save via API
+                    const success = await this.saveSubscriber(formData);
 
-                if (success) {
-                    // Close modal
-                    if (window.closeModal) {
-                        window.closeModal();
+                    if (success) {
+                        // Close modal
+                        if (window.closeModal) {
+                            window.closeModal();
+                        }
                     }
+                } catch (err) {
+                    console.error('Error during saveSubscriber execution:', err);
+                    if (this.setLoading) this.setLoading(false);
                 }
             };
         }
