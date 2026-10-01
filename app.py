@@ -5535,9 +5535,57 @@ def company_manager_proxy():
             else:
                 print(f"    Error from parking server: {response.status_code}")
                 print(f"    Error details: {response.text[:500]}")
+                
+                # Check for validity error 30001 (Consumer validity exceeds contract validity)
+                if response.status_code == 500 and ('30001' in response.text or 'validity of the consumer exceeds' in response.text.lower()) and method == 'PUT' and 'consumers/' in endpoint:
+                    try:
+                        import re
+                        m = re.search(r'consumers/([^,/]+)', endpoint)
+                        if m:
+                            c_id = m.group(1)
+                            c_url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts/{c_id}"
+                            c_resp = requests.get(c_url, headers=headers, verify=False, timeout=timeout_seconds)
+                            if c_resp.status_code == 200:
+                                c_root = ET.fromstring(c_resp.content)
+                                ns = {'ns': 'http://gsph.sub.com/cust/types'}
+                                c_until = c_root.findtext('.//ns:xValidUntil', namespaces=ns) or c_root.findtext('.//xValidUntil') or c_root.findtext('.//ns:validUntil', namespaces=ns) or c_root.findtext('.//validUntil')
+                                if c_until:
+                                    print(f"    [Auto-Fix 30001] Found contract {c_id} xValidUntil: {c_until}. Retrying update with contract date...")
+                                    clean_date = c_until.split('T')[0].split('+')[0]
+                                    fixed_xml = re.sub(r'<xValidUntil>[^<]+</xValidUntil>', f'<xValidUntil>{clean_date}+02:00</xValidUntil>', xml_str)
+                                    fixed_xml = re.sub(r'<validUntil>[^<]+</validUntil>', f'<validUntil>{clean_date}+02:00</validUntil>', fixed_xml)
+                                    retry_resp = requests.put(url, data=fixed_xml.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
+                                    if retry_resp.status_code in [200, 201]:
+                                        print(f"    [Auto-Fix 30001] Retry with contract validity SUCCEEDED!")
+                                        return jsonify({'success': True, 'message': 'הנתונים עודכנו בהצלחה (תוקף הותאם לתוקף חוזה החברה)'})
+                    except Exception as retry_err:
+                        print(f"    [Auto-Fix 30001] Failed to auto-fix validity: {retry_err}")
+
+                # Extract detailed error message from XML if present
+                server_error_detail = None
+                try:
+                    if response.text and response.text.startswith('<?xml'):
+                        err_root = ET.fromstring(response.text.encode('utf-8'))
+                        msg_elem = err_root.find('.//{http://gsph.sub.com/cust/types}message')
+                        if msg_elem is None:
+                            msg_elem = err_root.find('.//message')
+                        if msg_elem is not None and msg_elem.text:
+                            server_error_detail = msg_elem.text
+                except Exception:
+                    pass
+
+                error_message = f'שגיאה בקריאה לשרת החניון: {response.status_code}'
+                if server_error_detail:
+                    if 'validity of the consumer exceeds' in server_error_detail.lower():
+                        error_message = 'תוקף המנוי חורג מתוקף החוזה של החברה'
+                    else:
+                        error_message += f' - {server_error_detail}'
+
                 return jsonify({
                     'success': False,
-                    'message': f'שגיאה בקריאה לשרת החניון: {response.status_code}'
+                    'error': error_message,
+                    'message': error_message,
+                    'details': response.text[:500]
                 }), response.status_code
                 
         except requests.exceptions.Timeout:
