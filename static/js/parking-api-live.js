@@ -163,8 +163,9 @@ class ParkingAPIXML {
             }
             
             if (!response.ok) {
-                console.error('[makeRequest] Response not OK:', response.status, response.statusText);
-                return { success: false, error: `HTTP ${response.status}: ${response.statusText}` };
+                console.error('[makeRequest] Response not OK:', response.status, response.statusText, result);
+                const errMsg = result?.message || result?.error || `HTTP ${response.status}: ${response.statusText}`;
+                return { success: false, error: errMsg, status: response.status, data: result?.data };
             }
             
             if (result.success && result.data) {
@@ -322,8 +323,8 @@ class ParkingAPIXML {
                             isLargeCompany: parsedData.subscribers.length > 300
                         }));
                         
-                        onBasicLoaded(parsedData.subscribers);
-                        if (onProgress) onProgress({ percent: 100, message: 'הנתונים נטענו מזיכרון מקומי' });
+                        onBasicLoaded(parsedData.subscribers, true);
+                        if (onProgress) onProgress({ percent: 100, message: 'הנתונים נטענו מזיכרון מקומי (מטמון)' });
                         return { success: true, data: parsedData.subscribers, fromCache: true };
                     } else {
                         localStorage.removeItem(cacheKey);
@@ -439,8 +440,20 @@ class ParkingAPIXML {
                 isLargeCompany: isLargeCompany
             }));
             
+            // Cache basic list immediately so user has data cached even if they refresh or leave early
+            try {
+                const initialPayload = {
+                    timestamp: Date.now(),
+                    subscribers: basicSubscribers
+                };
+                localStorage.setItem(cacheKey, JSON.stringify(initialPayload));
+                console.log(`[Cache] Immediate basic cache saved for company ${companyId} (${basicSubscribers.length} items)`);
+            } catch(e) {
+                console.warn('[Cache] Could not save initial cache:', e);
+            }
+
             // Return basic data immediately
-            onBasicLoaded(basicSubscribers);
+            onBasicLoaded(basicSubscribers, false);
             
             // Load details based on company size strategy  
             if (loadingStrategy !== 'on-demand') {
@@ -627,6 +640,17 @@ class ParkingAPIXML {
                             // Small pause between batches
                             if (i + BATCH_SIZE < totalSubscribers) {
                                 await new Promise(resolve => setTimeout(resolve, 80));
+                            }
+
+                            // Periodically save batch progress to cache so work is preserved even if user navigates
+                            if (allUpdated.length % 30 === 0 || allUpdated.length === totalSubscribers) {
+                                try {
+                                    const progressSubscribers = allUpdated.concat(basicSubscribers.slice(allUpdated.length));
+                                    localStorage.setItem(cacheKey, JSON.stringify({
+                                        timestamp: Date.now(),
+                                        subscribers: progressSubscribers
+                                    }));
+                                } catch(e) {}
                             }
                         }
                         

@@ -916,7 +916,7 @@ class ParkingUIIntegrationXML {
                 forceFullLoad: forceFullLoad,  // Force loading all details if requested
 
                 // Callback when basic data is ready
-                onBasicLoaded: (basicSubscribers) => {
+                onBasicLoaded: (basicSubscribers, fromCache = false) => {
                     if (!this.currentContract || String(this.currentContract.id) !== String(requestedContractId)) return;
                     
                     this.subscribers = basicSubscribers;
@@ -967,9 +967,10 @@ class ParkingUIIntegrationXML {
                         this.setupFilters();
                     }, 100);
 
-                    // Show subtle progress indicator only for medium/large companies
-                    // Small companies (≤30) load instantly, so no need for progress
-                    if (basicSubscribers.length > 30) {
+                    // Show subtle progress indicator only for fresh network loads
+                    if (fromCache) {
+                        this.hideBackgroundProgress();
+                    } else if (basicSubscribers.length > 30) {
                         this.showBackgroundProgress('טוען פרטים מלאים ברקע...');
                     }
                 },
@@ -1838,12 +1839,9 @@ class ParkingUIIntegrationXML {
                 row.onclick = () => {
                     // Find the current subscriber data
                     const currentSubscriber = this.subscribers.find(s =>
-                        s.subscriberNum === subscriber.subscriberNum
+                        String(s.subscriberNum) === String(subscriber.subscriberNum)
                     ) || subscriber;
-                    // Trigger the edit function from the HTML page
-                    if (window.editSubscriber) {
-                        window.editSubscriber(currentSubscriber);
-                    }
+                    this.editSubscriber(currentSubscriber);
                 };
 
                 row.dataset.subscriberNum = subscriber.subscriberNum;
@@ -2314,7 +2312,16 @@ class ParkingUIIntegrationXML {
                 const firstName = rawFirstName || ' '; // If empty, set to space to force update
                 const fullName = `${lastName} ${firstName}`.trim();
 
-                // tagNum is already safely resolved at function level
+                // Filial ID from subscriber or contract
+                const filialId = currentSubscriber?.filialId || this.currentContract.filialId || '1093';
+
+                // Tag and identification handling: if no tag, preserve LPR (55 / 0)
+                const hasTag = Boolean(tagNum && tagNum.trim() !== '');
+                const identType = hasTag ? '54' : (currentSubscriber?.identificationType || currentSubscriber?.identification?.identificationType || '55');
+                const cardClass = hasTag ? '1' : (currentSubscriber?.cardclass || currentSubscriber?.identification?.cardclass || '0');
+                const ptcptGrp = currentSubscriber?.ptcptGrpNo || currentSubscriber?.identification?.ptcptGrpNo || '0';
+                const currentPres = currentSubscriber?.presence || currentSubscriber?.present ? 'true' : 'false';
+                const ignPres = currentSubscriber?.ignorePresence ? '1' : '0';
 
                 consumerData = {
                     consumer: {
@@ -2324,32 +2331,35 @@ class ParkingUIIntegrationXML {
                         // Send dates with timezone
                         xValidFrom: formatDateWithTimezone(subscriberData.validFrom),
                         xValidUntil: formatDateWithTimezone(subscriberData.validUntil),
-                        filialId: this.currentContract.filialId || '2228'  // Add filialId
+                        filialId: filialId
                     },
                     person: {
                         firstName: firstName,
                         surname: lastName
                     },
                     identification: {
-                        ptcptType: '2',  // Required field from documentation
-                        cardno: tagNum,
-                        cardclass: '1',  // Keep as 1
-                        identificationType: '54',  // Back to 54 as per your requirement
+                        ptcptType: '2',
+                        cardno: hasTag ? tagNum : '',
+                        cardclass: cardClass,
+                        identificationType: identType,
                         validFrom: formatDateWithTimezone(subscriberData.validFrom),
                         validUntil: formatDateWithTimezone(subscriberData.validUntil),
                         usageProfile: {
-                            id: subscriberData.profileId || '1',
-                            name: subscriberData.profile || 'Standard'
+                            id: subscriberData.profileId || currentSubscriber?.profileId || currentSubscriber?.profile || '1',
+                            name: subscriberData.profile || currentSubscriber?.profileName || 'Standard'
                         },
-                        admission: '',  // Empty as in documentation
-                        status: '0',  // Active status (0 = active, 6 = locked)
-                        ptcptGrpNo: '-1',  // Default group
-                        chrgOvdrftAcct: '0'  // Don't charge overdraft
+                        admission: '',
+                        present: currentPres,
+                        ignorePresence: ignPres,
+                        status: '0',
+                        ptcptGrpNo: ptcptGrp,
+                        chrgOvdrftAcct: '0'
                     },
                     displayText: '-1',
                     limit: '9999900',
-                    status: '0',  // Active status
-                    delete: '0',  // Not deleted
+                    status: '0',
+                    delete: '0',
+                    ignorePresence: ignPres,
                     // Vehicle data - clean dashes from vehicle numbers, send space if empty to force update
                     lpn1: subscriberData.vehicle1 ? subscriberData.vehicle1.replace(/-/g, '') : ' ',
                     lpn2: subscriberData.vehicle2 ? subscriberData.vehicle2.replace(/-/g, '') : ' ',
@@ -2530,69 +2540,30 @@ class ParkingUIIntegrationXML {
 
 
 
-                // If update failed with 500 error, try different approaches
-                if (!result.success && result.error && result.error.includes('500')) {
-                    // Update failed with 500
+                // If update failed with 500 error, try fallback WITHOUT identification block
+                // In Scheidt & Bachmann, when identification has constraints or card errors, updating without identification succeeds cleanly
+                if (!result.success && result.error && (result.error.includes('500') || result.status === 500)) {
+                    console.warn('[saveSubscriber] Primary update failed with 500, attempting fallback without identification block');
 
-                    // Check if this is company 8 or other large companies
-                    const isLargeCompany = this.currentContract.id === '8' ||
-                        this.currentContract.id === '4' ||
-                        this.currentContract.id === '10';
+                    const minimalData = {
+                        consumer: consumerData.consumer,
+                        person: {
+                            firstName: consumerData.person.firstName,
+                            surname: consumerData.person.surname
+                        },
+                        lpn1: consumerData.lpn1 || ' ',
+                        lpn2: consumerData.lpn2 || ' ',
+                        lpn3: consumerData.lpn3 || ' '
+                    };
 
-                    if (isLargeCompany) {
-                        // Large company detected
+                    result = await this.api.updateConsumer(
+                        this.currentContract.id,
+                        subscriberData.subscriberNum,
+                        minimalData
+                    );
 
-                        // For large companies, try WITHOUT identification block
-                        const minimalData = {
-                            person: {
-                                firstName: consumerData.person.firstName,
-                                surname: consumerData.person.surname
-                            },
-                            consumer: consumerData.consumer,
-                            lpn1: consumerData.lpn1 || ' ',
-                            lpn2: consumerData.lpn2 || ' ',
-                            lpn3: consumerData.lpn3 || ' '
-                        };
-
-                        // Trying with minimal data
-                        result = await this.api.updateConsumer(
-                            this.currentContract.id,
-                            subscriberData.subscriberNum,
-                            minimalData
-                        );
-
-                        if (result.success) {
-                            // Consumer updated successfully
-                            this.showNotification('✅ הנתונים הבסיסיים נשמרו בהצלחה', 'success');
-                        }
-                    }
-
-                    // If still failed, try without identification at all for problematic companies
-                    if (!result.success) {
-                        // Still failing
-
-                        // Create a copy without identification
-                        const dataWithoutIdentification = {
-                            person: {
-                                firstName: consumerData.person?.firstName || ' ',
-                                surname: consumerData.person?.surname || ' '
-                            },
-                            consumer: consumerData.consumer,
-                            lpn1: consumerData.lpn1 || '',
-                            ...(consumerData.lpn2 ? { lpn2: consumerData.lpn2 } : {}),
-                            ...(consumerData.lpn2 && consumerData.lpn3 ? { lpn3: consumerData.lpn3 } : {})
-                        };
-
-                        result = await this.api.updateConsumer(
-                            this.currentContract.id,
-                            subscriberData.subscriberNum,
-                            dataWithoutIdentification
-                        );
-
-                        if (result.success) {
-                            // Consumer updated successfully
-                            this.showNotification('⚠️ הנתונים נשמרו ללא פרופיל שימוש', 'warning');
-                        }
+                    if (result.success) {
+                        this.showNotification('✅ הנתונים (שמות ורכבים) נשמרו בהצלחה', 'success');
                     }
                 }
 
@@ -2763,16 +2734,15 @@ class ParkingUIIntegrationXML {
 
                 return true;
             } else {
-                // Provide clearer error messages based on the error type
                 let errorMessage = 'שגיאה בשמירת הנתונים';
-
+                // Provide clearer error messages based on the error type
                 if (result.error) {
                     if (result.error.includes('500') || result.error.includes('Internal Server Error')) {
-                        // Check if it's a present subscriber error
-                        if (consumerData.identification && consumerData.identification.present === 'true') {
+                        // Check if it's a confirmed present subscriber error
+                        if (currentSubscriber && (currentSubscriber.presence || currentSubscriber.present)) {
                             errorMessage = '⚠️ לא ניתן לעדכן מנוי נוכח בחניון - יש להוציא את הרכב מהחניון לפני עדכון פרטים';
                         } else {
-                            errorMessage = '⚠️ שגיאת שרת - ייתכן שהמנוי נוכח בחניון או שיש בעיה בנתונים שנשלחו';
+                            errorMessage = `⚠️ שגיאת שרת בעדכון הנתונים (${result.error || '500'})`;
                         }
                     } else if (result.error.includes('400') || result.error.includes('Bad Request')) {
                         errorMessage = '❌ הנתונים שהוזנו אינם תקינים - אנא בדוק את הפרטים';
