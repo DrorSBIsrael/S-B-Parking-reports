@@ -878,7 +878,6 @@ class ParkingUIIntegrationXML {
                 <td>${subscriber.lpn3 || ''}</td>
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(validUntil) || ''}</td>
                 <td style="color: #888;" title="פרופיל ${subscriber.profile || ''}">${subscriber.profileName || (subscriber.profile ? `פרופיל ${subscriber.profile}` : '')}</td>
-                <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                 <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
 
@@ -1256,7 +1255,6 @@ class ParkingUIIntegrationXML {
                 <td>${subscriber.vehicle3 || subscriber.lpn3 || ''}</td>
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil || subscriber.xValidUntil)}</td>
                 <td style="color: #888;" title="פרופיל ${subscriber.profile || ''}">${subscriber.profileName || (subscriber.profile ? `פרופיל ${subscriber.profile}` : '')}</td>
-                <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                 <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
 
@@ -1764,7 +1762,6 @@ class ParkingUIIntegrationXML {
                 <td>${subscriber.vehicle3 || subscriber.lpn3 || ''}</td>
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil || subscriber.xValidUntil) || ''}</td>
                 <td style="color: #888;" title="פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}">${subscriber.profileName || `פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}`}</td>
-                <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                 <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
                 // Add to fragment for better performance
@@ -1885,7 +1882,6 @@ class ParkingUIIntegrationXML {
                     <td>${subscriber.vehicle3 || subscriber.lpn3 || ''}</td>
                     <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil || subscriber.xValidUntil) || ''}</td>
                     <td style="color: #888;" title="פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}">${subscriber.profileName || `פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}`}</td>
-                    <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                     <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
                 tbody.appendChild(row);
@@ -2256,11 +2252,28 @@ class ParkingUIIntegrationXML {
             return;
         }
 
-        // Define tagNum safely at function scope so it's accessible throughout saveSubscriber
-        // tagNum is completely optional and fallback is automatic
+        // tagNum: only send if the user explicitly provided one in the form!
+        // Never auto-populate or fallback to arbitrary numbers because duplicates trigger errors
         const tagNum = (subscriberData.tagNum && subscriberData.tagNum.trim() !== '')
             ? subscriberData.tagNum.trim()
-            : (currentSubscriber?.tagNum || currentSubscriber?.cardno || '');
+            : '';
+
+        // Ensure subscriber validUntil does not exceed the contract's expiration date
+        let contractValidUntil = this.currentContract?.xValidUntil || this.currentContract?.validUntil;
+        if (contractValidUntil) {
+            const cleanContractDate = String(contractValidUntil).split(/[ T+]/)[0];
+            let cleanSubDate = String(subscriberData.validUntil || '').trim();
+            if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cleanSubDate)) {
+                const p = cleanSubDate.split('/');
+                cleanSubDate = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+            } else {
+                cleanSubDate = cleanSubDate.split(/[ T+]/)[0];
+            }
+            if (cleanContractDate && (!cleanSubDate || cleanSubDate > cleanContractDate)) {
+                console.warn(`[saveSubscriber] Capping subscriber validUntil (${cleanSubDate}) to contract validUntil (${cleanContractDate})`);
+                subscriberData.validUntil = cleanContractDate;
+            }
+        }
 
         this.setLoading(true);
 
@@ -2315,10 +2328,10 @@ class ParkingUIIntegrationXML {
                 // Filial ID from subscriber or contract
                 const filialId = currentSubscriber?.filialId || this.currentContract.filialId || '1093';
 
-                // Tag and identification handling: if no tag, preserve LPR (55 / 0)
+                // Tag and identification handling: if no tag, strictly use LPR (55 / 0) and NO cardno
                 const hasTag = Boolean(tagNum && tagNum.trim() !== '');
-                const identType = hasTag ? '54' : (currentSubscriber?.identificationType || currentSubscriber?.identification?.identificationType || '55');
-                const cardClass = hasTag ? '1' : (currentSubscriber?.cardclass || currentSubscriber?.identification?.cardclass || '0');
+                const identType = hasTag ? '54' : '55';
+                const cardClass = hasTag ? '1' : '0';
                 const ptcptGrp = currentSubscriber?.ptcptGrpNo || currentSubscriber?.identification?.ptcptGrpNo || '0';
                 const currentPres = currentSubscriber?.presence || currentSubscriber?.present ? 'true' : 'false';
                 const ignPres = currentSubscriber?.ignorePresence ? '1' : '0';
@@ -2394,6 +2407,7 @@ class ParkingUIIntegrationXML {
                 const firstName = rawFirstName || ' '; // If empty, set to space
                 const fullName = `${lastName} ${firstName}`.trim();
 
+                const newHasTag = Boolean(subscriberData.tagNum && subscriberData.tagNum.trim() !== '');
                 consumerData = {
                     consumer: {
                         id: '',  // Empty for new subscriber
@@ -2401,7 +2415,7 @@ class ParkingUIIntegrationXML {
                         name: fullName,
                         xValidFrom: formatDateWithTimezone(subscriberData.validFrom),
                         xValidUntil: formatDateWithTimezone(subscriberData.validUntil),
-                        filialId: this.currentContract.filialId || '2228'
+                        filialId: this.currentContract.filialId || '1093'
                     },
                     person: {
                         firstName: firstName,
@@ -2409,9 +2423,9 @@ class ParkingUIIntegrationXML {
                     },
                     identification: {
                         ptcptType: '2',
-                        cardno: subscriberData.tagNum || '',
-                        cardclass: '1',  // Keep as 1
-                        identificationType: '54',  // Back to 54 as per your requirement
+                        cardno: newHasTag ? subscriberData.tagNum.trim() : '',
+                        cardclass: newHasTag ? '1' : '0',
+                        identificationType: newHasTag ? '54' : '55',
                         validFrom: formatDateWithTimezone(subscriberData.validFrom),
                         validUntil: formatDateWithTimezone(subscriberData.validUntil),
 
@@ -2540,13 +2554,50 @@ class ParkingUIIntegrationXML {
 
 
 
+                // If update failed, check if it's validity error 30001 (exceeds contract validity)
+                const isValidityError = !result.success && result.error && (
+                    result.error.includes('30001') ||
+                    result.error.includes('validity') ||
+                    result.error.includes('Validity') ||
+                    result.error.includes('חורג')
+                );
+
+                if (isValidityError) {
+                    console.warn('[saveSubscriber] Update failed with validity error 30001, fetching contract validity and retrying...');
+                    try {
+                        const cRes = await this.api.getContractDetails(this.currentContract.id);
+                        if (cRes.success && cRes.data) {
+                            const cData = Array.isArray(cRes.data) ? cRes.data[0] : (cRes.data.contract || cRes.data);
+                            const realContractDate = (cData.xValidUntil || cData.validUntil || '').split(/[ T+]/)[0];
+                            if (realContractDate) {
+                                this.currentContract.xValidUntil = realContractDate;
+                                subscriberData.validUntil = realContractDate;
+                                consumerData.consumer.xValidUntil = formatDateWithTimezone(realContractDate);
+                                if (consumerData.identification) {
+                                    consumerData.identification.validUntil = formatDateWithTimezone(realContractDate);
+                                }
+                                result = await this.api.updateConsumer(
+                                    this.currentContract.id,
+                                    subscriberData.subscriberNum,
+                                    consumerData
+                                );
+                            }
+                        }
+                    } catch (retryErr) {
+                        console.error('[saveSubscriber] Failed to retry with contract validity:', retryErr);
+                    }
+                }
+
                 // If update failed with 500 error, try fallback WITHOUT identification block
                 // In Scheidt & Bachmann, when identification has constraints or card errors, updating without identification succeeds cleanly
                 if (!result.success && result.error && (result.error.includes('500') || result.status === 500)) {
                     console.warn('[saveSubscriber] Primary update failed with 500, attempting fallback without identification block');
 
                     const minimalData = {
-                        consumer: consumerData.consumer,
+                        consumer: {
+                            ...consumerData.consumer,
+                            xValidUntil: consumerData.consumer.xValidUntil
+                        },
                         person: {
                             firstName: consumerData.person.firstName,
                             surname: consumerData.person.surname
@@ -2561,14 +2612,6 @@ class ParkingUIIntegrationXML {
                         subscriberData.subscriberNum,
                         minimalData
                     );
-
-                    if (result.success) {
-                        this.showNotification('✅ הנתונים (שמות ורכבים) נשמרו בהצלחה', 'success');
-                    }
-                }
-
-                if (result.success) {
-                    // Consumer updated successfully
                 }
             }
 
@@ -2690,7 +2733,6 @@ class ParkingUIIntegrationXML {
                             <td>${newSubscriber.vehicle3 || ''}</td>
                             <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(newSubscriber.validUntil) || ''}</td>
                             <td style="color: #888;" title="פרופיל ${newSubscriber.profile || ''}">${newSubscriber.profileName || `פרופיל ${newSubscriber.profile || ''}`}</td>
-                            <td>${this.formatDate(newSubscriber.validFrom) || ''}</td>
                             <td style="text-align: center; font-size: 18px;">${newSubscriber.presence ? '✅' : '❌'}</td>
                         `;
 
