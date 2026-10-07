@@ -293,6 +293,7 @@ class ParkingAPIXML {
             onBasicLoaded = () => {}, 
             onDetailLoaded = () => {}, 
             onProgress = () => {},
+            onComplete = () => {},
             forceFullLoad = false  // Add this parameter
         } = callbacks;
         
@@ -323,9 +324,10 @@ class ParkingAPIXML {
                             isLargeCompany: parsedData.subscribers.length > 500
                         }));
                         
-                        onBasicLoaded(parsedData.subscribers, true);
+                        onBasicLoaded(parsedData.subscribers, true, parsedData.timestamp);
                         if (onProgress) onProgress({ percent: 100, message: 'הנתונים נטענו מזיכרון מקומי (מטמון)' });
-                        return { success: true, data: parsedData.subscribers, fromCache: true };
+                        if (onComplete) onComplete(parsedData.subscribers, true, parsedData.timestamp);
+                        return { success: true, data: parsedData.subscribers, fromCache: true, timestamp: parsedData.timestamp };
                     } else {
                         localStorage.removeItem(cacheKey);
                     }
@@ -440,18 +442,6 @@ class ParkingAPIXML {
                 isLargeCompany: isLargeCompany
             }));
             
-            // Cache basic list immediately so user has data cached even if they refresh or leave early
-            try {
-                const initialPayload = {
-                    timestamp: Date.now(),
-                    subscribers: basicSubscribers
-                };
-                localStorage.setItem(cacheKey, JSON.stringify(initialPayload));
-                console.log(`[Cache] Immediate basic cache saved for company ${companyId} (${basicSubscribers.length} items)`);
-            } catch(e) {
-                console.warn('[Cache] Could not save initial cache:', e);
-            }
-
             // Return basic data immediately
             onBasicLoaded(basicSubscribers, false);
             
@@ -541,12 +531,23 @@ class ParkingAPIXML {
                         onBasicLoaded(detailedSubscribers);
                         basicSubscribers = detailedSubscribers;
                         
+                        const instantTimestamp = Date.now();
+                        try {
+                            localStorage.setItem(cacheKey, JSON.stringify({
+                                timestamp: instantTimestamp,
+                                subscribers: basicSubscribers
+                            }));
+                        } catch(e) {}
+
                         // Hide progress message when done
                         if (callbacks.onProgress) {
                             callbacks.onProgress({ 
                                 percent: 100,
                                 message: `הושלמה טעינת ${basicSubscribers.length} מנויים`
                             });
+                        }
+                        if (callbacks.onComplete) {
+                            callbacks.onComplete(basicSubscribers, false, instantTimestamp);
                         }
                     } else if (loadingStrategy === 'batch-50') {
                         // Show initial loading message
@@ -557,7 +558,7 @@ class ParkingAPIXML {
                             });
                         }
                         
-                        // Load in batches of 25 for companies up to 300 subscribers
+                        // Load in batches of 25 for companies up to 500 subscribers
                         const BATCH_SIZE = 25;
                         const totalBatches = Math.ceil(basicSubscribers.length / BATCH_SIZE);
                         let allUpdated = [];
@@ -596,6 +597,17 @@ class ParkingAPIXML {
                         }
                         
                         basicSubscribers = allUpdated;
+                        const batchTimestamp = Date.now();
+                        try {
+                            localStorage.setItem(cacheKey, JSON.stringify({
+                                timestamp: batchTimestamp,
+                                subscribers: basicSubscribers
+                            }));
+                        } catch(e) {}
+
+                        if (callbacks.onComplete) {
+                            callbacks.onComplete(basicSubscribers, false, batchTimestamp);
+                        }
                     } else if (loadingStrategy === 'background-cache') {
                         // Load in background in concurrent batches (15 at a time) for speed and responsiveness
                         const BATCH_SIZE = 15;
@@ -655,11 +667,12 @@ class ParkingAPIXML {
                         }
                         
                         basicSubscribers = allUpdated;
+                        const bgTimestamp = Date.now();
                         
                         // Save to cache for 12 hours
                         try {
                             const payload = {
-                                timestamp: Date.now(),
+                                timestamp: bgTimestamp,
                                 subscribers: basicSubscribers
                             };
                             localStorage.setItem(cacheKey, JSON.stringify(payload));
@@ -670,6 +683,10 @@ class ParkingAPIXML {
                         
                         if (callbacks.onBasicLoaded) {
                             callbacks.onBasicLoaded(basicSubscribers);
+                        }
+
+                        if (callbacks.onComplete) {
+                            callbacks.onComplete(basicSubscribers, false, bgTimestamp);
                         }
                     } else {
                         // Should not reach here with current strategy

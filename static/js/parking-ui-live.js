@@ -37,8 +37,18 @@ class ParkingUIIntegrationXML {
         if (!this.currentContract || !this.currentContract.id) return;
         try {
             const cacheKey = 'skidata_cache_company_' + this.currentContract.id;
+            let cacheTimestamp = Date.now();
+            try {
+                const existing = localStorage.getItem(cacheKey);
+                if (existing) {
+                    const parsed = JSON.parse(existing);
+                    if (parsed && parsed.timestamp) {
+                        cacheTimestamp = parsed.timestamp;
+                    }
+                }
+            } catch(err) {}
             const payload = {
-                timestamp: Date.now(),
+                timestamp: cacheTimestamp,
                 subscribers: this.subscribers
             };
             localStorage.setItem(cacheKey, JSON.stringify(payload));
@@ -248,7 +258,8 @@ class ParkingUIIntegrationXML {
         parkings.forEach(parking => {
             const card = document.createElement('div');
             card.className = 'company-card';
-            card.onclick = () => this.selectParking(parking);
+            card.setAttribute('data-parking-id', parking.id);
+            card.onclick = (e) => this.selectParking(parking, e);
 
             card.innerHTML = `
                 <div class="company-header">
@@ -277,7 +288,7 @@ class ParkingUIIntegrationXML {
     /**
      * Select a parking and then load its companies
      */
-    async selectParking(parking) {
+    async selectParking(parking, evt) {
         // Selected parking
 
         // Show loading message immediately
@@ -308,8 +319,11 @@ class ParkingUIIntegrationXML {
             card.classList.remove('selected');
         });
 
-        if (event && event.currentTarget) {
-            event.currentTarget.classList.add('selected');
+        if (evt && evt.currentTarget) {
+            evt.currentTarget.classList.add('selected');
+        } else {
+            const matchingCard = document.querySelector(`.company-card[data-parking-id="${parking.id}"]`);
+            if (matchingCard) matchingCard.classList.add('selected');
         }
 
         // Now load companies/contracts from this parking
@@ -453,7 +467,8 @@ class ParkingUIIntegrationXML {
         companies.forEach(async (company) => {
             const card = document.createElement('div');
             card.className = 'company-card';
-            card.onclick = () => this.selectCompany(company);
+            card.setAttribute('data-company-id', company.id);
+            card.onclick = (e) => this.selectCompany(company, e);
 
             // Start with basic info
             card.innerHTML = `
@@ -741,7 +756,7 @@ class ParkingUIIntegrationXML {
     /**
      * Select a company and load its subscribers
      */
-    async selectCompany(company) {
+    async selectCompany(company, evt) {
         // Store the full company object with correct name
         // If no name, use the parking name or a default
         const contractName = company.name || company.firstName || company.companyName ||
@@ -762,17 +777,16 @@ class ParkingUIIntegrationXML {
             card.classList.remove('selected');
         });
 
-        if (event && event.currentTarget) {
-            event.currentTarget.classList.add('selected');
+        if (evt && evt.currentTarget) {
+            evt.currentTarget.classList.add('selected');
+        } else {
+            const matchingCard = document.querySelector(`.company-card[data-company-id="${company.id}"]`);
+            if (matchingCard) matchingCard.classList.add('selected');
         }
-
-        // Log company name for debugging
-        // Company selected
 
         // Keep company selector visible even with one company (for occupancy data)
         const companySelector = document.getElementById('companySelector');
         const companies = document.querySelectorAll('.company-card');
-        // Removed hiding logic - always show company card for occupancy info
 
         // Show main content
         const mainContent = document.getElementById('mainContent');
@@ -783,6 +797,9 @@ class ParkingUIIntegrationXML {
                 companyNameElement.textContent = `- ${company.name || company.companyName}`;
             }
         }
+
+        // Show sub notice with loading status initially
+        this.updateLoadedTimestamp(null, false, true);
 
         // Load subscribers
         await this.loadSubscribers();
@@ -903,6 +920,9 @@ class ParkingUIIntegrationXML {
 
         this.setLoading(true, 'loadingState');
         this.showProgressMessage(forceFullLoad ? 'טוען את כל נתוני המנויים...' : 'טוען רשימת מנויים...');
+        this.updateLoadedTimestamp(null, false, true);
+
+        let loadCompleted = false;
 
         try {
             // Get performance settings from config
@@ -915,7 +935,7 @@ class ParkingUIIntegrationXML {
                 forceFullLoad: forceFullLoad,  // Force loading all details if requested
 
                 // Callback when basic data is ready
-                onBasicLoaded: (basicSubscribers, fromCache = false) => {
+                onBasicLoaded: (basicSubscribers, fromCache = false, cachedTimestamp = null) => {
                     if (!this.currentContract || String(this.currentContract.id) !== String(requestedContractId)) return;
                     
                     this.subscribers = basicSubscribers;
@@ -969,6 +989,9 @@ class ParkingUIIntegrationXML {
                     // Show subtle progress indicator only for fresh network loads
                     if (fromCache) {
                         this.hideBackgroundProgress();
+                        // Cached data is already complete, update timestamp at end of loading
+                        this.updateLoadedTimestamp(cachedTimestamp || Date.now(), true);
+                        loadCompleted = true;
                     } else if (basicSubscribers.length > 30) {
                         this.showBackgroundProgress('טוען פרטים מלאים ברקע...');
                     }
@@ -1020,6 +1043,17 @@ class ParkingUIIntegrationXML {
                             this.hideBackgroundProgress();
                         }
                     }
+                },
+
+                // Callback when full load is completely finished
+                onComplete: (completedSubscribers, fromCache = false, timestamp = Date.now()) => {
+                    if (!this.currentContract || String(this.currentContract.id) !== String(requestedContractId)) return;
+                    loadCompleted = true;
+                    this.subscribers = completedSubscribers;
+                    this.hideBackgroundProgress();
+                    this.hideProgressMessage();
+                    this.updateLoadedTimestamp(timestamp, fromCache);
+                    this.updatePresentCount();
                 }
             });
 
@@ -1030,6 +1064,9 @@ class ParkingUIIntegrationXML {
                 this.displaySubscribers([]);
                 // Make sure loading is cleared
                 this.setLoading(false, 'loadingState');
+            } else if (!loadCompleted && (!result.progressive || result.fromCache)) {
+                loadCompleted = true;
+                this.updateLoadedTimestamp(result.timestamp || Date.now(), !!result.fromCache);
             }
         } catch (error) {
             console.error('Error loading subscribers:', error);
@@ -1043,6 +1080,10 @@ class ParkingUIIntegrationXML {
         } finally {
             // Hide background loading message
             this.hideBackgroundProgress();
+
+            if (!loadCompleted && this.subscribers && this.subscribers.length > 0) {
+                this.updateLoadedTimestamp(Date.now(), false);
+            }
 
             // If we're still showing the progress message after 5 seconds, something went wrong
             setTimeout(() => {
@@ -1093,6 +1134,30 @@ class ParkingUIIntegrationXML {
     }
 
     /**
+     * Update last loaded time in company subtitle
+     */
+    updateLoadedTimestamp(timestamp, fromCache = false, isLoading = false) {
+        const subNotice = document.getElementById('companySubNotice');
+        if (subNotice) {
+            subNotice.style.display = 'block';
+            const timeSpan = document.getElementById('lastLoadedTime');
+            if (timeSpan) {
+                if (isLoading) {
+                    timeSpan.textContent = '| טוען נתונים...';
+                } else if (timestamp) {
+                    const d = new Date(timestamp);
+                    const timeStr = d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    if (fromCache) {
+                        timeSpan.textContent = `| שעת טעינה אחרונה: ${timeStr} (מטמון)`;
+                    } else {
+                        timeSpan.textContent = `| שעת טעינה אחרונה: ${timeStr}`;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Update company info in header
      */
     async updateCompanyInfo() {
@@ -1127,16 +1192,10 @@ class ParkingUIIntegrationXML {
                         reloadButton.style.display = isLargeCompany ? 'inline-block' : 'none';
                     }
 
-                    // Update notice under title with last loaded time
+                    // Ensure notice under title is visible
                     const subNotice = document.getElementById('companySubNotice');
                     if (subNotice) {
                         subNotice.style.display = 'block';
-                        const timeSpan = document.getElementById('lastLoadedTime');
-                        if (timeSpan) {
-                            const now = new Date();
-                            const timeStr = now.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                            timeSpan.textContent = `| שעת טעינה אחרונה: ${timeStr}`;
-                        }
                     }
                 }
             }
