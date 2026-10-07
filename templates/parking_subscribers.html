@@ -2212,10 +2212,10 @@
         }
 
         // Select company
-        function selectCompany(company) {
-            // Skip if parkingUIXML is available - it will handle everything
-            if (window.parkingUIXML) {
-                return;
+        function selectCompany(company, evt) {
+            // Delegate to parkingUIXML if available
+            if (window.parkingUIXML && typeof window.parkingUIXML.selectCompany === 'function') {
+                return window.parkingUIXML.selectCompany(company, evt);
             }
 
             currentCompany = company;
@@ -2242,10 +2242,10 @@
         }
 
         // Load subscribers
-        function loadSubscribers() {
-            // Skip if parkingUIXML is available - it will handle everything
-            if (window.parkingUIXML) {
-                return;
+        function loadSubscribers(forceFullLoad = false) {
+            // Delegate to parkingUIXML if available
+            if (window.parkingUIXML && typeof window.parkingUIXML.loadSubscribers === 'function') {
+                return window.parkingUIXML.loadSubscribers(forceFullLoad);
             }
 
             document.getElementById('loadingState').style.display = 'block';
@@ -2262,9 +2262,9 @@
 
         // Display subscribers in table
         function displaySubscribers(subscribers) {
-            // Skip if parkingUIXML is available - it will handle everything
-            if (window.parkingUIXML) {
-                return;
+            // Delegate to parkingUIXML if available
+            if (window.parkingUIXML && typeof window.parkingUIXML.displaySubscribers === 'function') {
+                return window.parkingUIXML.displaySubscribers(subscribers);
             }
 
             const tbody = document.getElementById('subscribersTableBody');
@@ -4270,9 +4270,9 @@
         resetInactivityTimer();
     </script>
 
-    <script src="/static/js/config.js?v=20261007_load_and_cache_fix"></script>
-    <script src="/static/js/parking-api-live.js?v=20261007_load_and_cache_fix"></script>
-    <script src="/static/js/parking-ui-live.js?v=20261007_load_and_cache_fix"></script>
+    <script src="/static/js/config.js?v=20261007_load_fix_v4"></script>
+    <script src="/static/js/parking-api-live.js?v=20261007_load_fix_v4"></script>
+    <script src="/static/js/parking-ui-live.js?v=20261007_load_fix_v4"></script>
 
     <script>
         // Override init function to use XML API
