@@ -2953,7 +2953,7 @@
 
                 try {
                     if (window.parkingUIXML && typeof window.parkingUIXML.loadSubscribers === 'function') {
-                        await window.parkingUIXML.loadSubscribers();
+                        await window.parkingUIXML.loadSubscribers(true); // Force live reload from server (bypasses cache)
                     } else {
                         await new Promise(resolve => setTimeout(resolve, 500));
                         if (currentSubscribers) displaySubscribers(currentSubscribers);
@@ -3468,8 +3468,15 @@
 
         // Save subscriber
         async function saveSubscriber() {
-            // Check if we have the UI integration
-            if (window.parkingUIXML || window.parkingUI) {
+            if (window.isSavingSubscriber) {
+                console.warn('[saveSubscriber] Already saving, ignoring duplicate call');
+                return;
+            }
+            window.isSavingSubscriber = true;
+
+            try {
+                // Check if we have the UI integration
+                if (window.parkingUIXML || window.parkingUI) {
                 const uiIntegration = window.parkingUIXML || window.parkingUI;
 
                 // Debug logging
@@ -3665,11 +3672,7 @@
 
                     // Update only the specific subscriber instead of reloading all
                     if (window.parkingUIXML) {
-                        if (formData.isNew) {
-                            // For new subscriber, refresh only if necessary
-                            // The saveSubscriber function should have already updated the UI
-                            window.parkingUIXML.refreshSingleSubscriber(formData.subscriberNum);
-                        } else {
+                        if (!formData.isNew) {
                             // For existing subscriber, update the specific row
                             const subscriberToRefresh = currentlyEditing || editingSubscriber;
                             if (subscriberToRefresh && subscriberToRefresh.subscriberNum) {
@@ -3690,7 +3693,10 @@
                 closeModal();
                 loadSubscribers();
             }
+        } finally {
+            window.isSavingSubscriber = false;
         }
+    }
 
         // Language toggle
         function setLanguage(lang) {
@@ -4204,9 +4210,9 @@
         resetInactivityTimer();
     </script>
 
-    <script src="/static/js/config.js?v=20260930_large_company_fix"></script>
-    <script src="/static/js/parking-api-live.js?v=20261001_v3_validity_fix"></script>
-    <script src="/static/js/parking-ui-live.js?v=20261001_v3_validity_fix"></script>
+    <script src="/static/js/config.js?v=20261007_sync_and_duplicate_fix"></script>
+    <script src="/static/js/parking-api-live.js?v=20261007_sync_and_duplicate_fix"></script>
+    <script src="/static/js/parking-ui-live.js?v=20261007_sync_and_duplicate_fix"></script>
 
     <script>
         // Override init function to use XML API
