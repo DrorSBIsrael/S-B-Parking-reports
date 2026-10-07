@@ -361,37 +361,70 @@
             overflow-x: auto;
             border: 1px solid var(--border-color);
             border-radius: 8px;
+            width: 100%;
         }
 
         .subscribers-table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 1000px;
+            table-layout: fixed;
             font-family: 'Rubik', 'Assistant', 'Segoe UI', system-ui, sans-serif;
-            font-size: 15px;
+            font-size: 14px;
         }
 
         .subscribers-table th {
-            padding: 14px 12px;
+            padding: 12px 8px;
             text-align: right;
             border-bottom: 2px solid #555555;
             background: #2d2d2d;
             font-weight: bold;
             color: #e2e8f0;
-            font-size: 1.05em;
+            font-size: 1em;
             position: sticky;
             top: 0;
             z-index: 10;
+            user-select: none;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .subscribers-table td {
-            padding: 14px 12px;
+            padding: 10px 8px;
             text-align: right;
             border-bottom: 1px solid #333333;
             color: #ffffff;
             white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
             font-weight: 500;
-            line-height: 1.5;
+            line-height: 1.4;
+        }
+
+        .col-resizer {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 6px;
+            cursor: col-resize;
+            z-index: 20;
+            user-select: none;
+        }
+
+        html[dir="rtl"] .col-resizer,
+        body:not([lang="en"]) .col-resizer {
+            left: 0;
+            right: auto;
+        }
+
+        body[lang="en"] .col-resizer {
+            right: 0;
+            left: auto;
+        }
+
+        .col-resizer:hover,
+        .col-resizer.resizing {
+            background-color: var(--primary-color, #0066cc);
         }
 
         .subscribers-table tr:nth-child(odd) td {
@@ -1346,10 +1379,16 @@
         <!-- Main Content -->
         <div class="main-content" id="mainContent" style="display: none;">
             <div class="section-header">
-                <h2 class="section-title">
-                    <span data-translate="subscribers">מנויים</span>
-                    <span id="companyName"></span>
-                </h2>
+                <div>
+                    <h2 class="section-title">
+                        <span data-translate="subscribers">מנויים</span>
+                        <span id="companyName"></span>
+                    </h2>
+                    <div id="companySubNotice" style="font-size: 13px; color: #aaa; margin-top: 4px; display: none;">
+                        לעדכון מספר הנוכחים ונתוני מערכת יש לבצע טעינה מלאה
+                        <span id="lastLoadedTime" style="margin-right: 6px; color: #888;"></span>
+                    </div>
+                </div>
                 <div class="action-buttons">
                     <button class="btn action-btn primary-btn" onclick="addNewSubscriber()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -1407,40 +1446,40 @@
                 <table class="subscribers-table" id="subscribersTable">
                     <thead>
                         <tr>
-                            <th data-translate="companyNum" data-sort="companyNum" class="sortable">
+                            <th data-col="companyNum" data-translate="companyNum" data-sort="companyNum" class="sortable" style="width: 70px;">
                                 <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">מס' חברה <span class="sort-icon">⇅</span></div>
                             </th>
-                            <th data-translate="companyName" data-sort="companyName" class="sortable">
+                            <th data-col="companyName" data-translate="companyName" data-sort="companyName" class="sortable" style="width: 110px;">
                                 <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">שם חברה <span class="sort-icon">⇅</span></div>
                             </th>
-                            <th data-translate="subscriberNum" data-sort="subscriberNum" class="sortable">
+                            <th data-col="subscriberNum" data-translate="subscriberNum" data-sort="subscriberNum" class="sortable" style="width: 75px;">
                                 <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">מס' מנוי <span class="sort-icon">⇅</span></div>
                             </th>
-                            <th data-translate="firstName" data-sort="firstName" class="sortable">
+                            <th data-col="firstName" data-translate="firstName" data-sort="firstName" class="sortable" style="width: 105px;">
                                 <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">שם פרטי <span class="sort-icon">⇅</span></div>
                             </th>
-                            <th data-translate="lastName" data-sort="lastName" class="sortable">
+                            <th data-col="lastName" data-translate="lastName" data-sort="lastName" class="sortable" style="width: 110px;">
                                 <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">שם משפחה <span class="sort-icon">⇅</span></div>
                             </th>
-                            <th data-translate="tagNum" data-sort="tagNum" class="sortable">
+                            <th data-col="tagNum" data-translate="tagNum" data-sort="tagNum" class="sortable" style="width: 75px;">
                                 <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">מס' תג <span class="sort-icon">⇅</span></div>
                             </th>
-                            <th data-translate="vehicle1" data-sort="vehicle1" class="sortable">
+                            <th data-col="vehicle1" data-translate="vehicle1" data-sort="vehicle1" class="sortable" style="width: 85px;">
                                 <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">רכב 1 <span class="sort-icon">⇅</span></div>
                             </th>
-                            <th data-translate="vehicle2">
+                            <th data-col="vehicle2" data-translate="vehicle2" style="width: 80px;">
                                 <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">רכב 2</div>
                             </th>
-                            <th data-translate="vehicle3">
+                            <th data-col="vehicle3" data-translate="vehicle3" style="width: 80px;">
                                 <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">רכב 3</div>
                             </th>
-                            <th data-translate="validUntil" data-sort="validUntil" class="sortable">
+                            <th data-col="validUntil" data-translate="validUntil" data-sort="validUntil" class="sortable" style="width: 90px;">
                                 <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">בתוקף עד <span class="sort-icon">⇅</span></div>
                             </th>
-                            <th data-translate="profile">
+                            <th data-col="profile" data-translate="profile" style="width: 95px;">
                                 <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">פרופיל</div>
                             </th>
-                            <th data-translate="presence" data-sort="presence" class="sortable">
+                            <th data-col="presence" data-translate="presence" data-sort="presence" class="sortable" style="width: 65px;">
                                 <div style="display: flex; align-items: center; justify-content: flex-start; gap: 4px;">נוכחות <span class="sort-icon">⇅</span></div>
                             </th>
                         </tr>
@@ -4210,9 +4249,9 @@
         resetInactivityTimer();
     </script>
 
-    <script src="/static/js/config.js?v=20261007_sync_and_duplicate_fix"></script>
-    <script src="/static/js/parking-api-live.js?v=20261007_sync_and_duplicate_fix"></script>
-    <script src="/static/js/parking-ui-live.js?v=20261007_sync_and_duplicate_fix"></script>
+    <script src="/static/js/config.js?v=20261007_table_layout_fix"></script>
+    <script src="/static/js/parking-api-live.js?v=20261007_table_layout_fix"></script>
+    <script src="/static/js/parking-ui-live.js?v=20261007_table_layout_fix"></script>
 
     <script>
         // Override init function to use XML API
@@ -4331,6 +4370,97 @@
             }
         }
 
+        // Column Resizing Implementation for Subscribers Table
+        function initTableColumnResizing() {
+            const table = document.getElementById('subscribersTable');
+            if (!table) return;
+
+            const thead = table.querySelector('thead');
+            if (!thead) return;
+
+            const thElements = thead.querySelectorAll('th');
+            if (!thElements || thElements.length === 0) return;
+
+            // Load saved widths from localStorage
+            let savedWidths = {};
+            try {
+                const stored = localStorage.getItem('subscribers_col_widths');
+                if (stored) {
+                    savedWidths = JSON.parse(stored);
+                }
+            } catch (e) {
+                console.error('Error reading saved col widths:', e);
+            }
+
+            thElements.forEach((th) => {
+                const colKey = th.getAttribute('data-col') || th.getAttribute('data-translate');
+                if (colKey && savedWidths[colKey]) {
+                    th.style.width = savedWidths[colKey];
+                }
+
+                // If resizer already exists, don't duplicate
+                if (th.querySelector('.col-resizer')) return;
+
+                th.style.position = 'relative';
+
+                const resizer = document.createElement('div');
+                resizer.className = 'col-resizer';
+                th.appendChild(resizer);
+
+                let startX = 0;
+                let startWidth = 0;
+                let isRtl = false;
+
+                const onMouseDown = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    startX = e.clientX;
+                    startWidth = th.getBoundingClientRect().width;
+                    isRtl = document.dir === 'rtl' || document.documentElement.dir === 'rtl' || !document.body.hasAttribute('lang') || document.body.getAttribute('lang') !== 'en';
+
+                    resizer.classList.add('resizing');
+                    document.body.style.cursor = 'col-resize';
+                    document.body.style.userSelect = 'none';
+
+                    const onMouseMove = (moveEvent) => {
+                        const diffX = moveEvent.clientX - startX;
+                        // In RTL, dragging mouse leftwards (negative diff) makes column wider; dragging rightwards makes it smaller
+                        const newWidth = Math.max(40, isRtl ? (startWidth - diffX) : (startWidth + diffX));
+                        th.style.width = newWidth + 'px';
+                    };
+
+                    const onMouseUp = () => {
+                        resizer.classList.remove('resizing');
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+                        document.removeEventListener('mousemove', onMouseMove);
+                        document.removeEventListener('mouseup', onMouseUp);
+
+                        // Save widths
+                        try {
+                            const updatedWidths = {};
+                            thead.querySelectorAll('th').forEach(t => {
+                                const key = t.getAttribute('data-col') || t.getAttribute('data-translate');
+                                if (key && t.style.width) {
+                                    updatedWidths[key] = t.style.width;
+                                }
+                            });
+                            localStorage.setItem('subscribers_col_widths', JSON.stringify(updatedWidths));
+                        } catch (err) {
+                            console.error('Error saving col widths:', err);
+                        }
+                    };
+
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                };
+
+                resizer.addEventListener('mousedown', onMouseDown);
+            });
+        }
+        window.initTableColumnResizing = initTableColumnResizing;
+
         document.addEventListener('DOMContentLoaded', function () {
             // Load saved font size preference
             const savedFontSize = localStorage.getItem('preferredFontSize');
@@ -4339,6 +4469,9 @@
                 const newSize = 13 + (currentFontSize * 1);
                 document.body.style.fontSize = newSize + 'px';
             }
+
+            // Initialize column resizing
+            initTableColumnResizing();
 
             // Update button states based on permissions
             updateButtonPermissions();
