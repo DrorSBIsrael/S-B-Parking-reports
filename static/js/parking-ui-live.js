@@ -1114,8 +1114,7 @@ class ParkingUIIntegrationXML {
                 if (companyNameElement) {
                     // Check if this is a large company
                     const isLargeCompany = this.subscribers.length > 500;
-                    const statusText = isLargeCompany ? ' 🚀' : '';
-                    companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''})${statusText}`;
+                    companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''})`;
 
                     // Add tooltip for large companies
                     if (isLargeCompany) {
@@ -1126,6 +1125,18 @@ class ParkingUIIntegrationXML {
                     const reloadButton = document.getElementById('reloadFullButton');
                     if (reloadButton) {
                         reloadButton.style.display = isLargeCompany ? 'inline-block' : 'none';
+                    }
+
+                    // Update notice under title with last loaded time
+                    const subNotice = document.getElementById('companySubNotice');
+                    if (subNotice) {
+                        subNotice.style.display = 'block';
+                        const timeSpan = document.getElementById('lastLoadedTime');
+                        if (timeSpan) {
+                            const now = new Date();
+                            const timeStr = now.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                            timeSpan.textContent = `| שעת טעינה אחרונה: ${timeStr}`;
+                        }
                     }
                 }
             }
@@ -1141,14 +1152,13 @@ class ParkingUIIntegrationXML {
         const companyNameElement = document.getElementById('companyName');
         if (companyNameElement) {
             const currentText = companyNameElement.textContent;
-            const companyName = currentText.split('(')[0].trim().replace('- ', '').replace(' 🚀', '');
+            const companyName = currentText.split('(')[0].trim().replace('- ', '');
 
             // Check if this is a large company
             const isLargeCompany = this.subscribers.length > 500;
-            const statusText = isLargeCompany ? ' 🚀 מצב מהיר' : '';
 
-            // Update with clean format
-            companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''})${statusText}`;
+            // Update with clean format without rocket icon
+            companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''})`;
 
             // Add tooltip for large companies
             if (isLargeCompany) {
@@ -1668,13 +1678,9 @@ class ParkingUIIntegrationXML {
         const permissions = window.userPermissions || '';
         const canEdit = permissions !== 'B' && permissions !== '';
 
-        // Ensure the actions column header exists
-        const tableHead = document.querySelector('#subscribersTable thead tr');
-        if (tableHead && !tableHead.querySelector('th[data-translate="actions"]')) {
-            const actionsHeader = document.createElement('th');
-            actionsHeader.setAttribute('data-translate', 'actions');
-            actionsHeader.textContent = 'פעולות';
-            tableHead.appendChild(actionsHeader);
+        // Initialize column resizing if available
+        if (typeof window.initTableColumnResizing === 'function') {
+            window.initTableColumnResizing();
         }
 
         tbody.innerHTML = '';
