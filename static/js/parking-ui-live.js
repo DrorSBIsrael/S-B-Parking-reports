@@ -928,7 +928,7 @@ class ParkingUIIntegrationXML {
 
                     // Update all subscribers with correct company name and loading strategy
                     const companyName = this.currentContract.name || this.currentContract.firstName || `חברה ${this.currentContract.id}`;
-                    const isLargeCompany = this.subscribers.length > 300;
+                    const isLargeCompany = this.subscribers.length > 500;
                     this.subscribers.forEach(sub => {
                         // Only update company name if it's missing
                         if (!sub.companyName) {
@@ -1113,7 +1113,7 @@ class ParkingUIIntegrationXML {
                 const companyNameElement = document.getElementById('companyName');
                 if (companyNameElement) {
                     // Check if this is a large company
-                    const isLargeCompany = this.subscribers.length > 300;
+                    const isLargeCompany = this.subscribers.length > 500;
                     const statusText = isLargeCompany ? ' 🚀' : '';
                     companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''})${statusText}`;
 
@@ -1144,7 +1144,7 @@ class ParkingUIIntegrationXML {
             const companyName = currentText.split('(')[0].trim().replace('- ', '').replace(' 🚀', '');
 
             // Check if this is a large company
-            const isLargeCompany = this.subscribers.length > 300;
+            const isLargeCompany = this.subscribers.length > 500;
             const statusText = isLargeCompany ? ' 🚀 מצב מהיר' : '';
 
             // Update with clean format
@@ -2238,6 +2238,24 @@ class ParkingUIIntegrationXML {
     async saveSubscriber(subscriberData) {
         if (!this.currentContract) return;
 
+        // Prevent double submission / duplicate creation
+        if (this.isSaving) {
+            console.warn('[saveSubscriber] Save already in progress, ignoring duplicate call');
+            return false;
+        }
+        this.isSaving = true;
+
+        const saveTopBtn = document.getElementById('saveTopBtn');
+        const saveBottomBtn = document.querySelector('#editForm button[type="submit"]');
+        if (saveTopBtn) {
+            saveTopBtn.disabled = true;
+            saveTopBtn.style.opacity = '0.6';
+        }
+        if (saveBottomBtn) {
+            saveBottomBtn.disabled = true;
+            saveBottomBtn.style.opacity = '0.6';
+        }
+
         // Check if trying to update profile
         const permissions = window.userPermissions || '';
         const currentSubscriber = this.subscribers.find(s =>
@@ -2819,6 +2837,17 @@ class ParkingUIIntegrationXML {
             return false;
         } finally {
             this.setLoading(false);
+            this.isSaving = false;
+            const saveTopBtn = document.getElementById('saveTopBtn');
+            const saveBottomBtn = document.querySelector('#editForm button[type="submit"]');
+            if (saveTopBtn) {
+                saveTopBtn.disabled = false;
+                saveTopBtn.style.opacity = '1';
+            }
+            if (saveBottomBtn) {
+                saveBottomBtn.disabled = false;
+                saveBottomBtn.style.opacity = '1';
+            }
         }
     }
 

@@ -305,10 +305,10 @@ class ParkingAPIXML {
                 const cached = localStorage.getItem(cacheKey);
                 if (cached) {
                     const parsedData = JSON.parse(cached);
-                    // כאן מגדירים לכמה ימים לשמור את הנתונים בזיכרון המקומי
-                    const CACHE_VALID_DAYS = 7; 
+                    // כאן מגדירים לכמה שעות לשמור את הנתונים בזיכרון המקומי
+                    const CACHE_VALID_HOURS = 12; 
                     const cacheAgeMs = Date.now() - (parsedData.timestamp || 0);
-                    const isCacheValid = cacheAgeMs < (CACHE_VALID_DAYS * 24 * 60 * 60 * 1000);
+                    const isCacheValid = cacheAgeMs < (CACHE_VALID_HOURS * 60 * 60 * 1000);
                     
                     if (isCacheValid && parsedData.subscribers && parsedData.subscribers.length > 0) {
                         console.log(`[Cache] Loaded ${parsedData.subscribers.length} subscribers from cache for company ${companyId}`);
@@ -320,7 +320,7 @@ class ParkingAPIXML {
                             contractId: companyId,
                             companyName: callbacks.companyName || sub.companyName,
                             hasFullDetails: true,
-                            isLargeCompany: parsedData.subscribers.length > 300
+                            isLargeCompany: parsedData.subscribers.length > 500
                         }));
                         
                         onBasicLoaded(parsedData.subscribers, true);
@@ -375,7 +375,7 @@ class ParkingAPIXML {
             const finalConsumers = Array.isArray(consumers) ? consumers : [consumers];
             // PERFORMANCE OPTIMIZATION: Smart loading based on company size
             const INSTANT_LOAD_THRESHOLD = 30;    // Load all at once (1 batch)
-            const BATCH_LOAD_THRESHOLD = 300;     // Load in batches of 25 (up to 300)
+            const BATCH_LOAD_THRESHOLD = 500;     // Load in batches of 25 (up to 500)
             
             const subscriberCount = finalConsumers.length;
             let loadingStrategy = 'instant';
@@ -656,14 +656,14 @@ class ParkingAPIXML {
                         
                         basicSubscribers = allUpdated;
                         
-                        // Save to cache for 7 days
+                        // Save to cache for 12 hours
                         try {
                             const payload = {
                                 timestamp: Date.now(),
                                 subscribers: basicSubscribers
                             };
                             localStorage.setItem(cacheKey, JSON.stringify(payload));
-                            console.log(`[Cache] Background loading finished and cached ${basicSubscribers.length} subscribers for 7 days (company ${companyId})`);
+                            console.log(`[Cache] Background loading finished and cached ${basicSubscribers.length} subscribers for 12 hours (company ${companyId})`);
                         } catch(e) {
                             console.warn('[Cache] Could not save to localStorage:', e);
                         }
@@ -683,7 +683,7 @@ class ParkingAPIXML {
                 }, 100); // Small delay to let UI render first
             }
             else if (loadingStrategy === 'on-demand') {
-                // For very large companies (300+), don't auto-load details
+                // For very large companies (500+), don't auto-load details
                 if (callbacks.onProgress) {
                     callbacks.onProgress({ 
                         percent: 100,
