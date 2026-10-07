@@ -2920,7 +2920,7 @@
             validFromInput.addEventListener('change', guestDateChangeHandler);
             validFromInput.addEventListener('blur', guestDateChangeHandler);
 
-            // Warn if date is beyond current week, but ALLOW it (don't reset)
+            // Restrict guest date to Saturday of current week
             validUntilInput.addEventListener('change', function () {
                 const fromValue = validFromInput.value;
                 const untilValue = validUntilInput.value;
@@ -2945,15 +2945,18 @@
                     parseInt(untilParts[0])
                 );
 
-                // Calculate the Saturday of the from date's week
+                // Calculate the Saturday of the from date's week (0 = Sunday, 6 = Saturday)
                 const dayOfWeek = fromDate.getDay();
                 const daysUntilSaturday = 6 - dayOfWeek;
                 const maxEndDate = new Date(fromDate);
                 maxEndDate.setDate(fromDate.getDate() + daysUntilSaturday);
 
-                // If the selected until date is after the week's Saturday, just warn
                 if (untilDate > maxEndDate) {
-                    showToast('שים לב: תאריך הסיום חורג מהשבוע הנוכחי', 'warning');
+                    const maxSatDay = String(maxEndDate.getDate()).padStart(2, '0');
+                    const maxSatMonth = String(maxEndDate.getMonth() + 1).padStart(2, '0');
+                    const maxSatYear = maxEndDate.getFullYear();
+                    validUntilInput.value = `${maxSatDay}/${maxSatMonth}/${maxSatYear}`;
+                    showToast(`אורחים מוגבלים עד סוף השבוע (שבת ${maxSatDay}/${maxSatMonth}). התאריך עודכן אוטומטית.`, 'warning');
                 }
             });
 
@@ -3689,6 +3692,24 @@
                     return;
                 }
 
+                // Strict validation for guest: cannot exceed Saturday of current week
+                if (isGuest) {
+                    const dayOfWeek = fromDate.getDay(); // 0 = Sunday, 6 = Saturday
+                    const daysUntilSaturday = 6 - dayOfWeek;
+                    const maxGuestEndDate = new Date(fromDate);
+                    maxGuestEndDate.setDate(fromDate.getDate() + daysUntilSaturday);
+                    maxGuestEndDate.setHours(23, 59, 59, 999);
+
+                    if (untilDate > maxGuestEndDate) {
+                        const satDay = String(maxGuestEndDate.getDate()).padStart(2, '0');
+                        const satMonth = String(maxGuestEndDate.getMonth() + 1).padStart(2, '0');
+                        showToast(`שגיאה: אורחים יכולים להזמין רק עד סוף השבוע הנוכחי (שבת ${satDay}/${satMonth}).`, 'error');
+                        document.getElementById('editValidUntil').focus();
+                        document.getElementById('editValidUntil').style.borderColor = 'red';
+                        return;
+                    }
+                }
+
                 // Allow phone numbers in names - per user request
 
                 // Reset border colors
@@ -4249,9 +4270,9 @@
         resetInactivityTimer();
     </script>
 
-    <script src="/static/js/config.js?v=20261007_table_layout_fix"></script>
-    <script src="/static/js/parking-api-live.js?v=20261007_table_layout_fix"></script>
-    <script src="/static/js/parking-ui-live.js?v=20261007_table_layout_fix"></script>
+    <script src="/static/js/config.js?v=20261007_guest_date_limit"></script>
+    <script src="/static/js/parking-api-live.js?v=20261007_guest_date_limit"></script>
+    <script src="/static/js/parking-ui-live.js?v=20261007_guest_date_limit"></script>
 
     <script>
         // Override init function to use XML API
