@@ -16,13 +16,20 @@ class ParkingAPIXML {
             baseUrl = window.location.origin + '/api/company-manager/proxy';
         }
         
+        let savedParkingId = null;
+        try {
+            if (typeof localStorage !== 'undefined') {
+                savedParkingId = localStorage.getItem('currentParkingId');
+            }
+        } catch(e) {}
+
         this.config = {
             baseUrl: baseUrl,
             username: '2022',
             password: '2022',
             timeout: 30000,
             useProxy: true,  // Always use proxy
-            currentParkingId: null
+            currentParkingId: savedParkingId
         };
         // Initialization complete - using secure proxy
     }
@@ -38,7 +45,11 @@ class ParkingAPIXML {
     
     setCurrentParking(parkingId) {
         this.config.currentParkingId = parkingId;
-        // Current parking set
+        if (parkingId && typeof localStorage !== 'undefined') {
+            try {
+                localStorage.setItem('currentParkingId', parkingId);
+            } catch(e) {}
+        }
     }
     
     parseXML(xmlString) {
@@ -107,8 +118,13 @@ class ParkingAPIXML {
                     endpoint = `CustomerMediaWebService/${endpoint}`;
                 }
                 
+                const effectiveParkingId = this.config.currentParkingId || 
+                                           window.currentParking?.id || 
+                                           (typeof localStorage !== 'undefined' ? localStorage.getItem('currentParkingId') : null) || 
+                                           '1';
+                
                 const requestBody = {
-                    parking_id: this.config.currentParkingId,
+                    parking_id: effectiveParkingId,
                     endpoint: endpoint,
                     method: method,
                     payload: data
@@ -391,56 +407,64 @@ class ParkingAPIXML {
             } else if (subscriberCount <= BATCH_LOAD_THRESHOLD) {
                 loadingStrategy = 'batch-50';
             } else {
-                loadingStrategy = 'background-cache';
+                loadingStrategy = 'on-demand';
             }
             
             const isLargeCompany = subscriberCount > BATCH_LOAD_THRESHOLD;
 
-            // Map ALL available data from consumer list
-            let basicSubscribers = finalConsumers.map(consumer => ({
-                // IDs
-                id: consumer.id || consumer.subscriberNum,
-                subscriberNum: consumer.id || consumer.subscriberNum,
-                contractId: companyId,
-                companyNum: companyId,
-                companyName: callbacks.companyName || '',  // Will be passed from UI
-                
-                // Names - don't duplicate if only last name exists
-                firstName: consumer.firstName || '',
-                lastName: consumer.lastName || consumer.name || '',
-                name: consumer.name || consumer.lastName || '',
-                
-                // Vehicles
-                vehicleNum: consumer.vehicleNum || consumer.lpn1 || '',
-                lpn1: consumer.lpn1 || consumer.vehicleNum || '',
-                lpn2: consumer.lpn2 || '',
-                lpn3: consumer.lpn3 || '',
-                vehicle1: consumer.lpn1 || consumer.vehicleNum || '',
-                vehicle2: consumer.lpn2 || '',
-                vehicle3: consumer.lpn3 || '',
-                
-                // Dates
-                validFrom: consumer.xValidFrom || consumer.validFrom || '2024-01-01',
-                validUntil: consumer.xValidUntil || consumer.validUntil || '2030-12-31',
-                xValidFrom: consumer.xValidFrom || consumer.validFrom || '2024-01-01',
-                xValidUntil: consumer.xValidUntil || consumer.validUntil || '2030-12-31',
-                
-                // Other fields
-                tagNum: consumer.tagNum || consumer.cardNum || consumer.cardno || '',
-                cardno: consumer.tagNum || consumer.cardNum || consumer.cardno || '',
-                profile: consumer.profile || consumer.extCardProfile || '1',
-                profileId: consumer.profile || consumer.extCardProfile || '1',
-                extCardProfile: consumer.extCardProfile || consumer.profile || '1',
-                facility: consumer.facility || '0',
-                filialId: consumer.filialId || '2240',
-                
-                // Status
-                presence: consumer.presence || false,
-                ignorePresence: consumer.ignorePresence || false,
-                hasFullDetails: false,  // Will be set to true after loading details
-                loadingStrategy: loadingStrategy,
-                isLargeCompany: isLargeCompany
-            }));
+            // Map ALL available data from consumer list (including nested XML person/identification structures)
+            let basicSubscribers = finalConsumers.map(consumer => {
+                const person = consumer.person || {};
+                const ident = consumer.identification || {};
+                const usageProf = ident.usageProfile || consumer.usageProfile || {};
+
+                const fname = person.firstName || consumer.firstName || '';
+                const lname = person.surname || consumer.lastName || consumer.name || '';
+                const tag = ident.cardno || consumer.tagNum || consumer.cardNum || consumer.cardno || '';
+                const profId = usageProf.id || consumer.profile || consumer.extCardProfile || '1';
+                const profName = usageProf.name || consumer.profileName || (profId ? `פרופיל ${profId}` : 'רגיל');
+                const vFrom = ident.validFrom || consumer.xValidFrom || consumer.validFrom || '2024-01-01';
+                const vUntil = ident.validUntil || consumer.xValidUntil || consumer.validUntil || '2030-12-31';
+                const isPres = ident.present === 'true' || ident.present === true || consumer.presence || consumer.present || false;
+                const l1 = consumer.lpn1 || consumer.vehicle1 || consumer.vehicleNum || '';
+                const l2 = consumer.lpn2 || consumer.vehicle2 || '';
+                const l3 = consumer.lpn3 || consumer.vehicle3 || '';
+
+                return {
+                    id: consumer.id || consumer.subscriberNum,
+                    subscriberNum: consumer.id || consumer.subscriberNum,
+                    contractId: companyId,
+                    companyNum: companyId,
+                    companyName: callbacks.companyName || '',
+                    firstName: fname,
+                    lastName: lname,
+                    name: lname,
+                    vehicleNum: l1,
+                    lpn1: l1,
+                    lpn2: l2,
+                    lpn3: l3,
+                    vehicle1: l1,
+                    vehicle2: l2,
+                    vehicle3: l3,
+                    validFrom: vFrom,
+                    validUntil: vUntil,
+                    xValidFrom: vFrom,
+                    xValidUntil: vUntil,
+                    tagNum: tag,
+                    cardno: tag,
+                    profile: profId,
+                    profileId: profId,
+                    profileName: profName,
+                    extCardProfile: profId,
+                    facility: consumer.facility || '0',
+                    filialId: consumer.filialId || '2240',
+                    presence: isPres,
+                    ignorePresence: consumer.ignorePresence || false,
+                    hasFullDetails: false,
+                    loadingStrategy: loadingStrategy,
+                    isLargeCompany: isLargeCompany
+                };
+            });
             
             // Return basic data immediately
             onBasicLoaded(basicSubscribers, false);
@@ -608,89 +632,6 @@ class ParkingAPIXML {
                         if (callbacks.onComplete) {
                             callbacks.onComplete(basicSubscribers, false, batchTimestamp);
                         }
-                    } else if (loadingStrategy === 'background-cache') {
-                        // Load in background in concurrent batches (15 at a time) for speed and responsiveness
-                        const BATCH_SIZE = 15;
-                        let allUpdated = [];
-                        const totalSubscribers = basicSubscribers.length;
-                        
-                        if (callbacks.onProgress) {
-                            callbacks.onProgress({ 
-                                percent: 0,
-                                current: 0,
-                                total: totalSubscribers,
-                                message: `חברה גדולה (${totalSubscribers} מנויים) - טוען פרטים ברקע...`
-                            });
-                        }
-                        
-                        for (let i = 0; i < totalSubscribers; i += BATCH_SIZE) {
-                            const batch = basicSubscribers.slice(i, Math.min(i + BATCH_SIZE, totalSubscribers));
-                            const batchPromises = batch.map(processSubscriber);
-                            const batchResults = await Promise.all(batchPromises);
-                            
-                            allUpdated = allUpdated.concat(batchResults);
-                            
-                            // Update UI row-by-row live as each batch completes
-                            batchResults.forEach((updated, idx) => {
-                                const originalIndex = i + idx;
-                                if (callbacks.onDetailLoaded) {
-                                    callbacks.onDetailLoaded(updated, originalIndex);
-                                }
-                            });
-                            
-                            // Report progress
-                            const progress = Math.round((allUpdated.length / totalSubscribers) * 100);
-                            if (callbacks.onProgress) {
-                                callbacks.onProgress({
-                                    percent: progress,
-                                    current: allUpdated.length,
-                                    total: totalSubscribers,
-                                    message: `חברה גדולה: טוען פרטי מנויים... ${allUpdated.length} מתוך ${totalSubscribers} (${progress}%)`
-                                });
-                            }
-                            
-                            // Small pause between batches
-                            if (i + BATCH_SIZE < totalSubscribers) {
-                                await new Promise(resolve => setTimeout(resolve, 80));
-                            }
-
-                            // Periodically save batch progress to cache so work is preserved even if user navigates
-                            if (allUpdated.length % 30 === 0 || allUpdated.length === totalSubscribers) {
-                                try {
-                                    const progressSubscribers = allUpdated.concat(basicSubscribers.slice(allUpdated.length));
-                                    localStorage.setItem(cacheKey, JSON.stringify({
-                                        timestamp: Date.now(),
-                                        subscribers: progressSubscribers
-                                    }));
-                                } catch(e) {}
-                            }
-                        }
-                        
-                        basicSubscribers = allUpdated;
-                        const bgTimestamp = Date.now();
-                        
-                        // Save to cache for 12 hours
-                        try {
-                            const payload = {
-                                timestamp: bgTimestamp,
-                                subscribers: basicSubscribers
-                            };
-                            localStorage.setItem(cacheKey, JSON.stringify(payload));
-                            console.log(`[Cache] Background loading finished and cached ${basicSubscribers.length} subscribers for 12 hours (company ${companyId})`);
-                        } catch(e) {
-                            console.warn('[Cache] Could not save to localStorage:', e);
-                        }
-                        
-                        if (callbacks.onBasicLoaded) {
-                            callbacks.onBasicLoaded(basicSubscribers);
-                        }
-
-                        if (callbacks.onComplete) {
-                            callbacks.onComplete(basicSubscribers, false, bgTimestamp);
-                        }
-                    } else {
-                        // Should not reach here with current strategy
-                        // Unknown loading strategy
                     }
                     
                     // Hide loading message (only if not already handled by instant loading)
@@ -700,12 +641,24 @@ class ParkingAPIXML {
                 }, 100); // Small delay to let UI render first
             }
             else if (loadingStrategy === 'on-demand') {
-                // For very large companies (500+), don't auto-load details
+                // For very large companies (500+), basic data is rendered immediately,
+                // and cached in localStorage for 12 hours. Full details load on demand (or via Full Reload).
+                const onDemandTimestamp = Date.now();
+                try {
+                    localStorage.setItem(cacheKey, JSON.stringify({
+                        timestamp: onDemandTimestamp,
+                        subscribers: basicSubscribers
+                    }));
+                } catch(e) {}
+
                 if (callbacks.onProgress) {
                     callbacks.onProgress({ 
                         percent: 100,
-                        message: `חברה גדולה - פרטי מנויים ייטענו בעת הצורך`
+                        message: `חברה גדולה (${subscriberCount} מנויים) - הושלמה טעינה`
                     });
+                }
+                if (callbacks.onComplete) {
+                    callbacks.onComplete(basicSubscribers, false, onDemandTimestamp);
                 }
             }
             

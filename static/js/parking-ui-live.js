@@ -992,6 +992,8 @@ class ParkingUIIntegrationXML {
                         // Cached data is already complete, update timestamp at end of loading
                         this.updateLoadedTimestamp(cachedTimestamp || Date.now(), true);
                         loadCompleted = true;
+                    } else if (isLargeCompany) {
+                        this.hideBackgroundProgress();
                     } else if (basicSubscribers.length > 30) {
                         this.showBackgroundProgress('טוען פרטים מלאים ברקע...');
                     }
@@ -1078,11 +1080,9 @@ class ParkingUIIntegrationXML {
             // Make sure loading is cleared on error
             this.setLoading(false, 'loadingState');
         } finally {
-            // Hide background loading message
-            this.hideBackgroundProgress();
-
-            if (!loadCompleted && this.subscribers && this.subscribers.length > 0) {
-                this.updateLoadedTimestamp(Date.now(), false);
+            if (loadCompleted) {
+                this.hideBackgroundProgress();
+                this.hideProgressMessage();
             }
 
             // If we're still showing the progress message after 5 seconds, something went wrong
