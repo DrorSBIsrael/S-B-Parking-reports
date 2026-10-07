@@ -35,6 +35,13 @@ class ParkingUIIntegrationXML {
     
     _syncCache() {
         if (!this.currentContract || !this.currentContract.id) return;
+        // שמירת מטמון מיועדת אך ורק לחברות גדולות (מעל 500 מנויים)
+        if (!this.subscribers || this.subscribers.length <= 500) {
+            try {
+                localStorage.removeItem('skidata_cache_company_' + this.currentContract.id);
+            } catch(e) {}
+            return;
+        }
         try {
             const cacheKey = 'skidata_cache_company_' + this.currentContract.id;
             let cacheTimestamp = Date.now();
@@ -52,7 +59,7 @@ class ParkingUIIntegrationXML {
                 subscribers: this.subscribers
             };
             localStorage.setItem(cacheKey, JSON.stringify(payload));
-            console.log(`[Cache] Synchronized local cache for company ${this.currentContract.id} (${this.subscribers.length} items)`);
+            console.log(`[Cache] Synchronized local cache for large company ${this.currentContract.id} (${this.subscribers.length} items)`);
         } catch(e) {
             console.warn('[Cache] Could not sync cache:', e);
         }
@@ -1140,17 +1147,23 @@ class ParkingUIIntegrationXML {
         const subNotice = document.getElementById('companySubNotice');
         if (subNotice) {
             subNotice.style.display = 'block';
+            const isLarge = this.subscribers && this.subscribers.length > 500;
+            const noticeText = document.getElementById('subNoticeText');
+            if (noticeText) {
+                noticeText.style.display = isLarge ? 'inline' : 'none';
+            }
             const timeSpan = document.getElementById('lastLoadedTime');
             if (timeSpan) {
+                const prefix = isLarge ? '| ' : '';
                 if (isLoading) {
-                    timeSpan.textContent = '| טוען נתונים...';
+                    timeSpan.textContent = `${prefix}טוען נתונים...`;
                 } else if (timestamp) {
                     const d = new Date(timestamp);
                     const timeStr = d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                     if (fromCache) {
-                        timeSpan.textContent = `| שעת טעינה אחרונה: ${timeStr} (מטמון)`;
+                        timeSpan.textContent = `${prefix}שעת טעינה אחרונה: ${timeStr} (מטמון)`;
                     } else {
-                        timeSpan.textContent = `| שעת טעינה אחרונה: ${timeStr}`;
+                        timeSpan.textContent = `${prefix}שעת טעינה אחרונה: ${timeStr}`;
                     }
                 }
             }
@@ -1190,6 +1203,12 @@ class ParkingUIIntegrationXML {
                     const reloadButton = document.getElementById('reloadFullButton');
                     if (reloadButton) {
                         reloadButton.style.display = isLargeCompany ? 'inline-block' : 'none';
+                    }
+
+                    // Notice text: only display for large companies
+                    const noticeText = document.getElementById('subNoticeText');
+                    if (noticeText) {
+                        noticeText.style.display = isLargeCompany ? 'inline' : 'none';
                     }
 
                     // Ensure notice under title is visible

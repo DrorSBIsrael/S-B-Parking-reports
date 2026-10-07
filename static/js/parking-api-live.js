@@ -327,7 +327,8 @@ class ParkingAPIXML {
                     const cacheAgeMs = Date.now() - (parsedData.timestamp || 0);
                     const isCacheValid = cacheAgeMs < (CACHE_VALID_HOURS * 60 * 60 * 1000);
                     
-                    if (isCacheValid && parsedData.subscribers && parsedData.subscribers.length > 0) {
+                    // שמירת מטמון מותרת אך ורק לחברות גדולות (מעל 500 מנויים)!
+                    if (isCacheValid && parsedData.subscribers && parsedData.subscribers.length > 500) {
                         console.log(`[Cache] Loaded ${parsedData.subscribers.length} subscribers from cache for company ${companyId}`);
                         
                         // Force update company number and name to fix any previously corrupted cache
@@ -337,7 +338,7 @@ class ParkingAPIXML {
                             contractId: companyId,
                             companyName: callbacks.companyName || sub.companyName,
                             hasFullDetails: true,
-                            isLargeCompany: parsedData.subscribers.length > 500
+                            isLargeCompany: true
                         }));
                         
                         onBasicLoaded(parsedData.subscribers, true, parsedData.timestamp);
@@ -345,6 +346,7 @@ class ParkingAPIXML {
                         if (onComplete) onComplete(parsedData.subscribers, true, parsedData.timestamp);
                         return { success: true, data: parsedData.subscribers, fromCache: true, timestamp: parsedData.timestamp };
                     } else {
+                        // אם המטמון פג תוקף (מעל 12 שעות) או שהחברה אינה גדולה (<= 500) - מנקים מיד מהמטמון
                         localStorage.removeItem(cacheKey);
                     }
                 }
@@ -556,12 +558,8 @@ class ParkingAPIXML {
                         basicSubscribers = detailedSubscribers;
                         
                         const instantTimestamp = Date.now();
-                        try {
-                            localStorage.setItem(cacheKey, JSON.stringify({
-                                timestamp: instantTimestamp,
-                                subscribers: basicSubscribers
-                            }));
-                        } catch(e) {}
+                        // חברות קטנות נטענות תמיד ישירות מהשרת (ללא שמירה במטמון מקומי)
+                        try { localStorage.removeItem(cacheKey); } catch(e) {}
 
                         // Hide progress message when done
                         if (callbacks.onProgress) {
@@ -622,12 +620,17 @@ class ParkingAPIXML {
                         
                         basicSubscribers = allUpdated;
                         const batchTimestamp = Date.now();
-                        try {
-                            localStorage.setItem(cacheKey, JSON.stringify({
-                                timestamp: batchTimestamp,
-                                subscribers: basicSubscribers
-                            }));
-                        } catch(e) {}
+                        // נשמור במטמון אך ורק אם מדובר בחברה גדולה (מעל 500) שביצעה טעינה מלאה
+                        if (isLargeCompany) {
+                            try {
+                                localStorage.setItem(cacheKey, JSON.stringify({
+                                    timestamp: batchTimestamp,
+                                    subscribers: basicSubscribers
+                                }));
+                            } catch(e) {}
+                        } else {
+                            try { localStorage.removeItem(cacheKey); } catch(e) {}
+                        }
 
                         if (callbacks.onComplete) {
                             callbacks.onComplete(basicSubscribers, false, batchTimestamp);
