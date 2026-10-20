@@ -516,10 +516,16 @@ class ParkingUIIntegrationXML {
             `;
 
             companyList.appendChild(card);
-
-            // Load additional data asynchronously
-            this.loadCompanyCardData(company);
         });
+
+        // Load company card details in controlled batches of 2 so we don't flood the parking server
+        (async () => {
+            const CARD_CONCURRENCY = 2;
+            for (let i = 0; i < companies.length; i += CARD_CONCURRENCY) {
+                const batch = companies.slice(i, i + CARD_CONCURRENCY);
+                await Promise.all(batch.map(company => this.loadCompanyCardData(company)));
+            }
+        })();
     }
 
     /**
@@ -577,11 +583,7 @@ class ParkingUIIntegrationXML {
             // Get company contract data with facility info
             // Loading detailed data for company
 
-            // Get company basic data
-            const directResult = await this.api.makeRequest(`/contracts/${company.id}`);
-            // Direct API response received
-
-            // Get enhanced details with pooling data
+            // Get enhanced details with pooling data (removed redundant /contracts/${id} request)
             const result = await this.api.getEnhancedContractDetails(company.id);
 
             if (result.success && result.data) {
@@ -764,6 +766,10 @@ class ParkingUIIntegrationXML {
      * Select a company and load its subscribers
      */
     async selectCompany(company, evt) {
+        // Cancel any previous company's background loading immediately
+        if (this.api && typeof this.api.cancelActiveLoad === 'function') {
+            this.api.cancelActiveLoad();
+        }
         // Store the full company object with correct name
         // If no name, use the parking name or a default
         const contractName = company.name || company.firstName || company.companyName ||
@@ -1175,9 +1181,18 @@ class ParkingUIIntegrationXML {
      */
     async updateCompanyInfo() {
         try {
-            const companyResult = await this.api.getContractDetails(this.currentContract.id);
-            if (companyResult.success) {
-                const companyName = companyResult.data.name || `חברה ${this.currentContract.id}`;
+            let companyName = this.currentContract?.name || this.currentContract?.companyName || '';
+            if (!companyName || companyName.startsWith('חברה ')) {
+                const companyResult = await this.api.getContractDetails(this.currentContract.id);
+                if (companyResult.success && companyResult.data) {
+                    companyName = companyResult.data.name || `חברה ${this.currentContract.id}`;
+                    this.currentContract.name = companyName;
+                }
+            }
+            if (!companyName) {
+                companyName = `חברה ${this.currentContract.id}`;
+            }
+            if (true) {
 
                 // Update company name in subscribers
                 this.subscribers.forEach(sub => {
@@ -1258,13 +1273,18 @@ class ParkingUIIntegrationXML {
             }
 
             // Find the subscriber in our list
-            const existingIndex = this.subscribers.findIndex(s => s.subscriberNum === subscriberNum);
+            const existingIndex = this.subscribers.findIndex(s => String(s.subscriberNum) === String(subscriberNum));
 
             // Get the updated subscriber data from server
             const result = await this.api.getSubscriber(this.currentContract.id, subscriberNum);
 
             if (result.success && result.data) {
-                const updatedSubscriber = result.data;
+                const existingSub = existingIndex >= 0 ? this.subscribers[existingIndex] : {};
+                const updatedSubscriber = {
+                    ...existingSub,
+                    ...result.data,
+                    companyName: result.data.companyName || existingSub.companyName || this.currentContract.name || ''
+                };
 
                 if (existingIndex >= 0) {
                     // Update existing subscriber
