@@ -4405,6 +4405,16 @@ def update_contract_pooling():
         print(f"Error in contract-pooling/update: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
 
+# Cache for parking connection details: parking_num -> {'ip_address': ..., 'port': ..., 'description': ..., 'ts': ...}
+_parking_info_cache = {}
+_PARKING_CACHE_TTL = 600  # 10 minutes
+
+# Shared requests.Session with connection pooling (Keep-Alive) for parking servers
+_parking_http_session = requests.Session()
+_parking_adapter = requests.adapters.HTTPAdapter(pool_connections=20, pool_maxsize=20)
+_parking_http_session.mount('https://', _parking_adapter)
+_parking_http_session.mount('http://', _parking_adapter)
+
 @app.route('/api/company-manager/proxy', methods=['POST', 'OPTIONS', 'GET'])
 def company_manager_proxy():
     """Proxy לקריאות API לשרתי החניונים"""
@@ -4478,69 +4488,82 @@ def company_manager_proxy():
         if not parking_id or not endpoint or parking_id == 'null' or parking_id == 'undefined':
             return jsonify({'success': False, 'message': 'חסרים פרמטרים'}), 400
         
-        # קבלת נתוני החניון
+        # קבלת נתוני החניון (עם מטמון בזיכרון לחיסכון בפניות ל-Supabase על כל בקשה)
         # Convert parking_id to string to handle numeric IDs
         parking_num = str(parking_id)
+        now_ts = time.time() if 'time' in globals() else 0
+        cached_parking = _parking_info_cache.get(parking_num)
         
-        # Check if parking_id looks like a UUID or a numeric ID
-        import re
-        is_uuid = bool(re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', parking_num, re.IGNORECASE))
-        
-        if is_uuid:
-            # Search by ID (UUID)
-            parking_result = supabase.table('parkings').select(
-                'ip_address, port, description'
-            ).eq('id', parking_num).execute()
+        if cached_parking and (now_ts - cached_parking.get('ts', 0) < _PARKING_CACHE_TTL):
+            parking_data = cached_parking
         else:
-            # Search by description (numeric parking ID)
-            parking_result = supabase.table('parkings').select(
-                'ip_address, port, description'
-            ).eq('description', parking_num).execute()
-        
-        if not parking_result.data:
-            # Try fallback to project_parking_mapping table
-            try:
-                mapping_result = supabase.table('project_parking_mapping').select(
-                    'parking_id, ip_address, port, parking_name'
-                ).eq('project_number', parking_num).execute()
-                
-                if mapping_result.data:
-                    # Found in mapping table
-                    mapping_data = mapping_result.data[0]
-                    parking_data = {
-                        'ip_address': mapping_data.get('ip_address'),
-                        'port': mapping_data.get('port', 443),
-                        'description': mapping_data.get('parking_name', parking_num)
-                    }
-                    # Create a result structure similar to parkings table
-                    parking_result = {'data': [parking_data]}
-                else:
-                    # Try parking_servers table as last resort
-                    servers_result = supabase.table('parking_servers').select(
-                        'server_url, name'
-                    ).eq('name', parking_num).execute()
+            # Check if parking_id looks like a UUID or a numeric ID
+            import re
+            is_uuid = bool(re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', parking_num, re.IGNORECASE))
+            
+            if is_uuid:
+                # Search by ID (UUID)
+                parking_result = supabase.table('parkings').select(
+                    'ip_address, port, description'
+                ).eq('id', parking_num).execute()
+            else:
+                # Search by description (numeric parking ID)
+                parking_result = supabase.table('parkings').select(
+                    'ip_address, port, description'
+                ).eq('description', parking_num).execute()
+            
+            if not parking_result.data:
+                # Try fallback to project_parking_mapping table
+                try:
+                    mapping_result = supabase.table('project_parking_mapping').select(
+                        'parking_id, ip_address, port, parking_name'
+                    ).eq('project_number', parking_num).execute()
                     
-                    if servers_result.data:
-                        server_data = servers_result.data[0]
-                        # Extract IP and port from server_url
-                        import re
-                        url_match = re.match(r'https?://([^:]+):?(\d+)?', server_data.get('server_url', ''))
-                        if url_match:
-                            parking_data = {
-                                'ip_address': url_match.group(1),
-                                'port': int(url_match.group(2)) if url_match.group(2) else 443,
-                                'description': server_data.get('name', parking_num)
-                            }
-                            parking_result = {'data': [parking_data]}
+                    if mapping_result.data:
+                        # Found in mapping table
+                        mapping_data = mapping_result.data[0]
+                        parking_data = {
+                            'ip_address': mapping_data.get('ip_address'),
+                            'port': mapping_data.get('port', 443),
+                            'description': mapping_data.get('parking_name', parking_num)
+                        }
+                        # Create a result structure similar to parkings table
+                        parking_result = {'data': [parking_data]}
+                    else:
+                        # Try parking_servers table as last resort
+                        servers_result = supabase.table('parking_servers').select(
+                            'server_url, name'
+                        ).eq('name', parking_num).execute()
+                        
+                        if servers_result.data:
+                            server_data = servers_result.data[0]
+                            # Extract IP and port from server_url
+                            import re
+                            url_match = re.match(r'https?://([^:]+):?(\d+)?', server_data.get('server_url', ''))
+                            if url_match:
+                                parking_data = {
+                                    'ip_address': url_match.group(1),
+                                    'port': int(url_match.group(2)) if url_match.group(2) else 443,
+                                    'description': server_data.get('name', parking_num)
+                                }
+                                parking_result = {'data': [parking_data]}
+                            else:
+                                return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
                         else:
                             return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
-                    else:
-                        return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
-            except Exception as e:
-                print(f" Error searching fallback tables: {str(e)}")
-                return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
-        else:
-            parking_data = parking_result.data[0]
+                except Exception as e:
+                    print(f" Error searching fallback tables: {str(e)}")
+                    return jsonify({'success': False, 'message': 'חניון לא נמצא'}), 404
+            else:
+                parking_data = parking_result.data[0]
+                
+            if parking_data and parking_data.get('ip_address'):
+                _parking_info_cache[parking_num] = {
+                    'ip_address': parking_data.get('ip_address'),
+                    'port': parking_data.get('port', 443),
+                    'description': parking_data.get('description', parking_num),
+                    'ts': now_ts
+                }
             
         ip_address = parking_data.get('ip_address')
         port = parking_data.get('port', 443)
@@ -4576,6 +4599,11 @@ def company_manager_proxy():
         if endpoint == 'contracts' or endpoint == 'GetContractsList':
             url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/contracts"
             method = 'GET'  # תמיד GET לחברות
+        elif 'consumersdetail' in endpoint.lower():
+            # Handle bulk contract consumers detail endpoint: contracts/{contractId}/consumersdetail[?minId=X&maxId=Y]
+            clean_endpoint = endpoint.replace('CustomerMediaWebService/', '').lstrip('/')
+            url = f"{protocol}://{ip_address}:{port}/CustomerMediaWebService/{clean_endpoint}"
+            method = 'GET'
         elif 'contracts/' in endpoint and '/consumers' in endpoint:
             # Handle contracts/{contractId}/consumers endpoint
             # Remove CustomerMediaWebService prefix if it exists
@@ -4682,7 +4710,7 @@ def company_manager_proxy():
             # ביצוע הקריאה - פשוט כמו שהיה
             # Executing request
             if method == 'GET':
-                response = requests.get(url, headers=headers, verify=False, timeout=timeout_seconds)
+                response = _parking_http_session.get(url, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'POST':
                 # POST request with payload
                 # Check if this is a consumer creation endpoint
@@ -4759,10 +4787,10 @@ def company_manager_proxy():
                     
                     # Send as XML
                     headers['Content-Type'] = 'application/xml'
-                    response = requests.post(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
+                    response = _parking_http_session.post(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
                 else:
                     # Regular POST with JSON
-                    response = requests.post(url, json=payload, headers=headers, verify=False, timeout=timeout_seconds)
+                    response = _parking_http_session.post(url, json=payload, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'PUT':
                 # For consumer detail updates, convert JSON to XML
                 if '/detail' in endpoint and 'consumer' in endpoint.lower():
@@ -4833,7 +4861,7 @@ def company_manager_proxy():
                     print(f"    Dates in consumer: xValidFrom={payload.get('consumer', {}).get('xValidFrom')}, xValidUntil={payload.get('consumer', {}).get('xValidUntil')}")
                     
                     headers['Content-Type'] = 'application/xml'
-                    response = requests.put(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
+                    response = _parking_http_session.put(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
                 elif '/detail' in endpoint and 'contracts' in endpoint:
                     # Handle Contract Update - Convert JSON to XML
                     import xml.etree.ElementTree as ET
@@ -4859,12 +4887,12 @@ def company_manager_proxy():
                     print(f"    Sending XML for Contract Update (PUT to {url}):\n{xml_str}")
                     
                     headers['Content-Type'] = 'application/xml'
-                    response = requests.put(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
+                    response = _parking_http_session.put(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
                 else:
                     # Regular PUT with JSON
-                    response = requests.put(url, json=payload, headers=headers, verify=False, timeout=timeout_seconds)
+                    response = _parking_http_session.put(url, json=payload, headers=headers, verify=False, timeout=timeout_seconds)
             elif method == 'DELETE':
-                response = requests.delete(url, headers=headers, verify=False, timeout=timeout_seconds)
+                response = _parking_http_session.delete(url, headers=headers, verify=False, timeout=timeout_seconds)
             else:
                 return jsonify({'success': False, 'message': 'שיטה לא נתמכת'}), 400
             
@@ -5044,7 +5072,32 @@ def company_manager_proxy():
                             # Default response for other DeviceControlWebService endpoints
                             return jsonify({'success': True, 'data': response.text})
                         
-                        elif not is_detail_endpoint and ('contracts' in endpoint or 'contract' in endpoint.lower()):
+                        elif 'consumersdetail' in endpoint.lower():
+                            # Parse bulk consumerDetails XML response (<consumerDetails><consumerDetail>...</consumerDetail></consumerDetails>)
+                            def extract_fields(element, prefix=''):
+                                data = {}
+                                for key, value in element.attrib.items():
+                                    clean_key = key.replace('{http://gsph.sub.com/cust/types}', '')
+                                    data[prefix + clean_key] = value
+                                if element.text and element.text.strip():
+                                    return element.text.strip()
+                                for child in element:
+                                    tag = child.tag.replace('{http://gsph.sub.com/cust/types}', '')
+                                    child_data = extract_fields(child, '')
+                                    if child_data is not None:
+                                        data[tag] = child_data
+                                return data if data else None
+
+                            detail_elements = root.findall('.//{http://gsph.sub.com/cust/types}consumerDetail')
+                            if not detail_elements:
+                                detail_elements = root.findall('.//consumerDetail')
+                            consumers_details = []
+                            for detail_elem in detail_elements:
+                                parsed = extract_fields(detail_elem)
+                                if parsed:
+                                    consumers_details.append(parsed)
+                            return jsonify({'success': True, 'data': consumers_details})
+                        elif not is_detail_endpoint and 'consumer' not in endpoint.lower() and ('contracts' in endpoint or 'contract' in endpoint.lower()):
                             contracts = []
                             # חפש contract elements בכל namespaces
                             for contract in root.findall('.//{http://gsph.sub.com/cust/types}contract'):
