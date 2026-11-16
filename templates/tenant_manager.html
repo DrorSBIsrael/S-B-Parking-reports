@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ניהול מתחם דיירים - שיידט את בכמן</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            direction: rtl;
+            color: #2c3e50;
+        }
+
+        .container {
+            max-width: 1150px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 25px;
+            border-radius: 14px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header-title h1 {
+            font-size: 26px;
+            color: #2c3e50;
+        }
+
+        .header-title p {
+            color: #6c757d;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-outline {
+            background: #f8f9fa;
+            color: #495057;
+            border: 1px solid #ced4da;
+        }
+        .btn-outline:hover {
+            background: #e2e6ea;
+        }
+
+        .tabs-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            flex: 1;
+            min-width: 180px;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.85);
+            color: #495057;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.16);
+            border-bottom: 4px solid #667eea;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 14px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            color: #2c3e50;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f1f3f5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            align-items: end;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #495057;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 12px 10px;
+            text-align: right;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 14px;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 700;
+            color: #495057;
+        }
+
+        tr:hover {
+            background: #f8f9ff;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            display: inline-block;
+        }
+
+        .badge-green {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-red {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge-blue {
+            background: #e7f3ff;
+            color: #004085;
+        }
+
+        .badge-yellow {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            display: none;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .portal-link-box {
+            background: #f0f4ff;
+            border: 1px dashed #667eea;
+            padding: 14px 18px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 14px;
+            width: 92%;
+            max-width: 460px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title">
+                <h1 id="buildingTitle">🏢 ניהול חניון דיירים</h1>
+                <p id="buildingSubtitle">ממשק מנהל מתחם - ניהול דירות, מכסות שיתוף ודו"ח התחשבנות חודשי</p>
+            </div>
+            <div class="header-actions">
+                <a href="/tenant-portal" target="_blank" class="btn btn-outline">📱 פתח פורטל דייר</a>
+                <button class="btn btn-danger" onclick="window.location.href='/logout'">🚪 התנתק</button>
+            </div>
+        </div>
+
+        <div id="globalAlert" class="alert"></div>
+
+        <div class="tabs-bar">
+            <button class="tab-btn active" onclick="switchTab('tenants', this)">👥 דיירים ודירות במתחם</button>
+            <button class="tab-btn" onclick="switchTab('report', this)">📊 דו"ח חודשי (זיכוי / תגמול דיירים)</button>
+            <button class="tab-btn" onclick="switchTab('settings', this)">⚙️ הגדרות ומכסות מתחם</button>
+        </div>
+
+        <!-- לשונית 1: ניהול דיירים -->
+        <div id="tab-tenants">
+            <div class="card">
+                <h2 class="section-title">➕ הוספת דייר לחניון הבניין (ללא מייל - כניסה בוואטסאפ בלבד)</h2>
+                <form id="createTenantForm" onsubmit="handleCreateTenant(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>שם הדייר / משפחה *</label>
+                            <input type="text" id="tFullName" placeholder="לדוגמה: משפחת כהן" required>
+                        </div>
+                        <div class="form-group">
+                            <label>מספר טלפון נייד (לוואטסאפ) *</label>
+                            <input type="tel" id="tPhone" placeholder="לדוגמה: 050-1234567" required>
+                        </div>
+                        <div class="form-group">
+                            <label>מספר דירה *</label>
+                            <input type="text" id="tApartment" placeholder="לדוגמה: 201" required>
+                        </div>
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;">
+                                ✅ הוסף דייר לבניין
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <div class="section-title">
+                    <span>📋 רשימת דיירי הבניין (<span id="tenantsCount">0</span>)</span>
+                    <input type="text" id="tenantSearch" placeholder="🔍 חפש לפי שם, טלפון או מספר דירה..." oninput="renderTenantsTable()" style="max-width: 280px; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 8px; font-size: 14px;">
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>מספר דירה</th>
+                                <th>שם הדייר</th>
+                                <th>טלפון נייד (וואטסאפ)</th>
+                                <th>חניות קבועות לדירה</th>
+                                <th>תאריך הקמה</th>
+                                <th>פעולות</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tenantsTableBody">
+                            <tr><td colspan="6" style="text-align:center; padding: 20px;">טוען דיירים...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- לשונית 2: דו"ח חודשי להתחשבנות ותגמול -->
+        <div id="tab-report" style="display: none;">
+            <div class="card">
+                <div class="section-title">
+                    <span>📊 דו"ח שיתוף חניות חודשי (התחשבנות ותגמול דיירים)</span>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="month" id="reportMonth" onchange="loadMonthlyReport()" style="padding: 8px 12px; border: 1px solid #ced4da; border-radius: 8px;">
+                        <button class="btn btn-success" onclick="exportReportCSV()">📥 ייצוא ל-Excel (CSV)</button>
+                    </div>
+                </div>
+
+                <p style="color: #6c757d; font-size: 14px; margin-bottom: 16px;">
+                    הדו"ח מסכם עבור כל דירה כמה פעמים (וכמה שעות) שחררה חניה שנוצלה ע"י שכנים, וכמה חניות לקחה מאחרים – לחישוב זיכוי או תגמול.
+                </p>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>מספר דירה</th>
+                                <th>שם דייר</th>
+                                <th>חניות ששחרר (נתן)</th>
+                                <th>סה"כ שעות שנתן</th>
+                                <th>חניות שלקח (השתמש)</th>
+                                <th>סה"כ שעות שלקח</th>
+                                <th>מאזן נטו (נתן פחות לקח)</th>
+                                <th>איחורים בפינוי</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportSummaryBody">
+                            <tr><td colspan="8" style="text-align:center; padding: 20px;">טוען נתוני דו"ח...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="section-title">🕒 פירוט העברות חניה בחודש הנבחר</h2>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>תאריך</th>
+                                <th>שעות</th>
+                                <th>מדירה (משחררת)</th>
+                                <th>לדירה (שואלת)</th>
+                                <th>שם הדייר השואל</th>
+                                <th>סטטוס</th>
+                                <th>הערות</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportDetailsBody">
+                            <tr><td colspan="7" style="text-align:center; padding: 20px;">אין תנועות בחודש זה</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- לשונית 3: הגדרות מתחם -->
+        <div id="tab-settings" style="display: none;">
+            <div class="card">
+                <h2 class="section-title">⚙️ הגדרות ומכסות שיתוף חניות במתחם</h2>
+
+                <div class="portal-link-box">
+                    <div>
+                        <strong>🔗 קישור לפורטל הדיירים של המתחם:</strong>
+                        <div id="portalUrlDisplay" style="color: #667eea; font-weight: 700; margin-top: 4px; direction: ltr; text-align: right;"></div>
+                    </div>
+                    <button class="btn btn-outline" onclick="copyPortalLink()">📋 העתק קישור</button>
+                </div>
+
+                <form onsubmit="handleSaveSettings(event)">
+                    <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
+                        <div class="form-group">
+                            <label>שם הבניין / המתחם</label>
+                            <input type="text" id="setParkingName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>מקסימום חניות שדירה יכולה לקחת ביום</label>
+                            <input type="number" id="setMaxDay" min="1" max="50" value="5" required>
+                        </div>
+                        <div class="form-group">
+                            <label>מקסימום חניות שדירה יכולה לקחת בחודש</label>
+                            <input type="number" id="setMaxMonth" min="1" max="500" value="30" required>
+                        </div>
+                        <div class="form-group">
+                            <label>בדיקה חוזרת אם הרכב טרם יצא מהחניון (דקות)</label>
+                            <input type="number" id="setCheckInterval" min="5" max="120" value="30" required>
+                        </div>
+                        <div class="form-group">
+                            <label>שליחת תזכורת וואטסאפ לפני סיום החניה (דקות)</label>
+                            <input type="number" id="setReminderMins" min="5" max="120" value="30" required>
+                        </div>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <button type="submit" class="btn btn-primary" style="padding: 12px 30px;">💾 שמור הגדרות מתחם</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal עריכת דייר -->
+    <div id="editTenantModal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 16px;">✏️ עריכת פרטי דייר</h3>
+            <input type="hidden" id="editTenantId">
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label>שם הדייר / משפחה</label>
+                <input type="text" id="editFullName">
+            </div>
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label>מספר טלפון נייד</label>
+                <input type="tel" id="editPhone">
+            </div>
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label>מספר דירה</label>
+                <input type="text" id="editApartment">
+            </div>
+            <div class="form-group" style="margin-bottom: 18px;">
+                <label>מכסת חניות קבועה לדירה</label>
+                <input type="number" id="editBaseMax" min="1" max="20">
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-outline" onclick="closeEditModal()">ביטול</button>
+                <button class="btn btn-primary" onclick="saveEditTenant()">שמור שינויים</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allTenants = [];
+        let currentReportData = null;
+        let currentProjectNumber = '';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const now = new Date();
+            document.getElementById('reportMonth').value = now.toISOString().slice(0, 7);
+            initManagerPage();
+        });
+
+        function showAlert(msg, type = 'success') {
+            const el = document.getElementById('globalAlert');
+            el.className = `alert alert-${type}`;
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 4500);
+        }
+
+        function switchTab(tabName, btnEl) {
+            ['tenants', 'report', 'settings'].forEach(t => {
+                document.getElementById(`tab-${t}`).style.display = (t === tabName) ? 'block' : 'none';
+            });
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+            if (tabName === 'report') {
+                loadMonthlyReport();
+            }
+        }
+
+        async function initManagerPage() {
+            try {
+                const res = await fetch('/api/tenant-manager/init');
+                const data = await res.json();
+                if (!data.success) {
+                    showAlert(data.message || 'שגיאה בטעינת נתונים', 'danger');
+                    return;
+                }
+                currentProjectNumber = data.manager.project_number;
+                document.getElementById('buildingTitle').textContent = `🏢 ${data.manager.parking_name} (#${currentProjectNumber})`;
+                document.getElementById('portalUrlDisplay').textContent = `${window.location.origin}/tenant-portal`;
+
+                if (data.settings) {
+                    document.getElementById('setParkingName').value = data.settings.parking_name || data.manager.parking_name || '';
+                    document.getElementById('setMaxDay').value = data.settings.max_bookings_per_day ?? 5;
+                    document.getElementById('setMaxMonth').value = data.settings.max_bookings_per_month ?? 30;
+                    document.getElementById('setCheckInterval').value = data.settings.check_interval_minutes ?? 30;
+                    document.getElementById('setReminderMins').value = data.settings.reminder_minutes_before ?? 30;
+                }
+
+                allTenants = data.tenants || [];
+                renderTenantsTable();
+            } catch (e) {
+                console.error(e);
+                showAlert('שגיאת תקשורת מול השרת', 'danger');
+            }
+        }
+
+        function formatPhoneDisplay(p) {
+            if (!p) return '';
+            const s = String(p);
+            if (s.startsWith('972') && s.length === 12) {
+                return '0' + s.slice(3, 5) + '-' + s.slice(5);
+            }
+            return s;
+        }
+
+        function renderTenantsTable() {
+            const q = (document.getElementById('tenantSearch').value || '').trim().toLowerCase();
+            const filtered = allTenants.filter(t => {
+                const term = `${t.full_name || ''} ${t.phone_number || ''} ${formatPhoneDisplay(t.phone_number)} ${t.apartment_number || ''}`.toLowerCase();
+                return term.includes(q);
+            });
+
+            document.getElementById('tenantsCount').textContent = filtered.length;
+            const tbody = document.getElementById('tenantsTableBody');
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px; color:#6c757d;">לא נמצאו דיירים רשומים</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(t => {
+                const dateStr = t.created_at ? t.created_at.split('T')[0] : '-';
+                return `
+                    <tr>
+                        <td><span class="badge badge-blue">דירה ${t.apartment_number}</span></td>
+                        <td style="font-weight: 600;">${t.full_name}</td>
+                        <td style="direction: ltr; text-align: right;">${formatPhoneDisplay(t.phone_number)}</td>
+                        <td>${t.base_max_counter || 1} חניות</td>
+                        <td>${dateStr}</td>
+                        <td>
+                            <button class="btn btn-success" style="padding: 5px 10px; font-size: 12px;" onclick="sendWhatsAppInvite(${t.id})">💬 שלח קישור לוואטסאפ</button>
+                            <button class="btn btn-outline" style="padding: 5px 10px; font-size: 12px;" onclick='openEditModal(${JSON.stringify(t)})'>✏️ ערוך</button>
+                            <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="deleteTenant(${t.id})">🗑️ מחק</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function handleCreateTenant(e) {
+            e.preventDefault();
+            const full_name = document.getElementById('tFullName').value.trim();
+            const phone_number = document.getElementById('tPhone').value.trim();
+            const apartment_number = document.getElementById('tApartment').value.trim();
+
+            try {
+                const res = await fetch('/api/tenant-manager/tenants', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ full_name, phone_number, apartment_number })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    document.getElementById('createTenantForm').reset();
+                    initManagerPage();
+                } else {
+                    showAlert(data.message || 'שגיאה בהוספת דייר', 'danger');
+                }
+            } catch (err) {
+                showAlert('שגיאת תקשורת', 'danger');
+            }
+        }
+
+        function openEditModal(t) {
+            document.getElementById('editTenantId').value = t.id;
+            document.getElementById('editFullName').value = t.full_name || '';
+            document.getElementById('editPhone').value = formatPhoneDisplay(t.phone_number);
+            document.getElementById('editApartment').value = t.apartment_number || '';
+            document.getElementById('editBaseMax').value = t.base_max_counter || 1;
+            document.getElementById('editTenantModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editTenantModal').style.display = 'none';
+        }
+
+        async function saveEditTenant() {
+            const id = document.getElementById('editTenantId').value;
+            const payload = {
+                full_name: document.getElementById('editFullName').value.trim(),
+                phone_number: document.getElementById('editPhone').value.trim(),
+                apartment_number: document.getElementById('editApartment').value.trim(),
+                base_max_counter: parseInt(document.getElementById('editBaseMax').value, 10) || 1
+            };
+            const res = await fetch(`/api/tenant-manager/tenants/${id}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.success) {
+                closeEditModal();
+                showAlert(data.message, 'success');
+                initManagerPage();
+            } else {
+                showAlert(data.message || 'שגיאה בעדכון', 'danger');
+            }
+        }
+
+        async function sendWhatsAppInvite(id) {
+            try {
+                const res = await fetch(`/api/tenant-manager/tenants/${id}/send-invite`, { method: 'POST' });
+                const data = await res.json();
+                showAlert(data.message || 'נשלח', data.success ? 'success' : 'danger');
+            } catch (e) {
+                showAlert('שגיאת תקשורת בשליחת וואטסאפ', 'danger');
+            }
+        }
+
+        async function deleteTenant(id) {
+            if (!confirm('האם למחוק את הדייר מהמערכת?')) return;
+            const res = await fetch(`/api/tenant-manager/tenants/${id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                showAlert(data.message, 'success');
+                initManagerPage();
+            }
+        }
+
+        async function handleSaveSettings(e) {
+            e.preventDefault();
+            const payload = {
+                parking_name: document.getElementById('setParkingName').value.trim(),
+                max_bookings_per_day: parseInt(document.getElementById('setMaxDay').value, 10) || 5,
+                max_bookings_per_month: parseInt(document.getElementById('setMaxMonth').value, 10) || 30,
+                check_interval_minutes: parseInt(document.getElementById('setCheckInterval').value, 10) || 30,
+                reminder_minutes_before: parseInt(document.getElementById('setReminderMins').value, 10) || 30
+            };
+            const res = await fetch('/api/tenant-manager/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.success) {
+                showAlert(data.message, 'success');
+                initManagerPage();
+            } else {
+                showAlert(data.message || 'שגיאה בשמירת הגדרות', 'danger');
+            }
+        }
+
+        function copyPortalLink() {
+            const url = `${window.location.origin}/tenant-portal`;
+            navigator.clipboard.writeText(url);
+            showAlert('הקישור לפורטל הדיירים הועתק ללוח!', 'success');
+        }
+
+        async function loadMonthlyReport() {
+            const month = document.getElementById('reportMonth').value;
+            const res = await fetch(`/api/tenant-manager/monthly-report?month=${encodeURIComponent(month)}`);
+            const data = await res.json();
+            if (!data.success) return;
+            currentReportData = data;
+
+            const sBody = document.getElementById('reportSummaryBody');
+            if (!data.summary || data.summary.length === 0) {
+                sBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">אין נתונים להצגה בחודש זה</td></tr>';
+            } else {
+                sBody.innerHTML = data.summary.map(row => {
+                    let netBadge = `<span class="badge badge-blue">0 (מאוזן)</span>`;
+                    if (row.net_balance > 0) {
+                        netBadge = `<span class="badge badge-green">+${row.net_balance} (לזכות / תגמול)</span>`;
+                    } else if (row.net_balance < 0) {
+                        netBadge = `<span class="badge badge-red">${row.net_balance} (לחיוב / ניכוי)</span>`;
+                    }
+                    const lateHtml = row.late_exits > 0
+                        ? `<span class="badge badge-red">${row.late_exits} איחורים</span>`
+                        : '0';
+
+                    return `
+                        <tr>
+                            <td><strong>דירה ${row.apartment_number}</strong></td>
+                            <td>${row.tenant_name}</td>
+                            <td><strong>${row.given_count}</strong> פעמים</td>
+                            <td>${row.given_hours} שעות</td>
+                            <td><strong>${row.taken_count}</strong> פעמים</td>
+                            <td>${row.taken_hours} שעות</td>
+                            <td>${netBadge}</td>
+                            <td>${lateHtml}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            const dBody = document.getElementById('reportDetailsBody');
+            if (!data.transfers || data.transfers.length === 0) {
+                dBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;">אין תנועות בחודש זה</td></tr>';
+            } else {
+                const statusNames = {
+                    'ACTIVE': '<span class="badge badge-green">פעיל כעת בחניון</span>',
+                    'RESTORED': '<span class="badge badge-blue">הושלם והוחזר</span>',
+                    'WAITING_FOR_EXIT': '<span class="badge badge-yellow">ממתין ליציאת המשחרר</span>',
+                    'SCHEDULED': '<span class="badge badge-blue">מוזמן</span>',
+                    'CANCELLED': '<span class="badge">בוטל</span>',
+                    'EXPIRED': '<span class="badge">פג תוקף</span>'
+                };
+                dBody.innerHTML = data.transfers.map(tr => `
+                    <tr>
+                        <td>${tr.booking_date}</td>
+                        <td>${tr.start_time} – ${tr.end_time}</td>
+                        <td><strong>דירה ${tr.from_apartment}</strong></td>
+                        <td><strong>דירה ${tr.to_apartment}</strong></td>
+                        <td>${tr.borrower_name || '-'}</td>
+                        <td>${statusNames[tr.status] || tr.status}</td>
+                        <td>${tr.late_exit_flag ? '<span class="badge badge-red">איחור בפינוי</span>' : '-'}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        function exportReportCSV() {
+            if (!currentReportData || !currentReportData.summary) return;
+            const rows = [
+                ['מספר דירה', 'שם דייר', 'חניות ששחרר (נתן)', 'שעות שנתן', 'חניות שלקח', 'שעות שלקח', 'מאזן נטו (פעמים)', 'איחורים בפינוי']
+            ];
+            currentReportData.summary.forEach(r => {
+                rows.push([
+                    r.apartment_number,
+                    r.tenant_name,
+                    r.given_count,
+                    r.given_hours,
+                    r.taken_count,
+                    r.taken_hours,
+                    r.net_balance,
+                    r.late_exits
+                ]);
+            });
+            const csvContent = '\uFEFF' + rows.map(e => e.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `tenant_parking_report_${currentReportData.month}.csv`;
+            link.click();
+        }
+    </script>
+</body>
+</html>

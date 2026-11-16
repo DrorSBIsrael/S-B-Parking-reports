@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>פורטל חניות דיירים - שיידט את בכמן</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, Tahoma, Arial, sans-serif;
+            background: #f0f4f8;
+            color: #1e293b;
+            min-height: 100vh;
+            direction: rtl;
+            padding-bottom: 40px;
+        }
+
+        .top-banner {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 22px 18px;
+            border-bottom-left-radius: 22px;
+            border-bottom-right-radius: 22px;
+            box-shadow: 0 4px 16px rgba(79, 70, 229, 0.25);
+        }
+
+        .banner-inner {
+            max-width: 640px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .banner-title h1 {
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .banner-title p {
+            font-size: 13px;
+            opacity: 0.9;
+            margin-top: 3px;
+        }
+
+        .main-wrap {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(15, 23, 42, 0.07);
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            color: #1e293b;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .input-group {
+            margin-bottom: 14px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #475569;
+        }
+
+        .input-group input,
+        .input-group select {
+            width: 100%;
+            padding: 13px 14px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 16px;
+            background: #f8fafc;
+        }
+
+        .input-group input:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #4f46e5;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 13px 18px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #4f46e5;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #4338ca;
+        }
+
+        .btn-whatsapp {
+            background: #16a34a;
+            color: white;
+        }
+        .btn-whatsapp:hover {
+            background: #15803d;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-outline {
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .stat-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 8px;
+            text-align: center;
+        }
+
+        .stat-box .num {
+            font-size: 24px;
+            font-weight: 800;
+            color: #4f46e5;
+        }
+
+        .stat-box .lbl {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .nav-pills {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .pill-btn {
+            padding: 12px 6px;
+            border: none;
+            border-radius: 12px;
+            background: white;
+            color: #475569;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+
+        .pill-btn.active {
+            background: #4f46e5;
+            color: white;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+
+        .days-selector {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+
+        .day-chip {
+            flex: 1;
+            min-width: 40px;
+            padding: 10px 4px;
+            text-align: center;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            background: white;
+            color: #334155;
+            user-select: none;
+        }
+
+        .day-chip.selected {
+            background: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+        }
+
+        .slot-item {
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            background: #ffffff;
+        }
+
+        .slot-item.special-for-me {
+            border-color: #16a34a;
+            background: #f0fdf4;
+        }
+
+        .badge {
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            display: inline-block;
+        }
+
+        .badge-green { background: #dcfce7; color: #166534; }
+        .badge-blue { background: #dbeafe; color: #1e40af; }
+        .badge-yellow { background: #fef9c3; color: #854d0e; }
+        .badge-purple { background: #f3e8ff; color: #6b21a8; }
+
+        .alert {
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 14px;
+            font-weight: 600;
+            font-size: 14px;
+            display: none;
+        }
+        .alert-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .alert-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    </style>
+</head>
+<body>
+    <div class="top-banner">
+        <div class="banner-inner">
+            <div class="banner-title">
+                <h1 id="headerBuildingName">🅿️ חניון הדיירים</h1>
+                <p id="headerTenantInfo">כניסה מהירה באמצעות וואטסאפ</p>
+            </div>
+            <button id="logoutBtn" onclick="logoutTenant()" style="display:none; background:rgba(255,255,255,0.2); color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:700; cursor:pointer;">
+                יציאה
+            </button>
+        </div>
+    </div>
+
+    <div class="main-wrap">
+        <div id="portalAlert" class="alert"></div>
+
+        <!-- מסך 1: כניסה עם טלפון + קוד וואטסאפ -->
+        <div id="loginSection" class="card" style="margin-top: 10px;">
+            <h2 class="card-title">📲 כניסת דיירים (ללא סיסמה)</h2>
+            <p style="font-size: 14px; color: #64748b; margin-bottom: 16px;">
+                הזן את מספר הטלפון הנייד שלך לקבלת קוד כניסה מהיר בוואטסאפ.
+            </p>
+
+            <div id="phoneStep">
+                <div class="input-group">
+                    <label>מספר טלפון נייד</label>
+                    <input type="tel" id="loginPhone" placeholder="050-1234567" autocomplete="tel" style="text-align: right; direction: ltr;">
+                </div>
+                <button class="btn btn-whatsapp" onclick="sendOtp()" id="sendOtpBtn">💬 שלח קוד בוואטסאפ</button>
+            </div>
+
+            <div id="otpStep" style="display: none;">
+                <!-- כפתור לחיצה מהירה על הקוד ללא צורך בהקלדה -->
+                <div id="quickCodeBox" style="display: none; margin-bottom: 14px;">
+                    <button type="button" id="quickCodeBtn" class="btn btn-whatsapp"
+                            style="padding: 16px; font-size: 18px; border-radius: 12px; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);"
+                            onclick="clickDetectedCode()">
+                        ✨ לחץ כאן לכניסה עם קוד: <span id="quickCodeValue" style="font-size: 22px; text-decoration: underline;"></span>
+                    </button>
+                </div>
+
+                <div class="input-group">
+                    <label>קוד אימות מוואטסאפ (ניתן ללחוץ על הקוד למעלה או בתיבה)</label>
+                    <input type="text" id="loginOtp" name="otc" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="------"
+                           style="text-align: center; font-size: 26px; letter-spacing: 8px; font-weight: 800;"
+                           onfocus="tryReadClipboardOtp()"
+                           oninput="if(this.value.replace(/\D/g,'').length===6) verifyOtp();">
+                </div>
+                <button class="btn btn-primary" onclick="verifyOtp()" id="verifyOtpBtn" style="margin-bottom: 10px;">🔐 כניסה לפורטל הדירה</button>
+                <button class="btn btn-outline" onclick="backToPhoneStep()">חזור להחלפת מספר טלפון</button>
+            </div>
+        </div>
+
+        <!-- מסך 2: פורטל הדייר הפעיל -->
+        <div id="dashboardSection" style="display: none;">
+            <!-- סרגל מצב החניות של הדירה -->
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="num" id="statMaxCounter">-</div>
+                    <div class="lbl">מכסת חניות פעילה</div>
+                </div>
+                <div class="stat-box">
+                    <div class="num" id="statPresentCounter">-</div>
+                    <div class="lbl">רכבים בחניון כעת</div>
+                </div>
+                <div class="stat-box">
+                    <div class="num" id="statAvailableNow" style="color: #16a34a;">-</div>
+                    <div class="lbl">פנויות לכניסה כעת</div>
+                </div>
+            </div>
+
+            <!-- ניווט בין 3 לשוניות -->
+            <div class="nav-pills">
+                <button class="pill-btn active" onclick="switchPortalTab('vehicles', this)">🚗 הרכבים שלי</button>
+                <button class="pill-btn" onclick="switchPortalTab('pool', this)">🅿️ חניות פנויות</button>
+                <button class="pill-btn" onclick="switchPortalTab('share', this)">🤝 שחרור חניה</button>
+            </div>
+
+            <!-- לשונית א': הרכבים של הדירה שלי -->
+            <div id="ptab-vehicles">
+                <div class="card">
+                    <div class="card-title">
+                        <span>🚗 רכבי הדירה שלי</span>
+                        <button onclick="loadDashboard()" style="background:none; border:none; color:#4f46e5; font-weight:700; cursor:pointer;">🔄 רענן</button>
+                    </div>
+                    <div id="mySubscribersContainer">
+                        <p style="text-align: center; color: #64748b; padding: 16px;">טוען רכבים מבקר החניון...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- לשונית ב': חניות פנויות בבניין והזמנות פעילות -->
+            <div id="ptab-pool" style="display: none;">
+                <div class="card" style="background: #eef2ff; border: 1px solid #c7d2fe;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; color: #3730a3;">
+                        <span id="quotaTodayBadge">ניצול יומי: 0/5</span>
+                        <span id="quotaMonthBadge">ניצול חודשי: 0/30</span>
+                    </div>
+                </div>
+
+                <!-- הזמנות פעילות שלי -->
+                <div class="card" id="myActiveBookingsCard" style="display: none;">
+                    <h3 class="card-title">📌 חניות פעילות / מוזמנות שלי</h3>
+                    <div id="myActiveBookingsList"></div>
+                </div>
+
+                <!-- חניות פנויות לתפיסה -->
+                <div class="card">
+                    <div class="card-title">
+                        <span>🅿️ חניות פנויות לתפיסה בבניין</span>
+                        <button onclick="loadDashboard()" style="background:none; border:none; color:#4f46e5; font-weight:700; cursor:pointer;">🔄 רענן</button>
+                    </div>
+                    <div id="availableSlotsList"></div>
+                </div>
+            </div>
+
+            <!-- לשונית ג': שחרור חניה של הדירה שלי -->
+            <div id="ptab-share" style="display: none;">
+                <div class="card">
+                    <h3 class="card-title">🤝 שחרר חניה של הדירה שלי</h3>
+                    <p style="font-size: 13px; color: #64748b; margin-bottom: 14px;">
+                        בשעות שתגדיר, המערכת תאפשר לשכן להשתמש בחניה שלך (רק אם רכבך אינו בחניון) ותחזיר את החניה אליך אוטומטית בסיום השעה!
+                    </p>
+
+                    <form onsubmit="handleCreateShare(event)">
+                        <div class="input-group">
+                            <label>כמה חניות לשחרר?</label>
+                            <select id="shSpotsCount">
+                                <option value="1">חניה 1</option>
+                                <option value="2">2 חניות</option>
+                                <option value="3">3 חניות</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label>למי לשחרר את החניה?</label>
+                            <select id="shTargetType" onchange="document.getElementById('shTargetAptGroup').style.display = (this.value === 'APT') ? 'block' : 'none';">
+                                <option value="POOL">🌐 לפול הכללי של הבניין (כל דייר פנוי יוכל לקחת)</option>
+                                <option value="APT">🏠 לדירה ספציפית בלבד</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group" id="shTargetAptGroup" style="display: none;">
+                            <label>מספר הדירה שעבורה משחררים את החניה *</label>
+                            <input type="text" id="shTargetApt" placeholder="לדוגמה: 202">
+                        </div>
+
+                        <div class="input-group">
+                            <label>סוג תזמון</label>
+                            <select id="shScheduleType" onchange="toggleScheduleType()">
+                                <option value="WEEKLY">📅 קבוע לפי ימים בשבוע (למשל ימים ב', ד')</option>
+                                <option value="ONCE">📌 תאריך חד-פעמי</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group" id="shWeeklyDaysGroup">
+                            <label>בחר ימים בשבוע:</label>
+                            <div class="days-selector" id="daysSelector">
+                                <div class="day-chip" data-day="0" onclick="this.classList.toggle('selected')">א'</div>
+                                <div class="day-chip selected" data-day="1" onclick="this.classList.toggle('selected')">ב'</div>
+                                <div class="day-chip" data-day="2" onclick="this.classList.toggle('selected')">ג'</div>
+                                <div class="day-chip selected" data-day="3" onclick="this.classList.toggle('selected')">ד'</div>
+                                <div class="day-chip" data-day="4" onclick="this.classList.toggle('selected')">ה'</div>
+                                <div class="day-chip" data-day="5" onclick="this.classList.toggle('selected')">ו'</div>
+                                <div class="day-chip" data-day="6" onclick="this.classList.toggle('selected')">ש'</div>
+                            </div>
+                        </div>
+
+                        <div class="input-group" id="shOnceDateGroup" style="display: none;">
+                            <label>תאריך שחרור החניה:</label>
+                            <input type="date" id="shSpecificDate">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div class="input-group">
+                                <label>משעה:</label>
+                                <input type="time" id="shStartTime" value="08:00" required>
+                            </div>
+                            <div class="input-group">
+                                <label>עד שעה:</label>
+                                <input type="time" id="shEndTime" value="17:00" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">✅ פרסם ושחרר חניה</button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <h3 class="card-title">📋 השחרורים הפעילים של הדירה שלי</h3>
+                    <div id="mySharesList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+        let currentTenant = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('shSpecificDate').value = new Date().toISOString().split('T')[0];
+
+            // בדיקה אם הגענו מקישור מוואטסאפ (עם phone או עם phone + code)
+            const params = new URLSearchParams(window.location.search);
+            const urlPhone = params.get('phone');
+            const urlCode = params.get('code');
+            if (urlPhone) {
+                document.getElementById('loginPhone').value = urlPhone;
+            }
+            if (urlPhone && urlCode) {
+                document.getElementById('phoneStep').style.display = 'none';
+                document.getElementById('otpStep').style.display = 'block';
+                showClickableCode(urlCode);
+                document.getElementById('loginOtp').value = urlCode;
+                verifyOtp();
+                window.history.replaceState({}, document.title, window.location.pathname);
+                return;
+            }
+
+            // כשחוזרים מהוואטסאפ לדפדפן, נזהה אוטומטית קוד בן 6 ספרות מהלוח ונציג אותו ככפתור לחיץ!
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    tryReadClipboardOtp();
+                }
+            });
+            window.addEventListener('focus', () => {
+                tryReadClipboardOtp();
+            });
+
+            // בדיקה אם יש סשן פעיל
+            loadDashboard(true);
+        });
+
+        function showPortalAlert(msg, type = 'success') {
+            const el = document.getElementById('portalAlert');
+            el.className = `alert alert-${type}`;
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 5000);
+        }
+
+        function switchPortalTab(tab, btnEl) {
+            ['vehicles', 'pool', 'share'].forEach(t => {
+                document.getElementById(`ptab-${t}`).style.display = (t === tab) ? 'block' : 'none';
+            });
+            document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+        }
+
+        function toggleScheduleType() {
+            const st = document.getElementById('shScheduleType').value;
+            document.getElementById('shWeeklyDaysGroup').style.display = (st === 'WEEKLY') ? 'block' : 'none';
+            document.getElementById('shOnceDateGroup').style.display = (st === 'ONCE') ? 'block' : 'none';
+        }
+
+        async function sendOtp() {
+            const phone = document.getElementById('loginPhone').value.trim();
+            if (!phone || phone.length < 9) {
+                showPortalAlert('נא להזין מספר טלפון נייד תקין', 'danger');
+                return;
+            }
+            const btn = document.getElementById('sendOtpBtn');
+            btn.disabled = true;
+            btn.textContent = 'שולח קוד לוואטסאפ...';
+            try {
+                const res = await fetch('/api/tenant/send-otp', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ phone_number: phone })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('phoneStep').style.display = 'none';
+                    document.getElementById('otpStep').style.display = 'block';
+                    document.getElementById('loginOtp').focus();
+                    showPortalAlert(data.message, 'success');
+                } else {
+                    showPortalAlert(data.message || 'שגיאה בשליחת קוד', 'danger');
+                }
+            } catch (e) {
+                showPortalAlert('שגיאת תקשורת מול השרת', 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '💬 שלח קוד בוואטסאפ';
+            }
+        }
+
+        let detectedOtpCode = '';
+
+        function showClickableCode(codeStr) {
+            const clean = String(codeStr || '').replace(/\D/g, '');
+            if (clean.length === 6) {
+                detectedOtpCode = clean;
+                document.getElementById('quickCodeValue').textContent = clean;
+                document.getElementById('quickCodeBox').style.display = 'block';
+            }
+        }
+
+        function clickDetectedCode() {
+            if (!detectedOtpCode) return;
+            document.getElementById('loginOtp').value = detectedOtpCode;
+            verifyOtp();
+        }
+
+        async function tryReadClipboardOtp() {
+            if (document.getElementById('otpStep').style.display === 'none') return;
+            try {
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    const text = await navigator.clipboard.readText();
+                    const match = String(text || '').match(/\b(\d{6})\b/);
+                    if (match && match[1]) {
+                        showClickableCode(match[1]);
+                    }
+                }
+            } catch (e) {}
+        }
+
+        function backToPhoneStep() {
+            document.getElementById('otpStep').style.display = 'none';
+            document.getElementById('phoneStep').style.display = 'block';
+        }
+
+        async function verifyOtp() {
+            const phone = document.getElementById('loginPhone').value.trim();
+            const code = document.getElementById('loginOtp').value.trim();
+            if (code.length !== 6) {
+                showPortalAlert('נא להזין קוד בן 6 ספרות', 'danger');
+                return;
+            }
+            const btn = document.getElementById('verifyOtpBtn');
+            btn.disabled = true;
+            btn.textContent = 'מאמת קוד...';
+            try {
+                const res = await fetch('/api/tenant/verify-otp', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ phone_number: phone, otp_code: code })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    loadDashboard();
+                } else {
+                    showPortalAlert(data.message || 'קוד שגוי', 'danger');
+                }
+            } catch (e) {
+                showPortalAlert('שגיאת תקשורת', 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔐 כניסה לפורטל הדירה';
+            }
+        }
+
+        async function logoutTenant() {
+            await fetch('/api/tenant/logout', { method: 'POST' });
+            document.getElementById('dashboardSection').style.display = 'none';
+            document.getElementById('logoutBtn').style.display = 'none';
+            document.getElementById('loginSection').style.display = 'block';
+            backToPhoneStep();
+        }
+
+        async function loadDashboard(silentIfUnauth = false) {
+            try {
+                const res = await fetch('/api/tenant/dashboard');
+                if (res.status === 401) {
+                    if (!silentIfUnauth) {
+                        document.getElementById('dashboardSection').style.display = 'none';
+                        document.getElementById('loginSection').style.display = 'block';
+                    }
+                    return;
+                }
+                const data = await res.json();
+                if (!data.success) return;
+
+                currentTenant = data.tenant;
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('dashboardSection').style.display = 'block';
+                document.getElementById('logoutBtn').style.display = 'block';
+
+                document.getElementById('headerBuildingName').textContent = `🅿️ ${data.tenant.parking_name}`;
+                document.getElementById('headerTenantInfo').textContent = `שלום ${data.tenant.full_name} | דירה ${data.tenant.apartment_number}`;
+
+                if (data.pooling && data.pooling.success) {
+                    document.getElementById('statMaxCounter').textContent = data.pooling.maxCounter;
+                    document.getElementById('statPresentCounter').textContent = data.pooling.presentCounter;
+                    document.getElementById('statAvailableNow').textContent = data.pooling.availableSpots;
+                } else {
+                    document.getElementById('statMaxCounter').textContent = '-';
+                    document.getElementById('statPresentCounter').textContent = '-';
+                    document.getElementById('statAvailableNow').textContent = '-';
+                }
+
+                if (data.quota_limits) {
+                    document.getElementById('quotaTodayBadge').textContent = `ניצול יומי: ${data.quota_limits.used_today} מתוך ${data.quota_limits.max_per_day}`;
+                    document.getElementById('quotaMonthBadge').textContent = `ניצול חודשי: ${data.quota_limits.used_this_month} מתוך ${data.quota_limits.max_per_month}`;
+                }
+
+                renderMySubscribers(data.subscribers || []);
+                renderActiveBookings(data.active_bookings || []);
+                renderAvailableSlots(data.available_slots || []);
+                renderMyShares(data.my_shares || []);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderMySubscribers(subs) {
+            const container = document.getElementById('mySubscribersContainer');
+            if (!subs || subs.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#64748b; padding:14px;">לא נמצאו מנויים משויכים לדירה זו בבקר החניון.</p>';
+                return;
+            }
+
+            container.innerHTML = subs.map(s => `
+                <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 12px; background: #f8fafc;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <strong>👤 ${s.firstName || ''} ${s.lastName || ('מנוי #' + s.id)}</strong>
+                        <span class="badge ${s.present ? 'badge-green' : 'badge-blue'}">${s.present ? '🟢 נמצא בחניון' : '⚪ מחוץ לחניון'}</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-bottom:10px;">
+                        <div>
+                            <label style="font-size:12px; color:#64748b;">רכב 1</label>
+                            <input type="text" id="lpn1_${s.id}" value="${s.lpn1 || ''}" placeholder="מספר רכב 1" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px; text-align:center; font-weight:700;">
+                        </div>
+                        <div>
+                            <label style="font-size:12px; color:#64748b;">רכב 2</label>
+                            <input type="text" id="lpn2_${s.id}" value="${s.lpn2 || ''}" placeholder="מספר רכב 2" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px; text-align:center; font-weight:700;">
+                        </div>
+                        <div>
+                            <label style="font-size:12px; color:#64748b;">רכב 3</label>
+                            <input type="text" id="lpn3_${s.id}" value="${s.lpn3 || ''}" placeholder="מספר רכב 3" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px; text-align:center; font-weight:700;">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" style="padding:9px;" onclick="saveSubscriberPlates('${s.id}')">💾 שמור מספרי רכב בחניון</button>
+                </div>
+            `).join('');
+        }
+
+        async function saveSubscriberPlates(subId) {
+            const lpn1 = document.getElementById(`lpn1_${subId}`).value.trim();
+            const lpn2 = document.getElementById(`lpn2_${subId}`).value.trim();
+            const lpn3 = document.getElementById(`lpn3_${subId}`).value.trim();
+
+            const res = await fetch('/api/tenant/update-plates', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ subscriber_id: subId, lpn1, lpn2, lpn3 })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showPortalAlert(data.message, 'success');
+                loadDashboard();
+            } else {
+                showPortalAlert(data.message || 'שגיאה בעדכון מספרי הרכב', 'danger');
+            }
+        }
+
+        function renderActiveBookings(bookings) {
+            const card = document.getElementById('myActiveBookingsCard');
+            const list = document.getElementById('myActiveBookingsList');
+            if (!bookings || bookings.length === 0) {
+                card.style.display = 'none';
+                return;
+            }
+            card.style.display = 'block';
+            const statusLabels = {
+                'ACTIVE': '<span class="badge badge-green">פעיל כעת בחניון (+1 למכסה)</span>',
+                'WAITING_FOR_EXIT': '<span class="badge badge-yellow">ממתין ליציאת הרכב של המשחרר</span>',
+                'SCHEDULED': '<span class="badge badge-blue">משוריין</span>'
+            };
+            list.innerHTML = bookings.map(b => {
+                const isBorrower = String(b.to_apartment) === String(currentTenant.apartment_number);
+                const desc = isBorrower
+                    ? `שאלת חניה מדירה <strong>${b.from_apartment}</strong>`
+                    : `השאלת חניה לדירה <strong>${b.to_apartment}</strong>`;
+                return `
+                    <div class="slot-item">
+                        <div>
+                            <div style="font-size:15px;">${desc}</div>
+                            <div style="font-size:13px; color:#64748b; margin-top:3px;">📅 ${b.booking_date} | 🕒 ${b.start_time} עד ${b.end_time}</div>
+                            <div style="margin-top:5px;">${statusLabels[b.status] || b.status}</div>
+                        </div>
+                        <button class="btn btn-danger" style="width:auto; padding:8px 14px; font-size:13px;" onclick="releaseBooking(${b.id})">
+                            סיים / החזר
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderAvailableSlots(slots) {
+            const container = document.getElementById('availableSlotsList');
+            const openSlots = (slots || []).filter(s => !s.is_mine && s.spots_remaining > 0);
+            if (openSlots.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#64748b; padding:16px;">אין כרגע חניות פנויות בפול הכללי או עבור דירתך.</p>';
+                return;
+            }
+
+            container.innerHTML = openSlots.map(s => `
+                <div class="slot-item ${s.is_for_me_specifically ? 'special-for-me' : ''}">
+                    <div>
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <strong>🏠 חניה מדירה ${s.owner_apartment}</strong>
+                            ${s.is_for_me_specifically
+                                ? '<span class="badge badge-green">🎁 פונה במיוחד עבורך!</span>'
+                                : '<span class="badge badge-purple">🌐 פול כללי</span>'}
+                        </div>
+                        <div style="font-size:13px; color:#475569; margin-top:4px;">
+                            📅 תאריך: <strong>${s.booking_date}</strong> | 🕒 שעות: <strong>${s.start_time} – ${s.end_time}</strong>
+                        </div>
+                        <div style="font-size:12px; color:#64748b; margin-top:2px;">
+                            חניות פנויות בחלון זה: <strong>${s.spots_remaining}</strong> מתוך ${s.spots_offered}
+                        </div>
+                    </div>
+                    <button class="btn btn-whatsapp" style="width:auto; padding:10px 16px; font-size:14px;"
+                            onclick="claimSpot(${s.share_id}, '${s.booking_date}')">
+                        קח חניה
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function claimSpot(shareId, bookingDate) {
+            const res = await fetch('/api/tenant/claim-spot', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ share_id: shareId, booking_date: bookingDate })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showPortalAlert(data.message, 'success');
+                loadDashboard();
+            } else {
+                showPortalAlert(data.message || 'לא ניתן להזמין חניה זו', 'danger');
+            }
+        }
+
+        async function releaseBooking(transferId) {
+            if (!confirm('האם לסיים את השאלת החניה ולהחזיר את המכסה לבעל החניה?')) return;
+            const res = await fetch(`/api/tenant/release-booking/${transferId}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                showPortalAlert(data.message, 'success');
+                loadDashboard();
+            }
+        }
+
+        async function handleCreateShare(e) {
+            e.preventDefault();
+            const spots_offered = parseInt(document.getElementById('shSpotsCount').value, 10) || 1;
+            const share_target_type = document.getElementById('shTargetType').value;
+            const target_apartment = document.getElementById('shTargetApt').value.trim();
+            const schedule_type = document.getElementById('shScheduleType').value;
+            const specific_date = document.getElementById('shSpecificDate').value;
+            const start_time = document.getElementById('shStartTime').value;
+            const end_time = document.getElementById('shEndTime').value;
+
+            const selectedDays = Array.from(document.querySelectorAll('#daysSelector .day-chip.selected'))
+                .map(el => el.getAttribute('data-day'))
+                .join(',');
+
+            const res = await fetch('/api/tenant/share-spot', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    spots_offered,
+                    share_target_type,
+                    target_apartment,
+                    schedule_type,
+                    days_of_week: selectedDays,
+                    specific_date,
+                    start_time,
+                    end_time
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showPortalAlert(data.message, 'success');
+                loadDashboard();
+            } else {
+                showPortalAlert(data.message || 'שגיאה בשמירת שחרור חניה', 'danger');
+            }
+        }
+
+        function renderMyShares(shares) {
+            const container = document.getElementById('mySharesList');
+            if (!shares || shares.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#64748b; padding:12px;">אין לך כרגע שחרורי חניה פעילים.</p>';
+                return;
+            }
+            container.innerHTML = shares.map(sh => {
+                let schedDesc = '';
+                if (sh.schedule_type === 'ONCE') {
+                    schedDesc = `📅 חד-פעמי בתאריך ${sh.specific_date}`;
+                } else {
+                    const dNames = String(sh.days_of_week || '').split(',').filter(Boolean).map(d => `יום ${DAY_NAMES[parseInt(d,10)] || d}`).join(', ');
+                    schedDesc = `📅 קבוע: ${dNames}`;
+                }
+                const targetDesc = (sh.share_target_type === 'APT')
+                    ? `<span class="badge badge-green">לדירה ${sh.target_apartment} בלבד</span>`
+                    : `<span class="badge badge-purple">לפול הכללי</span>`;
+
+                return `
+                    <div class="slot-item">
+                        <div>
+                            <div><strong>${sh.spots_offered} חניה/ות</strong> | ${targetDesc}</div>
+                            <div style="font-size:13px; color:#475569; margin-top:4px;">${schedDesc}</div>
+                            <div style="font-size:13px; color:#64748b;">🕒 שעות: ${sh.start_time} – ${sh.end_time}</div>
+                        </div>
+                        <button class="btn btn-danger" style="width:auto; padding:8px 12px; font-size:13px;" onclick="cancelShare(${sh.id})">
+                            בטל
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function cancelShare(shareId) {
+            if (!confirm('האם לבטל את שחרור החניה הזה?')) return;
+            const res = await fetch(`/api/tenant/cancel-share/${shareId}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                showPortalAlert(data.message, 'success');
+                loadDashboard();
+            }
+        }
+    </script>
+</body>
+</html>
