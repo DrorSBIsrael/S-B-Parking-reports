@@ -2282,6 +2282,8 @@ def get_user_redirect_url(email):
                 return '/parking-tour'
             elif code_type_lower == 'mobile_controller':
                 return '/mobile-parking-controller'
+            elif code_type_lower.replace('-', '_') == 'tenant_manager':
+                return '/tenant-manager'
             else:
                 return '/dashboard'
         else:
@@ -4701,7 +4703,9 @@ def company_manager_proxy():
         try:
             # timeout מוגבר ל-30 שניות ב-production
             # For device control endpoints, use even longer timeout
-            if 'DeviceControlWebService' in endpoint:
+            if 'consumersdetail' in endpoint.lower():
+                timeout_seconds = 90
+            elif 'DeviceControlWebService' in endpoint:
                 timeout_seconds = 45 if not is_local_dev else 30
             else:
                 timeout_seconds = 30 if not is_local_dev else 25
@@ -7226,15 +7230,27 @@ def mobile_get_subscribers():
         if not project_number:
             return jsonify({'success': False, 'message': 'חסר מספר פרויקט'})
             
-        connection_details = get_parking_connection_details(project_number)
-        
-        if not connection_details:
-             try:
-                 parking_result = supabase.table('parkings').select('ip_address, port, description, name').eq('id', project_number).execute()
-                 if parking_result.data:
-                     data_p = parking_result.data[0]
-                     connection_details = {'ip_address': data_p.get('ip_address'), 'port': data_p.get('port', 443), 'description': data_p.get('description'), 'name': data_p.get('name')}
-             except: pass
+        parking_key = str(project_number)
+        now_ts = time.time() if 'time' in globals() else 0
+        connection_details = _parking_info_cache.get(parking_key)
+        if not connection_details or (now_ts - connection_details.get('ts', 0) >= _PARKING_CACHE_TTL):
+            connection_details = get_parking_connection_details(project_number)
+            if not connection_details:
+                try:
+                    parking_result = supabase.table('parkings').select('ip_address, port, description, name').eq('id', project_number).execute()
+                    if parking_result.data:
+                        data_p = parking_result.data[0]
+                        connection_details = {
+                            'ip_address': data_p.get('ip_address'),
+                            'port': data_p.get('port', 443),
+                            'description': data_p.get('description'),
+                            'name': data_p.get('name')
+                        }
+                except Exception:
+                    pass
+            if connection_details and connection_details.get('ip_address'):
+                connection_details['ts'] = now_ts
+                _parking_info_cache[parking_key] = connection_details
              
         if not connection_details or not connection_details.get('ip_address'):
             return jsonify({'success': False, 'message': 'לא נמצא חניון'})
@@ -7260,10 +7276,10 @@ def mobile_get_subscribers():
         else:
             company_list_str = company_list_str or ""
 
-        is_admin = 'B' in user_permissions.upper()
+        is_admin = 'B' in user_permissions.upper() or str(company_list_str).strip().lower() == 'all'
 
         allowed_companies = []
-        if company_list_str:
+        if company_list_str and str(company_list_str).strip().lower() != 'all':
             parts = str(company_list_str).split(',')
             for part in parts:
                 part = part.strip()
@@ -7271,17 +7287,18 @@ def mobile_get_subscribers():
                     try:
                         start, end = part.split('-')
                         allowed_companies.extend(range(int(start), int(end) + 1))
-                    except: pass
+                    except Exception:
+                        pass
                 else:
-                    try: allowed_companies.append(int(part))
-                    except: pass
+                    try:
+                        allowed_companies.append(int(part))
+                    except Exception:
+                        pass
+        # Preserve order and remove duplicates
+        allowed_companies = list(dict.fromkeys(allowed_companies))
 
-        url = f"https://{ip_address}:{port}/CustomerMediaWebService/consumers"
-        if len(allowed_companies) == 1:
-            url += f"?contractId={allowed_companies[0]}"
-        
         import base64
-        import requests
+        import concurrent.futures
         import urllib3
         import xml.etree.ElementTree as ET
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -7292,181 +7309,244 @@ def mobile_get_subscribers():
             # אנו לא שולחים Accept: application/json בכדי לאלץ את שרת החניון להחזיר XML צפוי
             'Accept': 'application/xml, text/xml'
         }
-        
-        print(f" API Mobile fetching from: {url} for user_id={user_id}, admin={is_admin}")
-        
-        response = requests.get(url, headers=headers, verify=False, timeout=15)
-        
-        if response.status_code == 200:
-            # מפענחים אך ורק מה-XML על מנת לשלוט במבנה ולמנוע שדות ריקים או משובשים מה-JSON הדיפולטיבי של שיידט
-            try:
-                root = ET.fromstring(response.text)
-                
-                def xml_to_dict(element):
-                    res = {}
-                    if element.attrib:
-                        for k, v in element.attrib.items():
-                            k_clean = k.split('}')[-1] if '}' in k else k
-                            res[k_clean] = v
-                            res[f"@{k_clean}"] = v
-                            
-                    if len(element) == 0:
-                        if not element.attrib:
-                            return element.text or ""
-                        else:
-                            if element.text and element.text.strip():
-                                return element.text.strip()
-                                
-                    for child in element:
-                        child_tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
-                        child_val = xml_to_dict(child)
-                        if child_tag in res:
-                            if not isinstance(res[child_tag], list):
-                                res[child_tag] = [res[child_tag]]
-                            res[child_tag].append(child_val)
-                        else:
-                            res[child_tag] = child_val
-                            
-                    if element.text and element.text.strip() and len(element) > 0:
-                        res['#text'] = element.text.strip()
+
+        def xml_to_dict(element):
+            res = {}
+            if element.attrib:
+                for k, v in element.attrib.items():
+                    k_clean = k.split('}')[-1] if '}' in k else k
+                    res[k_clean] = v
+                    res[f"@{k_clean}"] = v
+                    
+            if len(element) == 0:
+                if not element.attrib:
+                    return element.text or ""
+                else:
+                    if element.text and element.text.strip():
+                        return element.text.strip()
                         
-                    return res
-
-                consumers_list = []
-                for cons in root.iter():
-                    tag_name = cons.tag.split('}')[-1] if '}' in cons.tag else cons.tag
-                    if tag_name == 'consumer':
-                        consumers_list.append(xml_to_dict(cons))
+            for child in element:
+                child_tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+                child_val = xml_to_dict(child)
+                if child_tag in res:
+                    if not isinstance(res[child_tag], list):
+                        res[child_tag] = [res[child_tag]]
+                    res[child_tag].append(child_val)
+                else:
+                    res[child_tag] = child_val
+                    
+            if element.text and element.text.strip() and len(element) > 0:
+                res['#text'] = element.text.strip()
                 
-                res_json = {'consumers': {'consumer': consumers_list}}
-            except Exception as ex:
-                import traceback
-                print("XML parsing failed string:", ex)
-                traceback.print_exc()
-                res_json = {"raw": response.text}
-        
-            # We apply filtering if there are explicit allowed_companies, regardless of admin status
-            # If no allowed_companies AND user is admin, we return all (though it might be huge)
-            if allowed_companies and isinstance(res_json, dict) and 'consumers' in res_json and 'consumer' in res_json['consumers']:
-                filtered_consumers = []
-                for sub in res_json['consumers']['consumer']:
-                    try:
-                        c_id = sub.get('contractId') or sub.get('contractid') or sub.get('companyNum') or ""
-                        if isinstance(c_id, dict):
-                            c_id = c_id.get('#text', list(c_id.values())[0] if c_id else -1)
-                        c_id = int(c_id) if c_id else -1
-                        if c_id in allowed_companies:
-                            filtered_consumers.append(sub)
-                    except:
-                        pass
-                res_json['consumers']['consumer'] = filtered_consumers
-            elif not is_admin and not allowed_companies:
-                 if isinstance(res_json, dict) and 'consumers' in res_json:
-                     res_json['consumers']['consumer'] = []
+            return res
 
-            # Fetch details for small lists so names actually show up in mobile app
-            if isinstance(res_json, dict) and 'consumers' in res_json and 'consumer' in res_json['consumers']:
-                final_list = res_json['consumers']['consumer']
-                if 0 < len(final_list) <= 1000:
-                    import concurrent.futures
-                    def fetch_detail(sub):
-                        try:
-                            c_id = sub.get('contractId') or sub.get('contractid') or sub.get('companyNum') or ""
-                            s_id = sub.get('id') or sub.get('subscriberNum') or ""
-                            if not c_id or not s_id: return sub
-                            
-                            detail_url = f"https://{ip_address}:{port}/CustomerMediaWebService/consumers/{c_id},{s_id}/detail"
-                            detail_resp = requests.get(detail_url, headers=headers, verify=False, timeout=3)
-                            if detail_resp.status_code == 200:
-                                d_root = ET.fromstring(detail_resp.text)
-                                d_dict = xml_to_dict(d_root)
-                                
-                                person = d_dict.get('person') or {}
-                                ident = d_dict.get('identification') or {}
-                                validation = d_dict.get('validation') or {}
-                                contract = d_dict.get('contract') or {}
-                                
-                                fname = person.get('firstName') or d_dict.get('firstName') or sub.get('firstName')
-                                lname = person.get('surname') or d_dict.get('surname') or sub.get('lastName')
-                                
-                                if isinstance(fname, dict): fname = ""
-                                if isinstance(lname, dict): lname = ""
-                                
-                                sub['firstName'] = fname
-                                sub['lastName'] = lname
-                                
-                                # Extract Company/Contract Name
-                                c_name = contract.get('name') or d_dict.get('contractName') or sub.get('contractName') or sub.get('companyName') or ''
-                                if isinstance(c_name, dict): c_name = c_name.get('#text') or ''
-                                
-                                # Fallback: fetch contract explicitly if missing
-                                if not c_name and c_id:
-                                    try:
-                                        c_url = f"https://{ip_address}:{port}/CustomerMediaWebService/contracts/{c_id}"
-                                        c_resp = requests.get(c_url, headers=headers, verify=False, timeout=2)
-                                        if c_resp.status_code == 200:
-                                            c_root = ET.fromstring(c_resp.text)
-                                            c_dict = xml_to_dict(c_root)
-                                            c_name = c_dict.get('name') or c_dict.get('description') or ''
-                                            if isinstance(c_name, dict): c_name = c_name.get('#text') or ''
-                                    except Exception: pass
-                                
-                                sub['contractName'] = c_name
-                                sub['companyName'] = c_name
-                                
-                                def extract_val(v):
-                                    if isinstance(v, dict): return v.get('#text') or ''
-                                    return v or ''
-                                
-                                # Extra Info
-                                sub['validFrom'] = extract_val(ident.get('xValidFrom')) or extract_val(ident.get('validFrom')) or extract_val(validation.get('xValidFrom')) or extract_val(validation.get('validFrom')) or extract_val(d_dict.get('xValidFrom')) or extract_val(d_dict.get('validFrom')) or extract_val(sub.get('xValidFrom')) or extract_val(sub.get('validFrom'))
-                                sub['validUntil'] = extract_val(ident.get('xValidUntil')) or extract_val(ident.get('validUntil')) or extract_val(validation.get('xValidUntil')) or extract_val(validation.get('validUntil')) or extract_val(d_dict.get('xValidUntil')) or extract_val(d_dict.get('validUntil')) or extract_val(sub.get('xValidUntil')) or extract_val(sub.get('validUntil'))
-                                
-                                uprof = ident.get('usageProfile') or d_dict.get('usageProfile') or {}
-                                
-                                p_id_val = uprof.get('id') or d_dict.get('profileId') or sub.get('profileId') or sub.get('extCardProfile') or ''
-                                sub['profileId'] = extract_val(p_id_val)
-                                
-                                p_name = uprof.get('profileName') or uprof.get('name') or uprof.get('profile') or d_dict.get('profileName') or d_dict.get('profile') or sub.get('profileName') or sub.get('profile') or sub.get('extCardProfile') or ''
-                                p_name_str = extract_val(p_name)
-                                sub['profileName'] = p_name_str
-                                sub['profile'] = p_name_str
-                                
-                                pres = ident.get('present') or ident.get('presence') or d_dict.get('presence') or sub.get('presence')
-                                pres_str = extract_val(pres)
-                                sub['presence'] = True if str(pres_str).lower() in ['true', '1', 'yes'] else False
-                                
-                                # extract plates
-                                lpn1 = d_dict.get('lpn1') or sub.get('lpn1')
-                                lpn2 = d_dict.get('lpn2') or sub.get('lpn2')
-                                lpn3 = d_dict.get('lpn3') or sub.get('lpn3')
-                                
-                                if isinstance(lpn1, dict) and not lpn1.get('plate'): lpn1 = ""
-                                if isinstance(lpn2, dict) and not lpn2.get('plate'): lpn2 = ""
-                                if isinstance(lpn3, dict) and not lpn3.get('plate'): lpn3 = ""
-                                
-                                if lpn1: sub['lpn1'] = lpn1
-                                if lpn2: sub['lpn2'] = lpn2
-                                if lpn3: sub['lpn3'] = lpn3
-                        except: pass
-                        return sub
+        def extract_val(v):
+            if isinstance(v, dict):
+                return str(v.get('#text') or '').strip()
+            return str(v or '').strip()
 
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=40) as executor:
-                        final_list = list(executor.map(fetch_detail, final_list))
-                        
-                res_json['consumers']['consumer'] = final_list
+        # 1. משיכת רשימת החברות פעם אחת בלבד למיפוי שמות חברות וסינון חוזים קיימים
+        contracts_map = {}
+        contracts_url = f"https://{ip_address}:{port}/CustomerMediaWebService/contracts"
+        try:
+            c_resp = _parking_http_session.get(contracts_url, headers=headers, verify=False, timeout=10)
+            if c_resp.status_code == 200:
+                c_resp.encoding = 'utf-8'
+                c_root = ET.fromstring(c_resp.content)
+                for c_elem in c_root.iter():
+                    tag_name = c_elem.tag.split('}')[-1] if '}' in c_elem.tag else c_elem.tag
+                    if tag_name == 'contract':
+                        c_dict = xml_to_dict(c_elem)
+                        cid_str = extract_val(c_dict.get('id') or c_dict.get('contractId') or c_dict.get('contractNum'))
+                        cname_str = extract_val(c_dict.get('name') or c_dict.get('description'))
+                        if cid_str:
+                            try:
+                                contracts_map[int(cid_str)] = cname_str
+                            except Exception:
+                                pass
+        except Exception as ce:
+            print(f" Warning: Failed to prefetch contracts from {contracts_url}: {ce}")
 
+        # 2. קביעת רשימת החברות לטעינה
+        if allowed_companies:
+            if contracts_map:
+                target_contracts = [cid for cid in allowed_companies if cid in contracts_map]
+            else:
+                target_contracts = allowed_companies
+        elif is_admin:
+            target_contracts = sorted(contracts_map.keys())
+        else:
+            target_contracts = []
+
+        if not target_contracts:
             return jsonify({
                 'success': True,
-                'data': res_json,
+                'data': {'consumers': {'consumer': []}},
                 'parking_name': user_parking_name or connection_details.get('name') or connection_details.get('description') or project_number
             })
-        else:
-            return jsonify({'success': False, 'message': f'Server returned {response.status_code}'})
+
+        def parse_consumer_detail_dict(d_dict, fallback_cid=None):
+            cons = d_dict.get('consumer') or {}
+            if not isinstance(cons, dict):
+                cons = {}
+            person = d_dict.get('person') or {}
+            if not isinstance(person, dict):
+                person = {}
+            ident = d_dict.get('identification') or {}
+            if not isinstance(ident, dict):
+                ident = {}
+            validation = d_dict.get('validation') or {}
+            if not isinstance(validation, dict):
+                validation = {}
+            contract = d_dict.get('contract') or {}
+            if not isinstance(contract, dict):
+                contract = {}
+
+            c_id_val = extract_val(cons.get('contractid') or cons.get('contractId') or d_dict.get('contractId') or d_dict.get('contractid') or fallback_cid)
+            s_id_val = extract_val(cons.get('id') or d_dict.get('id') or d_dict.get('subscriberNum'))
+
+            fname = extract_val(person.get('firstName') or d_dict.get('firstName'))
+            lname = extract_val(person.get('surname') or d_dict.get('surname') or cons.get('name'))
+
+            c_name = extract_val(contract.get('name') or d_dict.get('contractName'))
+            if not c_name and c_id_val:
+                try:
+                    c_name = contracts_map.get(int(c_id_val), '')
+                except Exception:
+                    c_name = ''
+
+            valid_from = (
+                extract_val(ident.get('validFrom')) or
+                extract_val(ident.get('xValidFrom')) or
+                extract_val(cons.get('xValidFrom')) or
+                extract_val(cons.get('validFrom')) or
+                extract_val(validation.get('validFrom')) or
+                extract_val(d_dict.get('validFrom'))
+            )
+            valid_until = (
+                extract_val(ident.get('validUntil')) or
+                extract_val(ident.get('xValidUntil')) or
+                extract_val(cons.get('xValidUntil')) or
+                extract_val(cons.get('validUntil')) or
+                extract_val(validation.get('validUntil')) or
+                extract_val(d_dict.get('validUntil'))
+            )
+
+            uprof = ident.get('usageProfile') or d_dict.get('usageProfile') or {}
+            if not isinstance(uprof, dict):
+                uprof = {}
+            p_id_val = extract_val(uprof.get('id') or d_dict.get('profileId') or cons.get('extCardProfile'))
+            p_name_str = extract_val(uprof.get('name') or uprof.get('profileName') or uprof.get('profile') or d_dict.get('profileName') or p_id_val)
+
+            pres = extract_val(ident.get('present') or ident.get('presence') or d_dict.get('presence'))
+            presence_bool = str(pres).lower() in ['true', '1', 'yes']
+
+            def clean_lpn(val):
+                if isinstance(val, dict):
+                    return extract_val(val.get('plate') or val.get('#text'))
+                return extract_val(val)
+
+            lpn1 = clean_lpn(d_dict.get('lpn1'))
+            lpn2 = clean_lpn(d_dict.get('lpn2'))
+            lpn3 = clean_lpn(d_dict.get('lpn3'))
+            cardno = extract_val(ident.get('cardno') or d_dict.get('cardno'))
+
+            return {
+                'id': s_id_val,
+                'subscriberNum': s_id_val,
+                'contractId': c_id_val,
+                'contractid': c_id_val,
+                'companyNum': c_id_val,
+                'contractName': c_name,
+                'companyName': c_name,
+                'firstName': fname,
+                'lastName': lname,
+                'validFrom': valid_from,
+                'validUntil': valid_until,
+                'profileId': p_id_val,
+                'extCardProfile': p_id_val,
+                'profileName': p_name_str,
+                'profile': p_name_str,
+                'presence': presence_bool,
+                'cardno': cardno,
+                'tagNum': cardno,
+                'ptcptType': extract_val(ident.get('ptcptType')) or '2',
+                'cardclass': extract_val(ident.get('cardclass')) or '1',
+                'identificationType': extract_val(ident.get('identificationType')) or '54',
+                'ignorePresence': extract_val(ident.get('ignorePresence')),
+                'filialId': extract_val(cons.get('filialId')),
+                'status': extract_val(d_dict.get('status') or cons.get('status')),
+                'lpn1': lpn1,
+                'lpn2': lpn2,
+                'lpn3': lpn3
+            }
+
+        # 3. משיכה מרוכזת (Bulk) של כל פרטי המנויים לכל חברה דרך contracts/{c_id}/consumersdetail
+        def fetch_contract_consumers_bulk(c_id):
+            bulk_url = f"https://{ip_address}:{port}/CustomerMediaWebService/contracts/{c_id}/consumersdetail"
+            print(f" API Mobile bulk fetching from: {bulk_url} for user_id={user_id}")
+            resp = _parking_http_session.get(bulk_url, headers=headers, verify=False, timeout=90)
+            if resp.status_code == 200:
+                resp.encoding = 'utf-8'
+                root_el = ET.fromstring(resp.content)
+                contract_subs = []
+                for elem in root_el.iter():
+                    t_name = elem.tag.split('}')[-1] if '}' in elem.tag else elem.tag
+                    if t_name == 'consumerDetail':
+                        d_dict = xml_to_dict(elem)
+                        if isinstance(d_dict, dict):
+                            contract_subs.append(parse_consumer_detail_dict(d_dict, fallback_cid=c_id))
+                return contract_subs
+            elif resp.status_code == 404:
+                return []
+            else:
+                raise RuntimeError(f"Bulk consumersdetail returned HTTP {resp.status_code}")
+
+        final_list = []
+        # עד 2 בקשות במקביל בלבד כדי לא להעמיס על שרת החניון (Skidata)
+        max_parallel_contracts = min(2, len(target_contracts))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_parallel_contracts) as executor:
+            future_to_cid = {executor.submit(fetch_contract_consumers_bulk, cid): cid for cid in target_contracts}
+            for future in concurrent.futures.as_completed(future_to_cid):
+                cid = future_to_cid[future]
+                try:
+                    subs = future.result()
+                    if subs:
+                        final_list.extend(subs)
+                except Exception as bulk_err:
+                    print(f" Bulk fetch failed for contract {cid}, error: {bulk_err}")
+
+        # מיון עקבי לפי חברה ומספר מנוי
+        def sort_key(s):
+            try:
+                c_num = int(s.get('contractId') or 0)
+            except Exception:
+                c_num = 0
+            try:
+                s_num = int(s.get('id') or 0)
+            except Exception:
+                s_num = 0
+            return (c_num, s_num)
+
+        final_list.sort(key=sort_key)
+        res_json = {'consumers': {'consumer': final_list}}
+
+        return jsonify({
+            'success': True,
+            'data': res_json,
+            'parking_name': user_parking_name or connection_details.get('name') or connection_details.get('description') or project_number
+        })
             
     except Exception as e:
         print(f" Error in mobile_get_subscribers: {str(e)}")
         return jsonify({'success': False, 'message': 'שגיאת התחברות לשרת החניון'})
+
+# ========== TENANT PARKING SHARING MODULE ==========
+try:
+    from tenant_system import tenant_bp
+    app.register_blueprint(tenant_bp)
+except Exception as _tenant_err:
+    print(f" Warning: Failed to load tenant_system blueprint: {_tenant_err}")
 
 if __name__ == '__main__':
     # Pre-flight email system check
