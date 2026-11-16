@@ -485,7 +485,7 @@ class ParkingAPIXML {
             
             const finalConsumers = Array.isArray(consumers) ? consumers : [consumers];
             const subscriberCount = finalConsumers.length;
-            const BULK_SINGLE_CALL_LIMIT = 450; // Up to 450 subscribers in a single /consumersdetail request (~2-3.5s)
+            const BULK_SINGLE_CALL_LIMIT = 1000; // Up to 1000 subscribers in a single /consumersdetail request
             const BULK_CHUNK_SIZE = 200;        // For > 450 subscribers, load in chunks of 200 via minId/maxId
             const isLargeCompany = subscriberCount > 500;
             const loadingStrategy = subscriberCount <= BULK_SINGLE_CALL_LIMIT ? 'bulk' : 'bulk-chunked';
@@ -632,6 +632,34 @@ class ParkingAPIXML {
 
                                 if (chunkRes.success && chunkRes.data) {
                                     const detailList = Array.isArray(chunkRes.data) ? chunkRes.data : [chunkRes.data];
+                                    // Detect older Skidata WAR bug where minId/maxId returns only 1 item (id == minId)
+                                    if (chunkIds.length > 2 && detailList.length <= 1) {
+                                        console.warn('[Progressive] Server ignores minId/maxId range (returned 1 item), switching to full bulk request');
+                                        const fullBulkRes = await this.getContractConsumersDetail(companyId);
+                                        if (fullBulkRes.success && fullBulkRes.data) {
+                                            const fullList = Array.isArray(fullBulkRes.data) ? fullBulkRes.data : [fullBulkRes.data];
+                                            fullList.forEach(detail => {
+                                                const consumerNode = detail.consumer || detail || {};
+                                                const sid = String(consumerNode.id || detail.id || detail.subscriberNum || '');
+                                                const existingEntry = subMapById.get(sid);
+                                                if (existingEntry) {
+                                                    const mapped = this.mapConsumerDetailToSubscriber(
+                                                        detail,
+                                                        companyId,
+                                                        callbacks.companyName,
+                                                        isLargeCompany,
+                                                        'bulk',
+                                                        existingEntry.sub
+                                                    );
+                                                    basicSubscribers[existingEntry.idx] = mapped;
+                                                }
+                                            });
+                                            allChunksOk = true;
+                                        } else {
+                                            allChunksOk = false;
+                                        }
+                                        break;
+                                    }
                                     detailList.forEach(detail => {
                                         const consumerNode = detail.consumer || detail || {};
                                         const sid = String(consumerNode.id || detail.id || detail.subscriberNum || '');
