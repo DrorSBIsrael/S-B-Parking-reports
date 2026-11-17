@@ -291,6 +291,9 @@
                     <input type="tel" id="loginPhone" placeholder="050-1234567" autocomplete="tel" style="text-align: right; direction: ltr;">
                 </div>
                 <button type="button" class="btn btn-whatsapp" onclick="sendOtp()" id="sendOtpBtn">💬 שלח קוד בוואטסאפ</button>
+                <p style="font-size: 12px; color: #64748b; margin-top: 12px; text-align: center;">
+                    השימוש והכניסה למערכת כפופים ל<a href="javascript:void(0)" onclick="openLegalModal('privacyModal')" style="color:#4f46e5; font-weight:700; text-decoration:underline;">הצהרת הפרטיות ותנאי השימוש</a> ול<a href="javascript:void(0)" onclick="openLegalModal('a11yStatementModal')" style="color:#4f46e5; font-weight:700; text-decoration:underline;">הצהרת הנגישות</a>.
+                </p>
             </div>
 
             <div id="otpStep" style="display: none;">
@@ -799,18 +802,21 @@
                         <strong>👤 ${s.firstName || ''} ${s.lastName || ('מנוי #' + s.id)}</strong>
                         <span class="badge ${s.present ? 'badge-green' : 'badge-blue'}">${s.present ? '🟢 נמצא בחניון' : '⚪ מחוץ לחניון'}</span>
                     </div>
-                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-bottom:10px;">
+                    <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:14px;">
                         <div>
-                            <label style="font-size:12px; color:#64748b;">רכב 1</label>
-                            <input type="text" id="lpn1_${s.id}" value="${s.lpn1 || ''}" placeholder="מספר רכב 1" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px; text-align:center; font-weight:700;">
+                            <label for="lpn1_${s.id}" style="font-size:14px; font-weight:700; color:#334155; display:block; margin-bottom:4px;">🚗 מספר רכב 1:</label>
+                            <input type="text" id="lpn1_${s.id}" inputmode="numeric" value="${s.lpn1 || ''}" placeholder="ללא רכב"
+                                   style="width:100%; padding:12px 14px; border:2px solid #eab308; background:#fefce8; border-radius:10px; text-align:center; font-size:24px; letter-spacing:2px; font-weight:800; color:#0f172a; direction:ltr;">
                         </div>
                         <div>
-                            <label style="font-size:12px; color:#64748b;">רכב 2</label>
-                            <input type="text" id="lpn2_${s.id}" value="${s.lpn2 || ''}" placeholder="מספר רכב 2" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px; text-align:center; font-weight:700;">
+                            <label for="lpn2_${s.id}" style="font-size:14px; font-weight:700; color:#334155; display:block; margin-bottom:4px;">🚗 מספר רכב 2:</label>
+                            <input type="text" id="lpn2_${s.id}" inputmode="numeric" value="${s.lpn2 || ''}" placeholder="ללא רכב"
+                                   style="width:100%; padding:12px 14px; border:2px solid #eab308; background:#fefce8; border-radius:10px; text-align:center; font-size:24px; letter-spacing:2px; font-weight:800; color:#0f172a; direction:ltr;">
                         </div>
                         <div>
-                            <label style="font-size:12px; color:#64748b;">רכב 3</label>
-                            <input type="text" id="lpn3_${s.id}" value="${s.lpn3 || ''}" placeholder="מספר רכב 3" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px; text-align:center; font-weight:700;">
+                            <label for="lpn3_${s.id}" style="font-size:14px; font-weight:700; color:#334155; display:block; margin-bottom:4px;">🚗 מספר רכב 3:</label>
+                            <input type="text" id="lpn3_${s.id}" inputmode="numeric" value="${s.lpn3 || ''}" placeholder="ללא רכב"
+                                   style="width:100%; padding:12px 14px; border:2px solid #eab308; background:#fefce8; border-radius:10px; text-align:center; font-size:24px; letter-spacing:2px; font-weight:800; color:#0f172a; direction:ltr;">
                         </div>
                     </div>
                     <button class="btn btn-primary" style="padding:9px;" onclick="saveSubscriberPlates('${s.id}')">💾 שמור מספרי רכב בחניון</button>
@@ -1026,5 +1032,405 @@
         });
         resetInactivityTimer();
     </script>
+
+    <!-- ==================== רכיב נגישות והצהרת פרטיות (ת"י 5568 וחוק הגנת הפרטיות) ==================== -->
+    <style>
+        /* מצבי נגישות */
+        html.a11y-grayscale {
+            filter: grayscale(100%) !important;
+        }
+        body.a11y-high-contrast-dark,
+        body.a11y-high-contrast-dark .card,
+        body.a11y-high-contrast-dark .header,
+        body.a11y-high-contrast-dark .stat-box,
+        body.a11y-high-contrast-dark .slot-item,
+        body.a11y-high-contrast-dark .modal-content,
+        body.a11y-high-contrast-dark table,
+        body.a11y-high-contrast-dark th,
+        body.a11y-high-contrast-dark td {
+            background: #000000 !important;
+            color: #ffff00 !important;
+            border-color: #ffff00 !important;
+        }
+        body.a11y-high-contrast-dark input,
+        body.a11y-high-contrast-dark select,
+        body.a11y-high-contrast-dark button {
+            background: #111111 !important;
+            color: #ffffff !important;
+            border: 2px solid #ffff00 !important;
+        }
+        body.a11y-high-contrast-light,
+        body.a11y-high-contrast-light .card,
+        body.a11y-high-contrast-light .header,
+        body.a11y-high-contrast-light .stat-box,
+        body.a11y-high-contrast-light .slot-item {
+            background: #ffffff !important;
+            color: #000000 !important;
+            border: 2px solid #000000 !important;
+        }
+        body.a11y-highlight-links a,
+        body.a11y-highlight-links button {
+            text-decoration: underline !important;
+            outline: 2px solid #d97706 !important;
+            outline-offset: 2px !important;
+        }
+        body.a11y-readable-font,
+        body.a11y-readable-font * {
+            font-family: Arial, Helvetica, sans-serif !important;
+            letter-spacing: 0.4px !important;
+        }
+        body.a11y-no-animations *,
+        body.a11y-no-animations *::before,
+        body.a11y-no-animations *::after {
+            animation: none !important;
+            transition: none !important;
+        }
+
+        /* כפתור נגישות צף (כיסא גלגלים) */
+        .a11y-fab {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: #1d4ed8;
+            color: #ffffff;
+            border: 3px solid #ffffff;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            font-size: 28px;
+            cursor: pointer;
+            z-index: 9998;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+        .a11y-fab:hover, .a11y-fab:focus {
+            transform: scale(1.08);
+            outline: 3px solid #facc15;
+        }
+
+        /* חלונית תפריט הנגישות */
+        .a11y-panel {
+            display: none;
+            position: fixed;
+            bottom: 84px;
+            left: 20px;
+            width: 310px;
+            max-width: calc(100vw - 40px);
+            background: #ffffff;
+            color: #1e293b;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+            border: 2px solid #1d4ed8;
+            z-index: 9999;
+            padding: 16px;
+            direction: rtl;
+        }
+        .a11y-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+            font-weight: 800;
+            font-size: 16px;
+            color: #1d4ed8;
+        }
+        .a11y-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .a11y-btn {
+            padding: 10px 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            background: #f8fafc;
+            color: #1e293b;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+        }
+        .a11y-btn.active {
+            background: #1d4ed8;
+            color: #ffffff;
+            border-color: #1d4ed8;
+        }
+        .a11y-btn:hover {
+            background: #e2e8f0;
+        }
+        .a11y-btn.active:hover {
+            background: #1e40af;
+        }
+
+        /* פוטר משפטי ונגישות */
+        .legal-footer {
+            max-width: 640px;
+            margin: 24px auto 10px auto;
+            padding: 14px 16px;
+            text-align: center;
+            font-size: 13px;
+            color: #475569;
+            border-top: 1px solid #cbd5e1;
+        }
+        .legal-footer a {
+            color: #1d4ed8;
+            font-weight: 700;
+            text-decoration: underline;
+            margin: 0 8px;
+            cursor: pointer;
+        }
+
+        /* מודאל הצהרת פרטיות והצהרת נגישות */
+        .legal-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .legal-modal-box {
+            background: #ffffff;
+            color: #1e293b;
+            border-radius: 16px;
+            max-width: 620px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 24px;
+            direction: rtl;
+            line-height: 1.65;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+        }
+        .legal-modal-box h2 {
+            color: #1d4ed8;
+            font-size: 20px;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+        .legal-modal-box h3 {
+            font-size: 15px;
+            margin-top: 14px;
+            margin-bottom: 4px;
+            color: #0f172a;
+        }
+        .legal-modal-box p, .legal-modal-box li {
+            font-size: 13.5px;
+            color: #334155;
+        }
+        .legal-modal-box ul {
+            padding-right: 20px;
+            margin-bottom: 10px;
+        }
+    </style>
+
+    <!-- פוטר משפטי קבוע -->
+    <footer class="legal-footer" role="contentinfo">
+        <div>שיידט את בכמן ישראל בע"מ © כל הזכויות שמורות</div>
+        <div style="margin-top: 6px;">
+            <a role="button" tabindex="0" onclick="openLegalModal('privacyModal')">🔒 הצהרת פרטיות ותנאי שימוש</a> |
+            <a role="button" tabindex="0" onclick="openLegalModal('a11yStatementModal')">♿ הצהרת נגישות</a> |
+            <a role="button" tabindex="0" onclick="toggleA11yPanel()">⚙️ כלי נגישות</a>
+        </div>
+    </footer>
+
+    <!-- כפתור נגישות צף (סמל כיסא גלגלים) -->
+    <button type="button" class="a11y-fab" id="a11yFabBtn" onclick="toggleA11yPanel()" aria-label="פתח תפריט נגישות" title="נגישות האתר">
+        ♿
+    </button>
+
+    <!-- פאנל כלי נגישות -->
+    <div class="a11y-panel" id="a11yPanel" role="dialog" aria-label="כלי נגישות">
+        <div class="a11y-panel-header">
+            <span>♿ התאמת נגישות האתר</span>
+            <button type="button" onclick="toggleA11yPanel()" aria-label="סגור תפריט נגישות" style="background:none; border:none; font-size:18px; cursor:pointer;">✖</button>
+        </div>
+        <div class="a11y-grid">
+            <button type="button" class="a11y-btn" onclick="a11yChangeFontSize(1)">🔍 הגדל טקסט (+)</button>
+            <button type="button" class="a11y-btn" onclick="a11yChangeFontSize(-1)">🔎 הקטן טקסט (-)</button>
+            <button type="button" class="a11y-btn" id="btnA11yGray" onclick="a11yToggleClass('grayscale')">⚫⚪ מסך שחור-לבן</button>
+            <button type="button" class="a11y-btn" id="btnA11yDark" onclick="a11yToggleClass('dark')">🌓 ניגודיות כהה</button>
+            <button type="button" class="a11y-btn" id="btnA11yLight" onclick="a11yToggleClass('light')">☀️ ניגודיות בהירה</button>
+            <button type="button" class="a11y-btn" id="btnA11yLinks" onclick="a11yToggleClass('links')">🔗 הדגש קישורים</button>
+            <button type="button" class="a11y-btn" id="btnA11yFont" onclick="a11yToggleClass('font')">🔤 פונט קריא</button>
+            <button type="button" class="a11y-btn" id="btnA11yAnim" onclick="a11yToggleClass('anim')">⏸️ עצור אנימציות</button>
+        </div>
+        <button type="button" class="a11y-btn" style="width:100%; margin-bottom:8px; background:#fee2e2; color:#991b1b; border-color:#fecaca;" onclick="a11yResetAll()">
+            🔄 איפוס הגדרות נגישות
+        </button>
+        <div style="display:flex; justify-content:space-between; font-size:12px; padding-top:6px; border-top:1px solid #e2e8f0;">
+            <a href="javascript:void(0)" onclick="openLegalModal('a11yStatementModal')" style="color:#1d4ed8; font-weight:700;">הצהרת נגישות</a>
+            <a href="javascript:void(0)" onclick="openLegalModal('privacyModal')" style="color:#1d4ed8; font-weight:700;">הצהרת פרטיות</a>
+        </div>
+    </div>
+
+    <!-- מודאל הצהרת פרטיות ותנאי שימוש (לפי חוק הגנת הפרטיות, התשמ"א-1981 ותיקון 13) -->
+    <div class="legal-modal" id="privacyModal" role="dialog" aria-modal="true" aria-labelledby="privacyModalTitle">
+        <div class="legal-modal-box">
+            <h2 id="privacyModalTitle">🔒 הצהרת פרטיות ותנאי שימוש במערכת</h2>
+            <p>מערכת ניהול ושיתוף החניות לדיירים מופעלת על ידי <strong>שיידט את בכמן ישראל בע"מ</strong> עבור הנהלת המתחם/הבניין, ופועלת בהתאם להוראות <strong>חוק הגנת הפרטיות, התשמ"א-1981</strong> (כולל תיקון 13 לחוק) והתקנות מכוחו.</p>
+
+            <h3>1. המידע הנאסף במערכת</h3>
+            <ul>
+                <li>פרטי זיהוי בסיסיים של הדייר כפי שנמסרו על ידי הנהלת הבניין: שם הדייר/משפחה, מספר דירה ומספר טלפון נייד.</li>
+                <li>מספרי הרישוי של הרכבים המשויכים למנוי הדירה בבקר החניון (Skidata).</li>
+                <li>תיעוד פעולות שחרור חניה ותפיסת חניה פנויה (תאריכים, שעות וכמות חניות) לצורך ניהול המכסות ובקרת הוגנות במתחם.</li>
+            </ul>
+
+            <h3>2. מטרות השימוש במידע</h3>
+            <ul>
+                <li>זיהוי ואימות כניסת הדייר למערכת באמצעות קוד חד-פעמי (OTP) הנשלח בהודעת WhatsApp למספר הנייד הרשום.</li>
+                <li>מתן אפשרות לדייר לצפות ולעדכן את מספרי הרכב של דירתו מול בקר השערים בחניון.</li>
+                <li>ניהול אוטומטי של השאלת חניות בין דיירי הבניין (התאמת מכסת החניות המותרת לכניסה בשעות שהוגדרו והחזרתה אוטומטית בסיום).</li>
+                <li>שליחת הודעות תפעוליות בלבד ב-WhatsApp (כגון הודעה על זמינות חניה שהוזמנה ותזכורת 30 דקות לפני סיום חלון החניה). לא יישלחו הודעות פרסומיות או שיווקיות.</li>
+                <li>הפקת דוח סיכום חודשי למנהל המתחם לצורך התחשבנות/זיכוי דיירים בבניין.</li>
+            </ul>
+
+            <h3>3. שמירה על סודיות ואי-העברה לצד שלישי</h3>
+            <p>המידע האישי ומספרי הרכב נשמרים במאגר מאובטח ומשמשים אך ורק לתפעול חניון הבניין. המידע <strong>אינו נמכר ואינו מועבר</strong> לשום גורם מסחרי או צד שלישי מחוץ למערכות התפעול של החניון.</p>
+
+            <h3>4. אבטחת מידע וניתוק אוטומטי</h3>
+            <p>התקשורת באתר מוצפנת בפרוטוקול SSL/HTTPS. המערכת משתמשת בעוגיות (Cookies) תפעוליות בלבד לשמירת החיבור, ומבצעת ניתוק סשן אוטומטי לאחר 30 דקות של חוסר פעילות להגנה על פרטיות הדייר.</p>
+
+            <h3>5. זכות עיון, תיקון ומחיקה (סעיפים 13–14 לחוק)</h3>
+            <p>כל דייר זכאי לעיין במידע השמור עליו במערכת, לעדכן את מספרי הרכב שלו באופן עצמאי דרך הפורטל, או לפנות למנהל המתחם בבקשה לעדכון או מחיקה של פרטיו ממאגר הדיירים של הבניין.</p>
+
+            <div style="margin-top: 18px; text-align: left;">
+                <button type="button" class="btn btn-primary" style="width: auto; padding: 10px 24px;" onclick="closeLegalModal('privacyModal')">קראתי והבנתי – סגור</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- מודאל הצהרת נגישות (לפי תקן ישראלי ת"י 5568 / WCAG 2.0 AA) -->
+    <div class="legal-modal" id="a11yStatementModal" role="dialog" aria-modal="true" aria-labelledby="a11yModalTitle">
+        <div class="legal-modal-box">
+            <h2 id="a11yModalTitle">♿ הצהרת נגישות</h2>
+            <p>אנו ב<strong>שיידט את בכמן ישראל בע"מ</strong> רואים חשיבות עליונה בהנגשת שירותינו הדיגיטליים לאנשים עם מוגבלות, ופועלים בהתאם לחוק שוויון זכויות לאנשים עם מוגבלות, התשנ"ח-1998 והתקנות שהותקנו מכוחו.</p>
+
+            <h3>1. רמת הנגישות באתר</h3>
+            <p>מערכת זו הותאמה לדרישות תקנות שוויון זכויות לאנשים עם מוגבלות (התאמות נגישות לשירות), ולתקן הישראלי <strong>ת"י 5568</strong> המבוסס על הנחיות <strong>WCAG 2.0 ברמת AA</strong>.</p>
+
+            <h3>2. התאמות הנגישות שבוצעו באתר</h3>
+            <ul>
+                <li><strong>תפריט נגישות ייעודי (סמל ♿):</strong> מאפשר הגדלה והקטנה של גופנים, מעבר למצב מסך שחור-לבן (גווני אפור), מצבי ניגודיות גבוהה (כהה ובהירה), הדגשת קישורים וכפתורים, החלפה לפונט קריא ועצירת אנימציות.</li>
+                <li><strong>קריאות ובולטות:</strong> שדות מספרי הרישוי והנתונים מוצגים בגופן גדול, מודגש ובעל ניגודיות גבוהה.</li>
+                <li><strong>תמיכה במקלדת ובקוראי מסך:</strong> אפשרות לניווט מלא באמצעות מקש <code>Tab</code>, סימון פוקוס ברור ותגיות ARIA מתאימות.</li>
+                <li><strong>התאמה למובייל ולכל הדפדפנים:</strong> עיצוב רספונסיבי מלא לתצוגה נוחה בטלפונים חכמים (iOS ו-Android) ובמחשבים.</li>
+            </ul>
+
+            <h3>3. יצירת קשר בנושא נגישות</h3>
+            <p>אם נתקלתם בקושי בגלישה באתר או שיש לכם הצעה לשיפור הנגישות, נשמח לעמוד לרשותכם דרך מנהל המתחם או מוקד השירות של שיידט את בכמן ישראל.</p>
+
+            <div style="margin-top: 18px; text-align: left;">
+                <button type="button" class="btn btn-primary" style="width: auto; padding: 10px 24px;" onclick="closeLegalModal('a11yStatementModal')">סגור</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let a11yFontStep = 0;
+        let a11yState = {
+            grayscale: false,
+            dark: false,
+            light: false,
+            links: false,
+            font: false,
+            anim: false
+        };
+
+        function toggleA11yPanel() {
+            const p = document.getElementById('a11yPanel');
+            p.style.display = (p.style.display === 'block') ? 'none' : 'block';
+        }
+
+        function a11yChangeFontSize(dir) {
+            a11yFontStep = Math.max(-1, Math.min(3, a11yFontStep + dir));
+            const zoomPct = 100 + (a11yFontStep * 12);
+            document.documentElement.style.fontSize = zoomPct + '%';
+            saveA11yPrefs();
+        }
+
+        function a11yToggleClass(mode) {
+            if (mode === 'dark' && !a11yState.dark) a11yState.light = false;
+            if (mode === 'light' && !a11yState.light) a11yState.dark = false;
+            a11yState[mode] = !a11yState[mode];
+            applyA11yState();
+            saveA11yPrefs();
+        }
+
+        function applyA11yState() {
+            document.documentElement.classList.toggle('a11y-grayscale', !!a11yState.grayscale);
+            document.body.classList.toggle('a11y-high-contrast-dark', !!a11yState.dark);
+            document.body.classList.toggle('a11y-high-contrast-light', !!a11yState.light);
+            document.body.classList.toggle('a11y-highlight-links', !!a11yState.links);
+            document.body.classList.toggle('a11y-readable-font', !!a11yState.font);
+            document.body.classList.toggle('a11y-no-animations', !!a11yState.anim);
+
+            const mapBtn = {
+                grayscale: 'btnA11yGray',
+                dark: 'btnA11yDark',
+                light: 'btnA11yLight',
+                links: 'btnA11yLinks',
+                font: 'btnA11yFont',
+                anim: 'btnA11yAnim'
+            };
+            Object.entries(mapBtn).forEach(([k, btnId]) => {
+                const el = document.getElementById(btnId);
+                if (el) el.classList.toggle('active', !!a11yState[k]);
+            });
+        }
+
+        function a11yResetAll() {
+            a11yFontStep = 0;
+            document.documentElement.style.fontSize = '100%';
+            a11yState = { grayscale: false, dark: false, light: false, links: false, font: false, anim: false };
+            applyA11yState();
+            try { localStorage.removeItem('sb_a11y_prefs'); } catch (e) {}
+        }
+
+        function saveA11yPrefs() {
+            try {
+                localStorage.setItem('sb_a11y_prefs', JSON.stringify({ fontStep: a11yFontStep, state: a11yState }));
+            } catch (e) {}
+        }
+
+        function loadA11yPrefs() {
+            try {
+                const raw = localStorage.getItem('sb_a11y_prefs');
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                if (typeof parsed.fontStep === 'number') {
+                    a11yFontStep = parsed.fontStep;
+                    document.documentElement.style.fontSize = (100 + a11yFontStep * 12) + '%';
+                }
+                if (parsed.state) {
+                    a11yState = { ...a11yState, ...parsed.state };
+                    applyA11yState();
+                }
+            } catch (e) {}
+        }
+
+        function openLegalModal(id) {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'flex';
+        }
+
+        function closeLegalModal(id) {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        }
+
+        document.addEventListener('DOMContentLoaded', loadA11yPrefs);
+    </script>
+
 </body>
 </html>
