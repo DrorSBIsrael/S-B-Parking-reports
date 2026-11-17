@@ -87,11 +87,16 @@
         .input-group input,
         .input-group select {
             width: 100%;
-            padding: 13px 14px;
+            max-width: 100%;
+            min-width: 0;
+            padding: 11px 12px;
             border: 1.5px solid #cbd5e1;
             border-radius: 10px;
-            font-size: 16px;
+            font-size: 15px;
             background: #f8fafc;
+            box-sizing: border-box;
+            -webkit-appearance: none;
+            appearance: none;
         }
 
         .input-group input:focus,
@@ -265,9 +270,12 @@
 <body>
     <div class="top-banner">
         <div class="banner-inner">
-            <div class="banner-title">
-                <h1 id="headerBuildingName">🅿️ חניון הדיירים</h1>
-                <p id="headerTenantInfo">כניסה מהירה באמצעות וואטסאפ</p>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <img id="portalBuildingLogo" src="" alt="לוגו בניין" style="display: none; width: 48px; height: 48px; border-radius: 10px; object-fit: contain; background: white; padding: 3px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                <div class="banner-title">
+                    <h1 id="headerBuildingName">🅿️ חניון הדיירים</h1>
+                    <p id="headerTenantInfo">כניסה מהירה באמצעות וואטסאפ</p>
+                </div>
             </div>
             <button id="logoutBtn" onclick="logoutTenant()" style="display:none; background:rgba(255,255,255,0.2); color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:700; cursor:pointer;">
                 יציאה
@@ -320,10 +328,10 @@
 
         <!-- מסך 2: פורטל הדייר הפעיל -->
         <div id="dashboardSection" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <span style="font-weight: 700; font-size: 15px; color: #334155;">🏠 מצב החניות של הדירה שלי:</span>
-                <button type="button" onclick="refreshApartmentStatus(this)" class="btn btn-outline" style="width: auto; padding: 7px 14px; font-size: 13px; border-radius: 8px; background: white;">
-                    🔄 רענן נתוני דירה וחניות
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px;">
+                <span style="font-weight: 700; font-size: 15px; color: #334155; white-space: nowrap;">🏠 מצב הדירה שלי</span>
+                <button type="button" onclick="refreshApartmentStatus(this)" class="btn btn-outline" style="width: auto; padding: 6px 12px; font-size: 13px; border-radius: 8px; background: white; white-space: nowrap;">
+                    🔄 רענן מכסה
                 </button>
             </div>
             <!-- סרגל מצב החניות של הדירה -->
@@ -405,7 +413,7 @@
                         <div class="input-group">
                             <label>למי לשחרר את החניה?</label>
                             <select id="shTargetType" onchange="document.getElementById('shTargetAptGroup').style.display = (this.value === 'APT') ? 'block' : 'none';">
-                                <option value="POOL">🌐 לפול הכללי של הבניין (כל דייר פנוי יוכל לקחת)</option>
+                                <option value="POOL">🌐 לפול הכללי של הבניין</option>
                                 <option value="APT">🏠 לדירה ספציפית בלבד</option>
                             </select>
                         </div>
@@ -418,7 +426,7 @@
                         <div class="input-group">
                             <label>סוג תזמון</label>
                             <select id="shScheduleType" onchange="toggleScheduleType()">
-                                <option value="WEEKLY">📅 קבוע לפי ימים בשבוע (למשל ימים ב', ד')</option>
+                                <option value="WEEKLY">📅 קבוע לפי ימים בשבוע</option>
                                 <option value="ONCE">📌 תאריך חד-פעמי</option>
                             </select>
                         </div>
@@ -427,9 +435,9 @@
                             <label>בחר ימים בשבוע:</label>
                             <div class="days-selector" id="daysSelector">
                                 <div class="day-chip" data-day="0" onclick="this.classList.toggle('selected')">א'</div>
-                                <div class="day-chip selected" data-day="1" onclick="this.classList.toggle('selected')">ב'</div>
+                                <div class="day-chip" data-day="1" onclick="this.classList.toggle('selected')">ב'</div>
                                 <div class="day-chip" data-day="2" onclick="this.classList.toggle('selected')">ג'</div>
-                                <div class="day-chip selected" data-day="3" onclick="this.classList.toggle('selected')">ד'</div>
+                                <div class="day-chip" data-day="3" onclick="this.classList.toggle('selected')">ד'</div>
                                 <div class="day-chip" data-day="4" onclick="this.classList.toggle('selected')">ה'</div>
                                 <div class="day-chip" data-day="5" onclick="this.classList.toggle('selected')">ו'</div>
                                 <div class="day-chip" data-day="6" onclick="this.classList.toggle('selected')">ש'</div>
@@ -441,20 +449,20 @@
                             <input type="date" id="shSpecificDate">
                         </div>
 
-                        <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
-                            <label style="font-size: 14px; font-weight: 600; color: #475569;">שעות השחרור:</label>
+                        <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                            <label style="font-size: 14px; font-weight: 600; color: #475569; white-space: nowrap;">שעות השחרור:</label>
                             <button type="button" id="fullDayBtn" onclick="toggleFullDayShare()"
-                                    style="padding: 8px 16px; border-radius: 10px; border: 1.5px solid #4f46e5; background: #eef2ff; color: #4f46e5; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s;">
-                                ☀️ יום מלא (00:00–23:59)
+                                    style="padding: 8px 18px; border-radius: 10px; border: 1.5px solid #4f46e5; background: #eef2ff; color: #4f46e5; font-weight: 700; font-size: 14px; cursor: pointer; white-space: nowrap; transition: all 0.2s;">
+                                ☀️ יום מלא
                             </button>
                         </div>
 
-                        <div id="customHoursGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <div class="input-group">
+                        <div id="customHoursGrid" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px;">
+                            <div class="input-group" style="min-width: 0;">
                                 <label>משעה:</label>
                                 <input type="time" id="shStartTime" value="08:00" oninput="onManualTimeChange()" required>
                             </div>
-                            <div class="input-group">
+                            <div class="input-group" style="min-width: 0;">
                                 <label>עד שעה:</label>
                                 <input type="time" id="shEndTime" value="17:00" oninput="onManualTimeChange()" required>
                             </div>
@@ -485,6 +493,18 @@
             const urlCode = params.get('code');
             if (urlPhone) {
                 document.getElementById('loginPhone').value = urlPhone;
+                fetch(`/api/tenant/building-info?phone=${encodeURIComponent(urlPhone)}`)
+                    .then(r => r.json())
+                    .then(b => {
+                        if (b && b.success) {
+                            if (b.parking_name) document.getElementById('headerBuildingName').textContent = b.parking_name;
+                            if (b.logo_data) {
+                                const logoEl = document.getElementById('portalBuildingLogo');
+                                logoEl.src = b.logo_data;
+                                logoEl.style.display = 'block';
+                            }
+                        }
+                    }).catch(() => {});
             }
             const savedPendingPhone = sessionStorage.getItem('tenant_pending_phone');
             const savedPendingOtp = sessionStorage.getItem('tenant_pending_otp');
@@ -548,13 +568,13 @@
                 endEl.value = '23:59';
                 btn.style.background = '#4f46e5';
                 btn.style.color = '#ffffff';
-                btn.innerHTML = '✓ יום מלא מופעל (00:00–23:59)';
+                btn.innerHTML = '✓ יום מלא פעיל';
             } else {
                 startEl.value = '08:00';
                 endEl.value = '17:00';
                 btn.style.background = '#eef2ff';
                 btn.style.color = '#4f46e5';
-                btn.innerHTML = '☀️ יום מלא (00:00–23:59)';
+                btn.innerHTML = '☀️ יום מלא';
             }
         }
 
@@ -566,20 +586,20 @@
                 isFullDaySelected = true;
                 btn.style.background = '#4f46e5';
                 btn.style.color = '#ffffff';
-                btn.innerHTML = '✓ יום מלא מופעל (00:00–23:59)';
+                btn.innerHTML = '✓ יום מלא פעיל';
             } else {
                 isFullDaySelected = false;
                 btn.style.background = '#eef2ff';
                 btn.style.color = '#4f46e5';
-                btn.innerHTML = '☀️ יום מלא (00:00–23:59)';
+                btn.innerHTML = '☀️ יום מלא';
             }
         }
 
         function formatHoursDisplay(start, end) {
             if (start === '00:00' && end === '23:59') {
-                return '☀️ יום מלא (00:00–23:59)';
+                return '☀️ יום מלא';
             }
-            return `${start} – ${end}`;
+            return `<span dir="ltr">${start} – ${end}</span>`;
         }
 
         function toggleScheduleType() {
@@ -749,7 +769,15 @@
                 document.getElementById('dashboardSection').style.display = 'block';
                 document.getElementById('logoutBtn').style.display = 'block';
 
-                document.getElementById('headerBuildingName').textContent = `🅿️ ${data.tenant.parking_name}`;
+                const logoEl = document.getElementById('portalBuildingLogo');
+                if (data.tenant.logo_data) {
+                    logoEl.src = data.tenant.logo_data;
+                    logoEl.style.display = 'block';
+                    document.getElementById('headerBuildingName').textContent = data.tenant.parking_name;
+                } else {
+                    logoEl.style.display = 'none';
+                    document.getElementById('headerBuildingName').textContent = `🅿️ ${data.tenant.parking_name}`;
+                }
                 document.getElementById('headerTenantInfo').textContent = `שלום ${data.tenant.full_name} | דירה ${data.tenant.apartment_number}`;
 
                 const aptMaxSpots = Math.max(1, parseInt((data.pooling && data.pooling.success) ? data.pooling.maxCounter : (data.tenant.base_max_counter || 1), 10) || 1);
@@ -802,21 +830,21 @@
                         <strong>👤 ${s.firstName || ''} ${s.lastName || ('מנוי #' + s.id)}</strong>
                         <span class="badge ${s.present ? 'badge-green' : 'badge-blue'}">${s.present ? '🟢 נמצא בחניון' : '⚪ מחוץ לחניון'}</span>
                     </div>
-                    <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:14px;">
+                    <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:6px; margin-bottom:12px;">
                         <div>
-                            <label for="lpn1_${s.id}" style="font-size:14px; font-weight:700; color:#334155; display:block; margin-bottom:4px;">🚗 מספר רכב 1:</label>
-                            <input type="text" id="lpn1_${s.id}" inputmode="numeric" value="${s.lpn1 || ''}" placeholder="ללא רכב"
-                                   style="width:100%; padding:12px 14px; border:2px solid #eab308; background:#fefce8; border-radius:10px; text-align:center; font-size:24px; letter-spacing:2px; font-weight:800; color:#0f172a; direction:ltr;">
+                            <label for="lpn1_${s.id}" style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:3px; text-align:center;">רכב 1</label>
+                            <input type="text" id="lpn1_${s.id}" inputmode="numeric" value="${s.lpn1 || ''}" placeholder="-"
+                                   style="width:100%; padding:9px 4px; border:1.5px solid #eab308; background:#fefce8; border-radius:8px; text-align:center; font-size:16.5px; font-weight:800; color:#0f172a; direction:ltr;">
                         </div>
                         <div>
-                            <label for="lpn2_${s.id}" style="font-size:14px; font-weight:700; color:#334155; display:block; margin-bottom:4px;">🚗 מספר רכב 2:</label>
-                            <input type="text" id="lpn2_${s.id}" inputmode="numeric" value="${s.lpn2 || ''}" placeholder="ללא רכב"
-                                   style="width:100%; padding:12px 14px; border:2px solid #eab308; background:#fefce8; border-radius:10px; text-align:center; font-size:24px; letter-spacing:2px; font-weight:800; color:#0f172a; direction:ltr;">
+                            <label for="lpn2_${s.id}" style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:3px; text-align:center;">רכב 2</label>
+                            <input type="text" id="lpn2_${s.id}" inputmode="numeric" value="${s.lpn2 || ''}" placeholder="-"
+                                   style="width:100%; padding:9px 4px; border:1.5px solid #eab308; background:#fefce8; border-radius:8px; text-align:center; font-size:16.5px; font-weight:800; color:#0f172a; direction:ltr;">
                         </div>
                         <div>
-                            <label for="lpn3_${s.id}" style="font-size:14px; font-weight:700; color:#334155; display:block; margin-bottom:4px;">🚗 מספר רכב 3:</label>
-                            <input type="text" id="lpn3_${s.id}" inputmode="numeric" value="${s.lpn3 || ''}" placeholder="ללא רכב"
-                                   style="width:100%; padding:12px 14px; border:2px solid #eab308; background:#fefce8; border-radius:10px; text-align:center; font-size:24px; letter-spacing:2px; font-weight:800; color:#0f172a; direction:ltr;">
+                            <label for="lpn3_${s.id}" style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:3px; text-align:center;">רכב 3</label>
+                            <input type="text" id="lpn3_${s.id}" inputmode="numeric" value="${s.lpn3 || ''}" placeholder="-"
+                                   style="width:100%; padding:9px 4px; border:1.5px solid #eab308; background:#fefce8; border-radius:8px; text-align:center; font-size:16.5px; font-weight:800; color:#0f172a; direction:ltr;">
                         </div>
                     </div>
                     <button class="btn btn-primary" style="padding:9px;" onclick="saveSubscriberPlates('${s.id}')">💾 שמור מספרי רכב בחניון</button>
@@ -1282,7 +1310,7 @@
             <h3>1. המידע הנאסף במערכת</h3>
             <ul>
                 <li>פרטי זיהוי בסיסיים של הדייר כפי שנמסרו על ידי הנהלת הבניין: שם הדייר/משפחה, מספר דירה ומספר טלפון נייד.</li>
-                <li>מספרי הרישוי של הרכבים המשויכים למנוי הדירה בבקר החניון (Skidata).</li>
+                <li>מספרי הרישוי של הרכבים המשויכים למנוי הדירה בבקר החניון (שיידט את בכמן).</li>
                 <li>תיעוד פעולות שחרור חניה ותפיסת חניה פנויה (תאריכים, שעות וכמות חניות) לצורך ניהול המכסות ובקרת הוגנות במתחם.</li>
             </ul>
 

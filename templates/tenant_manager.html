@@ -292,9 +292,12 @@
 <body>
     <div class="container">
         <div class="header">
-            <div class="header-title">
-                <h1 id="buildingTitle">🏢 ניהול חניון דיירים</h1>
-                <p id="buildingSubtitle">ממשק מנהל מתחם - ניהול דירות, מכסות שיתוף ודו"ח התחשבנות חודשי</p>
+            <div style="display: flex; align-items: center; gap: 14px;">
+                <img id="mgrBuildingLogo" src="" alt="לוגו בניין" style="display: none; width: 58px; height: 58px; border-radius: 12px; object-fit: contain; border: 1px solid #e2e8f0; background: #fff; padding: 3px;">
+                <div class="header-title">
+                    <h1 id="buildingTitle">🏢 ניהול חניון דיירים</h1>
+                    <p id="buildingSubtitle">ממשק מנהל מתחם - ניהול דירות, מכסות שיתוף ודו"ח התחשבנות חודשי</p>
+                </div>
             </div>
             <div class="header-actions">
                 <a href="/tenant-portal" target="_blank" class="btn btn-outline">📱 פתח פורטל דייר</a>
@@ -542,8 +545,21 @@
                             <input type="number" id="setReminderMins" min="5" max="120" value="30" required>
                         </div>
                     </div>
+                    <div style="margin-top: 18px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc;">
+                        <label style="display: block; font-weight: 700; margin-bottom: 8px; color: #334155;">🖼️ לוגו הבניין / המתחם (יוצג לכל דיירי הבניין בפורטל):</label>
+                        <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                            <img id="settingsLogoPreview" src="" alt="תצוגה מקדימה" style="display: none; width: 72px; height: 72px; border-radius: 12px; object-fit: contain; border: 1px solid #cbd5e1; background: white; padding: 4px;">
+                            <div>
+                                <input type="file" id="logoFileInput" accept="image/*" onchange="handleLogoFileSelected(event)" style="font-size: 14px;">
+                                <div style="margin-top: 6px;">
+                                    <button type="button" class="btn btn-outline" style="padding: 5px 12px; font-size: 12px;" onclick="clearBuildingLogo()">🗑️ הסר לוגו</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div style="margin-top: 20px;">
-                        <button type="submit" class="btn btn-primary" style="padding: 12px 30px;">💾 שמור הגדרות מתחם</button>
+                        <button type="submit" class="btn btn-primary" style="padding: 12px 30px;">💾 שמור הגדרות ולוגו מתחם</button>
                     </div>
                 </form>
             </div>
@@ -568,7 +584,7 @@
                 <input type="text" id="editApartment">
             </div>
             <div style="background: #f0f4ff; border: 1px solid #c7d2fe; padding: 10px 12px; border-radius: 8px; margin-bottom: 18px; font-size: 13px; color: #3730a3;">
-                💡 <strong>כמות החניות לדירה</strong> נמשכת אוטומטית מבקר החניון (Skidata) לפי מספר הדירה.
+                💡 <strong>כמות החניות לדירה</strong> נמשכת אוטומטית מבקר החניון (שיידט את בכמן) לפי מספר הדירה.
             </div>
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
                 <button class="btn btn-outline" onclick="closeEditModal()">ביטול</button>
@@ -630,6 +646,8 @@
                     document.getElementById('setMaxMonth').value = data.settings.max_bookings_per_month ?? 30;
                     document.getElementById('setCheckInterval').value = data.settings.check_interval_minutes ?? 30;
                     document.getElementById('setReminderMins').value = data.settings.reminder_minutes_before ?? 30;
+                    currentLogoData = data.settings.logo_data || '';
+                    applyManagerLogoPreview(currentLogoData);
                 }
 
                 allTenants = data.tenants || [];
@@ -931,6 +949,59 @@
             }
         }
 
+        let currentLogoData = '';
+
+        function applyManagerLogoPreview(logoDataUrl) {
+            const headerImg = document.getElementById('mgrBuildingLogo');
+            const previewImg = document.getElementById('settingsLogoPreview');
+            if (logoDataUrl) {
+                headerImg.src = logoDataUrl;
+                headerImg.style.display = 'block';
+                previewImg.src = logoDataUrl;
+                previewImg.style.display = 'block';
+            } else {
+                headerImg.style.display = 'none';
+                previewImg.style.display = 'none';
+            }
+        }
+
+        function handleLogoFileSelected(e) {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const img = new Image();
+                img.onload = function() {
+                    const MAX_DIM = 220;
+                    let w = img.width, h = img.height;
+                    if (w > MAX_DIM || h > MAX_DIM) {
+                        if (w > h) {
+                            h = Math.round(h * (MAX_DIM / w));
+                            w = MAX_DIM;
+                        } else {
+                            w = Math.round(w * (MAX_DIM / h));
+                            h = MAX_DIM;
+                        }
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    currentLogoData = canvas.toDataURL('image/png', 0.85);
+                    applyManagerLogoPreview(currentLogoData);
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearBuildingLogo() {
+            currentLogoData = '';
+            document.getElementById('logoFileInput').value = '';
+            applyManagerLogoPreview('');
+        }
+
         async function handleSaveSettings(e) {
             e.preventDefault();
             const payload = {
@@ -938,7 +1009,8 @@
                 max_bookings_per_day: parseInt(document.getElementById('setMaxDay').value, 10) || 5,
                 max_bookings_per_month: parseInt(document.getElementById('setMaxMonth').value, 10) || 30,
                 check_interval_minutes: parseInt(document.getElementById('setCheckInterval').value, 10) || 30,
-                reminder_minutes_before: parseInt(document.getElementById('setReminderMins').value, 10) || 30
+                reminder_minutes_before: parseInt(document.getElementById('setReminderMins').value, 10) || 30,
+                logo_data: currentLogoData
             };
             const res = await fetch('/api/tenant-manager/settings', {
                 method: 'POST',
@@ -1314,7 +1386,7 @@
             <h3>1. המידע הנאסף במערכת</h3>
             <ul>
                 <li>פרטי זיהוי בסיסיים של הדייר כפי שנמסרו על ידי הנהלת הבניין: שם הדייר/משפחה, מספר דירה ומספר טלפון נייד.</li>
-                <li>מספרי הרישוי של הרכבים המשויכים למנוי הדירה בבקר החניון (Skidata).</li>
+                <li>מספרי הרישוי של הרכבים המשויכים למנוי הדירה בבקר החניון (שיידט את בכמן).</li>
                 <li>תיעוד פעולות שחרור חניה ותפיסת חניה פנויה (תאריכים, שעות וכמות חניות) לצורך ניהול המכסות ובקרת הוגנות במתחם.</li>
             </ul>
 
