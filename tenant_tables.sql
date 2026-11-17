@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS public.tenant_building_settings (
     check_interval_minutes INTEGER DEFAULT 30,
     reminder_minutes_before INTEGER DEFAULT 30,
     logo_data TEXT,
+    parking_lat DOUBLE PRECISION,
+    parking_lng DOUBLE PRECISION,
+    parking_address TEXT,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -83,5 +86,8 @@ CREATE TABLE IF NOT EXISTS public.tenant_quota_transfers (
 CREATE INDEX IF NOT EXISTS idx_tenant_transfers_project_date ON public.tenant_quota_transfers (project_number, booking_date);
 CREATE INDEX IF NOT EXISTS idx_tenant_transfers_status ON public.tenant_quota_transfers (status);
 
--- הוספת עמודת לוגו אם הטבלה כבר קיימת:
+-- הוספת עמודות לוגו וקואורדינטות חניון אם הטבלה כבר קיימת:
 ALTER TABLE public.tenant_building_settings ADD COLUMN IF NOT EXISTS logo_data TEXT;
+ALTER TABLE public.tenant_building_settings ADD COLUMN IF NOT EXISTS parking_lat DOUBLE PRECISION;
+ALTER TABLE public.tenant_building_settings ADD COLUMN IF NOT EXISTS parking_lng DOUBLE PRECISION;
+ALTER TABLE public.tenant_building_settings ADD COLUMN IF NOT EXISTS parking_address TEXT;

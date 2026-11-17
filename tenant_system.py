@@ -121,10 +121,16 @@ def _init_sqlite():
                 created_at TEXT
             )
         """)
-        try:
-            cur.execute("ALTER TABLE tenant_building_settings ADD COLUMN logo_data TEXT")
-        except Exception:
-            pass
+        for col_sql in [
+            "ALTER TABLE tenant_building_settings ADD COLUMN logo_data TEXT",
+            "ALTER TABLE tenant_building_settings ADD COLUMN parking_lat REAL",
+            "ALTER TABLE tenant_building_settings ADD COLUMN parking_lng REAL",
+            "ALTER TABLE tenant_building_settings ADD COLUMN parking_address TEXT"
+        ]:
+            try:
+                cur.execute(col_sql)
+            except Exception:
+                pass
         conn.commit()
         conn.close()
 
@@ -160,21 +166,31 @@ class TenantStore:
     @staticmethod
     def get_building_settings(project_number, default_name=''):
         p_num = str(project_number)
+        sb_row = None
         sb = _get_supabase()
         if sb:
             try:
                 res = sb.table('tenant_building_settings').select('*').eq('project_number', p_num).execute()
                 if res.data:
-                    return res.data[0]
+                    sb_row = dict(res.data[0])
             except Exception as _sbe:
                 _trip_sb_circuit_if_missing(_sbe)
+        local_row = None
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.row_factory = sqlite3.Row
             row = conn.execute("SELECT * FROM tenant_building_settings WHERE project_number = ?", (p_num,)).fetchone()
             conn.close()
             if row:
-                return dict(row)
+                local_row = dict(row)
+        if sb_row:
+            if local_row:
+                for k in ('logo_data', 'parking_lat', 'parking_lng', 'parking_address'):
+                    if sb_row.get(k) in (None, '') and local_row.get(k) not in (None, ''):
+                        sb_row[k] = local_row[k]
+            return sb_row
+        if local_row:
+            return local_row
         return {
             'project_number': p_num,
             'parking_name': default_name,
@@ -182,15 +198,34 @@ class TenantStore:
             'max_bookings_per_month': 30,
             'check_interval_minutes': 30,
             'reminder_minutes_before': 30,
-            'logo_data': ''
+            'logo_data': '',
+            'parking_lat': None,
+            'parking_lng': None,
+            'parking_address': ''
         }
 
     @staticmethod
-    def save_building_settings(project_number, parking_name, max_day, max_month, check_interval=30, reminder_mins=30, logo_data=None):
+    def save_building_settings(project_number, parking_name, max_day, max_month, check_interval=30, reminder_mins=30, logo_data=None, parking_lat=None, parking_lng=None, parking_address=None):
         p_num = str(project_number)
         now_iso = get_il_now().isoformat()
         existing = TenantStore.get_building_settings(p_num, parking_name)
         final_logo = logo_data if logo_data is not None else (existing.get('logo_data') or '')
+        final_addr = str(parking_address).strip() if parking_address is not None else (existing.get('parking_address') or '')
+
+        def _parse_coord(val, fallback):
+            if val is None:
+                return fallback
+            s = str(val).strip()
+            if not s:
+                return None
+            try:
+                return float(s)
+            except Exception:
+                return fallback
+
+        final_lat = _parse_coord(parking_lat, existing.get('parking_lat'))
+        final_lng = _parse_coord(parking_lng, existing.get('parking_lng'))
+
         payload = {
             'project_number': p_num,
             'parking_name': parking_name or '',
@@ -199,6 +234,9 @@ class TenantStore:
             'check_interval_minutes': int(check_interval),
             'reminder_minutes_before': int(reminder_mins),
             'logo_data': final_logo,
+            'parking_lat': final_lat,
+            'parking_lng': final_lng,
+            'parking_address': final_addr,
             'updated_at': now_iso
         }
         sb = _get_supabase()
@@ -206,13 +244,18 @@ class TenantStore:
             try:
                 sb.table('tenant_building_settings').upsert(payload).execute()
             except Exception as _sbe:
-                _trip_sb_circuit_if_missing(_sbe)
+                # אם העמודות החדשות טרם נוספו ב-Supabase, שמור את עמודות הבסיס כדי שלא תיכשל השמירה
+                try:
+                    base_payload = {k: v for k, v in payload.items() if k not in ('parking_lat', 'parking_lng', 'parking_address')}
+                    sb.table('tenant_building_settings').upsert(base_payload).execute()
+                except Exception as _sbe2:
+                    _trip_sb_circuit_if_missing(_sbe2)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.execute("""
                 INSERT INTO tenant_building_settings
-                (project_number, parking_name, max_bookings_per_day, max_bookings_per_month, check_interval_minutes, reminder_minutes_before, logo_data, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (project_number, parking_name, max_bookings_per_day, max_bookings_per_month, check_interval_minutes, reminder_minutes_before, logo_data, parking_lat, parking_lng, parking_address, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(project_number) DO UPDATE SET
                     parking_name=excluded.parking_name,
                     max_bookings_per_day=excluded.max_bookings_per_day,
@@ -220,9 +263,13 @@ class TenantStore:
                     check_interval_minutes=excluded.check_interval_minutes,
                     reminder_minutes_before=excluded.reminder_minutes_before,
                     logo_data=excluded.logo_data,
+                    parking_lat=excluded.parking_lat,
+                    parking_lng=excluded.parking_lng,
+                    parking_address=excluded.parking_address,
                     updated_at=excluded.updated_at
             """, (p_num, payload['parking_name'], payload['max_bookings_per_day'], payload['max_bookings_per_month'],
-                  payload['check_interval_minutes'], payload['reminder_minutes_before'], final_logo, now_iso))
+                  payload['check_interval_minutes'], payload['reminder_minutes_before'], final_logo,
+                  final_lat, final_lng, final_addr, now_iso))
             conn.commit()
             conn.close()
         return payload
@@ -736,14 +783,108 @@ def adjust_apartment_max_counter(project_number, apartment_number, delta):
     except Exception as e:
         return {'success': False, 'message': str(e)}
 
+def _get_subscriber_parked_info(sess, ip, port, apt_str, sid_str, cur_lpn1='', cur_lpn2='', cur_lpn3=''):
+    """
+    בודק מול /parktrans של שיידט איזה רכב ספציפי (lpn1 / lpn2 / lpn3) נמצא כעת בחניון
+    וכמה ימים עברו מהפעולה האחרונה (transactionTime).
+    מחזיר מילון: {
+        'fac_id': int, 'comp_id': int, 'dev_id': int,
+        'parked_lpn': str, 'parked_slot': 'lpn1'|'lpn2'|'lpn3',
+        'days_in_parking': float, 'entry_time_str': str
+    }
+    """
+    ns_uri = 'http://gsph.sub.com/cust/types'
+    ns = {'ns': ns_uri}
+    c1 = re.sub(r'[^0-9CCDמ]', '', str(cur_lpn1 or '').strip().upper())
+    c2 = re.sub(r'[^0-9CCDמ]', '', str(cur_lpn2 or '').strip().upper())
+    c3 = re.sub(r'[^0-9CCDמ]', '', str(cur_lpn3 or '').strip().upper())
+
+    fac_id, comp_id, dev_id = 2280, 2152, 101
+    parked_lpn = ''
+    entry_time_str = ''
+    days_in_parking = 0.0
+
+    try:
+        pt_url = f"https://{ip}:{port}/CustomerMediaWebService/consumers/{apt_str},{sid_str}/parktrans"
+        pt_resp = sess.get(pt_url, headers=_skidata_headers(), verify=False, timeout=10)
+        if pt_resp.status_code == 200:
+            pt_root = ET.fromstring(pt_resp.content)
+            tx_list = pt_root.findall('.//ns:parkTransaction', ns)
+            # מיון מהפעולה החדשה ביותר לישנה ביותר לפי transactionTime
+            def _tx_sort_key(tx_el):
+                return (tx_el.findtext('ns:transactionTime', default='', namespaces=ns) or '').strip()
+            tx_list_sorted = sorted(tx_list, key=_tx_sort_key, reverse=True)
+
+            # זמן הפעולה האחרונה בכלל
+            latest_tx_time_str = _tx_sort_key(tx_list_sorted[0]) if tx_list_sorted else ''
+
+            for tx in tx_list_sorted:
+                fin = int(tx.findtext('ns:facilityin', default='0', namespaces=ns) or 0)
+                if fin > 0:
+                    fac_id = fin
+                    comp_id = int(tx.findtext('ns:computer', default='2152', namespaces=ns) or 2152)
+                    dev_id = int(tx.findtext('ns:device', default='101', namespaces=ns) or 101)
+                    raw_tx_lpn = (tx.findtext('ns:lpn', default='', namespaces=ns) or '').strip().upper()
+                    parked_lpn = re.sub(r'[^0-9CCDמ]', '', raw_tx_lpn)
+                    entry_time_str = (tx.findtext('ns:transactionTime', default='', namespaces=ns) or '').strip()
+                    break
+
+            ref_time_str = entry_time_str or latest_tx_time_str
+            if ref_time_str:
+                try:
+                    tx_dt = datetime.datetime.fromisoformat(ref_time_str)
+                    now_dt = datetime.datetime.now(tx_dt.tzinfo) if tx_dt.tzinfo else datetime.datetime.now()
+                    days_in_parking = max(0.0, (now_dt - tx_dt).total_seconds() / 86400.0)
+                except Exception:
+                    days_in_parking = 0.0
+    except Exception:
+        pass
+
+    # זיהוי איזה שדה רכב (lpn1 / lpn2 / lpn3) הוא הרכב שנמצא בחניון
+    parked_slot = 'lpn1'
+    if parked_lpn:
+        if parked_lpn == c1:
+            parked_slot = 'lpn1'
+        elif parked_lpn == c2:
+            parked_slot = 'lpn2'
+        elif parked_lpn == c3:
+            parked_slot = 'lpn3'
+        elif c1 and parked_lpn.lstrip('0') == c1.lstrip('0'):
+            parked_slot = 'lpn1'
+        elif c2 and parked_lpn.lstrip('0') == c2.lstrip('0'):
+            parked_slot = 'lpn2'
+        elif c3 and parked_lpn.lstrip('0') == c3.lstrip('0'):
+            parked_slot = 'lpn3'
+    else:
+        if c1:
+            parked_slot = 'lpn1'
+            parked_lpn = c1
+        elif c2:
+            parked_slot = 'lpn2'
+            parked_lpn = c2
+        elif c3:
+            parked_slot = 'lpn3'
+            parked_lpn = c3
+
+    return {
+        'fac_id': fac_id,
+        'comp_id': comp_id,
+        'dev_id': dev_id,
+        'parked_lpn': parked_lpn,
+        'parked_slot': parked_slot,
+        'days_in_parking': days_in_parking,
+        'entry_time_str': entry_time_str
+    }
+
 def get_apartment_subscribers(project_number, apartment_number):
-    """שליפת המנויים והרכבים של הדירה מתוך שיידט."""
+    """שליפת המנויים והרכבים של הדירה מתוך שיידט, כולל זיהוי הרכב הספציפי שנמצא בחניון."""
     conn = _get_parking_conn(project_number)
     if not conn or not conn.get('ip_address'):
         return {'success': False, 'message': 'לא נמצאו פרטי חיבור לחניון', 'subscribers': []}
     ip = conn['ip_address']
     port = conn.get('port', 8443)
-    url = f"https://{ip}:{port}/CustomerMediaWebService/contracts/{apartment_number}/consumersdetail"
+    apt_str = str(apartment_number).strip()
+    url = f"https://{ip}:{port}/CustomerMediaWebService/contracts/{apt_str}/consumersdetail"
     try:
         sess = _get_http_session()
         resp = sess.get(url, headers=_skidata_headers(), verify=False, timeout=25)
@@ -757,19 +898,36 @@ def get_apartment_subscribers(project_number, apartment_number):
             cons = cd.find('ns:consumer', ns)
             person = cd.find('ns:person', ns)
             ident = cd.find('ns:identification', ns)
-            sid = cons.findtext('ns:id', default='', namespaces=ns) if cons is not None else ''
+            sid = (cons.findtext('ns:id', default='', namespaces=ns) if cons is not None else '').strip()
             fname = (person.findtext('ns:firstName', default='', namespaces=ns) if person is not None else '') or cd.findtext('ns:firstName', default='', namespaces=ns)
             lname = (person.findtext('ns:surname', default='', namespaces=ns) if person is not None else '') or cd.findtext('ns:surname', default='', namespaces=ns)
             pres = ident.findtext('ns:present', default='false', namespaces=ns) if ident is not None else 'false'
+            is_pres = str(pres).lower() in ('true', '1', 'yes')
             lpn1 = (cd.findtext('ns:lpn1', default='', namespaces=ns) or '').strip()
             lpn2 = (cd.findtext('ns:lpn2', default='', namespaces=ns) or '').strip()
             lpn3 = (cd.findtext('ns:lpn3', default='', namespaces=ns) or '').strip()
+
+            parked_slot = None
+            parked_lpn = ''
+            days_in_parking = 0.0
+            can_edit_parked = True
+            if is_pres and sid:
+                p_info = _get_subscriber_parked_info(sess, ip, port, apt_str, sid, lpn1, lpn2, lpn3)
+                parked_slot = p_info['parked_slot']
+                parked_lpn = p_info['parked_lpn']
+                days_in_parking = round(p_info['days_in_parking'], 1)
+                can_edit_parked = bool(p_info['days_in_parking'] >= 7.0)
+
             subs.append({
                 'id': sid,
-                'apartment': str(apartment_number),
+                'apartment': apt_str,
                 'firstName': fname.strip(),
                 'lastName': lname.strip(),
-                'present': str(pres).lower() in ('true', '1', 'yes'),
+                'present': is_pres,
+                'parked_slot': parked_slot,
+                'parked_lpn': parked_lpn,
+                'days_in_parking': days_in_parking,
+                'can_edit_parked': can_edit_parked,
                 'lpn1': lpn1,
                 'lpn2': lpn2,
                 'lpn3': lpn3
@@ -779,7 +937,13 @@ def get_apartment_subscribers(project_number, apartment_number):
         return {'success': False, 'message': str(e), 'subscribers': []}
 
 def update_apartment_subscriber_plates(project_number, apartment_number, subscriber_id, lpn1, lpn2, lpn3):
-    """עדכון מספרי רכב של מנוי בדירה בשיידט, כולל תמיכה מלאה בעדכון כאשר המנוי נמצא בחניון (present=true)."""
+    """
+    עדכון מספרי רכב של מנוי בדירה בשיידט:
+    - בודק איזה רכב ספציפי (רכב 1 / רכב 2 / רכב 3) נמצא כעת בחניון (לפי /parktrans).
+    - אם הרכב הספציפי שמבקשים לשנות נמצא בחניון ופחות מ-7 ימים עברו מהפעולה האחרונה -> חוסם את השינוי של אותו רכב.
+    - אם מבקשים לשנות רכב אחר של אותו מנוי (שאינו הרכב שנמצא בחניון) -> מאפשר את השינוי!
+    - אם עברו 7 ימים או יותר מהפעולה האחרונה של הרכב שבחניון (רכב תקוע) -> מאפס נוכחות ומאפשר את העדכון.
+    """
     conn = _get_parking_conn(project_number)
     if not conn or not conn.get('ip_address'):
         return {'success': False, 'message': 'לא נמצאו פרטי חיבור לחניון'}
@@ -811,11 +975,9 @@ def update_apartment_subscriber_plates(project_number, apartment_number, subscri
             s = re.sub(r'[\s\-]', '', str(raw_val or '').strip()).upper()
             if not s:
                 return True, ''
-            # הסרת הצירופים המותרים ובדיקה שנותרו אך ורק ספרות (ושיש לפחות ספרה אחת)
             rem = s.replace('CC', '', 1).replace('CD', '', 1).replace('מ', '', 1)
             if not rem.isdigit() or not any(ch.isdigit() for ch in s):
                 return False, s
-            # אל תאפשר גם CC/CD וגם מ' יחד או כפילויות של אותיות
             letters_only = ''.join(ch for ch in s if not ch.isdigit())
             if letters_only not in ('', 'CC', 'CD', 'מ'):
                 return False, s
@@ -849,7 +1011,7 @@ def update_apartment_subscriber_plates(project_number, apartment_number, subscri
             f'</consumerDetail>'
         ).encode('utf-8')
 
-        def _reset_stuck_presence(fac_id, comp_id, dev_id):
+        def _book_exit(fac_id, comp_id, dev_id):
             now_tx = datetime.datetime.now().astimezone().isoformat(timespec='milliseconds')
             tx_xml = (
                 f'<?xml version="1.0" encoding="UTF-8"?>'
@@ -866,63 +1028,80 @@ def update_apartment_subscriber_plates(project_number, apartment_number, subscri
             pt_url = f"https://{ip}:{port}/CustomerMediaWebService/consumers/{apt_str},{sid_str}/parktrans"
             return sess.post(pt_url, data=tx_xml, headers=_skidata_headers('application/xml'), verify=False, timeout=15)
 
-        def _get_open_entry_info():
-            """מחזיר (fac_id, comp_id, dev_id, days_in_parking) של הכניסה הפעילה בחניון."""
-            try:
-                pt_url = f"https://{ip}:{port}/CustomerMediaWebService/consumers/{apt_str},{sid_str}/parktrans"
-                pt_resp = sess.get(pt_url, headers=_skidata_headers(), verify=False, timeout=10)
-                if pt_resp.status_code == 200:
-                    pt_root = ET.fromstring(pt_resp.content)
-                    for tx in pt_root.findall('.//ns:parkTransaction', ns):
-                        fin = int(tx.findtext('ns:facilityin', default='0', namespaces=ns) or 0)
-                        if fin > 0:
-                            comp = int(tx.findtext('ns:computer', default='2152', namespaces=ns) or 2152)
-                            dev = int(tx.findtext('ns:device', default='101', namespaces=ns) or 101)
-                            tx_time_str = (tx.findtext('ns:transactionTime', default='', namespaces=ns) or '').strip()
-                            days_in = 0.0
-                            if tx_time_str:
-                                try:
-                                    tx_dt = datetime.datetime.fromisoformat(tx_time_str)
-                                    now_dt = datetime.datetime.now(tx_dt.tzinfo) if tx_dt.tzinfo else datetime.datetime.now()
-                                    days_in = max(0.0, (now_dt - tx_dt).total_seconds() / 86400.0)
-                                except Exception:
-                                    days_in = 0.0
-                            return fin, comp, dev, days_in
-            except Exception:
-                pass
-            return 2280, 2152, 101, 0.0
+        def _book_reentry(fac_id, comp_id, dev_id, entry_lpn, orig_time_str=''):
+            tx_time = orig_time_str or datetime.datetime.now().astimezone().isoformat(timespec='milliseconds')
+            lpn_tag = f'<lpn>{entry_lpn}</lpn>' if entry_lpn else ''
+            tx_xml = (
+                f'<?xml version="1.0" encoding="UTF-8"?>'
+                f'<bookParkTransaction xmlns="{ns_uri}">'
+                f'<enterParkTransaction>'
+                f'<transactionTime>{tx_time}</transactionTime>'
+                f'<transactionType>10</transactionType>'
+                f'<facilityin>{fac_id}</facilityin><facilityout>0</facilityout>'
+                f'<computer>{comp_id}</computer><device>{dev_id}</device><amount>0</amount>'
+                f'<contractid>{apt_str}</contractid><consumerid>{sid_str}</consumerid>'
+                f'{lpn_tag}'
+                f'</enterParkTransaction>'
+                f'</bookParkTransaction>'
+            ).encode('utf-8')
+            pt_url = f"https://{ip}:{port}/CustomerMediaWebService/consumers/{apt_str},{sid_str}/parktrans"
+            return sess.post(pt_url, data=tx_xml, headers=_skidata_headers('application/xml'), verify=False, timeout=15)
 
-        # הוספת/עדכון רכב 2 או רכב 3 בלבד (ללא שינוי רכב 1) עובדת ישירות ללא נגיעה בנוכחות.
-        # לעומת זאת, אם המנוי נמצא בחניון (present=true) ומנסים להחליף את רכב 1:
-        # - אם הרכב בחניון פחות מ-7 ימים -> לא משחררים נוכחות! מודיעים שלא ניתן להחליף רכב בזמן שהוא בחניון.
-        # - רק אם הרכב כבר 7 ימים ומעלה בחניון (נוכחות תקועה) -> מאפסים את הנוכחות ומחליפים את הרכב.
-        need_presence_check = is_present and ('lpn1' in changed_tags)
-
-        if not need_presence_check:
+        if not is_present:
             put_resp = sess.put(url, data=minimal_xml, headers=_skidata_headers('application/xml'), verify=False, timeout=15)
             if put_resp.status_code in (200, 201, 204):
                 return {'success': True, 'message': 'מספרי הרכב עודכנו בהצלחה בחניון!'}
-            if is_present:
-                need_presence_check = True
-            else:
-                return {'success': False, 'message': f'בקר החניון דחה את העדכון ({put_resp.status_code})'}
+            return {'success': False, 'message': f'בקר החניון דחה את העדכון ({put_resp.status_code})'}
 
-        if need_presence_check:
-            fac_id, comp_id, dev_id, days_in_parking = _get_open_entry_info()
+        # המנוי נמצא בחניון (is_present=True) -> בודקים איזה רכב ספציפי נמצא בחניון וכמה ימים עברו
+        p_info = _get_subscriber_parked_info(sess, ip, port, apt_str, sid_str, cur_lpn1, cur_lpn2, cur_lpn3)
+        parked_slot = p_info['parked_slot']
+        parked_lpn = p_info['parked_lpn']
+        days_in_parking = p_info['days_in_parking']
+        fac_id, comp_id, dev_id = p_info['fac_id'], p_info['comp_id'], p_info['dev_id']
+
+        slot_names = {'lpn1': 'רכב 1', 'lpn2': 'רכב 2', 'lpn3': 'רכב 3'}
+        parked_label = slot_names.get(parked_slot, 'הרכב')
+
+        # 1. האם המשתמש מנסה לשנות את הרכב הספציפי שנמצא כעת בחניון?
+        if parked_slot in changed_tags:
             if days_in_parking < 7.0:
+                plate_disp = f" ({parked_lpn})" if parked_lpn else ""
                 return {
                     'success': False,
                     'error_code': 'CAR_IN_PARKING',
-                    'message': 'לא ניתן להחליף את מספר הרכב בזמן שהרכב נמצא בחניון. יש להמתין ליציאת הרכב מהחניון (איפוס נוכחות אוטומטי מתבצע רק כאשר הרכב רשום בחניון מעל 7 ימים).'
+                    'parked_slot': parked_slot,
+                    'parked_lpn': parked_lpn,
+                    'days_in_parking': round(days_in_parking, 1),
+                    'message': f'לא ניתן לשנות את {parked_label}{plate_disp} בזמן שהוא נמצא בחניון. ניתן לשנות את הרכבים האחרים במנוי שאינם בחניון (איפוס נוכחות אוטומטי מתאפשר רק אם הרכב תקוע בחניון מעל 7 ימים).'
                 }
-            # הרכב רשום בחניון כבר 7 ימים או יותר -> מאפסים נוכחות ומבצעים את ההחלפה!
-            exit_res = _reset_stuck_presence(fac_id, comp_id, dev_id)
+            # הרכב הספציפי נמצא בחניון כבר 7 ימים ומעלה -> מאפסים נוכחות ומעדכנים!
+            exit_res = _book_exit(fac_id, comp_id, dev_id)
             if exit_res.status_code in (200, 201, 204):
                 time.sleep(0.2)
                 put_resp = sess.put(url, data=minimal_xml, headers=_skidata_headers('application/xml'), verify=False, timeout=15)
                 if put_resp.status_code in (200, 201, 204):
-                    return {'success': True, 'message': 'נוכחות הרכב (שהיה רשום בחניון מעל 7 ימים) אופסה ומספרי הרכב עודכנו בהצלחה!'}
-            return {'success': False, 'message': 'לא ניתן להחליף את מספר הרכב בזמן שהרכב נמצא בחניון.'}
+                    return {'success': True, 'message': f'נוכחות {parked_label} (שהיה רשום בחניון מעל 7 ימים) אופסה ומספרי הרכב עודכנו בהצלחה!'}
+            return {'success': False, 'message': f'לא ניתן להחליף את {parked_label} בזמן שהוא בחניון.'}
+
+        # 2. המשתמש משנה רק רכב שאינו נמצא בחניון (למשל רכב 1 בחניון והמשתמש משנה את רכב 2 או 3, או להיפך)
+        if 'lpn1' not in changed_tags:
+            # שינוי של lpn2 / lpn3 בלבד נתמך ישירות בבקר ללא נגיעה בנוכחות
+            put_resp = sess.put(url, data=minimal_xml, headers=_skidata_headers('application/xml'), verify=False, timeout=15)
+            if put_resp.status_code in (200, 201, 204):
+                return {'success': True, 'message': 'מספרי הרכב עודכנו בהצלחה בחניון!'}
+            return {'success': False, 'message': f'בקר החניון דחה את העדכון ({put_resp.status_code})'}
+        else:
+            # רכב 2 או רכב 3 נמצא בחניון, והמשתמש משנה את רכב 1 (שאינו בחניון):
+            # בקר שיידט דורש יציאה זמנית כדי לעדכן את השדה הראשי lpn1, ומיד מחזירים את הנוכחות לרכב שבחניון
+            exit_res = _book_exit(fac_id, comp_id, dev_id)
+            if exit_res.status_code in (200, 201, 204):
+                time.sleep(0.15)
+                put_resp = sess.put(url, data=minimal_xml, headers=_skidata_headers('application/xml'), verify=False, timeout=15)
+                _book_reentry(fac_id, comp_id, dev_id, parked_lpn, p_info.get('entry_time_str', ''))
+                if put_resp.status_code in (200, 201, 204):
+                    return {'success': True, 'message': 'מספרי הרכב עודכנו בהצלחה בחניון!'}
+            return {'success': False, 'message': 'לא ניתן לעדכן את מספר הרכב כעת.'}
     except Exception as e:
         return {'success': False, 'message': str(e)}
 
@@ -1200,7 +1379,10 @@ def api_tenant_manager_save_settings():
         max_month=data.get('max_bookings_per_month', 30),
         check_interval=data.get('check_interval_minutes', 30),
         reminder_mins=data.get('reminder_minutes_before', 30),
-        logo_data=data.get('logo_data')
+        logo_data=data.get('logo_data'),
+        parking_lat=data.get('parking_lat'),
+        parking_lng=data.get('parking_lng'),
+        parking_address=data.get('parking_address')
     )
     return jsonify({'success': True, 'message': 'הגדרות המתחם נשמרו בהצלחה', 'settings': saved})
 
@@ -1504,7 +1686,10 @@ def api_tenant_building_info():
         return jsonify({
             'success': True,
             'parking_name': b.get('parking_name') or '',
-            'logo_data': b.get('logo_data') or ''
+            'logo_data': b.get('logo_data') or '',
+            'parking_lat': b.get('parking_lat'),
+            'parking_lng': b.get('parking_lng'),
+            'parking_address': b.get('parking_address') or ''
         })
     return jsonify({'success': False})
 
@@ -1761,7 +1946,10 @@ def api_tenant_dashboard():
             'base_max_counter': int(pooling_info.get('maxCounter') if pooling_info.get('success') else (tenant.get('base_max_counter') or 1)),
             'project_number': p_num,
             'parking_name': b_settings.get('parking_name') or tenant.get('parking_name') or f'מתחם {p_num}',
-            'logo_data': b_settings.get('logo_data') or ''
+            'logo_data': b_settings.get('logo_data') or '',
+            'parking_lat': b_settings.get('parking_lat'),
+            'parking_lng': b_settings.get('parking_lng'),
+            'parking_address': b_settings.get('parking_address') or ''
         },
         'quota_limits': {
             'max_per_day': int(b_settings.get('max_bookings_per_day') or 5),
