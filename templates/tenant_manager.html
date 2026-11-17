@@ -1042,6 +1042,22 @@
             link.download = `tenant_parking_report_${currentReportData.month}.csv`;
             link.click();
         }
+
+        // ניתוק אוטומטי לאחר 30 דקות ללא פעילות למניעת עומס על השרת
+        const MGR_INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
+        let mgrInactivityTimer = null;
+
+        function resetMgrInactivityTimer() {
+            if (mgrInactivityTimer) clearTimeout(mgrInactivityTimer);
+            mgrInactivityTimer = setTimeout(() => {
+                window.location.href = '/logout';
+            }, MGR_INACTIVITY_LIMIT_MS);
+        }
+
+        ['click', 'touchstart', 'keydown', 'scroll', 'mousemove'].forEach(evt => {
+            document.addEventListener(evt, resetMgrInactivityTimer, { passive: true });
+        });
+        resetMgrInactivityTimer();
     </script>
 </body>
 </html>

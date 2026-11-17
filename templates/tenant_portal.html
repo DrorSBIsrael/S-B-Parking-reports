@@ -290,7 +290,7 @@
                     <label>מספר טלפון נייד</label>
                     <input type="tel" id="loginPhone" placeholder="050-1234567" autocomplete="tel" style="text-align: right; direction: ltr;">
                 </div>
-                <button class="btn btn-whatsapp" onclick="sendOtp()" id="sendOtpBtn">💬 שלח קוד בוואטסאפ</button>
+                <button type="button" class="btn btn-whatsapp" onclick="sendOtp()" id="sendOtpBtn">💬 שלח קוד בוואטסאפ</button>
             </div>
 
             <div id="otpStep" style="display: none;">
@@ -310,8 +310,8 @@
                            onfocus="tryReadClipboardOtp()"
                            oninput="if(this.value.replace(/\D/g,'').length===6) verifyOtp();">
                 </div>
-                <button class="btn btn-primary" onclick="verifyOtp()" id="verifyOtpBtn" style="margin-bottom: 10px;">🔐 כניסה לפורטל הדירה</button>
-                <button class="btn btn-outline" onclick="backToPhoneStep()">חזור להחלפת מספר טלפון</button>
+                <button type="button" class="btn btn-primary" onclick="verifyOtp()" id="verifyOtpBtn" style="margin-bottom: 10px;">🔐 כניסה לפורטל הדירה</button>
+                <button type="button" class="btn btn-outline" onclick="backToPhoneStep()">חזור להחלפת מספר טלפון</button>
             </div>
         </div>
 
@@ -394,12 +394,9 @@
 
                     <form onsubmit="handleCreateShare(event)">
                         <div class="input-group">
-                            <label>כמה חניות לשחרר?</label>
-                            <select id="shSpotsCount">
-                                <option value="1">חניה 1</option>
-                                <option value="2">2 חניות</option>
-                                <option value="3">3 חניות</option>
-                            </select>
+                            <label>כמה חניות לשחרר? <span id="maxSpotsHint" style="color: #4f46e5; font-size: 12px;">(מקסימום לדירתך: 1)</span></label>
+                            <input type="number" id="shSpotsCount" min="1" max="1" value="1" required
+                                   oninput="if(this.max && parseInt(this.value,10) > parseInt(this.max,10)) this.value = this.max; if(parseInt(this.value,10) < 1) this.value = 1;">
                         </div>
 
                         <div class="input-group">
@@ -485,6 +482,16 @@
             const urlCode = params.get('code');
             if (urlPhone) {
                 document.getElementById('loginPhone').value = urlPhone;
+            }
+            const savedPendingPhone = sessionStorage.getItem('tenant_pending_phone');
+            const savedPendingOtp = sessionStorage.getItem('tenant_pending_otp');
+            if (!urlCode && savedPendingPhone) {
+                document.getElementById('loginPhone').value = savedPendingPhone;
+                document.getElementById('phoneStep').style.display = 'none';
+                document.getElementById('otpStep').style.display = 'block';
+                if (savedPendingOtp) {
+                    showClickableCode(savedPendingOtp);
+                }
             }
             if (urlPhone && urlCode) {
                 document.getElementById('phoneStep').style.display = 'none';
@@ -595,9 +602,15 @@
                 });
                 const data = await res.json();
                 if (data.success) {
+                    try {
+                        sessionStorage.setItem('tenant_pending_phone', phone);
+                        if (data.otp_code) sessionStorage.setItem('tenant_pending_otp', data.otp_code);
+                    } catch (err) {}
                     document.getElementById('phoneStep').style.display = 'none';
                     document.getElementById('otpStep').style.display = 'block';
-                    document.getElementById('loginOtp').focus();
+                    if (data.otp_code) {
+                        showClickableCode(data.otp_code);
+                    }
                     showPortalAlert(data.message, 'success');
                 } else {
                     showPortalAlert(data.message || 'שגיאה בשליחת קוד', 'danger');
@@ -618,6 +631,7 @@
                 detectedOtpCode = clean;
                 document.getElementById('quickCodeValue').textContent = clean;
                 document.getElementById('quickCodeBox').style.display = 'block';
+                document.getElementById('loginOtp').value = clean;
             }
         }
 
@@ -641,6 +655,10 @@
         }
 
         function backToPhoneStep() {
+            try {
+                sessionStorage.removeItem('tenant_pending_phone');
+                sessionStorage.removeItem('tenant_pending_otp');
+            } catch (err) {}
             document.getElementById('otpStep').style.display = 'none';
             document.getElementById('phoneStep').style.display = 'block';
         }
@@ -654,7 +672,7 @@
             }
             const btn = document.getElementById('verifyOtpBtn');
             btn.disabled = true;
-            btn.textContent = 'מאמת קוד...';
+            btn.textContent = 'נכנס...';
             try {
                 const res = await fetch('/api/tenant/verify-otp', {
                     method: 'POST',
@@ -663,6 +681,19 @@
                 });
                 const data = await res.json();
                 if (data.success) {
+                    try {
+                        sessionStorage.removeItem('tenant_pending_phone');
+                        sessionStorage.removeItem('tenant_pending_otp');
+                    } catch (err) {}
+                    // מעבר מיידי למסך הפורטל ללא המתנה לטעינת בקר החניון!
+                    if (data.tenant) {
+                        currentTenant = data.tenant;
+                        document.getElementById('loginSection').style.display = 'none';
+                        document.getElementById('dashboardSection').style.display = 'block';
+                        document.getElementById('logoutBtn').style.display = 'block';
+                        document.getElementById('headerBuildingName').textContent = `🅿️ ${data.tenant.parking_name || 'חניון הדיירים'}`;
+                        document.getElementById('headerTenantInfo').textContent = `שלום ${data.tenant.full_name} | דירה ${data.tenant.apartment_number}`;
+                    }
                     loadDashboard();
                 } else {
                     showPortalAlert(data.message || 'קוד שגוי', 'danger');
@@ -717,6 +748,19 @@
 
                 document.getElementById('headerBuildingName').textContent = `🅿️ ${data.tenant.parking_name}`;
                 document.getElementById('headerTenantInfo').textContent = `שלום ${data.tenant.full_name} | דירה ${data.tenant.apartment_number}`;
+
+                const aptMaxSpots = Math.max(1, parseInt((data.pooling && data.pooling.success) ? data.pooling.maxCounter : (data.tenant.base_max_counter || 1), 10) || 1);
+                const spotsInput = document.getElementById('shSpotsCount');
+                const spotsHint = document.getElementById('maxSpotsHint');
+                if (spotsInput) {
+                    spotsInput.max = String(aptMaxSpots);
+                    if (parseInt(spotsInput.value, 10) > aptMaxSpots) {
+                        spotsInput.value = String(aptMaxSpots);
+                    }
+                }
+                if (spotsHint) {
+                    spotsHint.textContent = `(מקסימום לדירתך: ${aptMaxSpots})`;
+                }
 
                 if (data.pooling && data.pooling.success) {
                     document.getElementById('statMaxCounter').textContent = data.pooling.maxCounter;
@@ -962,6 +1006,25 @@
                 loadDashboard();
             }
         }
+
+        // ניתוק אוטומטי לאחר 30 דקות ללא פעילות למניעת עומס על השרת
+        const INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
+        let inactivityTimer = null;
+
+        function resetInactivityTimer() {
+            if (inactivityTimer) clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                if (currentTenant) {
+                    logoutTenant();
+                    showPortalAlert('החיבור נותק אוטומטית לאחר 30 דקות ללא פעילות.', 'danger');
+                }
+            }, INACTIVITY_LIMIT_MS);
+        }
+
+        ['click', 'touchstart', 'keydown', 'scroll'].forEach(evt => {
+            document.addEventListener(evt, resetInactivityTimer, { passive: true });
+        });
+        resetInactivityTimer();
     </script>
 </body>
 </html>
