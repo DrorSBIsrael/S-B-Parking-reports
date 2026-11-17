@@ -1017,8 +1017,14 @@ def api_tenant_manager_init():
 
     p_num = str(mgr.get('project_number') or '')
     p_name = mgr.get('parking_name') or f'מתחם {p_num}'
+    run_scheduler_cycle()
     b_settings = TenantStore.get_building_settings(p_num, p_name)
     tenants = TenantStore.list_tenants(p_num)
+    shares = TenantStore.list_shares(p_num, active_only=True)
+    active_transfers = TenantStore.list_transfers(
+        project_number=p_num,
+        statuses=['SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE']
+    )
 
     return jsonify({
         'success': True,
@@ -1029,7 +1035,9 @@ def api_tenant_manager_init():
             'parking_name': b_settings.get('parking_name') or p_name
         },
         'settings': b_settings,
-        'tenants': tenants
+        'tenants': tenants,
+        'shares': shares,
+        'active_transfers': active_transfers
     })
 
 @tenant_bp.route('/api/tenant-manager/settings', methods=['POST'])
@@ -1118,6 +1126,100 @@ def api_tenant_manager_send_invite(tenant_id):
     if wa_ok:
         return jsonify({'success': True, 'message': f'הודעת וואטסאפ עם קישור נשלחה ל-{t.get("full_name")}!'})
     return jsonify({'success': False, 'message': f'שגיאה בשליחת וואטסאפ: {wa_err}'})
+
+@tenant_bp.route('/api/tenant-manager/tenants/<int:tenant_id>/refresh-quota', methods=['POST'])
+def api_tenant_manager_refresh_quota(tenant_id):
+    """רענון כמות החניות (maxCounter ו-presentCounter) של דירה ספציפית ישירות מבקר החניון (Skidata)."""
+    mgr = _get_logged_in_tenant_manager()
+    if not mgr:
+        return jsonify({'success': False, 'message': 'לא מורשה'}), 401
+    t = TenantStore.get_tenant_by_id(tenant_id)
+    if not t:
+        return jsonify({'success': False, 'message': 'דייר לא נמצא'})
+
+    p_num = str(t.get('project_number') or mgr.get('project_number') or '')
+    apt = str(t.get('apartment_number') or '').strip()
+    pool_info = get_apartment_pooling_status(p_num, apt)
+    if not pool_info.get('success'):
+        return jsonify({
+            'success': False,
+            'message': f'לא ניתן למשוך נתונים מבקר החניון עבור דירה {apt}: {pool_info.get("message")}'
+        })
+
+    new_max = int(pool_info.get('maxCounter') or 0)
+    pres_c = int(pool_info.get('presentCounter') or 0)
+    TenantStore.update_tenant(
+        tenant_id=tenant_id,
+        full_name=t.get('full_name', ''),
+        phone_number=t.get('phone_number', ''),
+        apartment_number=apt,
+        base_max_counter=new_max,
+        is_active=t.get('is_active', True)
+    )
+    return jsonify({
+        'success': True,
+        'apartment_number': apt,
+        'base_max_counter': new_max,
+        'present_counter': pres_c,
+        'contract_name': pool_info.get('contractName', ''),
+        'message': f'דירה {apt} רועננה מהחניון: {new_max} חניות מוגדרות ({pres_c} רכבים בחניון כעת)'
+    })
+
+@tenant_bp.route('/api/tenant-manager/refresh-all-quotas', methods=['POST'])
+def api_tenant_manager_refresh_all_quotas():
+    """רענון כמות החניות מבקר החניון עבור כל הדירות במתחם."""
+    mgr = _get_logged_in_tenant_manager()
+    if not mgr:
+        return jsonify({'success': False, 'message': 'לא מורשה'}), 401
+    p_num = str(mgr.get('project_number') or '')
+    tenants = TenantStore.list_tenants(p_num)
+    updated_count = 0
+    live_status = {}
+    for t in tenants:
+        apt = str(t.get('apartment_number') or '').strip()
+        if not apt:
+            continue
+        if apt not in live_status:
+            live_status[apt] = get_apartment_pooling_status(p_num, apt)
+        p_info = live_status[apt]
+        if p_info.get('success'):
+            new_max = int(p_info.get('maxCounter') or 0)
+            TenantStore.update_tenant(
+                tenant_id=t['id'],
+                full_name=t.get('full_name', ''),
+                phone_number=t.get('phone_number', ''),
+                apartment_number=apt,
+                base_max_counter=new_max,
+                is_active=t.get('is_active', True)
+            )
+            updated_count += 1
+    return jsonify({
+        'success': True,
+        'updated_count': updated_count,
+        'live_status': live_status,
+        'message': f'רועננו בהצלחה נתוני החניות עבור {updated_count} דיירים מתוך בקר החניון!'
+    })
+
+@tenant_bp.route('/api/tenant-manager/cancel-share/<int:share_id>', methods=['POST'])
+def api_tenant_manager_cancel_share(share_id):
+    mgr = _get_logged_in_tenant_manager()
+    if not mgr:
+        return jsonify({'success': False, 'message': 'לא מורשה'}), 401
+    p_num = str(mgr.get('project_number') or '')
+    TenantStore.deactivate_share(share_id, p_num)
+    return jsonify({'success': True, 'message': 'שחרור החניה בוטל בהצלחה'})
+
+@tenant_bp.route('/api/tenant-manager/release-transfer/<int:transfer_id>', methods=['POST'])
+def api_tenant_manager_release_transfer(transfer_id):
+    mgr = _get_logged_in_tenant_manager()
+    if not mgr:
+        return jsonify({'success': False, 'message': 'לא מורשה'}), 401
+    p_num = str(mgr.get('project_number') or '')
+    tr = TenantStore.get_transfer_by_id(transfer_id)
+    if not tr or str(tr.get('project_number')) != p_num:
+        return jsonify({'success': False, 'message': 'העברה לא נמצאה'})
+    restore_active_transfer(tr, early_cancel=True)
+    return jsonify({'success': True, 'message': 'ההשאלה הסתיימה והמכסה הוחזרה לדירה המקורית!'})
 
 @tenant_bp.route('/api/tenant-manager/tenants/<int:tenant_id>', methods=['PUT', 'DELETE'])
 def api_tenant_manager_modify_tenant(tenant_id):
