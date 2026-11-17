@@ -317,6 +317,12 @@
 
         <!-- מסך 2: פורטל הדייר הפעיל -->
         <div id="dashboardSection" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="font-weight: 700; font-size: 15px; color: #334155;">🏠 מצב החניות של הדירה שלי:</span>
+                <button type="button" onclick="refreshApartmentStatus(this)" class="btn btn-outline" style="width: auto; padding: 7px 14px; font-size: 13px; border-radius: 8px; background: white;">
+                    🔄 רענן נתוני דירה וחניות
+                </button>
+            </div>
             <!-- סרגל מצב החניות של הדירה -->
             <div class="stats-grid">
                 <div class="stat-box">
@@ -435,14 +441,22 @@
                             <input type="date" id="shSpecificDate">
                         </div>
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                            <label style="font-size: 14px; font-weight: 600; color: #475569;">שעות השחרור:</label>
+                            <button type="button" id="fullDayBtn" onclick="toggleFullDayShare()"
+                                    style="padding: 8px 16px; border-radius: 10px; border: 1.5px solid #4f46e5; background: #eef2ff; color: #4f46e5; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s;">
+                                ☀️ יום מלא (00:00–23:59)
+                            </button>
+                        </div>
+
+                        <div id="customHoursGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                             <div class="input-group">
                                 <label>משעה:</label>
-                                <input type="time" id="shStartTime" value="08:00" required>
+                                <input type="time" id="shStartTime" value="08:00" oninput="onManualTimeChange()" required>
                             </div>
                             <div class="input-group">
                                 <label>עד שעה:</label>
-                                <input type="time" id="shEndTime" value="17:00" required>
+                                <input type="time" id="shEndTime" value="17:00" oninput="onManualTimeChange()" required>
                             </div>
                         </div>
 
@@ -510,6 +524,52 @@
             });
             document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
             if (btnEl) btnEl.classList.add('active');
+        }
+
+        let isFullDaySelected = false;
+
+        function toggleFullDayShare() {
+            isFullDaySelected = !isFullDaySelected;
+            const btn = document.getElementById('fullDayBtn');
+            const startEl = document.getElementById('shStartTime');
+            const endEl = document.getElementById('shEndTime');
+            if (isFullDaySelected) {
+                startEl.value = '00:00';
+                endEl.value = '23:59';
+                btn.style.background = '#4f46e5';
+                btn.style.color = '#ffffff';
+                btn.innerHTML = '✓ יום מלא מופעל (00:00–23:59)';
+            } else {
+                startEl.value = '08:00';
+                endEl.value = '17:00';
+                btn.style.background = '#eef2ff';
+                btn.style.color = '#4f46e5';
+                btn.innerHTML = '☀️ יום מלא (00:00–23:59)';
+            }
+        }
+
+        function onManualTimeChange() {
+            const startEl = document.getElementById('shStartTime');
+            const endEl = document.getElementById('shEndTime');
+            const btn = document.getElementById('fullDayBtn');
+            if (startEl.value === '00:00' && endEl.value === '23:59') {
+                isFullDaySelected = true;
+                btn.style.background = '#4f46e5';
+                btn.style.color = '#ffffff';
+                btn.innerHTML = '✓ יום מלא מופעל (00:00–23:59)';
+            } else {
+                isFullDaySelected = false;
+                btn.style.background = '#eef2ff';
+                btn.style.color = '#4f46e5';
+                btn.innerHTML = '☀️ יום מלא (00:00–23:59)';
+            }
+        }
+
+        function formatHoursDisplay(start, end) {
+            if (start === '00:00' && end === '23:59') {
+                return '☀️ יום מלא (00:00–23:59)';
+            }
+            return `${start} – ${end}`;
         }
 
         function toggleScheduleType() {
@@ -621,6 +681,20 @@
             document.getElementById('logoutBtn').style.display = 'none';
             document.getElementById('loginSection').style.display = 'block';
             backToPhoneStep();
+        }
+
+        async function refreshApartmentStatus(btnEl) {
+            const orig = btnEl ? btnEl.innerHTML : '';
+            if (btnEl) {
+                btnEl.disabled = true;
+                btnEl.innerHTML = '⏳ מרענן מהחניון...';
+            }
+            await loadDashboard();
+            showPortalAlert('נתוני הדירה וכמות החניות רועננו מבקר החניון!', 'success');
+            if (btnEl) {
+                btnEl.disabled = false;
+                btnEl.innerHTML = orig;
+            }
         }
 
         async function loadDashboard(silentIfUnauth = false) {
@@ -770,7 +844,7 @@
                                 : '<span class="badge badge-purple">🌐 פול כללי</span>'}
                         </div>
                         <div style="font-size:13px; color:#475569; margin-top:4px;">
-                            📅 תאריך: <strong>${s.booking_date}</strong> | 🕒 שעות: <strong>${s.start_time} – ${s.end_time}</strong>
+                            📅 תאריך: <strong>${s.booking_date}</strong> | 🕒 שעות: <strong>${formatHoursDisplay(s.start_time, s.end_time)}</strong>
                         </div>
                         <div style="font-size:12px; color:#64748b; margin-top:2px;">
                             חניות פנויות בחלון זה: <strong>${s.spots_remaining}</strong> מתוך ${s.spots_offered}
@@ -869,7 +943,7 @@
                         <div>
                             <div><strong>${sh.spots_offered} חניה/ות</strong> | ${targetDesc}</div>
                             <div style="font-size:13px; color:#475569; margin-top:4px;">${schedDesc}</div>
-                            <div style="font-size:13px; color:#64748b;">🕒 שעות: ${sh.start_time} – ${sh.end_time}</div>
+                            <div style="font-size:13px; color:#64748b;">🕒 שעות: <strong>${formatHoursDisplay(sh.start_time, sh.end_time)}</strong></div>
                         </div>
                         <button class="btn btn-danger" style="width:auto; padding:8px 12px; font-size:13px;" onclick="cancelShare(${sh.id})">
                             בטל

@@ -305,8 +305,9 @@
         <div id="globalAlert" class="alert"></div>
 
         <div class="tabs-bar">
-            <button class="tab-btn active" onclick="switchTab('tenants', this)">👥 דיירים ודירות במתחם</button>
-            <button class="tab-btn" onclick="switchTab('report', this)">📊 דו"ח חודשי (זיכוי / תגמול דיירים)</button>
+            <button class="tab-btn active" onclick="switchTab('tenants', this)">👥 דיירים וחניות משוחררות</button>
+            <button class="tab-btn" onclick="switchTab('shares', this)">🅿️ כל החניות המשוחררות (<span id="tabSharesBadge">0</span>)</button>
+            <button class="tab-btn" onclick="switchTab('report', this)">📊 דו"ח חודשי (זיכוי / תגמול)</button>
             <button class="tab-btn" onclick="switchTab('settings', this)">⚙️ הגדרות ומכסות מתחם</button>
         </div>
 
@@ -340,7 +341,12 @@
             <div class="card">
                 <div class="section-title">
                     <span>📋 רשימת דיירי הבניין (<span id="tenantsCount">0</span>)</span>
-                    <input type="text" id="tenantSearch" placeholder="🔍 חפש לפי שם, טלפון או מספר דירה..." oninput="renderTenantsTable()" style="max-width: 280px; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 8px; font-size: 14px;">
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <button class="btn btn-outline" onclick="refreshAllTenantsQuotas(this)" style="font-size: 13px; padding: 8px 14px;">
+                            🔄 רענן חניות לכל הדירות מהחניון
+                        </button>
+                        <input type="text" id="tenantSearch" placeholder="🔍 חפש לפי שם, טלפון או מספר דירה..." oninput="renderTenantsTable()" style="max-width: 260px; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 8px; font-size: 14px;">
+                    </div>
                 </div>
 
                 <div class="table-wrapper">
@@ -350,13 +356,91 @@
                                 <th>מספר דירה</th>
                                 <th>שם הדייר</th>
                                 <th>טלפון נייד (וואטסאפ)</th>
-                                <th>חניות קבועות לדירה</th>
+                                <th>חניות מוגדרות לדירה</th>
                                 <th>תאריך הקמה</th>
                                 <th>פעולות</th>
                             </tr>
                         </thead>
                         <tbody id="tenantsTableBody">
                             <tr><td colspan="6" style="text-align:center; padding: 20px;">טוען דיירים...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- תצוגה מהירה של החניות המשוחררות גם במסך הראשי של המנהל -->
+            <div class="card">
+                <div class="section-title">
+                    <span>🅿️ חניות משוחררות במתחם (<span id="mainSharesCount">0</span>)</span>
+                    <button class="btn btn-outline" onclick="initManagerPage()" style="font-size: 13px; padding: 7px 14px;">🔄 רענן רשימה</button>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>דירה משחררת</th>
+                                <th>שם הדייר</th>
+                                <th>כמות חניות</th>
+                                <th>מיועד ל-</th>
+                                <th>ימים / תאריך</th>
+                                <th>שעות שחרור</th>
+                                <th>פעולות</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mainSharesTableBody">
+                            <tr><td colspan="7" style="text-align:center; padding: 18px; color:#6c757d;">אין כרגע חניות משוחררות במתחם</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- לשונית ייעודית: כל החניות המשוחררות והתפיסות הפעילות -->
+        <div id="tab-shares" style="display: none;">
+            <div class="card">
+                <div class="section-title">
+                    <span>🅿️ כל החניות המשוחררות על ידי דיירים</span>
+                    <button class="btn btn-outline" onclick="initManagerPage()" style="font-size: 13px; padding: 7px 14px;">🔄 רענן נתונים</button>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>דירה משחררת</th>
+                                <th>שם הדייר</th>
+                                <th>כמות חניות</th>
+                                <th>מיועד ל-</th>
+                                <th>ימים / תאריך</th>
+                                <th>שעות שחרור</th>
+                                <th>פעולות</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sharesTabTableBody">
+                            <tr><td colspan="7" style="text-align:center; padding: 18px; color:#6c757d;">אין כרגע חניות משוחררות במתחם</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="section-title">
+                    <span>🚗 חניות שנתפסו / פעילות כרגע במתחם (<span id="activeTransfersCount">0</span>)</span>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>תאריך</th>
+                                <th>שעות</th>
+                                <th>מדירה (משחררת)</th>
+                                <th>לדירה (שואלת)</th>
+                                <th>שם הדייר השואל</th>
+                                <th>סטטוס בזמן אמת</th>
+                                <th>פעולות</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activeTransfersTableBody">
+                            <tr><td colspan="7" style="text-align:center; padding: 18px; color:#6c757d;">אין כרגע תפיסות חניה פעילות</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -495,7 +579,11 @@
     </div>
 
     <script>
+        const DAY_NAMES_HE = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
         let allTenants = [];
+        let allShares = [];
+        let allActiveTransfers = [];
+        let liveAptStatus = {};
         let currentReportData = null;
         let currentProjectNumber = '';
 
@@ -514,8 +602,9 @@
         }
 
         function switchTab(tabName, btnEl) {
-            ['tenants', 'report', 'settings'].forEach(t => {
-                document.getElementById(`tab-${t}`).style.display = (t === tabName) ? 'block' : 'none';
+            ['tenants', 'shares', 'report', 'settings'].forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                if (el) el.style.display = (t === tabName) ? 'block' : 'none';
             });
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             if (btnEl) btnEl.classList.add('active');
@@ -545,7 +634,10 @@
                 }
 
                 allTenants = data.tenants || [];
+                allShares = data.shares || [];
+                allActiveTransfers = data.active_transfers || [];
                 renderTenantsTable();
+                renderManagerSharesAndTransfers();
             } catch (e) {
                 console.error(e);
                 showAlert('שגיאת תקשורת מול השרת', 'danger');
@@ -577,12 +669,21 @@
 
             tbody.innerHTML = filtered.map(t => {
                 const dateStr = t.created_at ? t.created_at.split('T')[0] : '-';
+                const liveInfo = liveAptStatus[String(t.apartment_number)];
+                const presText = (liveInfo && liveInfo.present !== undefined)
+                    ? ` <span class="badge badge-green" style="margin-right:4px;">בפנים כעת: ${liveInfo.present}</span>`
+                    : '';
                 return `
                     <tr>
                         <td><span class="badge badge-blue">דירה ${t.apartment_number}</span></td>
                         <td style="font-weight: 600;">${t.full_name}</td>
                         <td style="direction: ltr; text-align: right;">${formatPhoneDisplay(t.phone_number)}</td>
-                        <td>${t.base_max_counter || 1} חניות</td>
+                        <td>
+                            <strong>${t.base_max_counter ?? 1} חניות</strong>${presText}
+                            <button class="btn btn-outline" style="padding: 3px 8px; font-size: 11px; margin-right: 6px;" title="משוך כמות חניות מעודכנת מבקר החניון" onclick="refreshSingleTenantQuota(${t.id}, this)">
+                                🔄 רענן דירה
+                            </button>
+                        </td>
                         <td>${dateStr}</td>
                         <td>
                             <button class="btn btn-success" style="padding: 5px 10px; font-size: 12px;" onclick="sendWhatsAppInvite(${t.id})">💬 שלח קישור לוואטסאפ</button>
@@ -652,6 +753,156 @@
                 initManagerPage();
             } else {
                 showAlert(data.message || 'שגיאה בעדכון', 'danger');
+            }
+        }
+
+        async function refreshSingleTenantQuota(tenantId, btnEl) {
+            const origText = btnEl ? btnEl.innerHTML : '';
+            if (btnEl) {
+                btnEl.disabled = true;
+                btnEl.innerHTML = '⏳ מרענן...';
+            }
+            try {
+                const res = await fetch(`/api/tenant-manager/tenants/${tenantId}/refresh-quota`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    liveAptStatus[String(data.apartment_number)] = {
+                        max: data.base_max_counter,
+                        present: data.present_counter
+                    };
+                    showAlert(data.message, 'success');
+                    await initManagerPage();
+                } else {
+                    showAlert(data.message || 'שגיאה ברענון נתוני הדירה מהחניון', 'danger');
+                }
+            } catch (e) {
+                showAlert('שגיאת תקשורת ברענון הדירה', 'danger');
+            } finally {
+                if (btnEl) {
+                    btnEl.disabled = false;
+                    btnEl.innerHTML = origText;
+                }
+            }
+        }
+
+        async function refreshAllTenantsQuotas(btnEl) {
+            const origText = btnEl ? btnEl.innerHTML : '';
+            if (btnEl) {
+                btnEl.disabled = true;
+                btnEl.innerHTML = '⏳ מרענן את כל הדירות מהחניון...';
+            }
+            try {
+                const res = await fetch('/api/tenant-manager/refresh-all-quotas', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    if (data.live_status) {
+                        Object.entries(data.live_status).forEach(([apt, info]) => {
+                            if (info && info.success) {
+                                liveAptStatus[String(apt)] = { max: info.maxCounter, present: info.presentCounter };
+                            }
+                        });
+                    }
+                    showAlert(data.message, 'success');
+                    await initManagerPage();
+                } else {
+                    showAlert(data.message || 'שגיאה ברענון הדירות', 'danger');
+                }
+            } catch (e) {
+                showAlert('שגיאת תקשורת', 'danger');
+            } finally {
+                if (btnEl) {
+                    btnEl.disabled = false;
+                    btnEl.innerHTML = origText;
+                }
+            }
+        }
+
+        function renderManagerSharesAndTransfers() {
+            document.getElementById('tabSharesBadge').textContent = allShares.length;
+            document.getElementById('mainSharesCount').textContent = allShares.length;
+            document.getElementById('activeTransfersCount').textContent = allActiveTransfers.length;
+
+            const buildSharesHtml = () => {
+                if (!allShares || allShares.length === 0) {
+                    return '<tr><td colspan="7" style="text-align:center; padding: 18px; color:#6c757d;">אין כרגע חניות משוחררות במתחם</td></tr>';
+                }
+                return allShares.map(sh => {
+                    const targetBadge = (sh.share_target_type === 'APT')
+                        ? `<span class="badge badge-green">לדירה ${sh.target_apartment} בלבד</span>`
+                        : `<span class="badge badge-blue">לפול הכללי של הבניין</span>`;
+                    let schedStr = '';
+                    if (sh.schedule_type === 'ONCE') {
+                        schedStr = `חד-פעמי: ${sh.specific_date || '-'}`;
+                    } else {
+                        const dNames = String(sh.days_of_week || '').split(',').filter(Boolean).map(d => `יום ${DAY_NAMES_HE[parseInt(d,10)] || d}`).join(', ');
+                        schedStr = `קבוע: ${dNames}`;
+                    }
+                    return `
+                        <tr>
+                            <td><span class="badge badge-blue">דירה ${sh.owner_apartment}</span></td>
+                            <td style="font-weight: 600;">${sh.owner_name || '-'}</td>
+                            <td><strong>${sh.spots_offered || 1}</strong> חניות</td>
+                            <td>${targetBadge}</td>
+                            <td>${schedStr}</td>
+                            <td><strong>${sh.start_time} – ${sh.end_time}</strong></td>
+                            <td>
+                                <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="managerCancelShare(${sh.id})">
+                                    🗑️ בטל שחרור
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            };
+
+            const sharesHtml = buildSharesHtml();
+            document.getElementById('mainSharesTableBody').innerHTML = sharesHtml;
+            document.getElementById('sharesTabTableBody').innerHTML = sharesHtml;
+
+            const trBody = document.getElementById('activeTransfersTableBody');
+            if (!allActiveTransfers || allActiveTransfers.length === 0) {
+                trBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 18px; color:#6c757d;">אין כרגע תפיסות חניה פעילות</td></tr>';
+            } else {
+                const stMap = {
+                    'ACTIVE': '<span class="badge badge-green">פעיל כעת בחניון (המונה הועבר)</span>',
+                    'WAITING_FOR_EXIT': '<span class="badge badge-yellow">ממתין ליציאת הרכב של המשחרר</span>',
+                    'SCHEDULED': '<span class="badge badge-blue">משוריין</span>'
+                };
+                trBody.innerHTML = allActiveTransfers.map(tr => `
+                    <tr>
+                        <td>${tr.booking_date}</td>
+                        <td><strong>${tr.start_time} – ${tr.end_time}</strong></td>
+                        <td><span class="badge badge-blue">דירה ${tr.from_apartment}</span></td>
+                        <td><span class="badge badge-green">דירה ${tr.to_apartment}</span></td>
+                        <td>${tr.borrower_name || '-'}</td>
+                        <td>${stMap[tr.status] || tr.status}</td>
+                        <td>
+                            <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="managerReleaseTransfer(${tr.id})">
+                                ⏹️ סיים והחזר מכסה
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        async function managerCancelShare(shareId) {
+            if (!confirm('האם לבטל את שחרור החניה הזה?')) return;
+            const res = await fetch(`/api/tenant-manager/cancel-share/${shareId}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                showAlert(data.message, 'success');
+                initManagerPage();
+            }
+        }
+
+        async function managerReleaseTransfer(transferId) {
+            if (!confirm('האם לסיים את השאלת החניה ולהחזיר את המכסה לדירה המקורית?')) return;
+            const res = await fetch(`/api/tenant-manager/release-transfer/${transferId}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                showAlert(data.message, 'success');
+                initManagerPage();
             }
         }
 
