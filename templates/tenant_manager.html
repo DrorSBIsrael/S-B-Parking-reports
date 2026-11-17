@@ -300,18 +300,25 @@
                 </div>
             </div>
             <div class="header-actions">
-                <a href="/tenant-portal" target="_blank" class="btn btn-outline">📱 פתח פורטל דייר</a>
-                <button class="btn btn-danger" onclick="window.location.href='/logout'">🚪 התנתק</button>
+                <select id="mgrLangSelector" onchange="setManagerLanguage(this.value)" aria-label="בחירת שפה / Language"
+                        style="padding:9px 12px; border-radius:8px; border:1.5px solid #667eea; font-weight:700; color:#334155; cursor:pointer;">
+                    <option value="he">🇮🇱 עברית</option>
+                    <option value="en">🇬🇧 English</option>
+                    <option value="ru">🇷🇺 Русский</option>
+                    <option value="ar">🇸🇦 العربية</option>
+                </select>
+                <a href="/tenant-portal" target="_blank" class="btn btn-outline" id="mgrOpenPortalBtn">📱 פתח פורטל דייר</a>
+                <button class="btn btn-danger" id="mgrLogoutBtn" onclick="window.location.href='/logout'">🚪 התנתק</button>
             </div>
         </div>
 
         <div id="globalAlert" class="alert"></div>
 
         <div class="tabs-bar">
-            <button class="tab-btn active" onclick="switchTab('tenants', this)">👥 דיירים וחניות משוחררות</button>
-            <button class="tab-btn" onclick="switchTab('shares', this)">🅿️ כל החניות המשוחררות (<span id="tabSharesBadge">0</span>)</button>
-            <button class="tab-btn" onclick="switchTab('report', this)">📊 דו"ח חודשי (זיכוי / תגמול)</button>
-            <button class="tab-btn" onclick="switchTab('settings', this)">⚙️ הגדרות ומכסות מתחם</button>
+            <button class="tab-btn active" id="mgrTabTenants" onclick="switchTab('tenants', this)">👥 דיירים וחניות משוחררות</button>
+            <button class="tab-btn" onclick="switchTab('shares', this)"><span id="mgrTabShares">🅿️ כל החניות המשוחררות</span> (<span id="tabSharesBadge">0</span>)</button>
+            <button class="tab-btn" id="mgrTabReport" onclick="switchTab('report', this)">📊 דו"ח חודשי (זיכוי / תגמול)</button>
+            <button class="tab-btn" id="mgrTabSettings" onclick="switchTab('settings', this)">⚙️ הגדרות ומכסות מתחם</button>
         </div>
 
         <!-- לשונית 1: ניהול דיירים -->
@@ -602,7 +609,74 @@
         let currentReportData = null;
         let currentProjectNumber = '';
 
+        
+        const MGR_I18N = {
+            he: {
+                dir: 'rtl',
+                open_portal: '📱 פתח פורטל דייר',
+                logout: '🚪 התנתק',
+                tab_tenants: '👥 דיירים וחניות משוחררות',
+                tab_shares: '🅿️ כל החניות המשוחררות',
+                tab_report: '📊 דו"ח חודשי (זיכוי / תגמול)',
+                tab_settings: '⚙️ הגדרות ומכסות מתחם',
+                subtitle: 'ממשק מנהל מתחם - ניהול דירות, מכסות שיתוף ודו"ח התחשבנות חודשי'
+            },
+            en: {
+                dir: 'ltr',
+                open_portal: '📱 Open Resident Portal',
+                logout: '🚪 Logout',
+                tab_tenants: '👥 Residents & Released Spots',
+                tab_shares: '🅿️ All Released Spots',
+                tab_report: '📊 Monthly Report (Credits)',
+                tab_settings: '⚙️ Building Settings & Logo',
+                subtitle: 'Building Manager Portal - Apartments, Quotas & Monthly Accounting'
+            },
+            ru: {
+                dir: 'ltr',
+                open_portal: '📱 Портал жильца',
+                logout: '🚪 Выход',
+                tab_tenants: '👥 Жильцы и места',
+                tab_shares: '🅿️ Все свободные места',
+                tab_report: '📊 Месячный отчет',
+                tab_settings: '⚙️ Настройки и логотип',
+                subtitle: 'Панель управляющего домом - квартиры, квоты и отчеты'
+            },
+            ar: {
+                dir: 'rtl',
+                open_portal: '📱 فتح بوابة الساكن',
+                logout: '🚪 خروج',
+                tab_tenants: '👥 السكان والمواقف المشتركة',
+                tab_shares: '🅿️ جميع المواقف المتاحة',
+                tab_report: '📊 التقرير الشهري',
+                tab_settings: '⚙️ إعدادات وشعار المبنى',
+                subtitle: 'واجهة مدير المبنى - إدارة الشقق والحصص والتقرير الشهري'
+            }
+        };
+
+        function setManagerLanguage(lang) {
+            if (!MGR_I18N[lang]) lang = 'he';
+            localStorage.setItem('tenant_lang', lang);
+            const d = MGR_I18N[lang];
+            document.documentElement.lang = lang;
+            document.documentElement.dir = d.dir;
+            const sel = document.getElementById('mgrLangSelector');
+            if (sel && sel.value !== lang) sel.value = lang;
+            const map = {
+                'mgrOpenPortalBtn': d.open_portal,
+                'mgrLogoutBtn': d.logout,
+                'mgrTabTenants': d.tab_tenants,
+                'mgrTabShares': d.tab_shares,
+                'mgrTabReport': d.tab_report,
+                'mgrTabSettings': d.tab_settings
+            };
+            Object.keys(map).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = map[id];
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
+            setManagerLanguage(localStorage.getItem('tenant_lang') || 'he');
             const now = new Date();
             document.getElementById('reportMonth').value = now.toISOString().slice(0, 7);
             initManagerPage();

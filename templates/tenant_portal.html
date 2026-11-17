@@ -277,9 +277,18 @@
                     <p id="headerTenantInfo">כניסה מהירה באמצעות וואטסאפ</p>
                 </div>
             </div>
-            <button id="logoutBtn" onclick="logoutTenant()" style="display:none; background:rgba(255,255,255,0.2); color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:700; cursor:pointer;">
-                יציאה
-            </button>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <select id="langSelector" onchange="setPortalLanguage(this.value)" aria-label="בחירת שפה / Language"
+                        style="background:rgba(255,255,255,0.22); color:white; border:1px solid rgba(255,255,255,0.4); padding:6px 8px; border-radius:8px; font-weight:700; font-size:12.5px; cursor:pointer; outline:none;">
+                    <option value="he" style="color:#0f172a;">🇮🇱 עברית</option>
+                    <option value="en" style="color:#0f172a;">🇬🇧 English</option>
+                    <option value="ru" style="color:#0f172a;">🇷🇺 Русский</option>
+                    <option value="ar" style="color:#0f172a;">🇸🇦 العربية</option>
+                </select>
+                <button id="logoutBtn" onclick="logoutTenant()" style="display:none; background:rgba(255,255,255,0.2); color:white; border:none; padding:7px 12px; border-radius:8px; font-weight:700; cursor:pointer;">
+                    יציאה
+                </button>
+            </div>
         </div>
     </div>
 
@@ -288,14 +297,14 @@
 
         <!-- מסך 1: כניסה עם טלפון + קוד וואטסאפ -->
         <div id="loginSection" class="card" style="margin-top: 10px;">
-            <h2 class="card-title">📲 כניסת דיירים (ללא סיסמה)</h2>
-            <p style="font-size: 14px; color: #64748b; margin-bottom: 16px;">
+            <h2 class="card-title" id="i18n_login_title">📲 כניסת דיירים (ללא סיסמה)</h2>
+            <p id="i18n_login_sub" style="font-size: 14px; color: #64748b; margin-bottom: 16px;">
                 הזן את מספר הטלפון הנייד שלך לקבלת קוד כניסה מהיר בוואטסאפ.
             </p>
 
             <div id="phoneStep">
                 <div class="input-group">
-                    <label>מספר טלפון נייד</label>
+                    <label id="i18n_phone_lbl">מספר טלפון נייד</label>
                     <input type="tel" id="loginPhone" placeholder="050-1234567" autocomplete="tel" style="text-align: right; direction: ltr;">
                 </div>
                 <button type="button" class="btn btn-whatsapp" onclick="sendOtp()" id="sendOtpBtn">💬 שלח קוד בוואטסאפ</button>
@@ -315,22 +324,22 @@
                 </div>
 
                 <div class="input-group">
-                    <label>קוד אימות מוואטסאפ (ניתן ללחוץ על הקוד למעלה או בתיבה)</label>
+                    <label id="i18n_otp_lbl">קוד אימות מוואטסאפ (ניתן ללחוץ על הקוד למעלה או בתיבה)</label>
                     <input type="text" id="loginOtp" name="otc" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="------"
                            style="text-align: center; font-size: 26px; letter-spacing: 8px; font-weight: 800;"
                            onfocus="tryReadClipboardOtp()"
-                           oninput="if(this.value.replace(/\D/g,'').length===6) verifyOtp();">
+                           oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6); if(this.value.length===6) verifyOtp();">
                 </div>
                 <button type="button" class="btn btn-primary" onclick="verifyOtp()" id="verifyOtpBtn" style="margin-bottom: 10px;">🔐 כניסה לפורטל הדירה</button>
-                <button type="button" class="btn btn-outline" onclick="backToPhoneStep()">חזור להחלפת מספר טלפון</button>
+                <button type="button" class="btn btn-outline" id="i18n_back_phone_btn" onclick="backToPhoneStep()">חזור להחלפת מספר טלפון</button>
             </div>
         </div>
 
         <!-- מסך 2: פורטל הדייר הפעיל -->
         <div id="dashboardSection" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px;">
-                <span style="font-weight: 700; font-size: 15px; color: #334155; white-space: nowrap;">🏠 מצב הדירה שלי</span>
-                <button type="button" onclick="refreshApartmentStatus(this)" class="btn btn-outline" style="width: auto; padding: 6px 12px; font-size: 13px; border-radius: 8px; background: white; white-space: nowrap;">
+                <span id="i18n_apt_status_title" style="font-weight: 700; font-size: 15px; color: #334155; white-space: nowrap;">🏠 מצב הדירה שלי</span>
+                <button type="button" id="i18n_refresh_quota_btn" onclick="refreshApartmentStatus(this)" class="btn btn-outline" style="width: auto; padding: 6px 12px; font-size: 13px; border-radius: 8px; background: white; white-space: nowrap;">
                     🔄 רענן מכסה
                 </button>
             </div>
@@ -338,30 +347,30 @@
             <div class="stats-grid">
                 <div class="stat-box">
                     <div class="num" id="statMaxCounter">-</div>
-                    <div class="lbl">מכסת חניות פעילה</div>
+                    <div class="lbl" id="i18n_stat_max">מכסת חניות פעילה</div>
                 </div>
                 <div class="stat-box">
                     <div class="num" id="statPresentCounter">-</div>
-                    <div class="lbl">רכבים בחניון כעת</div>
+                    <div class="lbl" id="i18n_stat_present">רכבים בחניון כעת</div>
                 </div>
                 <div class="stat-box">
                     <div class="num" id="statAvailableNow" style="color: #16a34a;">-</div>
-                    <div class="lbl">פנויות לכניסה כעת</div>
+                    <div class="lbl" id="i18n_stat_avail">פנויות לכניסה כעת</div>
                 </div>
             </div>
 
             <!-- ניווט בין 3 לשוניות -->
             <div class="nav-pills">
-                <button class="pill-btn active" onclick="switchPortalTab('vehicles', this)">🚗 הרכבים שלי</button>
-                <button class="pill-btn" onclick="switchPortalTab('pool', this)">🅿️ חניות פנויות</button>
-                <button class="pill-btn" onclick="switchPortalTab('share', this)">🤝 שחרור חניה</button>
+                <button class="pill-btn active" id="i18n_tab_vehicles" onclick="switchPortalTab('vehicles', this)">🚗 הרכבים שלי</button>
+                <button class="pill-btn" id="i18n_tab_pool" onclick="switchPortalTab('pool', this)">🅿️ חניות פנויות</button>
+                <button class="pill-btn" id="i18n_tab_share" onclick="switchPortalTab('share', this)">🤝 שחרור חניה</button>
             </div>
 
             <!-- לשונית א': הרכבים של הדירה שלי -->
             <div id="ptab-vehicles">
                 <div class="card">
                     <div class="card-title">
-                        <span>🚗 רכבי הדירה שלי</span>
+                        <span id="i18n_my_cars_title">🚗 רכבי הדירה שלי</span>
                         <button onclick="loadDashboard()" style="background:none; border:none; color:#4f46e5; font-weight:700; cursor:pointer;">🔄 רענן</button>
                     </div>
                     <div id="mySubscribersContainer">
@@ -381,14 +390,14 @@
 
                 <!-- הזמנות פעילות שלי -->
                 <div class="card" id="myActiveBookingsCard" style="display: none;">
-                    <h3 class="card-title">📌 חניות פעילות / מוזמנות שלי</h3>
+                    <h3 class="card-title" id="i18n_active_bookings_title">📌 חניות פעילות / מוזמנות שלי</h3>
                     <div id="myActiveBookingsList"></div>
                 </div>
 
                 <!-- חניות פנויות לתפיסה -->
                 <div class="card">
                     <div class="card-title">
-                        <span>🅿️ חניות פנויות לתפיסה בבניין</span>
+                        <span id="i18n_avail_slots_title">🅿️ חניות פנויות לתפיסה בבניין</span>
                         <button onclick="loadDashboard()" style="background:none; border:none; color:#4f46e5; font-weight:700; cursor:pointer;">🔄 רענן</button>
                     </div>
                     <div id="availableSlotsList"></div>
@@ -398,41 +407,41 @@
             <!-- לשונית ג': שחרור חניה של הדירה שלי -->
             <div id="ptab-share" style="display: none;">
                 <div class="card">
-                    <h3 class="card-title">🤝 שחרר חניה של הדירה שלי</h3>
-                    <p style="font-size: 13px; color: #64748b; margin-bottom: 14px;">
+                    <h3 class="card-title" id="i18n_share_title">🤝 שחרר חניה של הדירה שלי</h3>
+                    <p id="i18n_share_desc" style="font-size: 13px; color: #64748b; margin-bottom: 14px;">
                         בשעות שתגדיר, המערכת תאפשר לשכן להשתמש בחניה שלך (רק אם רכבך אינו בחניון) ותחזיר את החניה אליך אוטומטית בסיום השעה!
                     </p>
 
                     <form onsubmit="handleCreateShare(event)">
                         <div class="input-group">
-                            <label>כמה חניות לשחרר? <span id="maxSpotsHint" style="color: #4f46e5; font-size: 12px;">(מקסימום לדירתך: 1)</span></label>
+                            <label><span id="i18n_spots_count_lbl">כמה חניות לשחרר?</span> <span id="maxSpotsHint" style="color: #4f46e5; font-size: 12px;">(מקסימום לדירתך: 1)</span></label>
                             <input type="number" id="shSpotsCount" min="1" max="1" value="1" required
                                    oninput="if(this.max && parseInt(this.value,10) > parseInt(this.max,10)) this.value = this.max; if(parseInt(this.value,10) < 1) this.value = 1;">
                         </div>
 
                         <div class="input-group">
-                            <label>למי לשחרר את החניה?</label>
+                            <label id="i18n_target_lbl">למי לשחרר את החניה?</label>
                             <select id="shTargetType" onchange="document.getElementById('shTargetAptGroup').style.display = (this.value === 'APT') ? 'block' : 'none';">
-                                <option value="POOL">🌐 לפול הכללי של הבניין</option>
-                                <option value="APT">🏠 לדירה ספציפית בלבד</option>
+                                <option value="POOL" id="i18n_opt_pool">🌐 לפול הכללי של הבניין</option>
+                                <option value="APT" id="i18n_opt_apt">🏠 לדירה ספציפית בלבד</option>
                             </select>
                         </div>
 
                         <div class="input-group" id="shTargetAptGroup" style="display: none;">
-                            <label>מספר הדירה שעבורה משחררים את החניה *</label>
+                            <label id="i18n_target_apt_lbl">מספר הדירה שעבורה משחררים את החניה *</label>
                             <input type="text" id="shTargetApt" placeholder="לדוגמה: 202">
                         </div>
 
                         <div class="input-group">
-                            <label>סוג תזמון</label>
+                            <label id="i18n_sched_type_lbl">סוג תזמון</label>
                             <select id="shScheduleType" onchange="toggleScheduleType()">
-                                <option value="WEEKLY">📅 קבוע לפי ימים בשבוע</option>
-                                <option value="ONCE">📌 תאריך חד-פעמי</option>
+                                <option value="WEEKLY" id="i18n_opt_weekly">📅 קבוע לפי ימים בשבוע</option>
+                                <option value="ONCE" id="i18n_opt_once">📌 תאריך חד-פעמי</option>
                             </select>
                         </div>
 
                         <div class="input-group" id="shWeeklyDaysGroup">
-                            <label>בחר ימים בשבוע:</label>
+                            <label id="i18n_days_lbl">בחר ימים בשבוע:</label>
                             <div class="days-selector" id="daysSelector">
                                 <div class="day-chip" data-day="0" onclick="this.classList.toggle('selected')">א'</div>
                                 <div class="day-chip" data-day="1" onclick="this.classList.toggle('selected')">ב'</div>
@@ -445,12 +454,12 @@
                         </div>
 
                         <div class="input-group" id="shOnceDateGroup" style="display: none;">
-                            <label>תאריך שחרור החניה:</label>
+                            <label id="i18n_date_lbl">תאריך שחרור החניה:</label>
                             <input type="date" id="shSpecificDate">
                         </div>
 
                         <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
-                            <label style="font-size: 14px; font-weight: 600; color: #475569; white-space: nowrap;">שעות השחרור:</label>
+                            <label id="i18n_hours_lbl" style="font-size: 14px; font-weight: 600; color: #475569; white-space: nowrap;">שעות השחרור:</label>
                             <button type="button" id="fullDayBtn" onclick="toggleFullDayShare()"
                                     style="padding: 8px 18px; border-radius: 10px; border: 1.5px solid #4f46e5; background: #eef2ff; color: #4f46e5; font-weight: 700; font-size: 14px; cursor: pointer; white-space: nowrap; transition: all 0.2s;">
                                 ☀️ יום מלא
@@ -459,21 +468,21 @@
 
                         <div id="customHoursGrid" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px;">
                             <div class="input-group" style="min-width: 0;">
-                                <label>משעה:</label>
+                                <label id="i18n_from_hour_lbl">משעה:</label>
                                 <input type="time" id="shStartTime" value="08:00" oninput="onManualTimeChange()" required>
                             </div>
                             <div class="input-group" style="min-width: 0;">
-                                <label>עד שעה:</label>
+                                <label id="i18n_to_hour_lbl">עד שעה:</label>
                                 <input type="time" id="shEndTime" value="17:00" oninput="onManualTimeChange()" required>
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-primary">✅ פרסם ושחרר חניה</button>
+                        <button type="submit" id="i18n_publish_btn" class="btn btn-primary">✅ פרסם ושחרר חניה</button>
                     </form>
                 </div>
 
                 <div class="card">
-                    <h3 class="card-title">📋 השחרורים הפעילים של הדירה שלי</h3>
+                    <h3 class="card-title" id="i18n_my_shares_title">📋 השחרורים הפעילים של הדירה שלי</h3>
                     <div id="mySharesList"></div>
                 </div>
             </div>
@@ -481,11 +490,376 @@
     </div>
 
     <script>
-        const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+        const I18N = {
+            he: {
+                dir: 'rtl',
+                days: ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'],
+                days_short: ["א'", "ב'", "ג'", "ד'", "ה'", "ו'", "ש'"],
+                header_default: '🅿️ חניון הדיירים',
+                header_sub_default: 'כניסה מהירה באמצעות וואטסאפ',
+                hello_apt: (name, apt) => `שלום ${name} | דירה ${apt}`,
+                logout: 'יציאה',
+                login_title: '📲 כניסת דיירים (ללא סיסמה)',
+                login_sub: 'הזן את מספר הטלפון הנייד שלך לקבלת קוד כניסה מהיר בוואטסאפ.',
+                phone_lbl: 'מספר טלפון נייד',
+                send_otp_btn: '💬 שלח קוד בוואטסאפ',
+                sending_otp: 'שולח קוד לוואטסאפ...',
+                otp_lbl: 'קוד אימות מוואטסאפ (ניתן ללחוץ על הקוד למעלה או בתיבה)',
+                quick_code_prefix: '✨ לחץ כאן לכניסה עם קוד: ',
+                verify_btn: '🔐 כניסה לפורטל הדירה',
+                back_phone_btn: 'חזור להחלפת מספר טלפון',
+                apt_status_title: '🏠 מצב הדירה שלי',
+                refresh_quota_btn: '🔄 רענן מכסה',
+                stat_max: 'מכסת חניות פעילה',
+                stat_present: 'רכבים בחניון כעת',
+                stat_avail: 'פנויות לכניסה כעת',
+                tab_vehicles: '🚗 הרכבים שלי',
+                tab_pool: '🅿️ חניות פנויות',
+                tab_share: '🤝 שחרור חניה',
+                my_cars_title: '🚗 רכבי הדירה שלי',
+                no_subscribers: 'לא נמצאו מנויים משויכים לדירה זו בבקר החניון.',
+                status_in_parking: '🟢 נמצא בחניון',
+                status_out_parking: '⚪ מחוץ לחניון',
+                car_1: 'רכב 1',
+                car_2: 'רכב 2',
+                car_3: 'רכב 3',
+                no_car: 'ללא רכב',
+                save_plates_btn: '💾 שמור מספרי רכב בחניון',
+                active_bookings_title: '📌 חניות פעילות / מוזמנות שלי',
+                avail_slots_title: '🅿️ חניות פנויות לתפיסה בבניין',
+                no_avail_slots: 'אין כרגע חניות פנויות בפול הכללי או עבור דירתך.',
+                spot_from_apt: (apt) => `🏠 חניה מדירה ${apt}`,
+                for_me_badge: '🎁 פונה במיוחד עבורך!',
+                pool_badge: '🌐 פול כללי',
+                claim_btn: 'קח חניה',
+                end_return_btn: 'סיים / החזר',
+                share_title: '🤝 שחרר חניה של הדירה שלי',
+                share_desc: 'בשעות שתגדיר, המערכת תאפשר לשכן להשתמש בחניה שלך (רק אם רכבך אינו בחניון) ותחזיר את החניה אליך אוטומטית בסיום השעה!',
+                spots_count_lbl: 'כמה חניות לשחרר?',
+                max_spots_hint: (n) => `(מקסימום לדירתך: ${n})`,
+                target_lbl: 'למי לשחרר את החניה?',
+                opt_pool: '🌐 לפול הכללי של הבניין',
+                opt_apt: '🏠 לדירה ספציפית בלבד',
+                target_apt_lbl: 'מספר הדירה שעבורה משחררים את החניה *',
+                sched_type_lbl: 'סוג תזמון',
+                opt_weekly: '📅 קבוע לפי ימים בשבוע',
+                opt_once: '📌 תאריך חד-פעמי',
+                days_lbl: 'בחר ימים בשבוע:',
+                date_lbl: 'תאריך שחרור החניה:',
+                hours_lbl: 'שעות השחרור:',
+                full_day_off: '☀️ יום מלא',
+                full_day_on: '✓ יום מלא פעיל',
+                from_hour_lbl: 'משעה:',
+                to_hour_lbl: 'עד שעה:',
+                publish_btn: '✅ פרסם ושחרר חניה',
+                my_shares_title: '📋 השחרורים הפעילים של הדירה שלי',
+                no_my_shares: 'אין לך כרגע שחרורי חניה פעילים.',
+                cancel_btn: 'בטל',
+                quota_today: (u, m) => `ניצול יומי: ${u} מתוך ${m}`,
+                quota_month: (u, m) => `ניצול חודשי: ${u} מתוך ${m}`,
+            },
+            en: {
+                dir: 'ltr',
+                days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+                days_short: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
+                header_default: '🅿️ Residents Parking',
+                header_sub_default: 'Quick Login via WhatsApp',
+                hello_apt: (name, apt) => `Hello ${name} | Apt ${apt}`,
+                logout: 'Logout',
+                login_title: '📲 Resident Login (Passwordless)',
+                login_sub: 'Enter your mobile number to receive a quick login code via WhatsApp.',
+                phone_lbl: 'Mobile Phone Number',
+                send_otp_btn: '💬 Send Code via WhatsApp',
+                sending_otp: 'Sending WhatsApp code...',
+                otp_lbl: 'WhatsApp Verification Code (Tap code above or enter below)',
+                quick_code_prefix: '✨ Tap here to login with code: ',
+                verify_btn: '🔐 Enter Apartment Portal',
+                back_phone_btn: 'Back to change phone number',
+                apt_status_title: '🏠 My Apartment Status',
+                refresh_quota_btn: '🔄 Refresh Quota',
+                stat_max: 'Active Quota',
+                stat_present: 'Cars Parked Now',
+                stat_avail: 'Available to Enter',
+                tab_vehicles: '🚗 My Cars',
+                tab_pool: '🅿️ Free Spots',
+                tab_share: '🤝 Share Spot',
+                my_cars_title: '🚗 My Apartment Vehicles',
+                no_subscribers: 'No subscribers linked to this apartment in the controller.',
+                status_in_parking: '🟢 In Parking Lot',
+                status_out_parking: '⚪ Outside',
+                car_1: 'Car 1',
+                car_2: 'Car 2',
+                car_3: 'Car 3',
+                no_car: 'No Car',
+                save_plates_btn: '💾 Save License Plates',
+                active_bookings_title: '📌 My Active / Reserved Spots',
+                avail_slots_title: '🅿️ Available Spots in Building',
+                no_avail_slots: 'No available parking spots in the pool right now.',
+                spot_from_apt: (apt) => `🏠 Spot from Apt ${apt}`,
+                for_me_badge: '🎁 Released for you!',
+                pool_badge: '🌐 Building Pool',
+                claim_btn: 'Claim Spot',
+                end_return_btn: 'End / Return',
+                share_title: '🤝 Share My Apartment Spot',
+                share_desc: 'During the hours you set, a neighbor can use your spot (only if your car is outside) and it automatically returns to you when time ends!',
+                spots_count_lbl: 'Spots to release:',
+                max_spots_hint: (n) => `(Max for your apt: ${n})`,
+                target_lbl: 'Release spot to:',
+                opt_pool: '🌐 Building General Pool',
+                opt_apt: '🏠 Specific Apartment Only',
+                target_apt_lbl: 'Target Apartment Number *',
+                sched_type_lbl: 'Schedule Type',
+                opt_weekly: '📅 Recurring Weekly Days',
+                opt_once: '📌 One-Time Date',
+                days_lbl: 'Select Days of Week:',
+                date_lbl: 'Release Date:',
+                hours_lbl: 'Release Hours:',
+                full_day_off: '☀️ Full Day',
+                full_day_on: '✓ Full Day Active',
+                from_hour_lbl: 'From:',
+                to_hour_lbl: 'Until:',
+                publish_btn: '✅ Publish & Share Spot',
+                my_shares_title: '📋 My Active Spot Shares',
+                no_my_shares: 'You have no active spot shares.',
+                cancel_btn: 'Cancel',
+                quota_today: (u, m) => `Daily usage: ${u}/${m}`,
+                quota_month: (u, m) => `Monthly usage: ${u}/${m}`,
+            },
+            ru: {
+                dir: 'ltr',
+                days: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+                days_short: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+                header_default: '🅿️ Парковка жильцов',
+                header_sub_default: 'Быстрый вход через WhatsApp',
+                hello_apt: (name, apt) => `Здравствуйте, ${name} | Кв. ${apt}`,
+                logout: 'Выход',
+                login_title: '📲 Вход для жильцов (без пароля)',
+                login_sub: 'Введите номер мобильного телефона для получения кода в WhatsApp.',
+                phone_lbl: 'Номер мобильного телефона',
+                send_otp_btn: '💬 Отправить код в WhatsApp',
+                sending_otp: 'Отправка кода...',
+                otp_lbl: 'Код из WhatsApp (нажмите на код выше или введите ниже)',
+                quick_code_prefix: '✨ Нажмите для входа с кодом: ',
+                verify_btn: '🔐 Войти в портал квартиры',
+                back_phone_btn: 'Изменить номер телефона',
+                apt_status_title: '🏠 Статус моей квартиры',
+                refresh_quota_btn: '🔄 Обновить квоту',
+                stat_max: 'Активная квота',
+                stat_present: 'Машин на парковке',
+                stat_avail: 'Свободно для въезда',
+                tab_vehicles: '🚗 Мои авто',
+                tab_pool: '🅿️ Свободные',
+                tab_share: '🤝 Отдать место',
+                my_cars_title: '🚗 Автомобили моей квартиры',
+                no_subscribers: 'Нет абонентов, привязанных к этой квартире.',
+                status_in_parking: '🟢 На парковке',
+                status_out_parking: '⚪ Вне парковки',
+                car_1: 'Авто 1',
+                car_2: 'Авто 2',
+                car_3: 'Авто 3',
+                no_car: 'Нет авто',
+                save_plates_btn: '💾 Сохранить номера авто',
+                active_bookings_title: '📌 Мои активные бронирования',
+                avail_slots_title: '🅿️ Свободные места в доме',
+                no_avail_slots: 'Сейчас нет свободных парковочных мест.',
+                spot_from_apt: (apt) => `🏠 Место от кв. ${apt}`,
+                for_me_badge: '🎁 Специально для вас!',
+                pool_badge: '🌐 Общий пул',
+                claim_btn: 'Занять',
+                end_return_btn: 'Завершить',
+                share_title: '🤝 Освободить парковочное место',
+                share_desc: 'В указанные часы сосед сможет воспользоваться вашим местом (если вашей машины нет на парковке), а по окончании времени место вернется вам автоматически!',
+                spots_count_lbl: 'Сколько мест освободить?',
+                max_spots_hint: (n) => `(Макс. для квартиры: ${n})`,
+                target_lbl: 'Кому передать место?',
+                opt_pool: '🌐 В общий пул дома',
+                opt_apt: '🏠 Конкретной квартире',
+                target_apt_lbl: 'Номер квартиры получателя *',
+                sched_type_lbl: 'Тип расписания',
+                opt_weekly: '📅 По дням недели',
+                opt_once: '📌 На одну дату',
+                days_lbl: 'Выберите дни недели:',
+                date_lbl: 'Дата освобождения:',
+                hours_lbl: 'Часы:',
+                full_day_off: '☀️ Весь день',
+                full_day_on: '✓ Весь день активен',
+                from_hour_lbl: 'С:',
+                to_hour_lbl: 'До:',
+                publish_btn: '✅ Опубликовать и освободить',
+                my_shares_title: '📋 Мои активные публикации',
+                no_my_shares: 'У вас нет активных освобождений мест.',
+                cancel_btn: 'Отмена',
+                quota_today: (u, m) => `За день: ${u}/${m}`,
+                quota_month: (u, m) => `За месяц: ${u}/${m}`,
+            },
+            ar: {
+                dir: 'rtl',
+                days: ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
+                days_short: ['أحد', 'إثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت'],
+                header_default: '🅿️ موقف السكان',
+                header_sub_default: 'دخول سريع عبر واتساب',
+                hello_apt: (name, apt) => `مرحباً ${name} | شقة ${apt}`,
+                logout: 'خروج',
+                login_title: '📲 دخول السكان (بدون كلمة مرور)',
+                login_sub: 'أدخل رقم هاتفك المحمول للحصول على رمز دخول سريع عبر واتساب.',
+                phone_lbl: 'رقم الهاتف المحمول',
+                send_otp_btn: '💬 إرسال الرمز عبر واتساب',
+                sending_otp: 'جارٍ إرسال الرمز...',
+                otp_lbl: 'رمز التحقق من واتساب (اضغط على الرمز أعلاه أو أدخله)',
+                quick_code_prefix: '✨ اضغط هنا للدخول بالرمز: ',
+                verify_btn: '🔐 الدخول إلى بوابة الشقة',
+                back_phone_btn: 'العودة لتغيير رقم الهاتف',
+                apt_status_title: '🏠 حالة شقتي',
+                refresh_quota_btn: '🔄 تحديث الحصة',
+                stat_max: 'حصة المواقف النشطة',
+                stat_present: 'سيارات بالموقف الآن',
+                stat_avail: 'متاحة للدخول الآن',
+                tab_vehicles: '🚗 سياراتي',
+                tab_pool: '🅿️ مواقف متاحة',
+                tab_share: '🤝 مشاركة موقف',
+                my_cars_title: '🚗 سيارات شقتي',
+                no_subscribers: 'لا يوجد مشتركون مرتبطون بهذه الشقة.',
+                status_in_parking: '🟢 داخل الموقف',
+                status_out_parking: '⚪ خارج الموقف',
+                car_1: 'سيارة 1',
+                car_2: 'سيارة 2',
+                car_3: 'سيارة 3',
+                no_car: 'بدون سيارة',
+                save_plates_btn: '💾 حفظ أرقام السيارات',
+                active_bookings_title: '📌 حجوزاتي النشطة',
+                avail_slots_title: '🅿️ مواقف متاحة في المبنى',
+                no_avail_slots: 'لا توجد مواقف متاحة حالياً.',
+                spot_from_apt: (apt) => `🏠 موقف من شقة ${apt}`,
+                for_me_badge: '🎁 مخصص لشقتك!',
+                pool_badge: '🌐 المجمع العام',
+                claim_btn: 'احجز الموقف',
+                end_return_btn: 'إنهاء / إرجاع',
+                share_title: '🤝 مشاركة موقف شقتي',
+                share_desc: 'خلال الساعات المحددة، يمكن للجار استخدام موقفك (فقط إذا كانت سيارتك بالخارج) ويعود الموقف إليك تلقائياً عند انتهاء الوقت!',
+                spots_count_lbl: 'عدد المواقف للمشاركة؟',
+                max_spots_hint: (n) => `(الحد الأقصى لشقتك: ${n})`,
+                target_lbl: 'لمن تشارك الموقف؟',
+                opt_pool: '🌐 للمجمع العام للمبنى',
+                opt_apt: '🏠 لشقة محددة فقط',
+                target_apt_lbl: 'رقم الشقة المستهدفة *',
+                sched_type_lbl: 'نوع الجدولة',
+                opt_weekly: '📅 ثابت حسب أيام الأسبوع',
+                opt_once: '📌 تاريخ لمرة واحدة',
+                days_lbl: 'اختر أيام الأسبوع:',
+                date_lbl: 'تاريخ مشاركة الموقف:',
+                hours_lbl: 'ساعات المشاركة:',
+                full_day_off: '☀️ يوم كامل',
+                full_day_on: '✓ يوم كامل مفعل',
+                from_hour_lbl: 'من الساعة:',
+                to_hour_lbl: 'حتى الساعة:',
+                publish_btn: '✅ نشر ومشاركة الموقف',
+                my_shares_title: '📋 مشاركاتي النشطة',
+                no_my_shares: 'لا توجد لديك مشاركات نشطة حالياً.',
+                cancel_btn: 'إلغاء',
+                quota_today: (u, m) => `الاستخدام اليومي: ${u}/${m}`,
+                quota_month: (u, m) => `الاستخدام الشهري: ${u}/${m}`,
+            }
+        };
+
+        let currentLang = localStorage.getItem('tenant_lang') || 'he';
+        if (!I18N[currentLang]) currentLang = 'he';
+        let DAY_NAMES = I18N[currentLang].days;
         let currentTenant = null;
+
+        function t(key) {
+            const dict = I18N[currentLang] || I18N.he;
+            return dict[key] !== undefined ? dict[key] : (I18N.he[key] || key);
+        }
+
+        function setPortalLanguage(lang) {
+            if (!I18N[lang]) lang = 'he';
+            currentLang = lang;
+            localStorage.setItem('tenant_lang', lang);
+            const d = I18N[lang];
+            DAY_NAMES = d.days;
+            document.documentElement.lang = lang;
+            document.documentElement.dir = d.dir;
+            const sel = document.getElementById('langSelector');
+            if (sel && sel.value !== lang) sel.value = lang;
+
+            const mapIds = {
+                'logoutBtn': 'logout',
+                'i18n_login_title': 'login_title',
+                'i18n_login_sub': 'login_sub',
+                'i18n_phone_lbl': 'phone_lbl',
+                'sendOtpBtn': 'send_otp_btn',
+                'i18n_otp_lbl': 'otp_lbl',
+                'verifyOtpBtn': 'verify_btn',
+                'i18n_back_phone_btn': 'back_phone_btn',
+                'i18n_apt_status_title': 'apt_status_title',
+                'i18n_refresh_quota_btn': 'refresh_quota_btn',
+                'i18n_stat_max': 'stat_max',
+                'i18n_stat_present': 'stat_present',
+                'i18n_stat_avail': 'stat_avail',
+                'i18n_tab_vehicles': 'tab_vehicles',
+                'i18n_tab_pool': 'tab_pool',
+                'i18n_tab_share': 'tab_share',
+                'i18n_my_cars_title': 'my_cars_title',
+                'i18n_active_bookings_title': 'active_bookings_title',
+                'i18n_avail_slots_title': 'avail_slots_title',
+                'i18n_share_title': 'share_title',
+                'i18n_share_desc': 'share_desc',
+                'i18n_spots_count_lbl': 'spots_count_lbl',
+                'i18n_target_lbl': 'target_lbl',
+                'i18n_opt_pool': 'opt_pool',
+                'i18n_opt_apt': 'opt_apt',
+                'i18n_target_apt_lbl': 'target_apt_lbl',
+                'i18n_sched_type_lbl': 'sched_type_lbl',
+                'i18n_opt_weekly': 'opt_weekly',
+                'i18n_opt_once': 'opt_once',
+                'i18n_days_lbl': 'days_lbl',
+                'i18n_date_lbl': 'date_lbl',
+                'i18n_hours_lbl': 'hours_lbl',
+                'i18n_from_hour_lbl': 'from_hour_lbl',
+                'i18n_to_hour_lbl': 'to_hour_lbl',
+                'i18n_publish_btn': 'publish_btn',
+                'i18n_my_shares_title': 'my_shares_title'
+            };
+            Object.keys(mapIds).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = d[mapIds[id]];
+            });
+
+            // Update day chips
+            document.querySelectorAll('#daysSelector .day-chip').forEach((chip, idx) => {
+                if (d.days_short[idx]) chip.textContent = d.days_short[idx];
+            });
+
+            // Update full day button
+            const fdBtn = document.getElementById('fullDayBtn');
+            if (fdBtn) fdBtn.innerHTML = isFullDaySelected ? d.full_day_on : d.full_day_off;
+
+            if (!currentTenant) {
+                document.getElementById('headerTenantInfo').textContent = d.header_sub_default;
+            } else {
+                document.getElementById('headerTenantInfo').textContent = d.hello_apt(currentTenant.full_name, currentTenant.apartment_number);
+            }
+
+            if (lastDashboardData) {
+                const spotsInput = document.getElementById('shSpotsCount');
+                const spotsHint = document.getElementById('maxSpotsHint');
+                if (spotsHint && spotsInput) {
+                    spotsHint.textContent = d.max_spots_hint(spotsInput.max || 1);
+                }
+                if (lastDashboardData.quota_limits) {
+                    document.getElementById('quotaTodayBadge').textContent = d.quota_today(lastDashboardData.quota_limits.used_today, lastDashboardData.quota_limits.max_per_day);
+                    document.getElementById('quotaMonthBadge').textContent = d.quota_month(lastDashboardData.quota_limits.used_this_month, lastDashboardData.quota_limits.max_per_month);
+                }
+                renderMySubscribers(lastDashboardData.subscribers || []);
+                renderActiveBookings(lastDashboardData.active_bookings || []);
+                renderAvailableSlots(lastDashboardData.available_slots || []);
+                renderMyShares(lastDashboardData.my_shares || []);
+            }
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('shSpecificDate').value = new Date().toISOString().split('T')[0];
+            setPortalLanguage(currentLang);
 
             // בדיקה אם הגענו מקישור מוואטסאפ (עם phone או עם phone + code)
             const params = new URLSearchParams(window.location.search);
@@ -711,6 +1085,7 @@
                     // מעבר מיידי למסך הפורטל ללא המתנה לטעינת בקר החניון!
                     if (data.tenant) {
                         currentTenant = data.tenant;
+                lastDashboardData = data;
                         document.getElementById('loginSection').style.display = 'none';
                         document.getElementById('dashboardSection').style.display = 'block';
                         document.getElementById('logoutBtn').style.display = 'block';
@@ -817,37 +1192,72 @@
             }
         }
 
+        let lastDashboardData = null;
+
+        function sanitizePlateInput(rawVal) {
+            // מתיר אך ורק ספרות (0-9), הצירופים CC או CD (דיפלומטי), או האות מ' (משטרה)
+            let s = String(rawVal || '').toUpperCase().replace(/[^0-9CDמ]/g, '');
+            let digits = '';
+            let letters = '';
+            for (let i = 0; i < s.length; i++) {
+                const ch = s[i];
+                if (ch >= '0' && ch <= '9') {
+                    digits += ch;
+                } else if (ch === 'מ') {
+                    if (letters === '') letters = 'מ';
+                } else if (ch === 'C') {
+                    if (letters === '') letters = 'C';
+                    else if (letters === 'C') letters = 'CC';
+                } else if (ch === 'D') {
+                    if (letters === 'C') letters = 'CD';
+                }
+            }
+            return (digits + letters).slice(0, 10);
+        }
+
+        function isValidPlateValue(val) {
+            const s = String(val || '').trim().toUpperCase();
+            if (!s) return true;
+            const letters = s.replace(/[0-9]/g, '');
+            const digits = s.replace(/[^0-9]/g, '');
+            if (!digits) return false;
+            return (letters === '' || letters === 'CC' || letters === 'CD' || letters === 'מ');
+        }
+
         function renderMySubscribers(subs) {
             const container = document.getElementById('mySubscribersContainer');
             if (!subs || subs.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:#64748b; padding:14px;">לא נמצאו מנויים משויכים לדירה זו בבקר החניון.</p>';
+                container.innerHTML = `<p style="text-align:center; color:#64748b; padding:14px;">${t('no_subscribers')}</p>`;
                 return;
             }
 
             container.innerHTML = subs.map(s => `
                 <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 12px; background: #f8fafc;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <strong>👤 ${s.firstName || ''} ${s.lastName || ('מנוי #' + s.id)}</strong>
-                        <span class="badge ${s.present ? 'badge-green' : 'badge-blue'}">${s.present ? '🟢 נמצא בחניון' : '⚪ מחוץ לחניון'}</span>
+                        <strong>👤 ${s.firstName || ''} ${s.lastName || ('#' + s.id)}</strong>
+                        <span class="badge ${s.present ? 'badge-green' : 'badge-blue'}">${s.present ? t('status_in_parking') : t('status_out_parking')}</span>
                     </div>
-                    <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:6px; margin-bottom:12px;">
-                        <div>
-                            <label for="lpn1_${s.id}" style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:3px; text-align:center;">רכב 1</label>
-                            <input type="text" id="lpn1_${s.id}" inputmode="numeric" value="${s.lpn1 || ''}" placeholder="-"
-                                   style="width:100%; padding:9px 4px; border:1.5px solid #eab308; background:#fefce8; border-radius:8px; text-align:center; font-size:16.5px; font-weight:800; color:#0f172a; direction:ltr;">
+                    <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <label for="lpn1_${s.id}" style="font-size:13px; font-weight:700; color:#475569; min-width:62px;">🚗 ${t('car_1')}:</label>
+                            <input type="text" id="lpn1_${s.id}" maxlength="10" value="${s.lpn1 || ''}" placeholder="${t('no_car')}"
+                                   oninput="this.value = sanitizePlateInput(this.value)"
+                                   style="flex:1; padding:10px 12px; border:2px solid #eab308; background:#fefce8; border-radius:10px; text-align:center; font-size:20px; font-weight:800; letter-spacing:1.5px; color:#0f172a; direction:ltr;">
                         </div>
-                        <div>
-                            <label for="lpn2_${s.id}" style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:3px; text-align:center;">רכב 2</label>
-                            <input type="text" id="lpn2_${s.id}" inputmode="numeric" value="${s.lpn2 || ''}" placeholder="-"
-                                   style="width:100%; padding:9px 4px; border:1.5px solid #eab308; background:#fefce8; border-radius:8px; text-align:center; font-size:16.5px; font-weight:800; color:#0f172a; direction:ltr;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <label for="lpn2_${s.id}" style="font-size:13px; font-weight:700; color:#475569; min-width:62px;">🚗 ${t('car_2')}:</label>
+                            <input type="text" id="lpn2_${s.id}" maxlength="10" value="${s.lpn2 || ''}" placeholder="${t('no_car')}"
+                                   oninput="this.value = sanitizePlateInput(this.value)"
+                                   style="flex:1; padding:10px 12px; border:2px solid #eab308; background:#fefce8; border-radius:10px; text-align:center; font-size:20px; font-weight:800; letter-spacing:1.5px; color:#0f172a; direction:ltr;">
                         </div>
-                        <div>
-                            <label for="lpn3_${s.id}" style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:3px; text-align:center;">רכב 3</label>
-                            <input type="text" id="lpn3_${s.id}" inputmode="numeric" value="${s.lpn3 || ''}" placeholder="-"
-                                   style="width:100%; padding:9px 4px; border:1.5px solid #eab308; background:#fefce8; border-radius:8px; text-align:center; font-size:16.5px; font-weight:800; color:#0f172a; direction:ltr;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <label for="lpn3_${s.id}" style="font-size:13px; font-weight:700; color:#475569; min-width:62px;">🚗 ${t('car_3')}:</label>
+                            <input type="text" id="lpn3_${s.id}" maxlength="10" value="${s.lpn3 || ''}" placeholder="${t('no_car')}"
+                                   oninput="this.value = sanitizePlateInput(this.value)"
+                                   style="flex:1; padding:10px 12px; border:2px solid #eab308; background:#fefce8; border-radius:10px; text-align:center; font-size:20px; font-weight:800; letter-spacing:1.5px; color:#0f172a; direction:ltr;">
                         </div>
                     </div>
-                    <button class="btn btn-primary" style="padding:9px;" onclick="saveSubscriberPlates('${s.id}')">💾 שמור מספרי רכב בחניון</button>
+                    <button class="btn btn-primary" style="padding:10px;" onclick="saveSubscriberPlates('${s.id}')">${t('save_plates_btn')}</button>
                 </div>
             `).join('');
         }
@@ -856,6 +1266,11 @@
             const lpn1 = document.getElementById(`lpn1_${subId}`).value.trim();
             const lpn2 = document.getElementById(`lpn2_${subId}`).value.trim();
             const lpn3 = document.getElementById(`lpn3_${subId}`).value.trim();
+
+            if (!isValidPlateValue(lpn1) || !isValidPlateValue(lpn2) || !isValidPlateValue(lpn3)) {
+                showPortalAlert('במספר רכב מותר להזין ספרות בלבד, או CC / CD לרכב דיפלומטי, או מ׳ לרכב משטרה.', 'danger');
+                return;
+            }
 
             const res = await fetch('/api/tenant/update-plates', {
                 method: 'POST',
