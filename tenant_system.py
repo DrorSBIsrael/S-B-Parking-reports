@@ -779,13 +779,15 @@ def get_apartment_subscribers(project_number, apartment_number):
         return {'success': False, 'message': str(e), 'subscribers': []}
 
 def update_apartment_subscriber_plates(project_number, apartment_number, subscriber_id, lpn1, lpn2, lpn3):
-    """עדכון מספרי רכב של מנוי בדירה תוך שמירה מלאה על כל שדות המנוי הקיימים בשיידט."""
+    """עדכון מספרי רכב של מנוי בדירה בשיידט, כולל תמיכה מלאה בעדכון כאשר המנוי נמצא בחניון (present=true)."""
     conn = _get_parking_conn(project_number)
     if not conn or not conn.get('ip_address'):
         return {'success': False, 'message': 'לא נמצאו פרטי חיבור לחניון'}
     ip = conn['ip_address']
     port = conn.get('port', 8443)
-    url = f"https://{ip}:{port}/CustomerMediaWebService/consumers/{apartment_number},{subscriber_id}/detail"
+    apt_str = str(apartment_number).strip()
+    sid_str = str(subscriber_id).strip()
+    url = f"https://{ip}:{port}/CustomerMediaWebService/consumers/{apt_str},{sid_str}/detail"
     try:
         sess = _get_http_session()
         resp = sess.get(url, headers=_skidata_headers(), verify=False, timeout=15)
@@ -793,24 +795,134 @@ def update_apartment_subscriber_plates(project_number, apartment_number, subscri
             return {'success': False, 'message': f'שגיאה בקריאת מנוי ({resp.status_code})'}
         ns_uri = 'http://gsph.sub.com/cust/types'
         ns = {'ns': ns_uri}
-        ET.register_namespace('', ns_uri)
         root = ET.fromstring(resp.content)
 
+        ident = root.find('ns:identification', ns)
+        pres_txt = ident.findtext('ns:present', default='false', namespaces=ns) if ident is not None else 'false'
+        is_present = str(pres_txt).strip().lower() in ('true', '1', 'yes')
+
+        cur_lpn1 = re.sub(r'[^0-9CCDמ]', '', (root.findtext('ns:lpn1', default='', namespaces=ns) or '').strip().upper())
+        cur_lpn2 = re.sub(r'[^0-9CCDמ]', '', (root.findtext('ns:lpn2', default='', namespaces=ns) or '').strip().upper())
+        cur_lpn3 = re.sub(r'[^0-9CCDמ]', '', (root.findtext('ns:lpn3', default='', namespaces=ns) or '').strip().upper())
+        cur_map = {'lpn1': cur_lpn1, 'lpn2': cur_lpn2, 'lpn3': cur_lpn3}
+
+        def _validate_plate(raw_val):
+            """מתיר ספרות בלבד, או הצירופים CC / CD (דיפלומטי) או האות 'מ' (משטרה)."""
+            s = re.sub(r'[\s\-]', '', str(raw_val or '').strip()).upper()
+            if not s:
+                return True, ''
+            # הסרת הצירופים המותרים ובדיקה שנותרו אך ורק ספרות (ושיש לפחות ספרה אחת)
+            rem = s.replace('CC', '', 1).replace('CD', '', 1).replace('מ', '', 1)
+            if not rem.isdigit() or not any(ch.isdigit() for ch in s):
+                return False, s
+            # אל תאפשר גם CC/CD וגם מ' יחד או כפילויות של אותיות
+            letters_only = ''.join(ch for ch in s if not ch.isdigit())
+            if letters_only not in ('', 'CC', 'CD', 'מ'):
+                return False, s
+            return True, s
+
+        changed_tags = {}
         for tag_name, val in [('lpn1', lpn1), ('lpn2', lpn2), ('lpn3', lpn3)]:
             if val is None:
                 continue
-            clean_plate = re.sub(r'[^0-9A-Za-z]', '', str(val).strip())
-            el = root.find(f'ns:{tag_name}', ns)
-            if el is None:
-                el = ET.SubElement(root, f'{{{ns_uri}}}{tag_name}')
-            # בשיידט שליחת רווח בודד מנקה את מספר הרכב אם המשתמש מחק אותו
-            el.text = clean_plate if clean_plate else ' '
+            is_ok, clean_plate = _validate_plate(val)
+            if not is_ok:
+                return {
+                    'success': False,
+                    'message': 'במספר רכב מותר להזין ספרות בלבד, או CC / CD לרכב דיפלומטי, או האות מ׳ לרכב משטרה.'
+                }
+            if clean_plate != cur_map.get(tag_name, ''):
+                # בשיידט שליחת רווח בודד מנקה את מספר הרכב אם המשתמש מחק אותו
+                changed_tags[tag_name] = clean_plate if clean_plate else ' '
 
-        xml_payload = ET.tostring(root, encoding='utf-8', method='xml')
-        put_resp = sess.put(url, data=xml_payload, headers=_skidata_headers('application/xml'), verify=False, timeout=15)
-        if put_resp.status_code in (200, 201, 204):
+        if not changed_tags:
             return {'success': True, 'message': 'מספרי הרכב עודכנו בהצלחה בחניון!'}
-        return {'success': False, 'message': f'בקר החניון דחה את העדכון ({put_resp.status_code})'}
+
+        lpn_xml_parts = ''.join(f'<{k}>{v}</{k}>' for k, v in changed_tags.items())
+        minimal_xml = (
+            f'<?xml version="1.0" encoding="UTF-8"?>'
+            f'<consumerDetail xmlns="{ns_uri}">'
+            f'<consumer href="/consumers/{apt_str},{sid_str}">'
+            f'<id>{sid_str}</id><contractid>{apt_str}</contractid>'
+            f'</consumer>'
+            f'{lpn_xml_parts}'
+            f'</consumerDetail>'
+        ).encode('utf-8')
+
+        def _reset_stuck_presence(fac_id, comp_id, dev_id):
+            now_tx = datetime.datetime.now().astimezone().isoformat(timespec='milliseconds')
+            tx_xml = (
+                f'<?xml version="1.0" encoding="UTF-8"?>'
+                f'<bookParkTransaction xmlns="{ns_uri}">'
+                f'<exitParkTransaction>'
+                f'<transactionTime>{now_tx}</transactionTime>'
+                f'<transactionType>12</transactionType>'
+                f'<facilityin>0</facilityin><facilityout>{fac_id}</facilityout>'
+                f'<computer>{comp_id}</computer><device>{dev_id}</device><amount>0</amount>'
+                f'<contractid>{apt_str}</contractid><consumerid>{sid_str}</consumerid>'
+                f'</exitParkTransaction>'
+                f'</bookParkTransaction>'
+            ).encode('utf-8')
+            pt_url = f"https://{ip}:{port}/CustomerMediaWebService/consumers/{apt_str},{sid_str}/parktrans"
+            return sess.post(pt_url, data=tx_xml, headers=_skidata_headers('application/xml'), verify=False, timeout=15)
+
+        def _get_open_entry_info():
+            """מחזיר (fac_id, comp_id, dev_id, days_in_parking) של הכניסה הפעילה בחניון."""
+            try:
+                pt_url = f"https://{ip}:{port}/CustomerMediaWebService/consumers/{apt_str},{sid_str}/parktrans"
+                pt_resp = sess.get(pt_url, headers=_skidata_headers(), verify=False, timeout=10)
+                if pt_resp.status_code == 200:
+                    pt_root = ET.fromstring(pt_resp.content)
+                    for tx in pt_root.findall('.//ns:parkTransaction', ns):
+                        fin = int(tx.findtext('ns:facilityin', default='0', namespaces=ns) or 0)
+                        if fin > 0:
+                            comp = int(tx.findtext('ns:computer', default='2152', namespaces=ns) or 2152)
+                            dev = int(tx.findtext('ns:device', default='101', namespaces=ns) or 101)
+                            tx_time_str = (tx.findtext('ns:transactionTime', default='', namespaces=ns) or '').strip()
+                            days_in = 0.0
+                            if tx_time_str:
+                                try:
+                                    tx_dt = datetime.datetime.fromisoformat(tx_time_str)
+                                    now_dt = datetime.datetime.now(tx_dt.tzinfo) if tx_dt.tzinfo else datetime.datetime.now()
+                                    days_in = max(0.0, (now_dt - tx_dt).total_seconds() / 86400.0)
+                                except Exception:
+                                    days_in = 0.0
+                            return fin, comp, dev, days_in
+            except Exception:
+                pass
+            return 2280, 2152, 101, 0.0
+
+        # הוספת/עדכון רכב 2 או רכב 3 בלבד (ללא שינוי רכב 1) עובדת ישירות ללא נגיעה בנוכחות.
+        # לעומת זאת, אם המנוי נמצא בחניון (present=true) ומנסים להחליף את רכב 1:
+        # - אם הרכב בחניון פחות מ-7 ימים -> לא משחררים נוכחות! מודיעים שלא ניתן להחליף רכב בזמן שהוא בחניון.
+        # - רק אם הרכב כבר 7 ימים ומעלה בחניון (נוכחות תקועה) -> מאפסים את הנוכחות ומחליפים את הרכב.
+        need_presence_check = is_present and ('lpn1' in changed_tags)
+
+        if not need_presence_check:
+            put_resp = sess.put(url, data=minimal_xml, headers=_skidata_headers('application/xml'), verify=False, timeout=15)
+            if put_resp.status_code in (200, 201, 204):
+                return {'success': True, 'message': 'מספרי הרכב עודכנו בהצלחה בחניון!'}
+            if is_present:
+                need_presence_check = True
+            else:
+                return {'success': False, 'message': f'בקר החניון דחה את העדכון ({put_resp.status_code})'}
+
+        if need_presence_check:
+            fac_id, comp_id, dev_id, days_in_parking = _get_open_entry_info()
+            if days_in_parking < 7.0:
+                return {
+                    'success': False,
+                    'error_code': 'CAR_IN_PARKING',
+                    'message': 'לא ניתן להחליף את מספר הרכב בזמן שהרכב נמצא בחניון. יש להמתין ליציאת הרכב מהחניון (איפוס נוכחות אוטומטי מתבצע רק כאשר הרכב רשום בחניון מעל 7 ימים).'
+                }
+            # הרכב רשום בחניון כבר 7 ימים או יותר -> מאפסים נוכחות ומבצעים את ההחלפה!
+            exit_res = _reset_stuck_presence(fac_id, comp_id, dev_id)
+            if exit_res.status_code in (200, 201, 204):
+                time.sleep(0.2)
+                put_resp = sess.put(url, data=minimal_xml, headers=_skidata_headers('application/xml'), verify=False, timeout=15)
+                if put_resp.status_code in (200, 201, 204):
+                    return {'success': True, 'message': 'נוכחות הרכב (שהיה רשום בחניון מעל 7 ימים) אופסה ומספרי הרכב עודכנו בהצלחה!'}
+            return {'success': False, 'message': 'לא ניתן להחליף את מספר הרכב בזמן שהרכב נמצא בחניון.'}
     except Exception as e:
         return {'success': False, 'message': str(e)}
 
@@ -1457,8 +1569,11 @@ def api_tenant_verify_otp():
     session['tenant_apartment'] = str(tenant['apartment_number'])
     session['tenant_last_activity'] = time.time()
 
+    auth_token = _create_tenant_mobile_token(tenant['id'])
+
     return jsonify({
         'success': True,
+        'auth_token': auth_token,
         'tenant': {
             'id': tenant['id'],
             'full_name': tenant['full_name'],
@@ -1469,6 +1584,30 @@ def api_tenant_verify_otp():
         }
     })
 
+def _create_tenant_mobile_token(tenant_id):
+    import hmac, hashlib
+    secret = (os.getenv('SECRET_KEY') or 'sb-tenant-mobile-secret-2026').encode('utf-8')
+    payload_str = f"{int(tenant_id)}:{int(time.time())}"
+    sig = hmac.new(secret, payload_str.encode('utf-8'), hashlib.sha256).hexdigest()
+    return f"{payload_str}:{sig}"
+
+def _verify_tenant_mobile_token(token_str):
+    import hmac, hashlib
+    if not token_str or ':' not in token_str:
+        return None
+    parts = str(token_str).strip().split(':')
+    if len(parts) != 3:
+        return None
+    tid_str, ts_str, sig = parts
+    secret = (os.getenv('SECRET_KEY') or 'sb-tenant-mobile-secret-2026').encode('utf-8')
+    expected = hmac.new(secret, f"{tid_str}:{ts_str}".encode('utf-8'), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(sig, expected):
+        return None
+    try:
+        return int(tid_str)
+    except Exception:
+        return None
+
 @tenant_bp.route('/api/tenant/logout', methods=['POST'])
 def api_tenant_logout():
     session.pop('tenant_user_id', None)
@@ -1478,18 +1617,25 @@ def api_tenant_logout():
 
 def _get_current_tenant():
     tid = session.get('tenant_user_id')
-    if not tid:
-        return None
-    now_ts = time.time()
-    last_act = session.get('tenant_last_activity')
-    if last_act and (now_ts - float(last_act) > SESSION_INACTIVITY_TIMEOUT_SEC):
-        session.pop('tenant_user_id', None)
-        session.pop('tenant_project_number', None)
-        session.pop('tenant_apartment', None)
-        session.pop('tenant_last_activity', None)
-        return None
-    session['tenant_last_activity'] = now_ts
-    return TenantStore.get_tenant_by_id(tid)
+    if tid:
+        now_ts = time.time()
+        last_act = session.get('tenant_last_activity')
+        if last_act and (now_ts - float(last_act) > SESSION_INACTIVITY_TIMEOUT_SEC):
+            session.pop('tenant_user_id', None)
+            session.pop('tenant_project_number', None)
+            session.pop('tenant_apartment', None)
+            session.pop('tenant_last_activity', None)
+            return None
+        session['tenant_last_activity'] = now_ts
+        return TenantStore.get_tenant_by_id(tid)
+
+    # תמיכה באפליקציית מובייל (Expo iOS / Android) באמצעות X-Tenant-Token
+    mob_token = request.headers.get('X-Tenant-Token') or request.args.get('auth_token')
+    if mob_token:
+        mob_tid = _verify_tenant_mobile_token(mob_token)
+        if mob_tid:
+            return TenantStore.get_tenant_by_id(mob_tid)
+    return None
 
 def _compute_available_slots_for_tenant(project_number, my_apt, days_ahead=7):
     """מחשב את כל החניות הפנויות בפול הכללי או ששוחררו ספציפית עבור הדירה שלי ב-7 הימים הקרובים."""

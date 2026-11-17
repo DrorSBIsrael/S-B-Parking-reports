@@ -4866,6 +4866,57 @@ def company_manager_proxy():
                     
                     headers['Content-Type'] = 'application/xml'
                     response = _parking_http_session.put(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
+                    if response.status_code == 500 and '10020' in (response.text or ''):
+                        # המנוי נמצא בחניון (present=true) ובקר שיידט חוסם עדכון lpn1 בזמן נוכחות.
+                        # לפי הכלל העסקי: אם הרכב בחניון פחות מ-7 ימים -> מודיעים שלא ניתן להחליף בזמן שהרכב בחניון.
+                        # רק אם הרכב כבר 7 ימים ומעלה בחניון (נוכחות תקועה) -> מאפסים נוכחות ומחליפים.
+                        c_id_val = str(payload.get('consumer', {}).get('contractid', '')).strip()
+                        s_id_val = str(payload.get('consumer', {}).get('id', '')).strip()
+                        if c_id_val and s_id_val:
+                            pt_url = f"https://{ip_address}:{port}/CustomerMediaWebService/consumers/{c_id_val},{s_id_val}/parktrans"
+                            fac_id, comp_id, dev_id, days_in = 2280, 2152, 101, 0.0
+                            try:
+                                pt_get = _parking_http_session.get(pt_url, headers=headers, verify=False, timeout=10)
+                                if pt_get.status_code == 200:
+                                    ns_p = {'ns': 'http://gsph.sub.com/cust/types'}
+                                    pt_root = ET.fromstring(pt_get.content)
+                                    for tx in pt_root.findall('.//ns:parkTransaction', ns_p):
+                                        fin = int(tx.findtext('ns:facilityin', default='0', namespaces=ns_p) or 0)
+                                        if fin > 0:
+                                            fac_id = fin
+                                            comp_id = int(tx.findtext('ns:computer', default='2152', namespaces=ns_p) or 2152)
+                                            dev_id = int(tx.findtext('ns:device', default='101', namespaces=ns_p) or 101)
+                                            tx_time_str = (tx.findtext('ns:transactionTime', default='', namespaces=ns_p) or '').strip()
+                                            if tx_time_str:
+                                                try:
+                                                    tx_dt = datetime.fromisoformat(tx_time_str)
+                                                    now_dt = datetime.now(tx_dt.tzinfo) if tx_dt.tzinfo else datetime.now()
+                                                    days_in = max(0.0, (now_dt - tx_dt).total_seconds() / 86400.0)
+                                                except Exception:
+                                                    days_in = 0.0
+                                            break
+                            except Exception:
+                                pass
+                            if days_in < 7.0:
+                                return jsonify({
+                                    'success': False,
+                                    'error_code': 'CAR_IN_PARKING',
+                                    'message': 'לא ניתן להחליף את מספר הרכב בזמן שהרכב נמצא בחניון. יש להמתין ליציאת הרכב מהחניון (איפוס נוכחות אוטומטי מתבצע רק כאשר הרכב רשום בחניון מעל 7 ימים).'
+                                })
+                            now_tx = datetime.now().astimezone().isoformat(timespec='milliseconds')
+                            tx_body = (
+                                f'<?xml version="1.0" encoding="UTF-8"?>'
+                                f'<bookParkTransaction xmlns="http://gsph.sub.com/cust/types">'
+                                f'<exitParkTransaction><transactionTime>{now_tx}</transactionTime><transactionType>12</transactionType>'
+                                f'<facilityin>0</facilityin><facilityout>{fac_id}</facilityout>'
+                                f'<computer>{comp_id}</computer><device>{dev_id}</device><amount>0</amount>'
+                                f'<contractid>{c_id_val}</contractid><consumerid>{s_id_val}</consumerid></exitParkTransaction>'
+                                f'</bookParkTransaction>'
+                            ).encode('utf-8')
+                            ex_res = _parking_http_session.post(pt_url, data=tx_body, headers=headers, verify=False, timeout=15)
+                            if ex_res.status_code in (200, 201, 204):
+                                time.sleep(0.2)
+                                response = _parking_http_session.put(url, data=xml_str.encode('utf-8'), headers=headers, verify=False, timeout=timeout_seconds)
                 elif '/detail' in endpoint and 'contracts' in endpoint:
                     # Handle Contract Update - Convert JSON to XML
                     import xml.etree.ElementTree as ET
