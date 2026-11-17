@@ -131,12 +131,17 @@ def _get_app_module():
 
 _sb_circuit_disabled_until = 0
 
+def _get_raw_supabase():
+    """מחזיר את חיבור ה-Supabase עבור טבלאות הליבה הקיימות (user_parkings, parkings)."""
+    app_mod = _get_app_module()
+    return getattr(app_mod, 'supabase', None) if app_mod else None
+
 def _get_supabase():
+    """מחזיר את חיבור ה-Supabase עבור טבלאות הדיירים החדשות (עם מנגנון הגנה אם טרם הורץ ה-SQL)."""
     global _sb_circuit_disabled_until
     if time.time() < _sb_circuit_disabled_until:
         return None
-    app_mod = _get_app_module()
-    return getattr(app_mod, 'supabase', None) if app_mod else None
+    return _get_raw_supabase()
 
 def _trip_sb_circuit_if_missing(err):
     global _sb_circuit_disabled_until
@@ -1007,7 +1012,7 @@ def _get_logged_in_tenant_manager():
         session.clear()
         return None
     session['tm_last_activity'] = now_ts
-    sb = _get_supabase()
+    sb = _get_raw_supabase()
     if not sb:
         return {'email': session['user_email'], 'project_number': '1000', 'parking_name': 'מתחם מגורים', 'code_type': 'tenant_manager'}
     try:
@@ -1250,15 +1255,20 @@ def api_tenant_manager_modify_tenant(tenant_id):
         return jsonify({'success': True, 'message': 'הדייר נמחק בהצלחה'})
 
     data = request.get_json() or {}
+    p_num = str(mgr.get('project_number') or '')
+    apt = str(data.get('apartment_number') or '').strip()
+    pool_info = get_apartment_pooling_status(p_num, apt)
+    auto_max = pool_info.get('maxCounter') if pool_info.get('success') else None
+
     TenantStore.update_tenant(
         tenant_id=tenant_id,
         full_name=data.get('full_name', ''),
         phone_number=data.get('phone_number', ''),
-        apartment_number=data.get('apartment_number', ''),
-        base_max_counter=data.get('base_max_counter'),
+        apartment_number=apt,
+        base_max_counter=auto_max,
         is_active=data.get('is_active', True)
     )
-    return jsonify({'success': True, 'message': 'פרטי הדייר עודכנו בהצלחה'})
+    return jsonify({'success': True, 'message': 'פרטי הדייר עודכנו והמכסה סונכרנה מהמערכת'})
 
 @tenant_bp.route('/api/tenant-manager/monthly-report', methods=['GET'])
 def api_tenant_manager_monthly_report():
