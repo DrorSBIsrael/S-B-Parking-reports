@@ -285,6 +285,9 @@
                     <option value="ru" style="color:#0f172a;">🇷🇺 Русский</option>
                     <option value="ar" style="color:#0f172a;">🇸🇦 العربية</option>
                 </select>
+                <button id="portalWazeBtn" onclick="openPortalWaze()" title="פתח ניווט ב-Waze לחניון" style="background:rgba(255,255,255,0.22); color:white; border:1px solid rgba(255,255,255,0.35); padding:6px 10px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer;">
+                    🧭 Waze
+                </button>
                 <button id="logoutBtn" onclick="logoutTenant()" style="display:none; background:rgba(255,255,255,0.2); color:white; border:none; padding:7px 12px; border-radius:8px; font-weight:700; cursor:pointer;">
                     יציאה
                 </button>
@@ -1104,6 +1107,19 @@
             }
         }
 
+        function openPortalWaze() {
+            const lat = currentTenant && currentTenant.parking_lat;
+            const lng = currentTenant && currentTenant.parking_lng;
+            const addr = currentTenant && currentTenant.parking_address;
+            const pName = (currentTenant && currentTenant.parking_name) || document.getElementById('headerBuildingName').textContent || 'חניון';
+            if (lat !== null && lat !== undefined && lat !== '' && lng !== null && lng !== undefined && lng !== '' && !isNaN(Number(lat)) && !isNaN(Number(lng))) {
+                window.open(`https://waze.com/ul?ll=${Number(lat)},${Number(lng)}&navigate=yes`, '_blank');
+                return;
+            }
+            const q = (addr || pName).replace(/^🅿️\s*/, '').trim();
+            window.open(`https://waze.com/ul?q=${encodeURIComponent(q)}&navigate=yes`, '_blank');
+        }
+
         async function logoutTenant() {
             await fetch('/api/tenant/logout', { method: 'POST' });
             document.getElementById('dashboardSection').style.display = 'none';
@@ -1140,6 +1156,7 @@
                 if (!data.success) return;
 
                 currentTenant = data.tenant;
+                lastDashboardData = data;
                 document.getElementById('loginSection').style.display = 'none';
                 document.getElementById('dashboardSection').style.display = 'block';
                 document.getElementById('logoutBtn').style.display = 'block';
@@ -1224,6 +1241,32 @@
             return (letters === '' || letters === 'CC' || letters === 'CD' || letters === 'מ');
         }
 
+        function alertParkedCarLocked(carLabel) {
+            showPortalAlert(`לא ניתן לשנות את ${carLabel} בזמן שהרכב נמצא בחניון (פחות מ-7 ימים). ניתן לשנות את הרכבים האחרים במנוי שאינם בחניון!`, 'danger');
+        }
+
+        function renderSingleCarSlot(s, slotKey, labelKey) {
+            const pSlot = s.present ? (s.parked_slot || 'lpn1') : null;
+            const isThisParked = (pSlot === slotKey);
+            const isLocked = isThisParked && (s.can_edit_parked === false);
+            const val = s[slotKey] || '';
+            const labelHtml = `${t(labelKey)}${isThisParked ? ' <span title="רכב זה נמצא כעת בחניון">🟢</span>' : ''}`;
+            const inputStyle = isLocked
+                ? 'width:100%; padding:9px 4px; border:1.5px solid #16a34a; background:#f0fdf4; border-radius:8px; text-align:center; font-size:16px; font-weight:800; color:#15803d; direction:ltr; cursor:not-allowed;'
+                : 'width:100%; padding:9px 4px; border:1.5px solid #eab308; background:#fefce8; border-radius:8px; text-align:center; font-size:16px; font-weight:800; color:#0f172a; direction:ltr;';
+            const lockAttrs = isLocked
+                ? `readonly onclick="alertParkedCarLocked('${t(labelKey)}')"`
+                : `oninput="this.value = sanitizePlateInput(this.value)"`;
+            return `
+                <div>
+                    <label for="${slotKey}_${s.id}" style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:3px; text-align:center; white-space:nowrap;">${labelHtml}</label>
+                    <input type="text" id="${slotKey}_${s.id}" maxlength="10" value="${val}" placeholder="-"
+                           ${lockAttrs}
+                           style="${inputStyle}">
+                </div>
+            `;
+        }
+
         function renderMySubscribers(subs) {
             const container = document.getElementById('mySubscribersContainer');
             if (!subs || subs.length === 0) {
@@ -1238,24 +1281,9 @@
                         <span class="badge ${s.present ? 'badge-green' : 'badge-blue'}">${s.present ? t('status_in_parking') : t('status_out_parking')}</span>
                     </div>
                     <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:6px; margin-bottom:12px;">
-                        <div>
-                            <label for="lpn1_${s.id}" style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:3px; text-align:center;">${t('car_1')}</label>
-                            <input type="text" id="lpn1_${s.id}" maxlength="10" value="${s.lpn1 || ''}" placeholder="-"
-                                   oninput="this.value = sanitizePlateInput(this.value)"
-                                   style="width:100%; padding:9px 4px; border:1.5px solid #eab308; background:#fefce8; border-radius:8px; text-align:center; font-size:16px; font-weight:800; color:#0f172a; direction:ltr;">
-                        </div>
-                        <div>
-                            <label for="lpn2_${s.id}" style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:3px; text-align:center;">${t('car_2')}</label>
-                            <input type="text" id="lpn2_${s.id}" maxlength="10" value="${s.lpn2 || ''}" placeholder="-"
-                                   oninput="this.value = sanitizePlateInput(this.value)"
-                                   style="width:100%; padding:9px 4px; border:1.5px solid #eab308; background:#fefce8; border-radius:8px; text-align:center; font-size:16px; font-weight:800; color:#0f172a; direction:ltr;">
-                        </div>
-                        <div>
-                            <label for="lpn3_${s.id}" style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:3px; text-align:center;">${t('car_3')}</label>
-                            <input type="text" id="lpn3_${s.id}" maxlength="10" value="${s.lpn3 || ''}" placeholder="-"
-                                   oninput="this.value = sanitizePlateInput(this.value)"
-                                   style="width:100%; padding:9px 4px; border:1.5px solid #eab308; background:#fefce8; border-radius:8px; text-align:center; font-size:16px; font-weight:800; color:#0f172a; direction:ltr;">
-                        </div>
+                        ${renderSingleCarSlot(s, 'lpn1', 'car_1')}
+                        ${renderSingleCarSlot(s, 'lpn2', 'car_2')}
+                        ${renderSingleCarSlot(s, 'lpn3', 'car_3')}
                     </div>
                     <button class="btn btn-primary" style="padding:10px;" onclick="saveSubscriberPlates('${s.id}')">${t('save_plates_btn')}</button>
                 </div>

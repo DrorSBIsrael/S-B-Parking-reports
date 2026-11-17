@@ -551,6 +551,21 @@
                             <label>שליחת תזכורת וואטסאפ לפני סיום החניה (דקות)</label>
                             <input type="number" id="setReminderMins" min="5" max="120" value="30" required>
                         </div>
+                        <div class="form-group">
+                            <label>כתובת החניון לניווט ב-Waze (אופציונלי)</label>
+                            <input type="text" id="setParkingAddress" placeholder="לדוגמה: מנחם בגין 1, רמת גן">
+                        </div>
+                        <div class="form-group">
+                            <label>קו רוחב (Latitude) לניווט מדויק ב-Waze</label>
+                            <input type="number" step="any" id="setParkingLat" placeholder="לדוגמה: 32.091820" style="direction: ltr;">
+                        </div>
+                        <div class="form-group">
+                            <label>קו אורך (Longitude) לניווט מדויק ב-Waze</label>
+                            <div style="display: flex; gap: 6px;">
+                                <input type="number" step="any" id="setParkingLng" placeholder="לדוגמה: 34.823510" style="direction: ltr; flex: 1;">
+                                <button type="button" class="btn btn-outline" style="padding: 8px 10px; font-size: 12px; white-space: nowrap;" onclick="detectCurrentBuildingLocation()">📍 מיקום נוכחי</button>
+                            </div>
+                        </div>
                     </div>
                     <div style="margin-top: 18px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc;">
                         <label style="display: block; font-weight: 700; margin-bottom: 8px; color: #334155;">🖼️ לוגו הבניין / המתחם (יוצג לכל דיירי הבניין בפורטל):</label>
@@ -720,6 +735,9 @@
                     document.getElementById('setMaxMonth').value = data.settings.max_bookings_per_month ?? 30;
                     document.getElementById('setCheckInterval').value = data.settings.check_interval_minutes ?? 30;
                     document.getElementById('setReminderMins').value = data.settings.reminder_minutes_before ?? 30;
+                    document.getElementById('setParkingAddress').value = data.settings.parking_address || '';
+                    document.getElementById('setParkingLat').value = (data.settings.parking_lat !== null && data.settings.parking_lat !== undefined) ? data.settings.parking_lat : '';
+                    document.getElementById('setParkingLng').value = (data.settings.parking_lng !== null && data.settings.parking_lng !== undefined) ? data.settings.parking_lng : '';
                     currentLogoData = data.settings.logo_data || '';
                     applyManagerLogoPreview(currentLogoData);
                 }
@@ -1076,14 +1094,37 @@
             applyManagerLogoPreview('');
         }
 
+        function detectCurrentBuildingLocation() {
+            if (!navigator.geolocation) {
+                showAlert('הדפדפן אינו תומך בזיהוי מיקום GPS', 'danger');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    document.getElementById('setParkingLat').value = pos.coords.latitude.toFixed(6);
+                    document.getElementById('setParkingLng').value = pos.coords.longitude.toFixed(6);
+                    showAlert('קואורדינטות המיקום הנוכחי נקלטו בהצלחה! לחץ על "שמור הגדרות" לשמירה.', 'success');
+                },
+                () => {
+                    showAlert('לא ניתן היה לקבל את המיקום הנוכחי מהדפדפן (נא לאשר גישה למיקום).', 'danger');
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
+
         async function handleSaveSettings(e) {
             e.preventDefault();
+            const latVal = document.getElementById('setParkingLat').value.trim();
+            const lngVal = document.getElementById('setParkingLng').value.trim();
             const payload = {
                 parking_name: document.getElementById('setParkingName').value.trim(),
                 max_bookings_per_day: parseInt(document.getElementById('setMaxDay').value, 10) || 5,
                 max_bookings_per_month: parseInt(document.getElementById('setMaxMonth').value, 10) || 30,
                 check_interval_minutes: parseInt(document.getElementById('setCheckInterval').value, 10) || 30,
                 reminder_minutes_before: parseInt(document.getElementById('setReminderMins').value, 10) || 30,
+                parking_address: document.getElementById('setParkingAddress').value.trim(),
+                parking_lat: latVal !== '' ? parseFloat(latVal) : '',
+                parking_lng: lngVal !== '' ? parseFloat(lngVal) : '',
                 logo_data: currentLogoData
             };
             const res = await fetch('/api/tenant-manager/settings', {
