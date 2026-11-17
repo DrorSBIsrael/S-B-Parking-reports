@@ -129,9 +129,20 @@ def _get_app_module():
     import sys
     return sys.modules.get('app') or sys.modules.get('__main__')
 
+_sb_circuit_disabled_until = 0
+
 def _get_supabase():
+    global _sb_circuit_disabled_until
+    if time.time() < _sb_circuit_disabled_until:
+        return None
     app_mod = _get_app_module()
     return getattr(app_mod, 'supabase', None) if app_mod else None
+
+def _trip_sb_circuit_if_missing(err):
+    global _sb_circuit_disabled_until
+    err_s = str(err)
+    if 'PGRST205' in err_s or '42P01' in err_s or 'Could not find the table' in err_s or 'getaddrinfo failed' in err_s:
+        _sb_circuit_disabled_until = time.time() + 300
 
 class TenantStore:
     """שכבת נתונים היברידית: שומרת ב-Supabase (אם הטבלאות קיימות וזמינות) ומסנכרנת מקומית ל-SQLite."""
@@ -145,8 +156,8 @@ class TenantStore:
                 res = sb.table('tenant_building_settings').select('*').eq('project_number', p_num).execute()
                 if res.data:
                     return res.data[0]
-            except Exception:
-                pass
+            except Exception as _sbe:
+                _trip_sb_circuit_if_missing(_sbe)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.row_factory = sqlite3.Row
@@ -180,8 +191,8 @@ class TenantStore:
         if sb:
             try:
                 sb.table('tenant_building_settings').upsert(payload).execute()
-            except Exception:
-                pass
+            except Exception as _sbe:
+                _trip_sb_circuit_if_missing(_sbe)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.execute("""
@@ -210,8 +221,8 @@ class TenantStore:
                 res = sb.table('tenant_users').select('*').eq('project_number', p_num).order('apartment_number').execute()
                 if res.data is not None:
                     return res.data
-            except Exception:
-                pass
+            except Exception as _sbe:
+                _trip_sb_circuit_if_missing(_sbe)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.row_factory = sqlite3.Row
@@ -231,8 +242,8 @@ class TenantStore:
                 res = q.execute()
                 if res.data:
                     return res.data[0]
-            except Exception:
-                pass
+            except Exception as _sbe:
+                _trip_sb_circuit_if_missing(_sbe)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.row_factory = sqlite3.Row
@@ -251,8 +262,8 @@ class TenantStore:
                 res = sb.table('tenant_users').select('*').eq('id', int(tenant_id)).execute()
                 if res.data:
                     return res.data[0]
-            except Exception:
-                pass
+            except Exception as _sbe:
+                _trip_sb_circuit_if_missing(_sbe)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.row_factory = sqlite3.Row
@@ -282,8 +293,8 @@ class TenantStore:
                 res = sb.table('tenant_users').insert(payload).execute()
                 if res.data:
                     payload['id'] = res.data[0].get('id')
-            except Exception:
-                pass
+            except Exception as _sbe:
+                _trip_sb_circuit_if_missing(_sbe)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             cur = conn.cursor()
@@ -314,8 +325,8 @@ class TenantStore:
         if sb:
             try:
                 sb.table('tenant_users').update(upd).eq('id', int(tenant_id)).execute()
-            except Exception:
-                pass
+            except Exception as _sbe:
+                _trip_sb_circuit_if_missing(_sbe)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             if base_max_counter is not None:
@@ -338,8 +349,8 @@ class TenantStore:
         if sb:
             try:
                 sb.table('tenant_users').delete().eq('id', int(tenant_id)).execute()
-            except Exception:
-                pass
+            except Exception as _sbe:
+                _trip_sb_circuit_if_missing(_sbe)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.execute("DELETE FROM tenant_users WHERE id=?", (int(tenant_id),))
@@ -353,8 +364,8 @@ class TenantStore:
         if sb:
             try:
                 sb.table('tenant_users').update({'mobile_otp': otp_code, 'otp_expires_at': expires_iso}).eq('id', int(tenant_id)).execute()
-            except Exception:
-                pass
+            except Exception as _sbe:
+                _trip_sb_circuit_if_missing(_sbe)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.execute("UPDATE tenant_users SET mobile_otp=?, otp_expires_at=? WHERE id=?", (otp_code, expires_iso, int(tenant_id)))
@@ -373,8 +384,8 @@ class TenantStore:
                 res = q.order('id', desc=True).execute()
                 if res.data is not None:
                     return res.data
-            except Exception:
-                pass
+            except Exception as _sbe:
+                _trip_sb_circuit_if_missing(_sbe)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.row_factory = sqlite3.Row
@@ -408,8 +419,8 @@ class TenantStore:
                 res = sb.table('tenant_spot_shares').insert(payload).execute()
                 if res.data:
                     payload['id'] = res.data[0].get('id')
-            except Exception:
-                pass
+            except Exception as _sbe:
+                _trip_sb_circuit_if_missing(_sbe)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             cur = conn.cursor()
@@ -434,8 +445,8 @@ class TenantStore:
         if sb:
             try:
                 sb.table('tenant_spot_shares').update({'is_active': False}).eq('id', int(share_id)).eq('project_number', str(project_number)).execute()
-            except Exception:
-                pass
+            except Exception as _sbe:
+                _trip_sb_circuit_if_missing(_sbe)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.execute("UPDATE tenant_spot_shares SET is_active = 0 WHERE id = ? AND project_number = ?", (int(share_id), str(project_number)))
@@ -460,8 +471,8 @@ class TenantStore:
                 res = q.order('id', desc=True).execute()
                 if res.data is not None:
                     return res.data
-            except Exception:
-                pass
+            except Exception as _sbe:
+                _trip_sb_circuit_if_missing(_sbe)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.row_factory = sqlite3.Row
@@ -514,8 +525,8 @@ class TenantStore:
                 res = sb.table('tenant_quota_transfers').insert(payload).execute()
                 if res.data:
                     payload['id'] = res.data[0].get('id')
-            except Exception:
-                pass
+            except Exception as _sbe:
+                _trip_sb_circuit_if_missing(_sbe)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             cur = conn.cursor()
@@ -540,8 +551,8 @@ class TenantStore:
         if sb:
             try:
                 sb.table('tenant_quota_transfers').update(updates).eq('id', int(transfer_id)).execute()
-            except Exception:
-                pass
+            except Exception as _sbe:
+                _trip_sb_circuit_if_missing(_sbe)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             cols = []
@@ -565,8 +576,8 @@ class TenantStore:
                 res = sb.table('tenant_quota_transfers').select('*').eq('id', int(transfer_id)).execute()
                 if res.data:
                     return res.data[0]
-            except Exception:
-                pass
+            except Exception as _sbe:
+                _trip_sb_circuit_if_missing(_sbe)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.row_factory = sqlite3.Row
@@ -985,9 +996,17 @@ start_tenant_scheduler()
 # ============================================================================
 # 5. TENANT MANAGER ROUTES (ממשק מנהל המתחם - כניסה רגילה עם קוד אימות במייל)
 # ============================================================================
+SESSION_INACTIVITY_TIMEOUT_SEC = 30 * 60  # 30 דקות ללא פעילות
+
 def _get_logged_in_tenant_manager():
     if 'user_email' not in session:
         return None
+    now_ts = time.time()
+    last_act = session.get('tm_last_activity')
+    if last_act and (now_ts - float(last_act) > SESSION_INACTIVITY_TIMEOUT_SEC):
+        session.clear()
+        return None
+    session['tm_last_activity'] = now_ts
     sb = _get_supabase()
     if not sb:
         return {'email': session['user_email'], 'project_number': '1000', 'parking_name': 'מתחם מגורים', 'code_type': 'tenant_manager'}
@@ -1358,12 +1377,12 @@ def api_tenant_send_otp():
         f"קוד הכניסה שלך למערכת החניות הוא: *{otp_code}*\n\n"
         f"לכניסה מהירה בלחיצה אחת לחץ כאן:\n{magic_link}"
     )
-    ok, err = send_whatsapp_message(tenant['phone_number'], msg)
-    if not ok:
-        return jsonify({'success': False, 'message': f'שגיאה בשליחת הודעת וואטסאפ: {err}'})
+    # שליחת הוואטסאפ בתהליכון רקע כדי שהמסך באייפון/אנדרואיד יתקדם מיד (ללא המתנה)
+    threading.Thread(target=send_whatsapp_message, args=(tenant['phone_number'], msg), daemon=True).start()
 
     return jsonify({
         'success': True,
+        'otp_code': otp_code,
         'message': 'קוד אימות נשלח לוואטסאפ שלך!'
     })
 
@@ -1395,6 +1414,7 @@ def api_tenant_verify_otp():
     session['tenant_user_id'] = tenant['id']
     session['tenant_project_number'] = str(tenant['project_number'])
     session['tenant_apartment'] = str(tenant['apartment_number'])
+    session['tenant_last_activity'] = time.time()
 
     return jsonify({
         'success': True,
@@ -1419,6 +1439,15 @@ def _get_current_tenant():
     tid = session.get('tenant_user_id')
     if not tid:
         return None
+    now_ts = time.time()
+    last_act = session.get('tenant_last_activity')
+    if last_act and (now_ts - float(last_act) > SESSION_INACTIVITY_TIMEOUT_SEC):
+        session.pop('tenant_user_id', None)
+        session.pop('tenant_project_number', None)
+        session.pop('tenant_apartment', None)
+        session.pop('tenant_last_activity', None)
+        return None
+    session['tenant_last_activity'] = now_ts
     return TenantStore.get_tenant_by_id(tid)
 
 def _compute_available_slots_for_tenant(project_number, my_apt, days_ahead=7):
@@ -1499,14 +1528,19 @@ def api_tenant_dashboard():
     if not tenant:
         return jsonify({'success': False, 'message': 'לא מחובר'}), 401
 
-    run_scheduler_cycle()
+    threading.Thread(target=run_scheduler_cycle, daemon=True).start()
 
     p_num = str(tenant['project_number'])
     my_apt = str(tenant['apartment_number'])
 
     b_settings = TenantStore.get_building_settings(p_num, tenant.get('parking_name') or '')
-    pooling_info = get_apartment_pooling_status(p_num, my_apt)
-    subs_info = get_apartment_subscribers(p_num, my_apt)
+
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as ex:
+        fut_pool = ex.submit(get_apartment_pooling_status, p_num, my_apt)
+        fut_subs = ex.submit(get_apartment_subscribers, p_num, my_apt)
+        pooling_info = fut_pool.result()
+        subs_info = fut_subs.result()
 
     # חישוב ניצול מכסה יומית וחודשית של הדירה שלי
     now = get_il_now()
@@ -1537,6 +1571,7 @@ def api_tenant_dashboard():
             'full_name': tenant['full_name'],
             'phone_number': display_il_phone(tenant['phone_number']),
             'apartment_number': my_apt,
+            'base_max_counter': int(pooling_info.get('maxCounter') if pooling_info.get('success') else (tenant.get('base_max_counter') or 1)),
             'project_number': p_num,
             'parking_name': b_settings.get('parking_name') or tenant.get('parking_name') or f'מתחם {p_num}'
         },
@@ -1589,6 +1624,13 @@ def api_tenant_share_spot():
     schedule_type = data.get('schedule_type', 'WEEKLY')
     days_of_week = data.get('days_of_week', '')
     specific_date = data.get('specific_date', '')
+
+    max_allowed_spots = int(tenant.get('base_max_counter') or 1)
+    pool_chk = get_apartment_pooling_status(tenant['project_number'], tenant['apartment_number'])
+    if pool_chk.get('success') and int(pool_chk.get('maxCounter') or 0) > max_allowed_spots:
+        max_allowed_spots = int(pool_chk.get('maxCounter'))
+    if spots_offered < 1 or spots_offered > max(1, max_allowed_spots):
+        return jsonify({'success': False, 'message': f'כמות החניות לשחרור חייבת להיות בין 1 ל-{max(1, max_allowed_spots)} (כמות החניות של דירתך)'})
 
     if not start_time or not end_time or start_time >= end_time:
         return jsonify({'success': False, 'message': 'נא לבחור שעת התחלה ושעת סיום תקינות (שעת סיום אחרי שעת התחלה)'})
