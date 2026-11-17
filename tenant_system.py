@@ -56,6 +56,7 @@ def _init_sqlite():
                 max_bookings_per_month INTEGER DEFAULT 30,
                 check_interval_minutes INTEGER DEFAULT 30,
                 reminder_minutes_before INTEGER DEFAULT 30,
+                logo_data TEXT,
                 updated_at TEXT
             )
         """)
@@ -120,6 +121,10 @@ def _init_sqlite():
                 created_at TEXT
             )
         """)
+        try:
+            cur.execute("ALTER TABLE tenant_building_settings ADD COLUMN logo_data TEXT")
+        except Exception:
+            pass
         conn.commit()
         conn.close()
 
@@ -176,13 +181,16 @@ class TenantStore:
             'max_bookings_per_day': 5,
             'max_bookings_per_month': 30,
             'check_interval_minutes': 30,
-            'reminder_minutes_before': 30
+            'reminder_minutes_before': 30,
+            'logo_data': ''
         }
 
     @staticmethod
-    def save_building_settings(project_number, parking_name, max_day, max_month, check_interval=30, reminder_mins=30):
+    def save_building_settings(project_number, parking_name, max_day, max_month, check_interval=30, reminder_mins=30, logo_data=None):
         p_num = str(project_number)
         now_iso = get_il_now().isoformat()
+        existing = TenantStore.get_building_settings(p_num, parking_name)
+        final_logo = logo_data if logo_data is not None else (existing.get('logo_data') or '')
         payload = {
             'project_number': p_num,
             'parking_name': parking_name or '',
@@ -190,6 +198,7 @@ class TenantStore:
             'max_bookings_per_month': int(max_month),
             'check_interval_minutes': int(check_interval),
             'reminder_minutes_before': int(reminder_mins),
+            'logo_data': final_logo,
             'updated_at': now_iso
         }
         sb = _get_supabase()
@@ -202,17 +211,18 @@ class TenantStore:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.execute("""
                 INSERT INTO tenant_building_settings
-                (project_number, parking_name, max_bookings_per_day, max_bookings_per_month, check_interval_minutes, reminder_minutes_before, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (project_number, parking_name, max_bookings_per_day, max_bookings_per_month, check_interval_minutes, reminder_minutes_before, logo_data, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(project_number) DO UPDATE SET
                     parking_name=excluded.parking_name,
                     max_bookings_per_day=excluded.max_bookings_per_day,
                     max_bookings_per_month=excluded.max_bookings_per_month,
                     check_interval_minutes=excluded.check_interval_minutes,
                     reminder_minutes_before=excluded.reminder_minutes_before,
+                    logo_data=excluded.logo_data,
                     updated_at=excluded.updated_at
             """, (p_num, payload['parking_name'], payload['max_bookings_per_day'], payload['max_bookings_per_month'],
-                  payload['check_interval_minutes'], payload['reminder_minutes_before'], now_iso))
+                  payload['check_interval_minutes'], payload['reminder_minutes_before'], final_logo, now_iso))
             conn.commit()
             conn.close()
         return payload
@@ -591,7 +601,7 @@ class TenantStore:
             return dict(row) if row else None
 
 # ============================================================================
-# 2. SKIDATA INTEGRATION (maxCounter Pooling & Apartment Vehicles)
+# 2. Scheidt & Bachmann INTEGRATION (maxCounter Pooling & Apartment Vehicles)
 # ============================================================================
 def _get_parking_conn(project_number):
     app_mod = _get_app_module()
@@ -1077,7 +1087,8 @@ def api_tenant_manager_save_settings():
         max_day=data.get('max_bookings_per_day', 5),
         max_month=data.get('max_bookings_per_month', 30),
         check_interval=data.get('check_interval_minutes', 30),
-        reminder_mins=data.get('reminder_minutes_before', 30)
+        reminder_mins=data.get('reminder_minutes_before', 30),
+        logo_data=data.get('logo_data')
     )
     return jsonify({'success': True, 'message': 'הגדרות המתחם נשמרו בהצלחה', 'settings': saved})
 
@@ -1153,7 +1164,7 @@ def api_tenant_manager_send_invite(tenant_id):
 
 @tenant_bp.route('/api/tenant-manager/tenants/<int:tenant_id>/refresh-quota', methods=['POST'])
 def api_tenant_manager_refresh_quota(tenant_id):
-    """רענון כמות החניות (maxCounter ו-presentCounter) של דירה ספציפית ישירות מבקר החניון (Skidata)."""
+    """רענון כמות החניות (maxCounter ו-presentCounter) של דירה ספציפית ישירות מבקר החניון (שיידט את בכמן)."""
     mgr = _get_logged_in_tenant_manager()
     if not mgr:
         return jsonify({'success': False, 'message': 'לא מורשה'}), 401
@@ -1364,6 +1375,26 @@ def api_tenant_manager_monthly_report():
 @tenant_bp.route('/tenant-portal')
 def tenant_portal_page():
     return render_template('tenant_portal.html')
+
+@tenant_bp.route('/api/tenant/building-info', methods=['GET'])
+def api_tenant_building_info():
+    """מחזיר שם ולוגו של הבניין לפי project או phone (להצגת הלוגו כבר במסך הכניסה)."""
+    proj = request.args.get('project')
+    phone = request.args.get('phone')
+    if not proj and phone:
+        t = TenantStore.find_tenant_by_phone(phone)
+        if t:
+            proj = t.get('project_number')
+    if not proj:
+        proj = session.get('tenant_project_number')
+    if proj:
+        b = TenantStore.get_building_settings(proj)
+        return jsonify({
+            'success': True,
+            'parking_name': b.get('parking_name') or '',
+            'logo_data': b.get('logo_data') or ''
+        })
+    return jsonify({'success': False})
 
 @tenant_bp.route('/api/tenant/send-otp', methods=['POST'])
 def api_tenant_send_otp():
@@ -1583,7 +1614,8 @@ def api_tenant_dashboard():
             'apartment_number': my_apt,
             'base_max_counter': int(pooling_info.get('maxCounter') if pooling_info.get('success') else (tenant.get('base_max_counter') or 1)),
             'project_number': p_num,
-            'parking_name': b_settings.get('parking_name') or tenant.get('parking_name') or f'מתחם {p_num}'
+            'parking_name': b_settings.get('parking_name') or tenant.get('parking_name') or f'מתחם {p_num}',
+            'logo_data': b_settings.get('logo_data') or ''
         },
         'quota_limits': {
             'max_per_day': int(b_settings.get('max_bookings_per_day') or 5),
