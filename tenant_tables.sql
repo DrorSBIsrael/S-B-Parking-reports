@@ -86,8 +86,10 @@ CREATE TABLE IF NOT EXISTS public.tenant_quota_transfers (
 CREATE INDEX IF NOT EXISTS idx_tenant_transfers_project_date ON public.tenant_quota_transfers (project_number, booking_date);
 CREATE INDEX IF NOT EXISTS idx_tenant_transfers_status ON public.tenant_quota_transfers (status);
 
--- הוספת עמודות לוגו וקואורדינטות חניון אם הטבלה כבר קיימת:
+-- הוספת עמודות לוגו, קואורדינטות חניון ומספר חניה אם הטבלה כבר קיימת:
 ALTER TABLE public.tenant_building_settings ADD COLUMN IF NOT EXISTS logo_data TEXT;
 ALTER TABLE public.tenant_building_settings ADD COLUMN IF NOT EXISTS parking_lat DOUBLE PRECISION;
 ALTER TABLE public.tenant_building_settings ADD COLUMN IF NOT EXISTS parking_lng DOUBLE PRECISION;
 ALTER TABLE public.tenant_building_settings ADD COLUMN IF NOT EXISTS parking_address TEXT;
+ALTER TABLE public.tenant_spot_shares ADD COLUMN IF NOT EXISTS parking_spot_number TEXT;
+ALTER TABLE public.tenant_quota_transfers ADD COLUMN IF NOT EXISTS parking_spot_number TEXT;

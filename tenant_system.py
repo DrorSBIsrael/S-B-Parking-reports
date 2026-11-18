@@ -125,7 +125,9 @@ def _init_sqlite():
             "ALTER TABLE tenant_building_settings ADD COLUMN logo_data TEXT",
             "ALTER TABLE tenant_building_settings ADD COLUMN parking_lat REAL",
             "ALTER TABLE tenant_building_settings ADD COLUMN parking_lng REAL",
-            "ALTER TABLE tenant_building_settings ADD COLUMN parking_address TEXT"
+            "ALTER TABLE tenant_building_settings ADD COLUMN parking_address TEXT",
+            "ALTER TABLE tenant_spot_shares ADD COLUMN parking_spot_number TEXT",
+            "ALTER TABLE tenant_quota_transfers ADD COLUMN parking_spot_number TEXT"
         ]:
             try:
                 cur.execute(col_sql)
@@ -437,6 +439,16 @@ class TenantStore:
     @staticmethod
     def list_shares(project_number, active_only=True):
         p_num = str(project_number)
+        local_map = {}
+        with _db_lock:
+            conn = sqlite3.connect(SQLITE_PATH)
+            conn.row_factory = sqlite3.Row
+            sql = "SELECT * FROM tenant_spot_shares WHERE project_number = ?" + (" AND is_active = 1" if active_only else "") + " ORDER BY id DESC"
+            local_rows = [dict(r) for r in conn.execute(sql, (p_num,)).fetchall()]
+            conn.close()
+            for lr in local_rows:
+                local_map[int(lr['id'])] = lr
+
         sb = _get_supabase()
         if sb:
             try:
@@ -445,26 +457,28 @@ class TenantStore:
                     q = q.eq('is_active', True)
                 res = q.order('id', desc=True).execute()
                 if res.data is not None:
-                    return res.data
+                    out = []
+                    for row in res.data:
+                        d = dict(row)
+                        if not d.get('parking_spot_number') and int(d['id']) in local_map:
+                            d['parking_spot_number'] = local_map[int(d['id'])].get('parking_spot_number') or ''
+                        out.append(d)
+                    return out
             except Exception as _sbe:
                 _trip_sb_circuit_if_missing(_sbe)
-        with _db_lock:
-            conn = sqlite3.connect(SQLITE_PATH)
-            conn.row_factory = sqlite3.Row
-            sql = "SELECT * FROM tenant_spot_shares WHERE project_number = ?" + (" AND is_active = 1" if active_only else "") + " ORDER BY id DESC"
-            rows = conn.execute(sql, (p_num,)).fetchall()
-            conn.close()
-            return [dict(r) for r in rows]
+        return local_rows
 
     @staticmethod
     def create_share(data):
         now_iso = get_il_now().isoformat()
+        spot_no = str(data.get('parking_spot_number') or '').strip()
         payload = {
             'project_number': str(data['project_number']),
             'owner_tenant_id': int(data.get('owner_tenant_id') or 0),
             'owner_name': data.get('owner_name') or '',
             'owner_apartment': str(data['owner_apartment']).strip(),
             'spots_offered': int(data.get('spots_offered') or 1),
+            'parking_spot_number': spot_no,
             'share_target_type': data.get('share_target_type', 'POOL'),
             'target_apartment': str(data.get('target_apartment') or '').strip() or None,
             'schedule_type': data.get('schedule_type', 'WEEKLY'),
@@ -482,17 +496,23 @@ class TenantStore:
                 if res.data:
                     payload['id'] = res.data[0].get('id')
             except Exception as _sbe:
-                _trip_sb_circuit_if_missing(_sbe)
+                try:
+                    base_payload = {k: v for k, v in payload.items() if k != 'parking_spot_number'}
+                    res = sb.table('tenant_spot_shares').insert(base_payload).execute()
+                    if res.data:
+                        payload['id'] = res.data[0].get('id')
+                except Exception as _sbe2:
+                    _trip_sb_circuit_if_missing(_sbe2)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             cur = conn.cursor()
             cur.execute("""
                 INSERT INTO tenant_spot_shares
-                (project_number, owner_tenant_id, owner_name, owner_apartment, spots_offered, share_target_type, target_apartment,
+                (project_number, owner_tenant_id, owner_name, owner_apartment, spots_offered, parking_spot_number, share_target_type, target_apartment,
                  schedule_type, days_of_week, specific_date, start_time, end_time, is_active, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
             """, (payload['project_number'], payload['owner_tenant_id'], payload['owner_name'], payload['owner_apartment'],
-                  payload['spots_offered'], payload['share_target_type'], payload['target_apartment'],
+                  payload['spots_offered'], spot_no, payload['share_target_type'], payload['target_apartment'],
                   payload['schedule_type'], payload['days_of_week'], payload['specific_date'],
                   payload['start_time'], payload['end_time'], now_iso))
             if 'id' not in payload or not payload['id']:
@@ -518,23 +538,7 @@ class TenantStore:
 
     @staticmethod
     def list_transfers(project_number=None, booking_date=None, statuses=None, month_prefix=None):
-        sb = _get_supabase()
-        if sb:
-            try:
-                q = sb.table('tenant_quota_transfers').select('*')
-                if project_number:
-                    q = q.eq('project_number', str(project_number))
-                if booking_date:
-                    q = q.eq('booking_date', str(booking_date))
-                if statuses:
-                    q = q.in_('status', list(statuses))
-                if month_prefix:
-                    q = q.like('booking_date', f"{month_prefix}%")
-                res = q.order('id', desc=True).execute()
-                if res.data is not None:
-                    return res.data
-            except Exception as _sbe:
-                _trip_sb_circuit_if_missing(_sbe)
+        local_map = {}
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.row_factory = sqlite3.Row
@@ -554,19 +558,47 @@ class TenantStore:
                 conds.append("booking_date LIKE ?")
                 params.append(f"{month_prefix}%")
             where_sql = (" WHERE " + " AND ".join(conds)) if conds else ""
-            rows = conn.execute(f"SELECT * FROM tenant_quota_transfers{where_sql} ORDER BY id DESC", params).fetchall()
+            local_rows = [dict(r) for r in conn.execute(f"SELECT * FROM tenant_quota_transfers{where_sql} ORDER BY id DESC", params).fetchall()]
             conn.close()
-            return [dict(r) for r in rows]
+            for lr in local_rows:
+                local_map[int(lr['id'])] = lr
+
+        sb = _get_supabase()
+        if sb:
+            try:
+                q = sb.table('tenant_quota_transfers').select('*')
+                if project_number:
+                    q = q.eq('project_number', str(project_number))
+                if booking_date:
+                    q = q.eq('booking_date', str(booking_date))
+                if statuses:
+                    q = q.in_('status', list(statuses))
+                if month_prefix:
+                    q = q.like('booking_date', f"{month_prefix}%")
+                res = q.order('id', desc=True).execute()
+                if res.data is not None:
+                    out = []
+                    for row in res.data:
+                        d = dict(row)
+                        if not d.get('parking_spot_number') and int(d['id']) in local_map:
+                            d['parking_spot_number'] = local_map[int(d['id'])].get('parking_spot_number') or ''
+                        out.append(d)
+                    return out
+            except Exception as _sbe:
+                _trip_sb_circuit_if_missing(_sbe)
+        return local_rows
 
     @staticmethod
     def create_transfer(data):
         now_iso = get_il_now().isoformat()
+        spot_no = str(data.get('parking_spot_number') or '').strip()
         payload = {
             'share_id': int(data['share_id']),
             'slot_index': int(data.get('slot_index') or 1),
             'project_number': str(data['project_number']),
             'from_apartment': str(data['from_apartment']).strip(),
             'to_apartment': str(data['to_apartment']).strip(),
+            'parking_spot_number': spot_no,
             'borrower_tenant_id': int(data.get('borrower_tenant_id') or 0),
             'borrower_name': data.get('borrower_name') or '',
             'borrower_phone': clean_il_phone(data.get('borrower_phone') or ''),
@@ -588,17 +620,23 @@ class TenantStore:
                 if res.data:
                     payload['id'] = res.data[0].get('id')
             except Exception as _sbe:
-                _trip_sb_circuit_if_missing(_sbe)
+                try:
+                    base_payload = {k: v for k, v in payload.items() if k != 'parking_spot_number'}
+                    res = sb.table('tenant_quota_transfers').insert(base_payload).execute()
+                    if res.data:
+                        payload['id'] = res.data[0].get('id')
+                except Exception as _sbe2:
+                    _trip_sb_circuit_if_missing(_sbe2)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             cur = conn.cursor()
             cur.execute("""
                 INSERT INTO tenant_quota_transfers
-                (share_id, slot_index, project_number, from_apartment, to_apartment, borrower_tenant_id, borrower_name, borrower_phone,
+                (share_id, slot_index, project_number, from_apartment, to_apartment, parking_spot_number, borrower_tenant_id, borrower_name, borrower_phone,
                  booking_date, start_time, end_time, window_start, window_end, status, notified_start, notified_ending_soon, late_exit_flag, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, ?)
             """, (payload['share_id'], payload['slot_index'], payload['project_number'], payload['from_apartment'],
-                  payload['to_apartment'], payload['borrower_tenant_id'], payload['borrower_name'], payload['borrower_phone'],
+                  payload['to_apartment'], spot_no, payload['borrower_tenant_id'], payload['borrower_name'], payload['borrower_phone'],
                   payload['booking_date'], payload['start_time'], payload['end_time'], payload['window_start'],
                   payload['window_end'], payload['status'], now_iso))
             if 'id' not in payload or not payload['id']:
@@ -901,6 +939,7 @@ def get_apartment_subscribers(project_number, apartment_number):
             sid = (cons.findtext('ns:id', default='', namespaces=ns) if cons is not None else '').strip()
             fname = (person.findtext('ns:firstName', default='', namespaces=ns) if person is not None else '') or cd.findtext('ns:firstName', default='', namespaces=ns)
             lname = (person.findtext('ns:surname', default='', namespaces=ns) if person is not None else '') or cd.findtext('ns:surname', default='', namespaces=ns)
+            match_code = ((person.findtext('ns:matchCode', default='', namespaces=ns) if person is not None else '') or cd.findtext('ns:matchCode', default='', namespaces=ns) or '').strip()
             pres = ident.findtext('ns:present', default='false', namespaces=ns) if ident is not None else 'false'
             is_pres = str(pres).lower() in ('true', '1', 'yes')
             lpn1 = (cd.findtext('ns:lpn1', default='', namespaces=ns) or '').strip()
@@ -923,6 +962,7 @@ def get_apartment_subscribers(project_number, apartment_number):
                 'apartment': apt_str,
                 'firstName': fname.strip(),
                 'lastName': lname.strip(),
+                'parking_spot': match_code,
                 'present': is_pres,
                 'parked_slot': parked_slot,
                 'parked_lpn': parked_lpn,
@@ -1173,9 +1213,12 @@ def try_activate_transfer(transfer):
         # שליחת הודעת וואטסאפ לדייר שהחניה שלו פנויה וזמינה!
         borrower_phone = transfer.get('borrower_phone')
         if borrower_phone:
+            spot_no = (transfer.get('parking_spot_number') or '').strip()
+            spot_line = f"🅿️ מספר חניה: *{spot_no}*\n" if spot_no else ""
             msg = (
                 f"שלום {transfer.get('borrower_name') or ''}! 🚗\n"
                 f"החניה שהזמנת (מדירה {from_apt}) פנויה וזמינה עבורך כעת ועד השעה *{transfer.get('end_time')}*.\n"
+                f"{spot_line}"
                 f"מכסת החניות של דירה {to_apt} הוגדלה ב-1. חניה נעימה!"
             )
             send_whatsapp_message(borrower_phone, msg)
@@ -1334,6 +1377,29 @@ def tenant_manager_page():
         return redirect('/login')
     return render_template('tenant_manager.html')
 
+def _calc_transfer_used_hours(tr):
+    """מחשב שעות חניה שנתן הדייר ושנוצלו בפועל (רק כאשר הסטטוס ACTIVE או RESTORED)."""
+    if tr.get('status') not in ('ACTIVE', 'RESTORED'):
+        return 0.0
+    win_hours = 0.0
+    try:
+        ws = datetime.datetime.fromisoformat(str(tr['window_start']).replace('Z', ''))
+        we = datetime.datetime.fromisoformat(str(tr['window_end']).replace('Z', ''))
+        win_hours = max(0.0, (we - ws).total_seconds() / 3600.0)
+    except Exception:
+        pass
+    if tr.get('actual_activated_at') and tr.get('actual_restored_at'):
+        try:
+            act_s = datetime.datetime.fromisoformat(str(tr['actual_activated_at']).replace('Z', ''))
+            act_e = datetime.datetime.fromisoformat(str(tr['actual_restored_at']).replace('Z', ''))
+            act_h = max(0.1, (act_e - act_s).total_seconds() / 3600.0)
+            if win_hours > 0:
+                return round(min(win_hours, act_h), 1)
+            return round(act_h, 1)
+        except Exception:
+            pass
+    return round(win_hours, 1)
+
 @tenant_bp.route('/api/tenant-manager/init', methods=['GET'])
 def api_tenant_manager_init():
     mgr = _get_logged_in_tenant_manager()
@@ -1350,6 +1416,31 @@ def api_tenant_manager_init():
         project_number=p_num,
         statuses=['SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE']
     )
+
+    # חישוב שעות שכל דירה נתנה ושנוצלו בפועל (ACTIVE / RESTORED) להצגת כוכב ⭐ ליד כל דייר
+    used_transfers = TenantStore.list_transfers(
+        project_number=p_num,
+        statuses=['ACTIVE', 'RESTORED']
+    )
+    cur_month = get_il_now().strftime('%Y-%m')
+    apt_used_total = {}
+    apt_used_month = {}
+    apt_used_count = {}
+    for tr in used_transfers:
+        f_apt = str(tr.get('from_apartment') or '').strip()
+        if not f_apt:
+            continue
+        hrs = _calc_transfer_used_hours(tr)
+        apt_used_total[f_apt] = round(apt_used_total.get(f_apt, 0.0) + hrs, 1)
+        apt_used_count[f_apt] = apt_used_count.get(f_apt, 0) + 1
+        if str(tr.get('booking_date') or '').startswith(cur_month):
+            apt_used_month[f_apt] = round(apt_used_month.get(f_apt, 0.0) + hrs, 1)
+
+    for t in tenants:
+        apt_k = str(t.get('apartment_number') or '').strip()
+        t['given_used_hours_total'] = apt_used_total.get(apt_k, 0.0)
+        t['given_used_hours_month'] = apt_used_month.get(apt_k, 0.0)
+        t['given_used_count'] = apt_used_count.get(apt_k, 0)
 
     return jsonify({
         'success': True,
@@ -1613,14 +1704,8 @@ def api_tenant_manager_monthly_report():
         from_apt = str(tr.get('from_apartment'))
         to_apt = str(tr.get('to_apartment'))
 
-        # Calculate duration in hours
-        hours = 0.0
-        try:
-            ws = datetime.datetime.fromisoformat(str(tr['window_start']).replace('Z', ''))
-            we = datetime.datetime.fromisoformat(str(tr['window_end']).replace('Z', ''))
-            hours = max(0.0, round((we - ws).total_seconds() / 3600.0, 1))
-        except Exception:
-            pass
+        # חישוב שעות שנוצלו בפועל (ACTIVE או RESTORED)
+        hours = _calc_transfer_used_hours(tr)
 
         for apt_key in (from_apt, to_apt):
             if apt_key not in apt_stats:
@@ -1879,6 +1964,7 @@ def _compute_available_slots_for_tenant(project_number, my_apt, days_ahead=7):
                 'share_id': sh['id'],
                 'owner_apartment': owner_apt,
                 'owner_name': sh.get('owner_name') or f'דירה {owner_apt}',
+                'parking_spot_number': sh.get('parking_spot_number') or '',
                 'share_target_type': target_type,
                 'target_apartment': target_apt,
                 'is_for_me_specifically': (target_type == 'APT' and target_apt == str(my_apt)),
@@ -1926,6 +2012,13 @@ def api_tenant_dashboard():
     ]
     my_bookings_today = [tr for tr in my_Bookings_month if str(tr.get('booking_date')) == today_str]
 
+    # חישוב שעות חניה שהדייר נתן ושנוצלו בפועל על ידי שכנים (ACTIVE / RESTORED)
+    all_used_transfers = TenantStore.list_transfers(project_number=p_num, statuses=['ACTIVE', 'RESTORED'])
+    my_given_used_all = [tr for tr in all_used_transfers if str(tr.get('from_apartment')) == my_apt]
+    my_given_used_month = [tr for tr in my_given_used_all if str(tr.get('booking_date') or '').startswith(month_str)]
+    given_used_hours_total = round(sum(_calc_transfer_used_hours(tr) for tr in my_given_used_all), 1)
+    given_used_hours_month = round(sum(_calc_transfer_used_hours(tr) for tr in my_given_used_month), 1)
+
     all_shares = TenantStore.list_shares(p_num, active_only=True)
     my_shares = [sh for sh in all_shares if str(sh.get('owner_apartment')) == my_apt]
 
@@ -1936,11 +2029,17 @@ def api_tenant_dashboard():
         if str(tr.get('to_apartment')) == my_apt or str(tr.get('from_apartment')) == my_apt
     ]
 
+    subs_list = subs_info.get('subscribers', [])
+    apt_parking_spots = [s.get('parking_spot') for s in subs_list if s.get('parking_spot')]
+    family_name = (pooling_info.get('contractName') or '').strip()
+
     return jsonify({
         'success': True,
         'tenant': {
             'id': tenant['id'],
             'full_name': tenant['full_name'],
+            'family_name': family_name,
+            'parking_spots': apt_parking_spots,
             'phone_number': display_il_phone(tenant['phone_number']),
             'apartment_number': my_apt,
             'base_max_counter': int(pooling_info.get('maxCounter') if pooling_info.get('success') else (tenant.get('base_max_counter') or 1)),
@@ -1955,10 +2054,13 @@ def api_tenant_dashboard():
             'max_per_day': int(b_settings.get('max_bookings_per_day') or 5),
             'used_today': len(my_bookings_today),
             'max_per_month': int(b_settings.get('max_bookings_per_month') or 30),
-            'used_this_month': len(my_Bookings_month)
+            'used_this_month': len(my_Bookings_month),
+            'given_used_hours_month': given_used_hours_month,
+            'given_used_hours_total': given_used_hours_total,
+            'given_used_count': len(my_given_used_all)
         },
         'pooling': pooling_info,
-        'subscribers': subs_info.get('subscribers', []),
+        'subscribers': subs_list,
         'my_shares': my_shares,
         'available_slots': available_slots,
         'active_bookings': active_bookings
@@ -1995,6 +2097,7 @@ def api_tenant_share_spot():
     start_time = (data.get('start_time') or '').strip()
     end_time = (data.get('end_time') or '').strip()
     spots_offered = int(data.get('spots_offered') or 1)
+    parking_spot_number = str(data.get('parking_spot_number') or '').strip()
     share_target_type = data.get('share_target_type', 'POOL')
     target_apartment = str(data.get('target_apartment') or '').strip()
     schedule_type = data.get('schedule_type', 'WEEKLY')
@@ -2020,12 +2123,28 @@ def api_tenant_share_spot():
     if schedule_type == 'ONCE' and not str(specific_date).strip():
         return jsonify({'success': False, 'message': 'נא לבחור תאריך לשחרור החניה'})
 
+    # אם הדייר לא הזין ידנית מספר חניה, משוך אוטומטית משדה קוד התאמה (matchCode) של מנויי הדירה
+    if not parking_spot_number:
+        try:
+            subs_res = get_apartment_subscribers(tenant['project_number'], tenant['apartment_number'])
+            spots_from_subs = [s.get('parking_spot') for s in subs_res.get('subscribers', []) if s.get('parking_spot')]
+            if spots_from_subs:
+                parking_spot_number = ', '.join(spots_from_subs[:spots_offered])
+        except Exception:
+            pass
+
+    family_name = (pool_chk.get('contractName') or '').strip() if pool_chk.get('success') else ''
+    owner_disp_name = tenant['full_name']
+    if family_name and family_name not in owner_disp_name:
+        owner_disp_name = f"{owner_disp_name} ({family_name})"
+
     created = TenantStore.create_share({
         'project_number': tenant['project_number'],
         'owner_tenant_id': tenant['id'],
-        'owner_name': tenant['full_name'],
+        'owner_name': owner_disp_name,
         'owner_apartment': tenant['apartment_number'],
         'spots_offered': spots_offered,
+        'parking_spot_number': parking_spot_number,
         'share_target_type': share_target_type,
         'target_apartment': target_apartment if share_target_type == 'APT' else None,
         'schedule_type': schedule_type,
@@ -2035,21 +2154,23 @@ def api_tenant_share_spot():
         'end_time': end_time
     })
 
-    # אם שוחררה חניה במיוחד עבור דירה ספציפית, שלח לה הודעת וואטסאפ!
+    # אם שוחררה חניה במיוחד עבור דירה ספציפית, שלח לה הודעת וואטסאפ עם מספר החניה!
     if share_target_type == 'APT' and target_apartment:
         all_tenants = TenantStore.list_tenants(tenant['project_number'])
+        spot_txt = f" (חניה מס׳: *{parking_spot_number}*)" if parking_spot_number else ""
         for t in all_tenants:
             if str(t.get('apartment_number')) == target_apartment and t.get('phone_number'):
                 host_url = request.host_url.rstrip('/')
                 msg = (
                     f"שלום {t.get('full_name')} (דירה {target_apartment})! 🎁\n"
-                    f"דירה {tenant['apartment_number']} ({tenant['full_name']}) שחררה עבורך {spots_offered} חניה/ות "
+                    f"דירה {tenant['apartment_number']} ({owner_disp_name}) שחררה עבורך {spots_offered} חניה/ות{spot_txt} "
                     f"בין השעות *{start_time}* עד *{end_time}*.\n"
                     f"לצפייה ותפיסת החניה היכנס לפורטל הדיירים:\n{host_url}/tenant-portal"
                 )
                 send_whatsapp_message(t['phone_number'], msg)
 
-    return jsonify({'success': True, 'message': 'הגדרת שחרור החניה נשמרה בהצלחה!', 'share': created})
+    spot_confirm = f" (חניה: {parking_spot_number})" if parking_spot_number else ""
+    return jsonify({'success': True, 'message': f'הגדרת שחרור החניה{spot_confirm} נשמרה בהצלחה!', 'share': created})
 
 @tenant_bp.route('/api/tenant/cancel-share/<int:share_id>', methods=['POST'])
 def api_tenant_cancel_share(share_id):
@@ -2125,12 +2246,20 @@ def api_tenant_claim_spot():
     if w_end_dt <= now:
         return jsonify({'success': False, 'message': 'חלון הזמן של חניה זו כבר הסתיים'})
 
+    raw_share_spots = str(share.get('parking_spot_number') or '').strip()
+    assigned_spot_no = raw_share_spots
+    if ',' in raw_share_spots:
+        parts = [p.strip() for p in raw_share_spots.split(',') if p.strip()]
+        if parts:
+            assigned_spot_no = parts[min(slot_index - 1, len(parts) - 1)]
+
     transfer = TenantStore.create_transfer({
         'share_id': share_id,
         'slot_index': slot_index,
         'project_number': p_num,
         'from_apartment': from_apt,
         'to_apartment': my_apt,
+        'parking_spot_number': assigned_spot_no,
         'borrower_tenant_id': tenant['id'],
         'borrower_name': tenant['full_name'],
         'borrower_phone': tenant['phone_number'],
@@ -2142,23 +2271,25 @@ def api_tenant_claim_spot():
         'status': 'SCHEDULED'
     })
 
+    spot_msg_part = f" (חניה מס׳: {assigned_spot_no})" if assigned_spot_no else ""
+
     # אם חלון הזמן כבר פעיל כעת - נסה להעביר את המונה מיד!
     if w_start_dt <= now < w_end_dt:
         act_res = try_activate_transfer(transfer)
         if act_res.get('activated'):
             return jsonify({
                 'success': True,
-                'message': f'החניה מדירה {from_apt} הופעלה עבורך מיד! מכסת החניות של דירתך עלתה ב-1 עד {share["end_time"]}.'
+                'message': f'החניה מדירה {from_apt}{spot_msg_part} הופעלה עבורך מיד! מכסת החניות של דירתך עלתה ב-1 עד {share["end_time"]}.'
             })
         elif act_res.get('status') == 'WAITING_FOR_EXIT':
             return jsonify({
                 'success': True,
-                'message': f'החניה מדירה {from_apt} שוריינה עבורך! הרכב של דירה {from_apt} עדיין בחניון – ברגע שייצא, המכסה תועבר אליך ותקבל הודעת וואטסאפ.'
+                'message': f'החניה מדירה {from_apt}{spot_msg_part} שוריינה עבורך! הרכב של דירה {from_apt} עדיין בחניון – ברגע שייצא, המכסה תועבר אליך ותקבל הודעת וואטסאפ.'
             })
 
     return jsonify({
         'success': True,
-        'message': f'החניה מדירה {from_apt} שוריינה עבורך לתאריך {booking_date} בין {share["start_time"]} ל-{share["end_time"]}! תקבל הודעת וואטסאפ ברגע שהחניה תיכנס לתוקף.'
+        'message': f'החניה מדירה {from_apt}{spot_msg_part} שוריינה עבורך לתאריך {booking_date} בין {share["start_time"]} ל-{share["end_time"]}! תקבל הודעת וואטסאפ ברגע שהחניה תיכנס לתוקף.'
     })
 
 @tenant_bp.route('/api/tenant/release-booking/<int:transfer_id>', methods=['POST'])
