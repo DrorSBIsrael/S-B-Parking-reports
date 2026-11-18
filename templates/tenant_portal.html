@@ -333,12 +333,12 @@
 
         <!-- מסך 2: פורטל הדייר הפעיל -->
         <div id="dashboardSection" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; flex-wrap: wrap;">
-                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                    <span id="i18n_apt_status_title" style="font-weight: 700; font-size: 15px; color: #334155; white-space: nowrap;">🏠 מצב הדירה שלי</span>
-                    <span id="portalStarHoursBadge" class="badge badge-yellow" style="border: 1px solid #eab308; font-size: 12.5px; font-weight: 800;">⭐ 0 שע׳ שנוצלו</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 6px; flex-wrap: nowrap;">
+                <div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1;">
+                    <span id="i18n_apt_status_title" style="font-weight: 800; font-size: 14.5px; color: #334155; white-space: nowrap;">🏠 מצב הדירה שלי</span>
+                    <span id="portalStarHoursBadge" class="badge badge-yellow" style="border: 1px solid #eab308; font-size: 12px; font-weight: 800; white-space: nowrap;">⭐ 0 שעות שתרמתי</span>
                 </div>
-                <button type="button" id="i18n_refresh_quota_btn" onclick="refreshApartmentStatus(this)" class="btn btn-outline" style="width: auto; padding: 6px 12px; font-size: 13px; border-radius: 8px; background: white; white-space: nowrap;">
+                <button type="button" id="i18n_refresh_quota_btn" onclick="refreshApartmentStatus(this)" class="btn btn-outline" style="width: auto; padding: 6px 10px; font-size: 12.5px; border-radius: 8px; background: white; white-space: nowrap; flex-shrink: 0;">
                     🔄 רענן מכסה
                 </button>
             </div>
@@ -386,9 +386,9 @@
                         <span id="quotaTodayBadge">ניצול יומי: 0/5</span>
                         <span id="quotaMonthBadge">ניצול חודשי: 0/30</span>
                     </div>
-                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; font-weight: 800; color: #854d0e;">
-                        <span id="givenHoursMonthBadge">⭐ שעות שנתת ונוצלו החודש: 0 שע׳</span>
-                        <span id="givenHoursTotalBadge">סה״כ מצטבר: ⭐ 0 שע׳</span>
+                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 800; color: #854d0e;">
+                        <div id="givenHoursMonthBadge">⭐ שעות חניה שתרמתי החודש: 0 שעות</div>
+                        <div id="givenHoursTotalBadge">⭐ סה״כ כללי שתרמתי: 0 שעות</div>
                     </div>
                 </div>
 
@@ -418,15 +418,10 @@
 
                     <form onsubmit="handleCreateShare(event)">
                         <div class="input-group">
-                            <label>🅿️ איזו חניה לשחרר? (מספר חניה)</label>
-                            <div id="shParkingSpotChips" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px;"></div>
+                            <label>🅿️ איזו חניה לשחרר? (ניתן לבחור חניה אחת או יותר)</label>
+                            <div id="shParkingSpotChips" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px;"></div>
                             <input type="text" id="shParkingSpotNumber" placeholder="לדוגמה: 28ג">
-                        </div>
-
-                        <div class="input-group">
-                            <label><span id="i18n_spots_count_lbl">כמה חניות לשחרר?</span> <span id="maxSpotsHint" style="color: #475569; font-size: 12px;">(מקסימום לדירתך: 1)</span></label>
-                            <input type="number" id="shSpotsCount" min="1" max="1" value="1" required
-                                   oninput="if(this.max && parseInt(this.value,10) > parseInt(this.max,10)) this.value = this.max; if(parseInt(this.value,10) < 1) this.value = 1;">
+                            <input type="hidden" id="shSpotsCount" value="1" data-max="1">
                         </div>
 
                         <div class="input-group">
@@ -1212,11 +1207,11 @@
                     const gMonth = data.quota_limits.given_used_hours_month ?? 0;
                     const gTot = data.quota_limits.given_used_hours_total ?? 0;
                     const starTop = document.getElementById('portalStarHoursBadge');
-                    if (starTop) starTop.textContent = `⭐ ${gTot} שע׳ שנוצלו`;
+                    if (starTop) starTop.textContent = `⭐ ${gTot} שעות שתרמתי`;
                     const gM = document.getElementById('givenHoursMonthBadge');
-                    if (gM) gM.textContent = `⭐ שעות שנתת ונוצלו החודש: ${gMonth} שע׳`;
+                    if (gM) gM.textContent = `⭐ שעות חניה שתרמתי החודש: ${gMonth} שעות`;
                     const gT = document.getElementById('givenHoursTotalBadge');
-                    if (gT) gT.textContent = `סה״כ מצטבר: ⭐ ${gTot} שע׳`;
+                    if (gT) gT.textContent = `⭐ סה״כ כללי שתרמתי: ${gTot} שעות`;
                 }
 
                 renderMySubscribers(data.subscribers || []);
@@ -1293,16 +1288,27 @@
             const withSpots = (subs || []).filter(s => s.parking_spot);
             if (withSpots.length === 0) {
                 chipsBox.innerHTML = '';
+                spotInput.style.display = 'block';
                 return;
             }
+            spotInput.style.display = 'none';
             if (!spotInput.value.trim()) {
-                spotInput.value = withSpots[0].parking_spot;
+                spotInput.value = String(withSpots[0].parking_spot).trim();
             }
+            const selectedList = spotInput.value.split(',').map(x => x.trim()).filter(Boolean);
             chipsBox.innerHTML = withSpots.map(s => {
                 const sp = String(s.parking_spot).trim();
                 const nameLbl = s.firstName || s.lastName || ('#' + s.id);
-                return `<button type="button" class="btn btn-outline" style="width:auto; padding:6px 12px; font-size:13px; border-radius:8px;" onclick="selectShareSpotChip('${sp.replace(/'/g, "\\'")}')">🅿️ חניה ${sp} (${nameLbl})</button>`;
+                const isSel = selectedList.includes(sp);
+                const btnStyle = isSel
+                    ? 'flex:1; min-width:130px; padding:10px 12px; font-size:13.5px; border-radius:10px; border:1.5px solid #334155; background:#e2e8f0; color:#1e293b; font-weight:800;'
+                    : 'flex:1; min-width:130px; padding:10px 12px; font-size:13.5px; border-radius:10px; border:1.5px solid #cbd5e1; background:#ffffff; color:#334155; font-weight:700;';
+                return `<button type="button" class="btn" style="${btnStyle}" onclick="selectShareSpotChip('${sp.replace(/'/g, "\\'")}')">${isSel ? '✓ ' : ''}🅿️ חניה ${sp} (${nameLbl})</button>`;
             }).join('');
+            const spotsCountEl = document.getElementById('shSpotsCount');
+            if (spotsCountEl) {
+                spotsCountEl.value = String(Math.max(1, selectedList.length));
+            }
         }
 
         function selectShareSpotChip(spotVal) {
@@ -1319,8 +1325,10 @@
             spotInput.value = next.join(', ');
             const spotsCountEl = document.getElementById('shSpotsCount');
             if (spotsCountEl) {
-                const maxAllowed = parseInt(spotsCountEl.max || '1', 10) || 1;
-                spotsCountEl.value = String(Math.min(maxAllowed, next.length));
+                spotsCountEl.value = String(Math.max(1, next.length));
+            }
+            if (lastDashboardData && lastDashboardData.subscribers) {
+                renderShareSpotChips(lastDashboardData.subscribers);
             }
         }
 
@@ -1334,12 +1342,12 @@
 
             container.innerHTML = subs.map(s => `
                 <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 12px; background: #f8fafc;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px;">
-                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                            <strong>👤 ${s.firstName || ''} ${s.lastName || ('#' + s.id)}</strong>
-                            ${s.parking_spot ? `<span class="badge badge-blue" style="border:1px solid #94a3b8;">🅿️ חניה: ${s.parking_spot}</span>` : ''}
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:nowrap; gap:8px;">
+                        <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+                            <strong style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">👤 ${s.firstName || ''} ${s.lastName || ('#' + s.id)}</strong>
+                            ${s.parking_spot ? `<span class="badge badge-blue" style="border:1px solid #94a3b8; white-space:nowrap;">🅿️ חניה: ${s.parking_spot}</span>` : ''}
                         </div>
-                        <span class="badge ${s.present ? 'badge-green' : 'badge-blue'}">${s.present ? t('status_in_parking') : t('status_out_parking')}</span>
+                        <span title="${s.present ? t('status_in_parking') : t('status_out_parking')}" style="font-size:16px; line-height:1; flex-shrink:0;">${s.present ? '🟢' : '🔴'}</span>
                     </div>
                     <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:6px; margin-bottom:12px;">
                         ${renderSingleCarSlot(s, 'lpn1', 'car_1')}
@@ -1472,8 +1480,9 @@
 
         async function handleCreateShare(e) {
             e.preventDefault();
-            const spots_offered = parseInt(document.getElementById('shSpotsCount').value, 10) || 1;
             const parking_spot_number = (document.getElementById('shParkingSpotNumber')?.value || '').trim();
+            const selectedSpotsList = parking_spot_number.split(',').map(x => x.trim()).filter(Boolean);
+            const spots_offered = selectedSpotsList.length > 0 ? selectedSpotsList.length : (parseInt(document.getElementById('shSpotsCount')?.value || '1', 10) || 1);
             const share_target_type = document.getElementById('shTargetType').value;
             const target_apartment = document.getElementById('shTargetApt').value.trim();
             const schedule_type = document.getElementById('shScheduleType').value;
@@ -1776,7 +1785,7 @@
 
     <!-- פוטר משפטי קבוע -->
     <footer class="legal-footer" role="contentinfo">
-        <div style="font-weight: 700;">© 2026 HINT LTD — כל הזכויות שמורות | גרסה 1.0.4</div>
+        <div style="font-weight: 700;">© 2026 HINT LTD — כל הזכויות שמורות | גרסה 1.0.5</div>
         <div style="font-size: 12px; margin-top: 2px;">שיידט את בכמן ישראל בע"מ</div>
         <div style="margin-top: 6px;">
             <a role="button" tabindex="0" onclick="openLegalModal('privacyModal')">🔒 הצהרת פרטיות ותנאי שימוש</a> |
