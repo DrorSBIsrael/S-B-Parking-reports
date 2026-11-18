@@ -788,10 +788,13 @@
                 const presText = (liveInfo && liveInfo.present !== undefined)
                     ? ` <span class="badge badge-green" style="margin-right:4px;">בפנים כעת: ${liveInfo.present}</span>`
                     : '';
+                const usedHoursTot = t.given_used_hours_total ?? 0;
+                const usedHoursMonth = t.given_used_hours_month ?? 0;
+                const starBadge = `<span class="badge badge-yellow" style="border:1px solid #eab308; margin-right:6px;" title="שעות חניה שנתן הדייר ונוצלו בפועל ע״י שכנים (החודש: ${usedHoursMonth} שע׳)">⭐ ${usedHoursTot} שע׳ שנוצלו</span>`;
                 return `
                     <tr>
                         <td><span class="badge badge-blue">דירה ${t.apartment_number}</span></td>
-                        <td style="font-weight: 600;">${t.full_name}</td>
+                        <td style="font-weight: 600;">${t.full_name} ${starBadge}</td>
                         <td style="direction: ltr; text-align: right;">${formatPhoneDisplay(t.phone_number)}</td>
                         <td>
                             <strong>${t.base_max_counter ?? 1} חניות</strong>${presText}
@@ -952,11 +955,14 @@
                         const dNames = String(sh.days_of_week || '').split(',').filter(Boolean).map(d => `יום ${DAY_NAMES_HE[parseInt(d,10)] || d}`).join(', ');
                         schedStr = `קבוע: ${dNames}`;
                     }
+                    const spotBadge = sh.parking_spot_number
+                        ? ` <span class="badge badge-green">🅿️ חניה: ${sh.parking_spot_number}</span>`
+                        : '';
                     return `
                         <tr>
                             <td><span class="badge badge-blue">דירה ${sh.owner_apartment}</span></td>
                             <td style="font-weight: 600;">${sh.owner_name || '-'}</td>
-                            <td><strong>${sh.spots_offered || 1}</strong> חניות</td>
+                            <td><strong>${sh.spots_offered || 1}</strong> חניות${spotBadge}</td>
                             <td>${targetBadge}</td>
                             <td>${schedStr}</td>
                             <td><strong>${sh.start_time} – ${sh.end_time}</strong></td>
@@ -987,7 +993,7 @@
                     <tr>
                         <td>${tr.booking_date}</td>
                         <td><strong>${tr.start_time} – ${tr.end_time}</strong></td>
-                        <td><span class="badge badge-blue">דירה ${tr.from_apartment}</span></td>
+                        <td><span class="badge badge-blue">דירה ${tr.from_apartment}</span>${tr.parking_spot_number ? ` <span class="badge badge-green">🅿️ חניה: ${tr.parking_spot_number}</span>` : ''}</td>
                         <td><span class="badge badge-green">דירה ${tr.to_apartment}</span></td>
                         <td>${tr.borrower_name || '-'}</td>
                         <td>${stMap[tr.status] || tr.status}</td>
@@ -1174,7 +1180,7 @@
                             <td><strong>דירה ${row.apartment_number}</strong></td>
                             <td>${row.tenant_name}</td>
                             <td><strong>${row.given_count}</strong> פעמים</td>
-                            <td>${row.given_hours} שעות</td>
+                            <td><span class="badge badge-yellow" style="border:1px solid #eab308;">⭐ ${row.given_hours} שעות</span></td>
                             <td><strong>${row.taken_count}</strong> פעמים</td>
                             <td>${row.taken_hours} שעות</td>
                             <td>${netBadge}</td>
@@ -1454,7 +1460,8 @@
 
     <!-- פוטר משפטי קבוע -->
     <footer class="legal-footer" role="contentinfo">
-        <div>שיידט את בכמן ישראל בע"מ © כל הזכויות שמורות</div>
+        <div style="font-weight: 700;">© 2026 HINT LTD — כל הזכויות שמורות | גרסה 1.0.4</div>
+        <div style="font-size: 12px; margin-top: 2px;">שיידט את בכמן ישראל בע"מ</div>
         <div style="margin-top: 6px;">
             <a role="button" tabindex="0" onclick="openLegalModal('privacyModal')">🔒 הצהרת פרטיות ותנאי שימוש</a> |
             <a role="button" tabindex="0" onclick="openLegalModal('a11yStatementModal')">♿ הצהרת נגישות</a> |

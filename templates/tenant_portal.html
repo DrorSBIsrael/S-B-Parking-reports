@@ -21,12 +21,12 @@
         }
 
         .top-banner {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
             color: white;
             padding: 22px 18px;
             border-bottom-left-radius: 22px;
             border-bottom-right-radius: 22px;
-            box-shadow: 0 4px 16px rgba(79, 70, 229, 0.25);
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.25);
         }
 
         .banner-inner {
@@ -102,9 +102,9 @@
         .input-group input:focus,
         .input-group select:focus {
             outline: none;
-            border-color: #4f46e5;
+            border-color: #334155;
             background: white;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+            box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.14);
         }
 
         .btn {
@@ -119,11 +119,11 @@
         }
 
         .btn-primary {
-            background: #4f46e5;
+            background: #334155;
             color: white;
         }
         .btn-primary:hover {
-            background: #4338ca;
+            background: #1e293b;
         }
 
         .btn-whatsapp {
@@ -163,7 +163,7 @@
         .stat-box .num {
             font-size: 24px;
             font-weight: 800;
-            color: #4f46e5;
+            color: #334155;
         }
 
         .stat-box .lbl {
@@ -192,9 +192,9 @@
         }
 
         .pill-btn.active {
-            background: #4f46e5;
+            background: #334155;
             color: white;
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
         }
 
         .days-selector {
@@ -220,9 +220,9 @@
         }
 
         .day-chip.selected {
-            background: #4f46e5;
+            background: #334155;
             color: white;
-            border-color: #4f46e5;
+            border-color: #334155;
         }
 
         .slot-item {
@@ -251,9 +251,9 @@
         }
 
         .badge-green { background: #dcfce7; color: #166534; }
-        .badge-blue { background: #dbeafe; color: #1e40af; }
+        .badge-blue { background: #e2e8f0; color: #334155; }
         .badge-yellow { background: #fef9c3; color: #854d0e; }
-        .badge-purple { background: #f3e8ff; color: #6b21a8; }
+        .badge-purple { background: #e2e8f0; color: #334155; }
 
         .alert {
             padding: 12px 14px;
@@ -278,15 +278,8 @@
                 </div>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
-                <select id="langSelector" onchange="setPortalLanguage(this.value)" aria-label="בחירת שפה / Language"
-                        style="background:rgba(255,255,255,0.22); color:white; border:1px solid rgba(255,255,255,0.4); padding:6px 8px; border-radius:8px; font-weight:700; font-size:12.5px; cursor:pointer; outline:none;">
-                    <option value="he" style="color:#0f172a;">🇮🇱 עברית</option>
-                    <option value="en" style="color:#0f172a;">🇬🇧 English</option>
-                    <option value="ru" style="color:#0f172a;">🇷🇺 Русский</option>
-                    <option value="ar" style="color:#0f172a;">🇸🇦 العربية</option>
-                </select>
-                <button id="portalWazeBtn" onclick="openPortalWaze()" title="פתח ניווט ב-Waze לחניון" style="background:rgba(255,255,255,0.22); color:white; border:1px solid rgba(255,255,255,0.35); padding:6px 10px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer;">
-                    🧭 Waze
+                <button id="portalSettingsBtn" onclick="openLegalModal('portalSettingsModal')" title="הגדרות ושפה" style="background:rgba(255,255,255,0.2); color:white; border:none; padding:7px 10px; border-radius:8px; font-weight:700; font-size:16px; cursor:pointer;">
+                    ⚙️
                 </button>
                 <button id="logoutBtn" onclick="logoutTenant()" style="display:none; background:rgba(255,255,255,0.2); color:white; border:none; padding:7px 12px; border-radius:8px; font-weight:700; cursor:pointer;">
                     יציאה
@@ -312,7 +305,7 @@
                 </div>
                 <button type="button" class="btn btn-whatsapp" onclick="sendOtp()" id="sendOtpBtn">💬 שלח קוד בוואטסאפ</button>
                 <p style="font-size: 12px; color: #64748b; margin-top: 12px; text-align: center;">
-                    השימוש והכניסה למערכת כפופים ל<a href="javascript:void(0)" onclick="openLegalModal('privacyModal')" style="color:#4f46e5; font-weight:700; text-decoration:underline;">הצהרת הפרטיות ותנאי השימוש</a> ול<a href="javascript:void(0)" onclick="openLegalModal('a11yStatementModal')" style="color:#4f46e5; font-weight:700; text-decoration:underline;">הצהרת הנגישות</a>.
+                    השימוש והכניסה למערכת כפופים ל<a href="javascript:void(0)" onclick="openLegalModal('privacyModal')" style="color:#334155; font-weight:700; text-decoration:underline;">הצהרת הפרטיות ותנאי השימוש</a> ול<a href="javascript:void(0)" onclick="openLegalModal('a11yStatementModal')" style="color:#334155; font-weight:700; text-decoration:underline;">הצהרת הנגישות</a>.
                 </p>
             </div>
 
@@ -340,8 +333,11 @@
 
         <!-- מסך 2: פורטל הדייר הפעיל -->
         <div id="dashboardSection" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px;">
-                <span id="i18n_apt_status_title" style="font-weight: 700; font-size: 15px; color: #334155; white-space: nowrap;">🏠 מצב הדירה שלי</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span id="i18n_apt_status_title" style="font-weight: 700; font-size: 15px; color: #334155; white-space: nowrap;">🏠 מצב הדירה שלי</span>
+                    <span id="portalStarHoursBadge" class="badge badge-yellow" style="border: 1px solid #eab308; font-size: 12.5px; font-weight: 800;">⭐ 0 שע׳ שנוצלו</span>
+                </div>
                 <button type="button" id="i18n_refresh_quota_btn" onclick="refreshApartmentStatus(this)" class="btn btn-outline" style="width: auto; padding: 6px 12px; font-size: 13px; border-radius: 8px; background: white; white-space: nowrap;">
                     🔄 רענן מכסה
                 </button>
@@ -362,19 +358,20 @@
                 </div>
             </div>
 
-            <!-- ניווט בין 3 לשוניות -->
+            <!-- ניווט בין 3 לשוניות ללא אייקונים -->
             <div class="nav-pills">
-                <button class="pill-btn active" id="i18n_tab_vehicles" onclick="switchPortalTab('vehicles', this)">🚗 הרכבים שלי</button>
-                <button class="pill-btn" id="i18n_tab_pool" onclick="switchPortalTab('pool', this)">🅿️ חניות פנויות</button>
-                <button class="pill-btn" id="i18n_tab_share" onclick="switchPortalTab('share', this)">🤝 שחרור חניה</button>
+                <button class="pill-btn active" id="i18n_tab_vehicles" onclick="switchPortalTab('vehicles', this)">הרכבים שלי</button>
+                <button class="pill-btn" id="i18n_tab_pool" onclick="switchPortalTab('pool', this)">חניות פנויות</button>
+                <button class="pill-btn" id="i18n_tab_share" onclick="switchPortalTab('share', this)">שחרור חניה</button>
             </div>
 
             <!-- לשונית א': הרכבים של הדירה שלי -->
             <div id="ptab-vehicles">
                 <div class="card">
                     <div class="card-title">
-                        <span id="i18n_my_cars_title">🚗 רכבי הדירה שלי</span>
-                        <button onclick="loadDashboard()" style="background:none; border:none; color:#4f46e5; font-weight:700; cursor:pointer;">🔄 רענן</button>
+                        <span id="i18n_my_cars_title">רכבי הדירה שלי</span>
+                        <span style="font-size: 18px;">🚗</span>
+                        <button onclick="loadDashboard()" style="background:none; border:none; color:#334155; font-weight:700; cursor:pointer;">🔄 רענן</button>
                     </div>
                     <div id="mySubscribersContainer">
                         <p style="text-align: center; color: #64748b; padding: 16px;">טוען רכבים מבקר החניון...</p>
@@ -384,10 +381,14 @@
 
             <!-- לשונית ב': חניות פנויות בבניין והזמנות פעילות -->
             <div id="ptab-pool" style="display: none;">
-                <div class="card" style="background: #eef2ff; border: 1px solid #c7d2fe;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; color: #3730a3;">
+                <div class="card" style="background: #f1f5f9; border: 1px solid #cbd5e1;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; color: #334155;">
                         <span id="quotaTodayBadge">ניצול יומי: 0/5</span>
                         <span id="quotaMonthBadge">ניצול חודשי: 0/30</span>
+                    </div>
+                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; font-weight: 800; color: #854d0e;">
+                        <span id="givenHoursMonthBadge">⭐ שעות שנתת ונוצלו החודש: 0 שע׳</span>
+                        <span id="givenHoursTotalBadge">סה״כ מצטבר: ⭐ 0 שע׳</span>
                     </div>
                 </div>
 
@@ -400,8 +401,8 @@
                 <!-- חניות פנויות לתפיסה -->
                 <div class="card">
                     <div class="card-title">
-                        <span id="i18n_avail_slots_title">🅿️ חניות פנויות לתפיסה בבניין</span>
-                        <button onclick="loadDashboard()" style="background:none; border:none; color:#4f46e5; font-weight:700; cursor:pointer;">🔄 רענן</button>
+                        <span id="i18n_avail_slots_title">חניות פנויות לתפיסה בבניין</span>
+                        <button onclick="loadDashboard()" style="background:none; border:none; color:#334155; font-weight:700; cursor:pointer;">🔄 רענן</button>
                     </div>
                     <div id="availableSlotsList"></div>
                 </div>
@@ -410,14 +411,20 @@
             <!-- לשונית ג': שחרור חניה של הדירה שלי -->
             <div id="ptab-share" style="display: none;">
                 <div class="card">
-                    <h3 class="card-title" id="i18n_share_title">🤝 שחרר חניה של הדירה שלי</h3>
+                    <h3 class="card-title" id="i18n_share_title">שחרר חניה של הדירה שלי</h3>
                     <p id="i18n_share_desc" style="font-size: 13px; color: #64748b; margin-bottom: 14px;">
                         בשעות שתגדיר, המערכת תאפשר לשכן להשתמש בחניה שלך (רק אם רכבך אינו בחניון) ותחזיר את החניה אליך אוטומטית בסיום השעה!
                     </p>
 
                     <form onsubmit="handleCreateShare(event)">
                         <div class="input-group">
-                            <label><span id="i18n_spots_count_lbl">כמה חניות לשחרר?</span> <span id="maxSpotsHint" style="color: #4f46e5; font-size: 12px;">(מקסימום לדירתך: 1)</span></label>
+                            <label>🅿️ איזו חניה לשחרר? (מספר חניה)</label>
+                            <div id="shParkingSpotChips" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px;"></div>
+                            <input type="text" id="shParkingSpotNumber" placeholder="לדוגמה: 28ג">
+                        </div>
+
+                        <div class="input-group">
+                            <label><span id="i18n_spots_count_lbl">כמה חניות לשחרר?</span> <span id="maxSpotsHint" style="color: #475569; font-size: 12px;">(מקסימום לדירתך: 1)</span></label>
                             <input type="number" id="shSpotsCount" min="1" max="1" value="1" required
                                    oninput="if(this.max && parseInt(this.value,10) > parseInt(this.max,10)) this.value = this.max; if(parseInt(this.value,10) < 1) this.value = 1;">
                         </div>
@@ -516,10 +523,10 @@
                 stat_max: 'מכסת חניות פעילה',
                 stat_present: 'רכבים בחניון כעת',
                 stat_avail: 'פנויות לכניסה כעת',
-                tab_vehicles: '🚗 הרכבים שלי',
-                tab_pool: '🅿️ חניות פנויות',
-                tab_share: '🤝 שחרור חניה',
-                my_cars_title: '🚗 רכבי הדירה שלי',
+                tab_vehicles: 'הרכבים שלי',
+                tab_pool: 'חניות פנויות',
+                tab_share: 'שחרור חניה',
+                my_cars_title: 'רכבי הדירה שלי',
                 no_subscribers: 'לא נמצאו מנויים משויכים לדירה זו בבקר החניון.',
                 status_in_parking: '🟢 נמצא בחניון',
                 status_out_parking: '⚪ מחוץ לחניון',
@@ -1093,7 +1100,9 @@
                         document.getElementById('dashboardSection').style.display = 'block';
                         document.getElementById('logoutBtn').style.display = 'block';
                         document.getElementById('headerBuildingName').textContent = `🅿️ ${data.tenant.parking_name || 'חניון הדיירים'}`;
-                        document.getElementById('headerTenantInfo').textContent = `שלום ${data.tenant.full_name} | דירה ${data.tenant.apartment_number}`;
+                        const famName = (data.pooling && data.pooling.contractName) || data.tenant.family_name || '';
+                const famSuffix = (famName && famName !== data.tenant.full_name) ? ` (${famName})` : '';
+                document.getElementById('headerTenantInfo').textContent = `שלום ${data.tenant.full_name} | דירה ${data.tenant.apartment_number}${famSuffix}`;
                     }
                     loadDashboard();
                 } else {
@@ -1170,7 +1179,9 @@
                     logoEl.style.display = 'none';
                     document.getElementById('headerBuildingName').textContent = `🅿️ ${data.tenant.parking_name}`;
                 }
-                document.getElementById('headerTenantInfo').textContent = `שלום ${data.tenant.full_name} | דירה ${data.tenant.apartment_number}`;
+                const famName = (data.pooling && data.pooling.contractName) || data.tenant.family_name || '';
+                const famSuffix = (famName && famName !== data.tenant.full_name) ? ` (${famName})` : '';
+                document.getElementById('headerTenantInfo').textContent = `שלום ${data.tenant.full_name} | דירה ${data.tenant.apartment_number}${famSuffix}`;
 
                 const aptMaxSpots = Math.max(1, parseInt((data.pooling && data.pooling.success) ? data.pooling.maxCounter : (data.tenant.base_max_counter || 1), 10) || 1);
                 const spotsInput = document.getElementById('shSpotsCount');
@@ -1198,6 +1209,14 @@
                 if (data.quota_limits) {
                     document.getElementById('quotaTodayBadge').textContent = `ניצול יומי: ${data.quota_limits.used_today} מתוך ${data.quota_limits.max_per_day}`;
                     document.getElementById('quotaMonthBadge').textContent = `ניצול חודשי: ${data.quota_limits.used_this_month} מתוך ${data.quota_limits.max_per_month}`;
+                    const gMonth = data.quota_limits.given_used_hours_month ?? 0;
+                    const gTot = data.quota_limits.given_used_hours_total ?? 0;
+                    const starTop = document.getElementById('portalStarHoursBadge');
+                    if (starTop) starTop.textContent = `⭐ ${gTot} שע׳ שנוצלו`;
+                    const gM = document.getElementById('givenHoursMonthBadge');
+                    if (gM) gM.textContent = `⭐ שעות שנתת ונוצלו החודש: ${gMonth} שע׳`;
+                    const gT = document.getElementById('givenHoursTotalBadge');
+                    if (gT) gT.textContent = `סה״כ מצטבר: ⭐ ${gTot} שע׳`;
                 }
 
                 renderMySubscribers(data.subscribers || []);
@@ -1267,7 +1286,46 @@
             `;
         }
 
+        function renderShareSpotChips(subs) {
+            const chipsBox = document.getElementById('shParkingSpotChips');
+            const spotInput = document.getElementById('shParkingSpotNumber');
+            if (!chipsBox || !spotInput) return;
+            const withSpots = (subs || []).filter(s => s.parking_spot);
+            if (withSpots.length === 0) {
+                chipsBox.innerHTML = '';
+                return;
+            }
+            if (!spotInput.value.trim()) {
+                spotInput.value = withSpots[0].parking_spot;
+            }
+            chipsBox.innerHTML = withSpots.map(s => {
+                const sp = String(s.parking_spot).trim();
+                const nameLbl = s.firstName || s.lastName || ('#' + s.id);
+                return `<button type="button" class="btn btn-outline" style="width:auto; padding:6px 12px; font-size:13px; border-radius:8px;" onclick="selectShareSpotChip('${sp.replace(/'/g, "\\'")}')">🅿️ חניה ${sp} (${nameLbl})</button>`;
+            }).join('');
+        }
+
+        function selectShareSpotChip(spotVal) {
+            const spotInput = document.getElementById('shParkingSpotNumber');
+            if (!spotInput) return;
+            const cur = spotInput.value.split(',').map(x => x.trim()).filter(Boolean);
+            let next;
+            if (cur.includes(spotVal)) {
+                next = cur.filter(x => x !== spotVal);
+            } else {
+                next = [...cur, spotVal];
+            }
+            if (next.length === 0) next = [spotVal];
+            spotInput.value = next.join(', ');
+            const spotsCountEl = document.getElementById('shSpotsCount');
+            if (spotsCountEl) {
+                const maxAllowed = parseInt(spotsCountEl.max || '1', 10) || 1;
+                spotsCountEl.value = String(Math.min(maxAllowed, next.length));
+            }
+        }
+
         function renderMySubscribers(subs) {
+            renderShareSpotChips(subs);
             const container = document.getElementById('mySubscribersContainer');
             if (!subs || subs.length === 0) {
                 container.innerHTML = `<p style="text-align:center; color:#64748b; padding:14px;">${t('no_subscribers')}</p>`;
@@ -1276,8 +1334,11 @@
 
             container.innerHTML = subs.map(s => `
                 <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 12px; background: #f8fafc;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <strong>👤 ${s.firstName || ''} ${s.lastName || ('#' + s.id)}</strong>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px;">
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <strong>👤 ${s.firstName || ''} ${s.lastName || ('#' + s.id)}</strong>
+                            ${s.parking_spot ? `<span class="badge badge-blue" style="border:1px solid #94a3b8;">🅿️ חניה: ${s.parking_spot}</span>` : ''}
+                        </div>
                         <span class="badge ${s.present ? 'badge-green' : 'badge-blue'}">${s.present ? t('status_in_parking') : t('status_out_parking')}</span>
                     </div>
                     <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:6px; margin-bottom:12px;">
@@ -1329,9 +1390,10 @@
             };
             list.innerHTML = bookings.map(b => {
                 const isBorrower = String(b.to_apartment) === String(currentTenant.apartment_number);
+                const spotBadge = b.parking_spot_number ? ` <span class="badge badge-green">🅿️ חניה: ${b.parking_spot_number}</span>` : '';
                 const desc = isBorrower
-                    ? `שאלת חניה מדירה <strong>${b.from_apartment}</strong>`
-                    : `השאלת חניה לדירה <strong>${b.to_apartment}</strong>`;
+                    ? `שאלת חניה מדירה <strong>${b.from_apartment}</strong>${spotBadge}`
+                    : `השאלת חניה לדירה <strong>${b.to_apartment}</strong>${spotBadge}`;
                 return `
                     <div class="slot-item">
                         <div>
@@ -1355,11 +1417,15 @@
                 return;
             }
 
-            container.innerHTML = openSlots.map(s => `
+            container.innerHTML = openSlots.map(s => {
+                const ownerExtra = (s.owner_name && !String(s.owner_name).startsWith('דירה')) ? ` (${s.owner_name})` : '';
+                const spotBadge = s.parking_spot_number ? `<span class="badge badge-green" style="border:1px solid #86efac;">🅿️ מספר חניה: ${s.parking_spot_number}</span>` : '';
+                return `
                 <div class="slot-item ${s.is_for_me_specifically ? 'special-for-me' : ''}">
                     <div>
                         <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                            <strong>🏠 חניה מדירה ${s.owner_apartment}</strong>
+                            <strong>🏠 חניה מדירה ${s.owner_apartment}${ownerExtra}</strong>
+                            ${spotBadge}
                             ${s.is_for_me_specifically
                                 ? '<span class="badge badge-green">🎁 פונה במיוחד עבורך!</span>'
                                 : '<span class="badge badge-purple">🌐 פול כללי</span>'}
@@ -1376,7 +1442,7 @@
                         קח חניה
                     </button>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         async function claimSpot(shareId, bookingDate) {
@@ -1407,6 +1473,7 @@
         async function handleCreateShare(e) {
             e.preventDefault();
             const spots_offered = parseInt(document.getElementById('shSpotsCount').value, 10) || 1;
+            const parking_spot_number = (document.getElementById('shParkingSpotNumber')?.value || '').trim();
             const share_target_type = document.getElementById('shTargetType').value;
             const target_apartment = document.getElementById('shTargetApt').value.trim();
             const schedule_type = document.getElementById('shScheduleType').value;
@@ -1423,6 +1490,7 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     spots_offered,
+                    parking_spot_number,
                     share_target_type,
                     target_apartment,
                     schedule_type,
@@ -1458,11 +1526,12 @@
                 const targetDesc = (sh.share_target_type === 'APT')
                     ? `<span class="badge badge-green">לדירה ${sh.target_apartment} בלבד</span>`
                     : `<span class="badge badge-purple">לפול הכללי</span>`;
+                const spotPart = sh.parking_spot_number ? `<span class="badge badge-blue">🅿️ חניה: ${sh.parking_spot_number}</span> | ` : '';
 
                 return `
                     <div class="slot-item">
                         <div>
-                            <div><strong>${sh.spots_offered} חניה/ות</strong> | ${targetDesc}</div>
+                            <div>${spotPart}<strong>${sh.spots_offered} חניה/ות</strong> | ${targetDesc}</div>
                             <div style="font-size:13px; color:#475569; margin-top:4px;">${schedDesc}</div>
                             <div style="font-size:13px; color:#64748b;">🕒 שעות: <strong>${formatHoursDisplay(sh.start_time, sh.end_time)}</strong></div>
                         </div>
@@ -1707,13 +1776,34 @@
 
     <!-- פוטר משפטי קבוע -->
     <footer class="legal-footer" role="contentinfo">
-        <div>שיידט את בכמן ישראל בע"מ © כל הזכויות שמורות</div>
+        <div style="font-weight: 700;">© 2026 HINT LTD — כל הזכויות שמורות | גרסה 1.0.4</div>
+        <div style="font-size: 12px; margin-top: 2px;">שיידט את בכמן ישראל בע"מ</div>
         <div style="margin-top: 6px;">
             <a role="button" tabindex="0" onclick="openLegalModal('privacyModal')">🔒 הצהרת פרטיות ותנאי שימוש</a> |
             <a role="button" tabindex="0" onclick="openLegalModal('a11yStatementModal')">♿ הצהרת נגישות</a> |
             <a role="button" tabindex="0" onclick="toggleA11yPanel()">⚙️ כלי נגישות</a>
         </div>
     </footer>
+
+    <!-- מודאל הגדרות, שפה וניווט Waze -->
+    <div class="legal-modal" id="portalSettingsModal" role="dialog" aria-modal="true" aria-label="הגדרות">
+        <div class="legal-modal-box" style="max-width: 440px;">
+            <h2>⚙️ הגדרות וניווט</h2>
+            <div class="input-group" style="margin-top: 12px;">
+                <label>🌐 בחירת שפה / Language:</label>
+                <select id="langSelector" onchange="setPortalLanguage(this.value)" aria-label="בחירת שפה / Language">
+                    <option value="he">🇮🇱 עברית</option>
+                    <option value="en">🇬🇧 English</option>
+                    <option value="ru">🇷🇺 Русский</option>
+                    <option value="ar">🇸🇦 العربية</option>
+                </select>
+            </div>
+            <button type="button" class="btn btn-outline" style="margin-bottom: 12px;" onclick="openPortalWaze()">
+                🧭 פתח ניווט ב-Waze לחניון הבניין
+            </button>
+            <button type="button" class="btn btn-primary" onclick="closeLegalModal('portalSettingsModal')">סגור</button>
+        </div>
+    </div>
 
     <!-- כפתור נגישות צף (סמל כיסא גלגלים) -->
     <button type="button" class="a11y-fab" id="a11yFabBtn" onclick="toggleA11yPanel()" aria-label="פתח תפריט נגישות" title="נגישות האתר">
