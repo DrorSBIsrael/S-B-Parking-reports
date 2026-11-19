@@ -340,6 +340,12 @@
                             <input type="text" id="tApartment" placeholder="לדוגמה: 201" required>
                         </div>
                         <div class="form-group">
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:#fff1f2; border:1px solid #fecdd3; padding:10px 12px; border-radius:8px; color:#9f1239; margin-bottom:0;">
+                                <input type="checkbox" id="tIsZeroSpot" style="width:18px; height:18px; cursor:pointer;">
+                                <span>🚫 דירה ללא חניה קבועה (0 חניות)</span>
+                            </label>
+                        </div>
+                        <div class="form-group">
                             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;">
                                 ✅ הוסף דייר לבניין
                             </button>
@@ -608,8 +614,14 @@
                 <label>מספר דירה</label>
                 <input type="text" id="editApartment">
             </div>
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:#fff1f2; border:1px solid #fecdd3; padding:10px 12px; border-radius:8px; color:#9f1239;">
+                    <input type="checkbox" id="editIsZeroSpot" style="width:18px; height:18px; cursor:pointer;">
+                    <span>🚫 דירה ללא חניה קבועה (0 חניות — חסומה בבקר עד לקבלת חניה משכן)</span>
+                </label>
+            </div>
             <div style="background: #f0f4ff; border: 1px solid #c7d2fe; padding: 10px 12px; border-radius: 8px; margin-bottom: 18px; font-size: 13px; color: #3730a3;">
-                💡 <strong>כמות החניות לדירה</strong> נמשכת אוטומטית מבקר החניון (שיידט את בכמן) לפי מספר הדירה.
+                💡 <strong>כמות החניות לדירה</strong> נמשכת אוטומטית מבקר החניון (שיידט את בכמן) לפי מספר הדירה. אם מסומן "דירה ללא חניה קבועה", המערכת שמה לחוזה חסימה (2) בבקר ופותחת אותה אוטומטית רק בזמן השאלת חניה משכן.
             </div>
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
                 <button class="btn btn-outline" onclick="closeEditModal()">ביטול</button>
@@ -840,13 +852,17 @@
                 const phoneCellHtml = phoneDisp
                     ? `<span style="direction: ltr; display: inline-block;">${phoneDisp}</span>`
                     : `<span style="color:#94a3b8; font-style:italic; font-size:12.5px;">טרם הוזן טלפון</span>`;
+                const quotaVal = (t.base_max_counter !== undefined && t.base_max_counter !== null) ? intOrZero(t.base_max_counter) : 1;
+                const quotaHtml = (quotaVal === 0)
+                    ? `<span class="badge badge-red" title="דירה ללא חניה קבועה (חסומה בבקר status=2 אלא בזמן השאלת חניה משכן)">🚫 0 חניות (ללא חניה)</span>`
+                    : `<strong>${quotaVal} חניות</strong>`;
                 return `
                     <tr>
                         <td><span class="badge badge-blue">דירה ${t.apartment_number}</span></td>
                         <td style="font-weight: 600;">${t.full_name} ${starBadge}</td>
                         <td style="text-align: right;">${phoneCellHtml}</td>
                         <td>
-                            <strong>${t.base_max_counter ?? 1} חניות</strong>${presText}
+                            ${quotaHtml}${presText}
                             <button class="btn btn-outline" style="padding: 3px 8px; font-size: 11px; margin-right: 6px;" title="משוך כמות חניות מעודכנת מבקר החניון" onclick="refreshSingleTenantQuota(${t.id}, this)">
                                 🔄 בדוק מכסה מול המערכת
                             </button>
@@ -862,12 +878,18 @@
             }).join('');
         }
 
+        function intOrZero(v) {
+            const n = parseInt(v, 10);
+            return isNaN(n) ? 0 : n;
+        }
+
         async function handleCreateTenant(e) {
             e.preventDefault();
             if (_mgrActionBusy) return;
             const full_name = document.getElementById('tFullName').value.trim();
             const phone_number = document.getElementById('tPhone').value.trim();
             const apartment_number = document.getElementById('tApartment').value.trim();
+            const is_zero_spot = !!(document.getElementById('tIsZeroSpot') && document.getElementById('tIsZeroSpot').checked);
 
             const submitBtn = document.querySelector('#createTenantForm button[type="submit"]');
             const origBtnHtml = submitBtn ? submitBtn.innerHTML : '';
@@ -880,7 +902,7 @@
                 const res = await fetch('/api/tenant-manager/tenants', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ full_name, phone_number, apartment_number })
+                    body: JSON.stringify({ full_name, phone_number, apartment_number, is_zero_spot })
                 });
                 const data = await res.json();
                 if (data.success) {
@@ -906,6 +928,10 @@
             document.getElementById('editFullName').value = t.full_name || '';
             document.getElementById('editPhone').value = formatPhoneDisplay(t.phone_number);
             document.getElementById('editApartment').value = t.apartment_number || '';
+            const zeroChk = document.getElementById('editIsZeroSpot');
+            if (zeroChk) {
+                zeroChk.checked = (intOrZero(t.base_max_counter ?? 1) === 0);
+            }
             document.getElementById('editTenantModal').style.display = 'flex';
         }
 
@@ -976,10 +1002,12 @@
             _mgrActionBusy = true;
             try {
                 const id = document.getElementById('editTenantId').value;
+                const zeroChk = document.getElementById('editIsZeroSpot');
                 const payload = {
                     full_name: document.getElementById('editFullName').value.trim(),
                     phone_number: document.getElementById('editPhone').value.trim(),
-                    apartment_number: document.getElementById('editApartment').value.trim()
+                    apartment_number: document.getElementById('editApartment').value.trim(),
+                    is_zero_spot: zeroChk ? !!zeroChk.checked : false
                 };
                 const res = await fetch(`/api/tenant-manager/tenants/${id}`, {
                     method: 'PUT',

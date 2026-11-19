@@ -412,6 +412,17 @@
 
             <!-- לשונית ג': שחרור חניה של הדירה שלי -->
             <div id="ptab-share" style="display: none;">
+                <div id="zeroSpotShareNotice" class="card" style="display: none; background: #fff1f2; border: 1.5px solid #fecdd3;">
+                    <div style="font-size: 15px; font-weight: 800; color: #9f1239; margin-bottom: 6px;">
+                        🚫 לדירתך לא משויכת חניה קבועה לשחרור (0 חניות)
+                    </div>
+                    <p style="font-size: 13px; color: #881337; margin-bottom: 12px; line-height: 1.5;">
+                        באפשרותך לבקש חניה משכני הבניין בלשונית "בקשת חניה" או לתפוס חניה פנויה בלשונית "חניות פנויות".
+                    </p>
+                    <button type="button" class="btn btn-whatsapp" onclick="switchPortalTab('request', document.getElementById('i18n_tab_request'))">
+                        🙋‍♂️ מעבר לבקשת חניה משכנים
+                    </button>
+                </div>
                 <div class="card">
                     <div id="fulfillRequestBanner" style="display: none; background: #f0fdf4; border: 2px solid #16a34a; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
                         <div id="fulfillRequestBannerText" style="font-size: 14px; font-weight: 800; color: #166534; line-height: 1.45;"></div>
@@ -1517,6 +1528,12 @@
             }
             if (spotsHint) {
                 spotsHint.textContent = `(מקסימום לדירתך: ${aptMaxSpots})`;
+            }
+
+            const isZeroApt = (parseInt(data.tenant.base_max_counter ?? 1, 10) === 0) && (!data.pooling || parseInt(data.pooling.maxCounter ?? 0, 10) === 0);
+            const zeroNoticeEl = document.getElementById('zeroSpotShareNotice');
+            if (zeroNoticeEl) {
+                zeroNoticeEl.style.display = isZeroApt ? 'block' : 'none';
             }
 
             if (data.pooling && data.pooling.success) {
