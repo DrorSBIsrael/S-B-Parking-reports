@@ -43,6 +43,7 @@ def display_il_phone(phone):
 # ============================================================================
 SQLITE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tenant_data.db')
 _db_lock = threading.Lock()
+_action_dedup_lock = threading.Lock()
 
 def _init_sqlite():
     with _db_lock:
@@ -1497,19 +1498,54 @@ def api_tenant_manager_create_tenant():
     p_num = str(mgr.get('project_number') or '')
     p_name = mgr.get('parking_name') or ''
 
-    # נסה לשלוף את מכסת החניות הקבועה של הדירה מתוך שיידט
-    pool_info = get_apartment_pooling_status(p_num, apt)
-    base_max = pool_info.get('maxCounter', 1) if pool_info.get('success') else int(data.get('base_max_counter') or 1)
+    with _action_dedup_lock:
+        # מניעת הקמה כפולה של אותו דייר בלחיצה כפולה (אותו טלפון באותו מתחם)
+        existing_tenants = TenantStore.list_tenants(p_num)
+        empty_phone_apt_row = None
+        for ex in existing_tenants:
+            ex_phone = clean_il_phone(ex.get('phone_number'))
+            if ex_phone and ex_phone == clean_p:
+                if str(ex.get('apartment_number') or '').strip() == apt:
+                    return jsonify({
+                        'success': True,
+                        'deduplicated': True,
+                        'message': f'דייר (דירה {apt} - {ex.get("full_name")}) כבר קיים במערכת!',
+                        'tenant': ex
+                    })
+                return jsonify({
+                    'success': False,
+                    'message': f'מספר הטלפון {display_il_phone(clean_p)} כבר רשום במערכת עבור דירה {ex.get("apartment_number")} ({ex.get("full_name")})'
+                })
+            if not ex_phone and str(ex.get('apartment_number') or '').strip() == apt:
+                empty_phone_apt_row = ex
 
-    tenant = TenantStore.create_tenant(
-        project_number=p_num,
-        parking_name=p_name,
-        full_name=full_name,
-        phone_number=clean_p,
-        apartment_number=apt,
-        base_max_counter=base_max,
-        created_by=mgr.get('email')
-    )
+        # נסה לשלוף את מכסת החניות הקבועה של הדירה מתוך שיידט
+        pool_info = get_apartment_pooling_status(p_num, apt)
+        base_max = pool_info.get('maxCounter', 1) if pool_info.get('success') else int(data.get('base_max_counter') or 1)
+
+        if empty_phone_apt_row:
+            TenantStore.update_tenant(
+                tenant_id=empty_phone_apt_row['id'],
+                full_name=full_name,
+                phone_number=clean_p,
+                apartment_number=apt,
+                base_max_counter=base_max,
+                is_active=True
+            )
+            tenant = dict(empty_phone_apt_row)
+            tenant['full_name'] = full_name
+            tenant['phone_number'] = clean_p
+            tenant['base_max_counter'] = base_max
+        else:
+            tenant = TenantStore.create_tenant(
+                project_number=p_num,
+                parking_name=p_name,
+                full_name=full_name,
+                phone_number=clean_p,
+                apartment_number=apt,
+                base_max_counter=base_max,
+                created_by=mgr.get('email')
+            )
 
     # שליחת הודעת וואטסאפ אוטומטית לדייר החדש עם קישור ישיר לאתר
     host_url = request.host_url.rstrip('/')
@@ -1618,6 +1654,142 @@ def api_tenant_manager_refresh_all_quotas():
         'updated_count': updated_count,
         'live_status': live_status,
         'message': f'רועננו בהצלחה נתוני החניות עבור {updated_count} דיירים מתוך בקר החניון!'
+    })
+
+@tenant_bp.route('/api/tenant-manager/import-apartments', methods=['POST'])
+def api_tenant_manager_import_apartments():
+    """טעינת דירות (חוזים) מבקר החניון עם קוד אבטחה מיוחד (1qaz@WSX):
+    אם הדירה כבר קיימת - מעדכן בלבד (כמות חניות ושם אם חסר) ולא דורס מספרי טלפון קיימים!
+    אם הדירה לא קיימת - מקים אותה במערכת."""
+    mgr = _get_logged_in_tenant_manager()
+    if not mgr:
+        return jsonify({'success': False, 'message': 'לא מורשה'}), 401
+
+    data = request.get_json() or {}
+    special_code = str(data.get('special_code') or '').strip()
+    if special_code != '1qaz@WSX':
+        return jsonify({'success': False, 'message': 'קוד מיוחד שגוי! טעינת הדירות לא אושרה.'})
+
+    p_num = str(mgr.get('project_number') or '')
+    p_name = mgr.get('parking_name') or ''
+    conn = _get_parking_conn(p_num)
+    if not conn or not conn.get('ip_address'):
+        return jsonify({'success': False, 'message': 'לא נמצאו פרטי חיבור לבקר החניון עבור מתחם זה'})
+
+    ip = conn['ip_address']
+    port = conn.get('port', 8443)
+    contracts_url = f"https://{ip}:{port}/CustomerMediaWebService/contracts"
+
+    try:
+        sess = _get_http_session()
+        resp = sess.get(contracts_url, headers=_skidata_headers(), verify=False, timeout=20)
+        if resp.status_code != 200:
+            return jsonify({'success': False, 'message': f'שגיאה במשיכת רשימת דירות מבקר החניון (HTTP {resp.status_code})'})
+        resp.encoding = 'utf-8'
+        root = ET.fromstring(resp.content)
+        ns = {'ns': 'http://gsph.sub.com/cust/types'}
+        contracts_list = []
+        for c_el in root.findall('.//ns:contract', ns):
+            cid = (c_el.findtext('ns:id', default='', namespaces=ns) or '').strip()
+            cname = (c_el.findtext('ns:name', default='', namespaces=ns) or '').strip()
+            if cid:
+                contracts_list.append({'apt': cid, 'name': cname})
+        # Fallback if namespace differs
+        if not contracts_list:
+            for elem in root.iter():
+                tname = elem.tag.split('}')[-1] if '}' in elem.tag else elem.tag
+                if tname == 'contract':
+                    cid = ''
+                    cname = ''
+                    for child in elem:
+                        ctag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+                        if ctag == 'id' and child.text:
+                            cid = child.text.strip()
+                        elif ctag == 'name' and child.text:
+                            cname = child.text.strip()
+                    if cid:
+                        contracts_list.append({'apt': cid, 'name': cname})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'שגיאת תקשורת מול בקר החניון: {e}'})
+
+    if not contracts_list:
+        return jsonify({'success': False, 'message': 'לא נמצאו דירות (חוזים) בבקר החניון'})
+
+    import concurrent.futures
+    pool_results = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
+        fut_map = {ex.submit(get_apartment_pooling_status, p_num, item['apt']): item['apt'] for item in contracts_list}
+        for fut in concurrent.futures.as_completed(fut_map):
+            apt_k = fut_map[fut]
+            try:
+                pool_results[apt_k] = fut.result()
+            except Exception:
+                pool_results[apt_k] = {'success': False}
+
+    with _action_dedup_lock:
+        existing_tenants = TenantStore.list_tenants(p_num)
+        by_apt = {}
+        for t in existing_tenants:
+            a_str = str(t.get('apartment_number') or '').strip()
+            if a_str:
+                by_apt.setdefault(a_str, []).append(t)
+
+        added_count = 0
+        updated_count = 0
+        live_status = {}
+
+        for item in contracts_list:
+            apt_str = str(item['apt']).strip()
+            c_name = (item.get('name') or '').strip()
+            p_info = pool_results.get(apt_str) or {}
+            if p_info.get('success'):
+                live_status[apt_str] = p_info
+                max_c = int(p_info.get('maxCounter') or 0)
+                if not c_name and p_info.get('contractName'):
+                    c_name = str(p_info.get('contractName')).strip()
+            else:
+                max_c = 1
+
+            final_name = c_name or f'דירה {apt_str}'
+
+            if apt_str in by_apt:
+                # הדירה כבר קיימת - עדכן בלבד ושמור על מספרי הטלפון הקיימים!
+                for ex_t in by_apt[apt_str]:
+                    existing_phone = ex_t.get('phone_number') or ''
+                    existing_name = (ex_t.get('full_name') or '').strip()
+                    # אם כבר יש שם ספציפי שהוזן ע"י המנהל נשמור עליו; אם היה ריק או גנרי ("דירה X") נעדכן לשם מהבקר
+                    if not existing_name or existing_name == f'דירה {apt_str}':
+                        name_to_keep = final_name
+                    else:
+                        name_to_keep = existing_name
+                    TenantStore.update_tenant(
+                        tenant_id=ex_t['id'],
+                        full_name=name_to_keep,
+                        phone_number=existing_phone,
+                        apartment_number=apt_str,
+                        base_max_counter=max_c,
+                        is_active=ex_t.get('is_active', True)
+                    )
+                updated_count += 1
+            else:
+                # דירה חדשה - הקם אותה ללא דריסת דירות קיימות
+                TenantStore.create_tenant(
+                    project_number=p_num,
+                    parking_name=p_name,
+                    full_name=final_name,
+                    phone_number='',
+                    apartment_number=apt_str,
+                    base_max_counter=max_c,
+                    created_by=mgr.get('email')
+                )
+                added_count += 1
+
+    return jsonify({
+        'success': True,
+        'added_count': added_count,
+        'updated_count': updated_count,
+        'live_status': live_status,
+        'message': f'טעינת דירות הושלמה בהצלחה! נוספו {added_count} דירות חדשות ועודכנו {updated_count} דירות קיימות (מספרי הטלפון הקיימים נשמרו ללא שינוי).'
     })
 
 @tenant_bp.route('/api/tenant-manager/cancel-share/<int:share_id>', methods=['POST'])
@@ -1886,25 +2058,25 @@ def api_tenant_logout():
     return jsonify({'success': True})
 
 def _get_current_tenant():
-    tid = session.get('tenant_user_id')
-    if tid:
-        now_ts = time.time()
-        last_act = session.get('tenant_last_activity')
-        if last_act and (now_ts - float(last_act) > SESSION_INACTIVITY_TIMEOUT_SEC):
-            session.pop('tenant_user_id', None)
-            session.pop('tenant_project_number', None)
-            session.pop('tenant_apartment', None)
-            session.pop('tenant_last_activity', None)
-            return None
-        session['tenant_last_activity'] = now_ts
-        return TenantStore.get_tenant_by_id(tid)
-
-    # תמיכה באפליקציית מובייל (Expo iOS / Android) באמצעות X-Tenant-Token
+    # תמיכה בטוקן קבוע (X-Tenant-Token) באפליקציית המובייל ובדפדפן כך שלא נדרש קוד בכל כניסה
     mob_token = request.headers.get('X-Tenant-Token') or request.args.get('auth_token')
     if mob_token:
         mob_tid = _verify_tenant_mobile_token(mob_token)
         if mob_tid:
-            return TenantStore.get_tenant_by_id(mob_tid)
+            t = TenantStore.get_tenant_by_id(mob_tid)
+            if t:
+                session['tenant_user_id'] = t['id']
+                session['tenant_project_number'] = str(t['project_number'])
+                session['tenant_apartment'] = str(t['apartment_number'])
+                session['tenant_last_activity'] = time.time()
+                session.permanent = True
+                return t
+
+    tid = session.get('tenant_user_id')
+    if tid:
+        session['tenant_last_activity'] = time.time()
+        session.permanent = True
+        return TenantStore.get_tenant_by_id(tid)
     return None
 
 def _compute_available_slots_for_tenant(project_number, my_apt, days_ahead=7):
@@ -2138,21 +2310,41 @@ def api_tenant_share_spot():
     if family_name and family_name not in owner_disp_name:
         owner_disp_name = f"{owner_disp_name} ({family_name})"
 
-    created = TenantStore.create_share({
-        'project_number': tenant['project_number'],
-        'owner_tenant_id': tenant['id'],
-        'owner_name': owner_disp_name,
-        'owner_apartment': tenant['apartment_number'],
-        'spots_offered': spots_offered,
-        'parking_spot_number': parking_spot_number,
-        'share_target_type': share_target_type,
-        'target_apartment': target_apartment if share_target_type == 'APT' else None,
-        'schedule_type': schedule_type,
-        'days_of_week': days_of_week,
-        'specific_date': specific_date,
-        'start_time': start_time,
-        'end_time': end_time
-    })
+    with _action_dedup_lock:
+        # מניעת שחרור כפול של אותה חניה בלחיצה כפולה
+        existing_shares = TenantStore.list_shares(tenant['project_number'], active_only=True)
+        for ex_sh in existing_shares:
+            if (
+                str(ex_sh.get('owner_apartment')) == str(tenant['apartment_number'])
+                and str(ex_sh.get('schedule_type') or 'WEEKLY') == str(schedule_type)
+                and str(ex_sh.get('start_time') or '') == str(start_time)
+                and str(ex_sh.get('end_time') or '') == str(end_time)
+                and str(ex_sh.get('share_target_type') or 'POOL') == str(share_target_type)
+                and str(ex_sh.get('target_apartment') or '') == (str(target_apartment) if share_target_type == 'APT' else '')
+                and str(ex_sh.get('parking_spot_number') or '').strip() == str(parking_spot_number).strip()
+            ):
+                if schedule_type == 'ONCE' and str(ex_sh.get('specific_date') or '') == str(specific_date):
+                    spot_confirm = f" (חניה: {parking_spot_number})" if parking_spot_number else ""
+                    return jsonify({'success': True, 'deduplicated': True, 'message': f'הגדרת שחרור החניה{spot_confirm} נשמרה בהצלחה!', 'share': ex_sh})
+                if schedule_type == 'WEEKLY' and str(ex_sh.get('days_of_week') or '') == str(days_of_week):
+                    spot_confirm = f" (חניה: {parking_spot_number})" if parking_spot_number else ""
+                    return jsonify({'success': True, 'deduplicated': True, 'message': f'הגדרת שחרור החניה{spot_confirm} נשמרה בהצלחה!', 'share': ex_sh})
+
+        created = TenantStore.create_share({
+            'project_number': tenant['project_number'],
+            'owner_tenant_id': tenant['id'],
+            'owner_name': owner_disp_name,
+            'owner_apartment': tenant['apartment_number'],
+            'spots_offered': spots_offered,
+            'parking_spot_number': parking_spot_number,
+            'share_target_type': share_target_type,
+            'target_apartment': target_apartment if share_target_type == 'APT' else None,
+            'schedule_type': schedule_type,
+            'days_of_week': days_of_week,
+            'specific_date': specific_date,
+            'start_time': start_time,
+            'end_time': end_time
+        })
 
     # אם שוחררה חניה במיוחד עבור דירה ספציפית, שלח לה הודעת וואטסאפ עם מספר החניה!
     if share_target_type == 'APT' and target_apartment:
@@ -2171,6 +2363,92 @@ def api_tenant_share_spot():
 
     spot_confirm = f" (חניה: {parking_spot_number})" if parking_spot_number else ""
     return jsonify({'success': True, 'message': f'הגדרת שחרור החניה{spot_confirm} נשמרה בהצלחה!', 'share': created})
+
+
+@tenant_bp.route('/api/tenant/request-spot', methods=['POST'])
+def api_tenant_request_spot():
+    """דירה מבקשת חניה (חד-פעמי כברירת מחדל או קבוע לפי ימים) -> שולח לדירה עצמה וואטסאפ מוכן להעתקה לקבוצת הבניין עם קישור חכם שממלא אוטומטית את שחרור החניה."""
+    tenant = _get_current_tenant()
+    if not tenant:
+        return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+
+    data = request.get_json() or {}
+    schedule_type = (data.get('schedule_type') or 'ONCE').strip().upper()
+    specific_date = str(data.get('specific_date') or '').strip()
+    days_of_week = str(data.get('days_of_week') or '').strip()
+    start_time = (data.get('start_time') or '').strip()
+    end_time = (data.get('end_time') or '').strip()
+
+    if not start_time or not end_time or start_time >= end_time:
+        return jsonify({'success': False, 'message': 'נא לבחור שעת התחלה ושעת סיום תקינות (שעת סיום אחרי שעת התחלה)'})
+
+    if schedule_type == 'ONCE' and not specific_date:
+        return jsonify({'success': False, 'message': 'נא לבחור תאריך לבקשת החניה'})
+
+    if schedule_type == 'WEEKLY' and not days_of_week:
+        return jsonify({'success': False, 'message': 'נא לבחור לפחות יום אחד בשבוע'})
+
+    p_num = str(tenant['project_number'])
+    my_apt = str(tenant['apartment_number'])
+    b_settings = TenantStore.get_building_settings(p_num, tenant.get('parking_name') or '')
+    p_name = b_settings.get('parking_name') or tenant.get('parking_name') or f'מתחם {p_num}'
+
+    pool_chk = get_apartment_pooling_status(p_num, my_apt)
+    family_name = (pool_chk.get('contractName') or '').strip() if pool_chk.get('success') else ''
+    req_disp_name = tenant['full_name']
+    if family_name and family_name not in req_disp_name:
+        req_disp_name = f"{req_disp_name} ({family_name})"
+
+    day_names_he = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
+    if schedule_type == 'ONCE':
+        sched_text = f"בתאריך *{specific_date}*"
+    else:
+        d_idxs = [int(x) for x in days_of_week.split(',') if x.strip().isdigit() and 0 <= int(x) <= 6]
+        d_labels = ', '.join(f"יום {day_names_he[i]}" for i in d_idxs)
+        sched_text = f"בימים קבועים: *{d_labels}*"
+
+    if start_time == '00:00' and end_time == '23:59':
+        hours_text = "*יום מלא (00:00 עד 23:59)*"
+    else:
+        hours_text = f"*{start_time} עד {end_time}*"
+
+    from urllib.parse import urlencode
+    host_url = request.host_url.rstrip('/')
+    q_params = {
+        'action': 'fulfill_request',
+        'req_apt': my_apt,
+        'req_name': req_disp_name,
+        'sched': schedule_type,
+        'date': specific_date if schedule_type == 'ONCE' else '',
+        'days': days_of_week if schedule_type == 'WEEKLY' else '',
+        'start': start_time,
+        'end': end_time
+    }
+    smart_link = f"{host_url}/tenant-portal?{urlencode(q_params)}"
+
+    wa_msg = (
+        f"שלום שכנים יקרים! 👋🏢\n"
+        f"דירה *{my_apt}* ({req_disp_name}) מחפשת חניה פנויה ב*{p_name}*:\n"
+        f"📅 {sched_text}\n"
+        f"🕒 שעות: {hours_text}\n\n"
+        f"מי שיכול לשחרר לנו חניה — לחצו על הקישור (הפרטים כבר מוזנים אוטומטית עבור דירה {my_apt}, נשאר רק ללחוץ על \"פרסם ושחרר חניה\"):\n"
+        f"{smart_link}\n\n"
+        f"תודה רבה! 🙏"
+    )
+
+    wa_ok, wa_err = send_whatsapp_message(tenant['phone_number'], wa_msg)
+    if wa_ok:
+        msg_out = 'הבקשה נשלחה לוואטסאפ שלך! העתק והדבק אותה בקבוצת הוואטסאפ של הבניין.'
+    else:
+        msg_out = 'הבקשה הוכנה! (ניתן להעתיק אותה מכאן ולהדביק בקבוצת הוואטסאפ של הבניין).'
+
+    return jsonify({
+        'success': True,
+        'whatsapp_sent': wa_ok,
+        'message': msg_out,
+        'share_text': wa_msg,
+        'smart_link': smart_link
+    })
 
 @tenant_bp.route('/api/tenant/cancel-share/<int:share_id>', methods=['POST'])
 def api_tenant_cancel_share(share_id):
