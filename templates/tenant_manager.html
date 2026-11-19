@@ -352,6 +352,9 @@
                 <div class="section-title">
                     <span>📋 רשימת דיירי הבניין (<span id="tenantsCount">0</span>)</span>
                     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="openImportApartmentsModal()" style="font-size: 13px; padding: 8px 14px; background: #4f46e5;">
+                            📥 טעינת דירות מהחניון
+                        </button>
                         <button class="btn btn-outline" onclick="refreshAllTenantsQuotas(this)" style="font-size: 13px; padding: 8px 14px;">
                             🔄 רענון כללי (בדוק מכסות לכל הדירות מול המערכת)
                         </button>
@@ -615,6 +618,26 @@
         </div>
     </div>
 
+    <!-- Modal טעינת דירות מבקר החניון (מוגן בקוד מיוחד) -->
+    <div id="importApartmentsModal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 12px;">📥 טעינת דירות מבקר החניון</h3>
+            <p style="font-size: 13.5px; color: #495057; margin-bottom: 14px; line-height: 1.5;">
+                פעולה זו מושכת את כל הדירות והמכסות מבקר החניון.<br>
+                <strong>שים לב:</strong> במידה וכבר קיימות דירות במערכת, הפעולה <strong>רק מעדכנת</strong> אותן ו<strong>אינה דורסת מספרי טלפון</strong> קיימים!
+            </p>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label>הזן קוד מיוחד לאישור הפעולה *</label>
+                <input type="password" id="importSpecialCodeInput" placeholder="הזן סיסמה מיוחדת..." autocomplete="off"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault(); confirmImportApartments();}">
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-outline" onclick="closeImportApartmentsModal()">ביטול</button>
+                <button class="btn btn-primary" id="confirmImportBtn" onclick="confirmImportApartments()">📥 בצע טעינת ועדכון דירות</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const DAY_NAMES_HE = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
         let allTenants = [];
@@ -717,7 +740,46 @@
             }
         }
 
+        let _mgrActionBusy = false;
+
+        function applyManagerInitData(data) {
+            if (!data || !data.manager) return;
+            currentProjectNumber = data.manager.project_number;
+            document.getElementById('buildingTitle').textContent = `🏢 ${data.manager.parking_name} (#${currentProjectNumber})`;
+            document.getElementById('portalUrlDisplay').textContent = `${window.location.origin}/tenant-portal`;
+
+            if (data.settings) {
+                document.getElementById('setParkingName').value = data.settings.parking_name || data.manager.parking_name || '';
+                document.getElementById('setMaxDay').value = data.settings.max_bookings_per_day ?? 5;
+                document.getElementById('setMaxMonth').value = data.settings.max_bookings_per_month ?? 30;
+                document.getElementById('setCheckInterval').value = data.settings.check_interval_minutes ?? 30;
+                document.getElementById('setReminderMins').value = data.settings.reminder_minutes_before ?? 30;
+                document.getElementById('setParkingAddress').value = data.settings.parking_address || '';
+                document.getElementById('setParkingLat').value = (data.settings.parking_lat !== null && data.settings.parking_lat !== undefined) ? data.settings.parking_lat : '';
+                document.getElementById('setParkingLng').value = (data.settings.parking_lng !== null && data.settings.parking_lng !== undefined) ? data.settings.parking_lng : '';
+                currentLogoData = data.settings.logo_data || '';
+                applyManagerLogoPreview(currentLogoData);
+            }
+
+            allTenants = data.tenants || [];
+            allShares = data.shares || [];
+            allActiveTransfers = data.active_transfers || [];
+            renderTenantsTable();
+            renderManagerSharesAndTransfers();
+        }
+
         async function initManagerPage() {
+            // הצגה מיידית מהזיכרון המקומי של המכשיר בזמן שהשרת מרענן ברקע
+            try {
+                const cachedRaw = localStorage.getItem('mgr_cached_init_data');
+                if (cachedRaw && allTenants.length === 0) {
+                    const cachedData = JSON.parse(cachedRaw);
+                    if (cachedData && cachedData.success) {
+                        applyManagerInitData(cachedData);
+                    }
+                }
+            } catch (e) {}
+
             try {
                 const res = await fetch('/api/tenant-manager/init');
                 const data = await res.json();
@@ -725,28 +787,11 @@
                     showAlert(data.message || 'שגיאה בטעינת נתונים', 'danger');
                     return;
                 }
-                currentProjectNumber = data.manager.project_number;
-                document.getElementById('buildingTitle').textContent = `🏢 ${data.manager.parking_name} (#${currentProjectNumber})`;
-                document.getElementById('portalUrlDisplay').textContent = `${window.location.origin}/tenant-portal`;
+                try {
+                    localStorage.setItem('mgr_cached_init_data', JSON.stringify(data));
+                } catch (e) {}
 
-                if (data.settings) {
-                    document.getElementById('setParkingName').value = data.settings.parking_name || data.manager.parking_name || '';
-                    document.getElementById('setMaxDay').value = data.settings.max_bookings_per_day ?? 5;
-                    document.getElementById('setMaxMonth').value = data.settings.max_bookings_per_month ?? 30;
-                    document.getElementById('setCheckInterval').value = data.settings.check_interval_minutes ?? 30;
-                    document.getElementById('setReminderMins').value = data.settings.reminder_minutes_before ?? 30;
-                    document.getElementById('setParkingAddress').value = data.settings.parking_address || '';
-                    document.getElementById('setParkingLat').value = (data.settings.parking_lat !== null && data.settings.parking_lat !== undefined) ? data.settings.parking_lat : '';
-                    document.getElementById('setParkingLng').value = (data.settings.parking_lng !== null && data.settings.parking_lng !== undefined) ? data.settings.parking_lng : '';
-                    currentLogoData = data.settings.logo_data || '';
-                    applyManagerLogoPreview(currentLogoData);
-                }
-
-                allTenants = data.tenants || [];
-                allShares = data.shares || [];
-                allActiveTransfers = data.active_transfers || [];
-                renderTenantsTable();
-                renderManagerSharesAndTransfers();
+                applyManagerInitData(data);
 
                 // בטעינה ראשונית של מסך המנהל - משוך אוטומטית ברקע את מכסות החניה העדכניות מבקר החניון
                 if (!window._initialQuotaSynced && allTenants.length > 0) {
@@ -791,11 +836,15 @@
                 const usedHoursTot = t.given_used_hours_total ?? 0;
                 const usedHoursMonth = t.given_used_hours_month ?? 0;
                 const starBadge = `<span class="badge badge-yellow" style="border:1px solid #eab308; margin-right:6px;" title="שעות חניה שתרם הדייר ונוצלו בפועל ע״י שכנים (החודש: ${usedHoursMonth} שעות)">⭐ ${usedHoursTot} שעות שתרם</span>`;
+                const phoneDisp = formatPhoneDisplay(t.phone_number);
+                const phoneCellHtml = phoneDisp
+                    ? `<span style="direction: ltr; display: inline-block;">${phoneDisp}</span>`
+                    : `<span style="color:#94a3b8; font-style:italic; font-size:12.5px;">טרם הוזן טלפון</span>`;
                 return `
                     <tr>
                         <td><span class="badge badge-blue">דירה ${t.apartment_number}</span></td>
                         <td style="font-weight: 600;">${t.full_name} ${starBadge}</td>
-                        <td style="direction: ltr; text-align: right;">${formatPhoneDisplay(t.phone_number)}</td>
+                        <td style="text-align: right;">${phoneCellHtml}</td>
                         <td>
                             <strong>${t.base_max_counter ?? 1} חניות</strong>${presText}
                             <button class="btn btn-outline" style="padding: 3px 8px; font-size: 11px; margin-right: 6px;" title="משוך כמות חניות מעודכנת מבקר החניון" onclick="refreshSingleTenantQuota(${t.id}, this)">
@@ -815,10 +864,18 @@
 
         async function handleCreateTenant(e) {
             e.preventDefault();
+            if (_mgrActionBusy) return;
             const full_name = document.getElementById('tFullName').value.trim();
             const phone_number = document.getElementById('tPhone').value.trim();
             const apartment_number = document.getElementById('tApartment').value.trim();
 
+            const submitBtn = document.querySelector('#createTenantForm button[type="submit"]');
+            const origBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+            _mgrActionBusy = true;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '⏳ מקים דייר ושולח וואטסאפ...';
+            }
             try {
                 const res = await fetch('/api/tenant-manager/tenants', {
                     method: 'POST',
@@ -829,12 +886,18 @@
                 if (data.success) {
                     showAlert(data.message, 'success');
                     document.getElementById('createTenantForm').reset();
-                    initManagerPage();
+                    await initManagerPage();
                 } else {
                     showAlert(data.message || 'שגיאה בהוספת דייר', 'danger');
                 }
             } catch (err) {
                 showAlert('שגיאת תקשורת', 'danger');
+            } finally {
+                _mgrActionBusy = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = origBtnHtml;
+                }
             }
         }
 
@@ -843,32 +906,96 @@
             document.getElementById('editFullName').value = t.full_name || '';
             document.getElementById('editPhone').value = formatPhoneDisplay(t.phone_number);
             document.getElementById('editApartment').value = t.apartment_number || '';
-                        document.getElementById('editTenantModal').style.display = 'flex';
+            document.getElementById('editTenantModal').style.display = 'flex';
         }
 
         function closeEditModal() {
             document.getElementById('editTenantModal').style.display = 'none';
         }
 
+        function openImportApartmentsModal() {
+            document.getElementById('importSpecialCodeInput').value = '';
+            document.getElementById('importApartmentsModal').style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('importSpecialCodeInput').focus();
+            }, 50);
+        }
+
+        function closeImportApartmentsModal() {
+            document.getElementById('importApartmentsModal').style.display = 'none';
+        }
+
+        async function confirmImportApartments() {
+            if (_mgrActionBusy) return;
+            const codeVal = (document.getElementById('importSpecialCodeInput').value || '').trim();
+            if (!codeVal) {
+                showAlert('נא להזין את הקוד המיוחד לאישור טעינת הדירות', 'danger');
+                return;
+            }
+            const btn = document.getElementById('confirmImportBtn');
+            const origHtml = btn ? btn.innerHTML : '';
+            _mgrActionBusy = true;
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '⏳ טוען ומעדכן דירות מהחניון...';
+            }
+            try {
+                const res = await fetch('/api/tenant-manager/import-apartments', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ special_code: codeVal })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    closeImportApartmentsModal();
+                    if (data.live_status) {
+                        Object.entries(data.live_status).forEach(([apt, info]) => {
+                            if (info && info.success) {
+                                liveAptStatus[String(apt)] = { max: info.maxCounter, present: info.presentCounter };
+                            }
+                        });
+                    }
+                    showAlert(data.message, 'success');
+                    await initManagerPage();
+                } else {
+                    showAlert(data.message || 'שגיאה בטעינת הדירות', 'danger');
+                }
+            } catch (e) {
+                showAlert('שגיאת תקשורת מול השרת', 'danger');
+            } finally {
+                _mgrActionBusy = false;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = origHtml;
+                }
+            }
+        }
+
         async function saveEditTenant() {
-            const id = document.getElementById('editTenantId').value;
-            const payload = {
-                full_name: document.getElementById('editFullName').value.trim(),
-                phone_number: document.getElementById('editPhone').value.trim(),
-                apartment_number: document.getElementById('editApartment').value.trim()
-            };
-            const res = await fetch(`/api/tenant-manager/tenants/${id}`, {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            if (data.success) {
-                closeEditModal();
-                showAlert(data.message, 'success');
-                initManagerPage();
-            } else {
-                showAlert(data.message || 'שגיאה בעדכון', 'danger');
+            if (_mgrActionBusy) return;
+            _mgrActionBusy = true;
+            try {
+                const id = document.getElementById('editTenantId').value;
+                const payload = {
+                    full_name: document.getElementById('editFullName').value.trim(),
+                    phone_number: document.getElementById('editPhone').value.trim(),
+                    apartment_number: document.getElementById('editApartment').value.trim()
+                };
+                const res = await fetch(`/api/tenant-manager/tenants/${id}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    closeEditModal();
+                    showAlert(data.message, 'success');
+                    await initManagerPage();
+                } else {
+                    showAlert(data.message || 'שגיאה בעדכון', 'danger');
+                }
+            } finally {
+                _mgrActionBusy = false;
             }
         }
 
@@ -1008,42 +1135,64 @@
         }
 
         async function managerCancelShare(shareId) {
+            if (_mgrActionBusy) return;
             if (!confirm('האם לבטל את שחרור החניה הזה?')) return;
-            const res = await fetch(`/api/tenant-manager/cancel-share/${shareId}`, { method: 'POST' });
-            const data = await res.json();
-            if (data.success) {
-                showAlert(data.message, 'success');
-                initManagerPage();
+            _mgrActionBusy = true;
+            try {
+                const res = await fetch(`/api/tenant-manager/cancel-share/${shareId}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    await initManagerPage();
+                }
+            } finally {
+                _mgrActionBusy = false;
             }
         }
 
         async function managerReleaseTransfer(transferId) {
+            if (_mgrActionBusy) return;
             if (!confirm('האם לסיים את השאלת החניה ולהחזיר את המכסה לדירה המקורית?')) return;
-            const res = await fetch(`/api/tenant-manager/release-transfer/${transferId}`, { method: 'POST' });
-            const data = await res.json();
-            if (data.success) {
-                showAlert(data.message, 'success');
-                initManagerPage();
+            _mgrActionBusy = true;
+            try {
+                const res = await fetch(`/api/tenant-manager/release-transfer/${transferId}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    await initManagerPage();
+                }
+            } finally {
+                _mgrActionBusy = false;
             }
         }
 
         async function sendWhatsAppInvite(id) {
+            if (_mgrActionBusy) return;
+            _mgrActionBusy = true;
             try {
                 const res = await fetch(`/api/tenant-manager/tenants/${id}/send-invite`, { method: 'POST' });
                 const data = await res.json();
                 showAlert(data.message || 'נשלח', data.success ? 'success' : 'danger');
             } catch (e) {
                 showAlert('שגיאת תקשורת בשליחת וואטסאפ', 'danger');
+            } finally {
+                _mgrActionBusy = false;
             }
         }
 
         async function deleteTenant(id) {
+            if (_mgrActionBusy) return;
             if (!confirm('האם למחוק את הדייר מהמערכת?')) return;
-            const res = await fetch(`/api/tenant-manager/tenants/${id}`, { method: 'DELETE' });
-            const data = await res.json();
-            if (data.success) {
-                showAlert(data.message, 'success');
-                initManagerPage();
+            _mgrActionBusy = true;
+            try {
+                const res = await fetch(`/api/tenant-manager/tenants/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    await initManagerPage();
+                }
+            } finally {
+                _mgrActionBusy = false;
             }
         }
 

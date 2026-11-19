@@ -174,21 +174,22 @@
 
         .nav-pills {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
             margin-bottom: 16px;
         }
 
         .pill-btn {
-            padding: 12px 6px;
+            padding: 11px 4px;
             border: none;
             border-radius: 12px;
             background: white;
             color: #475569;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 700;
             cursor: pointer;
             box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            white-space: nowrap;
         }
 
         .pill-btn.active {
@@ -358,11 +359,12 @@
                 </div>
             </div>
 
-            <!-- ניווט בין 3 לשוניות ללא אייקונים -->
+            <!-- ניווט בין 4 לשוניות ללא אייקונים -->
             <div class="nav-pills">
                 <button class="pill-btn active" id="i18n_tab_vehicles" onclick="switchPortalTab('vehicles', this)">הרכבים שלי</button>
                 <button class="pill-btn" id="i18n_tab_pool" onclick="switchPortalTab('pool', this)">חניות פנויות</button>
                 <button class="pill-btn" id="i18n_tab_share" onclick="switchPortalTab('share', this)">שחרור חניה</button>
+                <button class="pill-btn" id="i18n_tab_request" onclick="switchPortalTab('request', this)">בקשת חניה</button>
             </div>
 
             <!-- לשונית א': הרכבים של הדירה שלי -->
@@ -411,6 +413,17 @@
             <!-- לשונית ג': שחרור חניה של הדירה שלי -->
             <div id="ptab-share" style="display: none;">
                 <div class="card">
+                    <div id="fulfillRequestBanner" style="display: none; background: #f0fdf4; border: 2px solid #16a34a; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+                        <div id="fulfillRequestBannerText" style="font-size: 14px; font-weight: 800; color: #166534; line-height: 1.45;"></div>
+                        <div style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
+                            <a id="fulfillOpenAppBtn" href="#" class="btn btn-outline" style="width: auto; padding: 6px 12px; font-size: 12.5px; text-decoration: none; display: inline-block; background: #ffffff; border-color: #16a34a; color: #166534;">
+                                📱 פתח באפליקציית הדיירים
+                            </a>
+                            <button type="button" onclick="clearPendingFulfillRequest()" style="background: none; border: none; color: #64748b; font-size: 12.5px; font-weight: 700; text-decoration: underline; cursor: pointer;">
+                                איפוס טופס
+                            </button>
+                        </div>
+                    </div>
                     <h3 class="card-title" id="i18n_share_title">שחרר חניה של הדירה שלי</h3>
                     <p id="i18n_share_desc" style="font-size: 13px; color: #64748b; margin-bottom: 14px;">
                         בשעות שתגדיר, המערכת תאפשר לשכן להשתמש בחניה שלך (רק אם רכבך אינו בחניון) ותחזיר את החניה אליך אוטומטית בסיום השעה!
@@ -489,6 +502,73 @@
                 <div class="card">
                     <h3 class="card-title" id="i18n_my_shares_title">📋 השחרורים הפעילים של הדירה שלי</h3>
                     <div id="mySharesList"></div>
+                </div>
+            </div>
+
+            <!-- לשונית ד': בקשת חניה משכני הבניין -->
+            <div id="ptab-request" style="display: none;">
+                <div class="card">
+                    <h3 class="card-title" id="i18n_request_title">🙋‍♂️ בקשת חניה משכני הבניין</h3>
+                    <p id="i18n_request_desc" style="font-size: 13px; color: #64748b; margin-bottom: 14px; line-height: 1.5;">
+                        צריך חניה נוספת? בחר את התאריך והשעות המבוקשות. המערכת תשלח אליך לוואטסאפ הודעה מוכנה עם קישור חכם — העתק והדבק אותה בקבוצת הוואטסאפ של הבניין. שכן שילחץ על הקישור יועבר אוטומטית לשחרור החניה עבור דירתך כשהפרטים כבר מלאים!
+                    </p>
+
+                    <form onsubmit="handleRequestSpot(event)">
+                        <div class="input-group">
+                            <label id="i18n_req_sched_type_lbl">סוג תזמון הבקשה</label>
+                            <select id="reqScheduleType" onchange="toggleReqScheduleType()">
+                                <option value="ONCE" selected>📌 תאריך חד-פעמי</option>
+                                <option value="WEEKLY">📅 קבוע לפי ימים בשבוע</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group" id="reqOnceDateGroup">
+                            <label id="i18n_req_date_lbl">תאריך מבוקש לחניה:</label>
+                            <input type="date" id="reqSpecificDate">
+                        </div>
+
+                        <div class="input-group" id="reqWeeklyDaysGroup" style="display: none;">
+                            <label id="i18n_req_days_lbl">בחר ימים בשבוע:</label>
+                            <div class="days-selector" id="reqDaysSelector">
+                                <div class="day-chip" data-day="0" onclick="this.classList.toggle('selected')">א'</div>
+                                <div class="day-chip" data-day="1" onclick="this.classList.toggle('selected')">ב'</div>
+                                <div class="day-chip" data-day="2" onclick="this.classList.toggle('selected')">ג'</div>
+                                <div class="day-chip" data-day="3" onclick="this.classList.toggle('selected')">ד'</div>
+                                <div class="day-chip" data-day="4" onclick="this.classList.toggle('selected')">ה'</div>
+                                <div class="day-chip" data-day="5" onclick="this.classList.toggle('selected')">ו'</div>
+                                <div class="day-chip" data-day="6" onclick="this.classList.toggle('selected')">ש'</div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                            <label id="i18n_req_hours_lbl" style="font-size: 14px; font-weight: 600; color: #475569; white-space: nowrap;">שעות מבוקשות:</label>
+                            <button type="button" id="reqFullDayBtn" onclick="toggleReqFullDay()"
+                                    style="padding: 8px 18px; border-radius: 10px; border: 1.5px solid #4f46e5; background: #eef2ff; color: #4f46e5; font-weight: 700; font-size: 14px; cursor: pointer; white-space: nowrap; transition: all 0.2s;">
+                                ☀️ יום מלא
+                            </button>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px;">
+                            <div class="input-group" style="min-width: 0;">
+                                <label>משעה:</label>
+                                <input type="time" id="reqStartTime" value="08:00" oninput="onReqManualTimeChange()" required>
+                            </div>
+                            <div class="input-group" style="min-width: 0;">
+                                <label>עד שעה:</label>
+                                <input type="time" id="reqEndTime" value="17:00" oninput="onReqManualTimeChange()" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="reqSubmitBtn" class="btn btn-whatsapp">💬 שלח בקשת חניה לוואטסאפ שלי</button>
+                    </form>
+
+                    <div id="reqResultBox" style="display: none; margin-top: 16px; padding: 14px; border-radius: 12px; background: #f0fdf4; border: 1.5px solid #86efac;">
+                        <div style="font-size: 13.5px; font-weight: 800; color: #166534; margin-bottom: 8px;">
+                            ✅ ההודעה נשלחה לוואטסאפ שלך! ניתן גם להעתיק אותה מכאן ולהדביק בקבוצת הבניין:
+                        </div>
+                        <textarea id="reqShareTextArea" readonly rows="6" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; font-size: 13px; background: #ffffff; color: #1e293b; resize: vertical; margin-bottom: 8px;"></textarea>
+                        <button type="button" class="btn btn-primary" onclick="copyRequestShareText()">📋 העתק הודעה להדבקה בקבוצת הבניין</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -862,13 +942,141 @@
             }
         }
 
+        let _portalActionBusy = false;
+
+        function getPortalAuthHeaders(extra = {}) {
+            const tk = localStorage.getItem('tenant_auth_token') || '';
+            const headers = { ...extra };
+            if (tk) headers['X-Tenant-Token'] = tk;
+            return headers;
+        }
+
+        function captureFulfillRequestFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const action = params.get('action');
+            const reqApt = params.get('req_apt');
+            if (action === 'fulfill_request' && reqApt) {
+                const reqObj = {
+                    req_apt: reqApt,
+                    req_name: params.get('req_name') || '',
+                    sched: (params.get('sched') || 'ONCE').toUpperCase(),
+                    date: params.get('date') || new Date().toISOString().split('T')[0],
+                    days: params.get('days') || '',
+                    start: params.get('start') || '08:00',
+                    end: params.get('end') || '17:00'
+                };
+                try {
+                    localStorage.setItem('tenant_pending_fulfill_req', JSON.stringify(reqObj));
+                } catch (e) {}
+                // נקה את ה-URL כדי שרענון דף לא ידרוס שינויים ידניים לאחר מילוי
+                const cleanUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+            }
+        }
+
+        function applyPendingFulfillRequest() {
+            let raw = null;
+            try {
+                raw = localStorage.getItem('tenant_pending_fulfill_req');
+            } catch (e) {}
+            if (!raw) return;
+            try {
+                const reqObj = JSON.parse(raw);
+                if (!reqObj || !reqObj.req_apt) return;
+
+                // 1. עבור אוטומטית ללשונית "שחרור חניה"
+                switchPortalTab('share', document.getElementById('i18n_tab_share'));
+
+                // 2. מלא את הדירה המבקשת ("לדירה ספציפית בלבד")
+                const targetTypeEl = document.getElementById('shTargetType');
+                const targetAptGroup = document.getElementById('shTargetAptGroup');
+                const targetAptEl = document.getElementById('shTargetApt');
+                if (targetTypeEl) targetTypeEl.value = 'APT';
+                if (targetAptGroup) targetAptGroup.style.display = 'block';
+                if (targetAptEl) targetAptEl.value = reqObj.req_apt;
+
+                // 3. מלא סוג תזמון (חד-פעמי או קבוע לפי ימים)
+                const schedEl = document.getElementById('shScheduleType');
+                if (schedEl) {
+                    schedEl.value = (reqObj.sched === 'WEEKLY') ? 'WEEKLY' : 'ONCE';
+                    toggleScheduleType();
+                }
+
+                if (reqObj.sched === 'WEEKLY') {
+                    const reqDays = String(reqObj.days || '').split(',').map(x => x.trim()).filter(Boolean);
+                    document.querySelectorAll('#daysSelector .day-chip').forEach(chip => {
+                        const dAttr = chip.getAttribute('data-day');
+                        chip.classList.toggle('selected', reqDays.includes(dAttr));
+                    });
+                } else if (reqObj.date) {
+                    const dateEl = document.getElementById('shSpecificDate');
+                    if (dateEl) dateEl.value = reqObj.date;
+                }
+
+                // 4. מלא שעות (או יום מלא)
+                const startEl = document.getElementById('shStartTime');
+                const endEl = document.getElementById('shEndTime');
+                if (startEl && reqObj.start) startEl.value = reqObj.start;
+                if (endEl && reqObj.end) endEl.value = reqObj.end;
+                onManualTimeChange();
+
+                // 5. הצג באנר הסבר ברור + כפתור פתיחה באפליקציה
+                const banner = document.getElementById('fulfillRequestBanner');
+                const bannerTxt = document.getElementById('fulfillRequestBannerText');
+                const openAppBtn = document.getElementById('fulfillOpenAppBtn');
+                if (banner && bannerTxt) {
+                    const namePart = reqObj.req_name ? ` (${reqObj.req_name})` : '';
+                    bannerTxt.textContent = `🎁 מענה לבקשת חניה מדירה ${reqObj.req_apt}${namePart}: כל פרטי הבקשה הוזנו אוטומטית — בדוק את החניה המסומנת ולחץ על "✅ פרסם ושחרר חניה"!`;
+                    banner.style.display = 'block';
+                }
+                if (openAppBtn) {
+                    const qs = new URLSearchParams({
+                        action: 'fulfill_request',
+                        req_apt: reqObj.req_apt,
+                        req_name: reqObj.req_name || '',
+                        sched: reqObj.sched || 'ONCE',
+                        date: reqObj.date || '',
+                        days: reqObj.days || '',
+                        start: reqObj.start || '08:00',
+                        end: reqObj.end || '17:00'
+                    }).toString();
+                    openAppBtn.href = `sbtenants://fulfill?${qs}`;
+                }
+            } catch (e) {}
+        }
+
+        function clearPendingFulfillRequest() {
+            try {
+                localStorage.removeItem('tenant_pending_fulfill_req');
+            } catch (e) {}
+            const banner = document.getElementById('fulfillRequestBanner');
+            if (banner) banner.style.display = 'none';
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('shSpecificDate').value = new Date().toISOString().split('T')[0];
+            const todayIso = new Date().toISOString().split('T')[0];
+            document.getElementById('shSpecificDate').value = todayIso;
+            const reqDateEl = document.getElementById('reqSpecificDate');
+            if (reqDateEl) reqDateEl.value = todayIso;
             setPortalLanguage(currentLang);
+
+            // קליטת לינק חכם של בקשת חניה (אם הגענו מקבוצת הוואטסאפ של הבניין)
+            captureFulfillRequestFromUrl();
+
+            // הצגה מיידית מהזיכרון המקומי של המכשיר (0.0 שניות המתנה!)
+            try {
+                const cachedRaw = localStorage.getItem('tenant_cached_dashboard');
+                if (cachedRaw) {
+                    const cachedData = JSON.parse(cachedRaw);
+                    if (cachedData && cachedData.success && cachedData.tenant) {
+                        renderDashboardData(cachedData);
+                    }
+                }
+            } catch (e) {}
 
             // בדיקה אם הגענו מקישור מוואטסאפ (עם phone או עם phone + code)
             const params = new URLSearchParams(window.location.search);
-            const urlPhone = params.get('phone');
+            const urlPhone = params.get('phone') || localStorage.getItem('tenant_last_phone') || '';
             const urlCode = params.get('code');
             if (urlPhone) {
                 document.getElementById('loginPhone').value = urlPhone;
@@ -915,7 +1123,7 @@
                 tryReadClipboardOtp();
             });
 
-            // בדיקה אם יש סשן פעיל
+            // בדיקה ורענון מול השרת (כולל שחזור סשן אוטומטי מהטוקן השמור במכשיר)
             loadDashboard(true);
         });
 
@@ -928,11 +1136,124 @@
         }
 
         function switchPortalTab(tab, btnEl) {
-            ['vehicles', 'pool', 'share'].forEach(t => {
-                document.getElementById(`ptab-${t}`).style.display = (t === tab) ? 'block' : 'none';
+            ['vehicles', 'pool', 'share', 'request'].forEach(t => {
+                const el = document.getElementById(`ptab-${t}`);
+                if (el) el.style.display = (t === tab) ? 'block' : 'none';
             });
             document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
             if (btnEl) btnEl.classList.add('active');
+        }
+
+        let isReqFullDaySelected = false;
+
+        function toggleReqScheduleType() {
+            const st = document.getElementById('reqScheduleType').value;
+            document.getElementById('reqWeeklyDaysGroup').style.display = (st === 'WEEKLY') ? 'block' : 'none';
+            document.getElementById('reqOnceDateGroup').style.display = (st === 'ONCE') ? 'block' : 'none';
+        }
+
+        function toggleReqFullDay() {
+            isReqFullDaySelected = !isReqFullDaySelected;
+            const btn = document.getElementById('reqFullDayBtn');
+            const startEl = document.getElementById('reqStartTime');
+            const endEl = document.getElementById('reqEndTime');
+            if (isReqFullDaySelected) {
+                startEl.value = '00:00';
+                endEl.value = '23:59';
+                btn.style.background = '#4f46e5';
+                btn.style.color = '#ffffff';
+                btn.innerHTML = '✓ יום מלא פעיל';
+            } else {
+                startEl.value = '08:00';
+                endEl.value = '17:00';
+                btn.style.background = '#eef2ff';
+                btn.style.color = '#4f46e5';
+                btn.innerHTML = '☀️ יום מלא';
+            }
+        }
+
+        function onReqManualTimeChange() {
+            const startEl = document.getElementById('reqStartTime');
+            const endEl = document.getElementById('reqEndTime');
+            const btn = document.getElementById('reqFullDayBtn');
+            if (startEl.value === '00:00' && endEl.value === '23:59') {
+                isReqFullDaySelected = true;
+                btn.style.background = '#4f46e5';
+                btn.style.color = '#ffffff';
+                btn.innerHTML = '✓ יום מלא פעיל';
+            } else {
+                isReqFullDaySelected = false;
+                btn.style.background = '#eef2ff';
+                btn.style.color = '#4f46e5';
+                btn.innerHTML = '☀️ יום מלא';
+            }
+        }
+
+        async function handleRequestSpot(e) {
+            e.preventDefault();
+            if (_portalActionBusy) return;
+            const schedule_type = document.getElementById('reqScheduleType').value;
+            const specific_date = document.getElementById('reqSpecificDate').value;
+            const start_time = document.getElementById('reqStartTime').value;
+            const end_time = document.getElementById('reqEndTime').value;
+            const selectedDays = Array.from(document.querySelectorAll('#reqDaysSelector .day-chip.selected'))
+                .map(el => el.getAttribute('data-day'))
+                .join(',');
+
+            const btn = document.getElementById('reqSubmitBtn');
+            const origText = btn ? btn.textContent : '';
+            _portalActionBusy = true;
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '⏳ שולח בקשה לוואטסאפ...';
+            }
+            try {
+                const res = await fetch('/api/tenant/request-spot', {
+                    method: 'POST',
+                    headers: getPortalAuthHeaders({'Content-Type': 'application/json'}),
+                    body: JSON.stringify({
+                        schedule_type,
+                        specific_date,
+                        days_of_week: selectedDays,
+                        start_time,
+                        end_time
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showPortalAlert(data.message, 'success');
+                    if (data.share_text) {
+                        const resBox = document.getElementById('reqResultBox');
+                        const txtArea = document.getElementById('reqShareTextArea');
+                        if (txtArea) txtArea.value = data.share_text;
+                        if (resBox) resBox.style.display = 'block';
+                    }
+                } else {
+                    showPortalAlert(data.message || 'שגיאה בשליחת בקשת החניה', 'danger');
+                }
+            } catch (err) {
+                showPortalAlert('שגיאת תקשורת מול השרת', 'danger');
+            } finally {
+                _portalActionBusy = false;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = origText;
+                }
+            }
+        }
+
+        function copyRequestShareText() {
+            const txtArea = document.getElementById('reqShareTextArea');
+            if (!txtArea || !txtArea.value) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(txtArea.value).then(() => {
+                    showPortalAlert('ההודעה הועתקה! כעת הדבק אותה בקבוצת הוואטסאפ של הבניין.', 'success');
+                }).catch(() => {});
+            } else {
+                txtArea.select();
+                document.execCommand('copy');
+                showPortalAlert('ההודעה הועתקה! כעת הדבק אותה בקבוצת הוואטסאפ של הבניין.', 'success');
+            }
         }
 
         let isFullDaySelected = false;
@@ -1066,6 +1387,7 @@
         }
 
         async function verifyOtp() {
+            if (_portalActionBusy) return;
             const phone = document.getElementById('loginPhone').value.trim();
             const code = document.getElementById('loginOtp').value.trim();
             if (code.length !== 6) {
@@ -1073,8 +1395,9 @@
                 return;
             }
             const btn = document.getElementById('verifyOtpBtn');
+            _portalActionBusy = true;
             btn.disabled = true;
-            btn.textContent = 'נכנס...';
+            btn.textContent = '⏳ נכנס...';
             try {
                 const res = await fetch('/api/tenant/verify-otp', {
                     method: 'POST',
@@ -1086,18 +1409,21 @@
                     try {
                         sessionStorage.removeItem('tenant_pending_phone');
                         sessionStorage.removeItem('tenant_pending_otp');
+                        localStorage.setItem('tenant_last_phone', phone);
+                        if (data.auth_token) localStorage.setItem('tenant_auth_token', data.auth_token);
+                        if (data.tenant) localStorage.setItem('tenant_user_data', JSON.stringify(data.tenant));
                     } catch (err) {}
                     // מעבר מיידי למסך הפורטל ללא המתנה לטעינת בקר החניון!
                     if (data.tenant) {
                         currentTenant = data.tenant;
-                lastDashboardData = data;
+                        lastDashboardData = data;
                         document.getElementById('loginSection').style.display = 'none';
                         document.getElementById('dashboardSection').style.display = 'block';
                         document.getElementById('logoutBtn').style.display = 'block';
                         document.getElementById('headerBuildingName').textContent = `🅿️ ${data.tenant.parking_name || 'חניון הדיירים'}`;
                         const famName = (data.pooling && data.pooling.contractName) || data.tenant.family_name || '';
-                const famSuffix = (famName && famName !== data.tenant.full_name) ? ` (${famName})` : '';
-                document.getElementById('headerTenantInfo').textContent = `שלום ${data.tenant.full_name} | דירה ${data.tenant.apartment_number}${famSuffix}`;
+                        const famSuffix = (famName && famName !== data.tenant.full_name) ? ` (${famName})` : '';
+                        document.getElementById('headerTenantInfo').textContent = `שלום ${data.tenant.full_name} | דירה ${data.tenant.apartment_number}${famSuffix}`;
                     }
                     loadDashboard();
                 } else {
@@ -1106,6 +1432,7 @@
             } catch (e) {
                 showPortalAlert('שגיאת תקשורת', 'danger');
             } finally {
+                _portalActionBusy = false;
                 btn.disabled = false;
                 btn.textContent = '🔐 כניסה לפורטל הדירה';
             }
@@ -1125,7 +1452,13 @@
         }
 
         async function logoutTenant() {
+            try {
+                localStorage.removeItem('tenant_auth_token');
+                localStorage.removeItem('tenant_user_data');
+                localStorage.removeItem('tenant_cached_dashboard');
+            } catch (e) {}
             await fetch('/api/tenant/logout', { method: 'POST' });
+            currentTenant = null;
             document.getElementById('dashboardSection').style.display = 'none';
             document.getElementById('logoutBtn').style.display = 'none';
             document.getElementById('loginSection').style.display = 'block';
@@ -1133,22 +1466,96 @@
         }
 
         async function refreshApartmentStatus(btnEl) {
+            if (_portalActionBusy) return;
             const orig = btnEl ? btnEl.innerHTML : '';
+            _portalActionBusy = true;
             if (btnEl) {
                 btnEl.disabled = true;
-                btnEl.innerHTML = '⏳ מרענן מהחניון...';
+                btnEl.innerHTML = '⏳ מרענן...';
             }
-            await loadDashboard();
-            showPortalAlert('נתוני הדירה וכמות החניות רועננו מבקר החניון!', 'success');
-            if (btnEl) {
-                btnEl.disabled = false;
-                btnEl.innerHTML = orig;
+            try {
+                await loadDashboard();
+                showPortalAlert('נתוני הדירה וכמות החניות רועננו מבקר החניון!', 'success');
+            } finally {
+                _portalActionBusy = false;
+                if (btnEl) {
+                    btnEl.disabled = false;
+                    btnEl.innerHTML = orig;
+                }
             }
+        }
+
+        function renderDashboardData(data) {
+            if (!data || !data.tenant) return;
+            currentTenant = data.tenant;
+            lastDashboardData = data;
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('dashboardSection').style.display = 'block';
+            document.getElementById('logoutBtn').style.display = 'block';
+
+            const logoEl = document.getElementById('portalBuildingLogo');
+            if (data.tenant.logo_data) {
+                logoEl.src = data.tenant.logo_data;
+                logoEl.style.display = 'block';
+                document.getElementById('headerBuildingName').textContent = data.tenant.parking_name;
+            } else {
+                logoEl.style.display = 'none';
+                document.getElementById('headerBuildingName').textContent = `🅿️ ${data.tenant.parking_name}`;
+            }
+            const famName = (data.pooling && data.pooling.contractName) || data.tenant.family_name || '';
+            const famSuffix = (famName && famName !== data.tenant.full_name) ? ` (${famName})` : '';
+            document.getElementById('headerTenantInfo').textContent = `שלום ${data.tenant.full_name} | דירה ${data.tenant.apartment_number}${famSuffix}`;
+
+            const aptMaxSpots = Math.max(1, parseInt((data.pooling && data.pooling.success) ? data.pooling.maxCounter : (data.tenant.base_max_counter || 1), 10) || 1);
+            const spotsInput = document.getElementById('shSpotsCount');
+            const spotsHint = document.getElementById('maxSpotsHint');
+            if (spotsInput) {
+                spotsInput.max = String(aptMaxSpots);
+                if (parseInt(spotsInput.value, 10) > aptMaxSpots) {
+                    spotsInput.value = String(aptMaxSpots);
+                }
+            }
+            if (spotsHint) {
+                spotsHint.textContent = `(מקסימום לדירתך: ${aptMaxSpots})`;
+            }
+
+            if (data.pooling && data.pooling.success) {
+                document.getElementById('statMaxCounter').textContent = data.pooling.maxCounter;
+                document.getElementById('statPresentCounter').textContent = data.pooling.presentCounter;
+                document.getElementById('statAvailableNow').textContent = data.pooling.availableSpots;
+            } else {
+                document.getElementById('statMaxCounter').textContent = '-';
+                document.getElementById('statPresentCounter').textContent = '-';
+                document.getElementById('statAvailableNow').textContent = '-';
+            }
+
+            if (data.quota_limits) {
+                document.getElementById('quotaTodayBadge').textContent = `ניצול יומי: ${data.quota_limits.used_today} מתוך ${data.quota_limits.max_per_day}`;
+                document.getElementById('quotaMonthBadge').textContent = `ניצול חודשי: ${data.quota_limits.used_this_month} מתוך ${data.quota_limits.max_per_month}`;
+                const gMonth = data.quota_limits.given_used_hours_month ?? 0;
+                const gTot = data.quota_limits.given_used_hours_total ?? 0;
+                const starTop = document.getElementById('portalStarHoursBadge');
+                if (starTop) starTop.textContent = `⭐ ${gTot} שעות שתרמתי`;
+                const gM = document.getElementById('givenHoursMonthBadge');
+                if (gM) gM.textContent = `⭐ שעות חניה שתרמתי החודש: ${gMonth} שעות`;
+                const gT = document.getElementById('givenHoursTotalBadge');
+                if (gT) gT.textContent = `⭐ סה״כ כללי שתרמתי: ${gTot} שעות`;
+            }
+
+            renderMySubscribers(data.subscribers || []);
+            renderActiveBookings(data.active_bookings || []);
+            renderAvailableSlots(data.available_slots || []);
+            renderMyShares(data.my_shares || []);
+
+            // אם הגענו מלינק בקשת חניה של שכן, מלא אוטומטית את הלשונית "שחרור חניה"!
+            applyPendingFulfillRequest();
         }
 
         async function loadDashboard(silentIfUnauth = false) {
             try {
-                const res = await fetch('/api/tenant/dashboard');
+                const res = await fetch('/api/tenant/dashboard', {
+                    headers: getPortalAuthHeaders()
+                });
                 if (res.status === 401) {
                     if (!silentIfUnauth) {
                         document.getElementById('dashboardSection').style.display = 'none';
@@ -1159,65 +1566,11 @@
                 const data = await res.json();
                 if (!data.success) return;
 
-                currentTenant = data.tenant;
-                lastDashboardData = data;
-                document.getElementById('loginSection').style.display = 'none';
-                document.getElementById('dashboardSection').style.display = 'block';
-                document.getElementById('logoutBtn').style.display = 'block';
+                try {
+                    localStorage.setItem('tenant_cached_dashboard', JSON.stringify(data));
+                } catch (e) {}
 
-                const logoEl = document.getElementById('portalBuildingLogo');
-                if (data.tenant.logo_data) {
-                    logoEl.src = data.tenant.logo_data;
-                    logoEl.style.display = 'block';
-                    document.getElementById('headerBuildingName').textContent = data.tenant.parking_name;
-                } else {
-                    logoEl.style.display = 'none';
-                    document.getElementById('headerBuildingName').textContent = `🅿️ ${data.tenant.parking_name}`;
-                }
-                const famName = (data.pooling && data.pooling.contractName) || data.tenant.family_name || '';
-                const famSuffix = (famName && famName !== data.tenant.full_name) ? ` (${famName})` : '';
-                document.getElementById('headerTenantInfo').textContent = `שלום ${data.tenant.full_name} | דירה ${data.tenant.apartment_number}${famSuffix}`;
-
-                const aptMaxSpots = Math.max(1, parseInt((data.pooling && data.pooling.success) ? data.pooling.maxCounter : (data.tenant.base_max_counter || 1), 10) || 1);
-                const spotsInput = document.getElementById('shSpotsCount');
-                const spotsHint = document.getElementById('maxSpotsHint');
-                if (spotsInput) {
-                    spotsInput.max = String(aptMaxSpots);
-                    if (parseInt(spotsInput.value, 10) > aptMaxSpots) {
-                        spotsInput.value = String(aptMaxSpots);
-                    }
-                }
-                if (spotsHint) {
-                    spotsHint.textContent = `(מקסימום לדירתך: ${aptMaxSpots})`;
-                }
-
-                if (data.pooling && data.pooling.success) {
-                    document.getElementById('statMaxCounter').textContent = data.pooling.maxCounter;
-                    document.getElementById('statPresentCounter').textContent = data.pooling.presentCounter;
-                    document.getElementById('statAvailableNow').textContent = data.pooling.availableSpots;
-                } else {
-                    document.getElementById('statMaxCounter').textContent = '-';
-                    document.getElementById('statPresentCounter').textContent = '-';
-                    document.getElementById('statAvailableNow').textContent = '-';
-                }
-
-                if (data.quota_limits) {
-                    document.getElementById('quotaTodayBadge').textContent = `ניצול יומי: ${data.quota_limits.used_today} מתוך ${data.quota_limits.max_per_day}`;
-                    document.getElementById('quotaMonthBadge').textContent = `ניצול חודשי: ${data.quota_limits.used_this_month} מתוך ${data.quota_limits.max_per_month}`;
-                    const gMonth = data.quota_limits.given_used_hours_month ?? 0;
-                    const gTot = data.quota_limits.given_used_hours_total ?? 0;
-                    const starTop = document.getElementById('portalStarHoursBadge');
-                    if (starTop) starTop.textContent = `⭐ ${gTot} שעות שתרמתי`;
-                    const gM = document.getElementById('givenHoursMonthBadge');
-                    if (gM) gM.textContent = `⭐ שעות חניה שתרמתי החודש: ${gMonth} שעות`;
-                    const gT = document.getElementById('givenHoursTotalBadge');
-                    if (gT) gT.textContent = `⭐ סה״כ כללי שתרמתי: ${gTot} שעות`;
-                }
-
-                renderMySubscribers(data.subscribers || []);
-                renderActiveBookings(data.active_bookings || []);
-                renderAvailableSlots(data.available_slots || []);
-                renderMyShares(data.my_shares || []);
+                renderDashboardData(data);
             } catch (e) {
                 console.error(e);
             }
@@ -1354,12 +1707,13 @@
                         ${renderSingleCarSlot(s, 'lpn2', 'car_2')}
                         ${renderSingleCarSlot(s, 'lpn3', 'car_3')}
                     </div>
-                    <button class="btn btn-primary" style="padding:10px;" onclick="saveSubscriberPlates('${s.id}')">${t('save_plates_btn')}</button>
+                    <button class="btn btn-primary" style="padding:10px;" onclick="saveSubscriberPlates('${s.id}', this)">${t('save_plates_btn')}</button>
                 </div>
             `).join('');
         }
 
-        async function saveSubscriberPlates(subId) {
+        async function saveSubscriberPlates(subId, btnEl) {
+            if (_portalActionBusy) return;
             const lpn1 = document.getElementById(`lpn1_${subId}`).value.trim();
             const lpn2 = document.getElementById(`lpn2_${subId}`).value.trim();
             const lpn3 = document.getElementById(`lpn3_${subId}`).value.trim();
@@ -1369,17 +1723,33 @@
                 return;
             }
 
-            const res = await fetch('/api/tenant/update-plates', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ subscriber_id: subId, lpn1, lpn2, lpn3 })
-            });
-            const data = await res.json();
-            if (data.success) {
-                showPortalAlert(data.message, 'success');
-                loadDashboard();
-            } else {
-                showPortalAlert(data.message || 'שגיאה בעדכון מספרי הרכב', 'danger');
+            _portalActionBusy = true;
+            const origText = btnEl ? btnEl.textContent : '';
+            if (btnEl) {
+                btnEl.disabled = true;
+                btnEl.textContent = '⏳ שומר מספרי רכב...';
+            }
+            try {
+                const res = await fetch('/api/tenant/update-plates', {
+                    method: 'POST',
+                    headers: getPortalAuthHeaders({'Content-Type': 'application/json'}),
+                    body: JSON.stringify({ subscriber_id: subId, lpn1, lpn2, lpn3 })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showPortalAlert(data.message, 'success');
+                    await loadDashboard();
+                } else {
+                    showPortalAlert(data.message || 'שגיאה בעדכון מספרי הרכב', 'danger');
+                }
+            } catch (e) {
+                showPortalAlert('שגיאת תקשורת מול השרת', 'danger');
+            } finally {
+                _portalActionBusy = false;
+                if (btnEl) {
+                    btnEl.disabled = false;
+                    btnEl.textContent = origText;
+                }
             }
         }
 
@@ -1446,40 +1816,67 @@
                         </div>
                     </div>
                     <button class="btn btn-whatsapp" style="width:auto; padding:10px 16px; font-size:14px;"
-                            onclick="claimSpot(${s.share_id}, '${s.booking_date}')">
+                            onclick="claimSpot(${s.share_id}, '${s.booking_date}', this)">
                         קח חניה
                     </button>
                 </div>
             `}).join('');
         }
 
-        async function claimSpot(shareId, bookingDate) {
-            const res = await fetch('/api/tenant/claim-spot', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ share_id: shareId, booking_date: bookingDate })
-            });
-            const data = await res.json();
-            if (data.success) {
-                showPortalAlert(data.message, 'success');
-                loadDashboard();
-            } else {
-                showPortalAlert(data.message || 'לא ניתן להזמין חניה זו', 'danger');
+        async function claimSpot(shareId, bookingDate, btnEl) {
+            if (_portalActionBusy) return;
+            _portalActionBusy = true;
+            const origText = btnEl ? btnEl.textContent : '';
+            if (btnEl) {
+                btnEl.disabled = true;
+                btnEl.textContent = '⏳ משריין...';
+            }
+            try {
+                const res = await fetch('/api/tenant/claim-spot', {
+                    method: 'POST',
+                    headers: getPortalAuthHeaders({'Content-Type': 'application/json'}),
+                    body: JSON.stringify({ share_id: shareId, booking_date: bookingDate })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showPortalAlert(data.message, 'success');
+                    await loadDashboard();
+                } else {
+                    showPortalAlert(data.message || 'לא ניתן להזמין חניה זו', 'danger');
+                }
+            } catch (e) {
+                showPortalAlert('שגיאת תקשורת מול השרת', 'danger');
+            } finally {
+                _portalActionBusy = false;
+                if (btnEl) {
+                    btnEl.disabled = false;
+                    btnEl.textContent = origText;
+                }
             }
         }
 
         async function releaseBooking(transferId) {
+            if (_portalActionBusy) return;
             if (!confirm('האם לסיים את השאלת החניה ולהחזיר את המכסה לבעל החניה?')) return;
-            const res = await fetch(`/api/tenant/release-booking/${transferId}`, { method: 'POST' });
-            const data = await res.json();
-            if (data.success) {
-                showPortalAlert(data.message, 'success');
-                loadDashboard();
+            _portalActionBusy = true;
+            try {
+                const res = await fetch(`/api/tenant/release-booking/${transferId}`, {
+                    method: 'POST',
+                    headers: getPortalAuthHeaders()
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showPortalAlert(data.message, 'success');
+                    await loadDashboard();
+                }
+            } finally {
+                _portalActionBusy = false;
             }
         }
 
         async function handleCreateShare(e) {
             e.preventDefault();
+            if (_portalActionBusy) return;
             const parking_spot_number = (document.getElementById('shParkingSpotNumber')?.value || '').trim();
             const selectedSpotsList = parking_spot_number.split(',').map(x => x.trim()).filter(Boolean);
             const spots_offered = selectedSpotsList.length > 0 ? selectedSpotsList.length : (parseInt(document.getElementById('shSpotsCount')?.value || '1', 10) || 1);
@@ -1494,27 +1891,45 @@
                 .map(el => el.getAttribute('data-day'))
                 .join(',');
 
-            const res = await fetch('/api/tenant/share-spot', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    spots_offered,
-                    parking_spot_number,
-                    share_target_type,
-                    target_apartment,
-                    schedule_type,
-                    days_of_week: selectedDays,
-                    specific_date,
-                    start_time,
-                    end_time
-                })
-            });
-            const data = await res.json();
-            if (data.success) {
-                showPortalAlert(data.message, 'success');
-                loadDashboard();
-            } else {
-                showPortalAlert(data.message || 'שגיאה בשמירת שחרור חניה', 'danger');
+            const btn = document.getElementById('i18n_publish_btn');
+            const origText = btn ? btn.textContent : '';
+            _portalActionBusy = true;
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '⏳ מפרסם ומשחרר חניה...';
+            }
+            try {
+                const res = await fetch('/api/tenant/share-spot', {
+                    method: 'POST',
+                    headers: getPortalAuthHeaders({'Content-Type': 'application/json'}),
+                    body: JSON.stringify({
+                        spots_offered,
+                        parking_spot_number,
+                        share_target_type,
+                        target_apartment,
+                        schedule_type,
+                        days_of_week: selectedDays,
+                        specific_date,
+                        start_time,
+                        end_time
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    clearPendingFulfillRequest();
+                    showPortalAlert(data.message, 'success');
+                    await loadDashboard();
+                } else {
+                    showPortalAlert(data.message || 'שגיאה בשמירת שחרור חניה', 'danger');
+                }
+            } catch (err) {
+                showPortalAlert('שגיאת תקשורת מול השרת', 'danger');
+            } finally {
+                _portalActionBusy = false;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = origText;
+                }
             }
         }
 
@@ -1553,33 +1968,23 @@
         }
 
         async function cancelShare(shareId) {
+            if (_portalActionBusy) return;
             if (!confirm('האם לבטל את שחרור החניה הזה?')) return;
-            const res = await fetch(`/api/tenant/cancel-share/${shareId}`, { method: 'POST' });
-            const data = await res.json();
-            if (data.success) {
-                showPortalAlert(data.message, 'success');
-                loadDashboard();
+            _portalActionBusy = true;
+            try {
+                const res = await fetch(`/api/tenant/cancel-share/${shareId}`, {
+                    method: 'POST',
+                    headers: getPortalAuthHeaders()
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showPortalAlert(data.message, 'success');
+                    await loadDashboard();
+                }
+            } finally {
+                _portalActionBusy = false;
             }
         }
-
-        // ניתוק אוטומטי לאחר 30 דקות ללא פעילות למניעת עומס על השרת
-        const INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
-        let inactivityTimer = null;
-
-        function resetInactivityTimer() {
-            if (inactivityTimer) clearTimeout(inactivityTimer);
-            inactivityTimer = setTimeout(() => {
-                if (currentTenant) {
-                    logoutTenant();
-                    showPortalAlert('החיבור נותק אוטומטית לאחר 30 דקות ללא פעילות.', 'danger');
-                }
-            }, INACTIVITY_LIMIT_MS);
-        }
-
-        ['click', 'touchstart', 'keydown', 'scroll'].forEach(evt => {
-            document.addEventListener(evt, resetInactivityTimer, { passive: true });
-        });
-        resetInactivityTimer();
     </script>
 
     <!-- ==================== רכיב נגישות והצהרת פרטיות (ת"י 5568 וחוק הגנת הפרטיות) ==================== -->
@@ -1785,7 +2190,7 @@
 
     <!-- פוטר משפטי קבוע -->
     <footer class="legal-footer" role="contentinfo">
-        <div style="font-weight: 700;">© 2026 HINT LTD — כל הזכויות שמורות | גרסה 1.0.5</div>
+        <div style="font-weight: 700;">© 2026 HINT LTD — כל הזכויות שמורות | גרסה 1.0.6</div>
         <div style="font-size: 12px; margin-top: 2px;">שיידט את בכמן ישראל בע"מ</div>
         <div style="margin-top: 6px;">
             <a role="button" tabindex="0" onclick="openLegalModal('privacyModal')">🔒 הצהרת פרטיות ותנאי שימוש</a> |
