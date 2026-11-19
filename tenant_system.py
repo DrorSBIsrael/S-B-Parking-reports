@@ -341,13 +341,14 @@ class TenantStore:
         p_num = str(project_number)
         clean_p = clean_il_phone(phone_number)
         now_iso = get_il_now().isoformat()
+        b_max = 1 if base_max_counter is None else int(base_max_counter)
         payload = {
             'project_number': p_num,
             'parking_name': parking_name or '',
             'full_name': full_name.strip(),
             'phone_number': clean_p,
             'apartment_number': str(apartment_number).strip(),
-            'base_max_counter': int(base_max_counter or 1),
+            'base_max_counter': b_max,
             'is_active': True,
             'created_by': created_by or '',
             'created_at': now_iso
@@ -723,7 +724,8 @@ def _skidata_headers(content_type=None):
     return h
 
 def get_apartment_pooling_status(project_number, apartment_number):
-    """קריאת maxCounter ו-presentCounter של דירה (חברה) מתוך שיידט."""
+    """קריאת maxCounter, presentCounter ו-status של דירה (חברה) מתוך שיידט.
+    בשיידט: maxCounter=0 נחשב ללא הגבלה, לכן דירה עם 0 חניות מוגדרת בבקר עם maxCounter=1 ו-status=2 (חסום)."""
     conn = _get_parking_conn(project_number)
     if not conn or not conn.get('ip_address'):
         return {'success': False, 'message': 'לא נמצאו פרטי חיבור לחניון'}
@@ -740,8 +742,9 @@ def get_apartment_pooling_status(project_number, apartment_number):
         root = ET.fromstring(resp.content)
         contract_node = root.find('ns:contract', ns)
         contract_name = contract_node.findtext('ns:name', default='', namespaces=ns) if contract_node is not None else ''
+        contract_status = int(root.findtext('ns:status', default='0', namespaces=ns) or 0)
         pooling_node = root.find('.//ns:pooling', ns)
-        max_c = 0
+        raw_max_c = 0
         pres_c = 0
         if pooling_node is not None:
             details = pooling_node.findall('ns:poolingDetail', ns)
@@ -755,21 +758,97 @@ def get_apartment_pooling_status(project_number, apartment_number):
             if chosen is None and details:
                 chosen = details[0]
             if chosen is not None:
-                max_c = int(chosen.findtext('ns:maxCounter', default='0', namespaces=ns) or 0)
+                raw_max_c = int(chosen.findtext('ns:maxCounter', default='0', namespaces=ns) or 0)
                 pres_c = int(chosen.findtext('ns:presentCounter', default='0', namespaces=ns) or 0)
+
+        # אם החוזה בסטטוס חסום (status == 2), מכסת החניות הפעילה שלו בפועל היא 0
+        is_blocked_zero = (contract_status != 0)
+        effective_max_c = 0 if is_blocked_zero else raw_max_c
+
         return {
             'success': True,
             'apartment': str(apartment_number),
             'contractName': contract_name,
-            'maxCounter': max_c,
+            'contractStatus': contract_status,
+            'isBlockedZeroSpot': is_blocked_zero,
+            'rawMaxCounter': raw_max_c,
+            'maxCounter': effective_max_c,
             'presentCounter': pres_c,
-            'availableSpots': max(0, max_c - pres_c)
+            'availableSpots': max(0, effective_max_c - pres_c)
         }
     except Exception as e:
         return {'success': False, 'message': str(e)}
 
+def set_apartment_zero_spot_mode(project_number, apartment_number, is_zero_spot):
+    """הגדרת דירה בבקר שיידט כ'דירה ללא חניה (0 חניות)' באמצעות status=2 ו-maxCounter=1,
+    או שחרור החסימה (status=0) לדירה עם חניה."""
+    conn = _get_parking_conn(project_number)
+    if not conn or not conn.get('ip_address'):
+        return {'success': False, 'message': 'לא נמצאו פרטי חיבור לחניון'}
+    ip = conn['ip_address']
+    port = conn.get('port', 8443)
+    url = f"https://{ip}:{port}/CustomerMediaWebService/contracts/{apartment_number}/detail"
+    try:
+        sess = _get_http_session()
+        resp = sess.get(url, headers=_skidata_headers(), verify=False, timeout=15)
+        if resp.status_code != 200:
+            return {'success': False, 'message': f'Failed GET contract {apartment_number}: HTTP {resp.status_code}'}
+        ns_uri = 'http://gsph.sub.com/cust/types'
+        ns = {'ns': ns_uri}
+        ET.register_namespace('', ns_uri)
+        root = ET.fromstring(resp.content)
+
+        st_el = root.find('ns:status', ns)
+        if st_el is None:
+            st_el = ET.SubElement(root, f'{{{ns_uri}}}status')
+
+        pooling_node = root.find('.//ns:pooling', ns)
+        max_el = None
+        if pooling_node is not None:
+            details = pooling_node.findall('ns:poolingDetail', ns)
+            target_detail = None
+            for d in details:
+                f = d.findtext('ns:facility', default='0', namespaces=ns)
+                p = d.findtext('ns:extCardProfile', default='0', namespaces=ns)
+                if f == '0' and p == '0':
+                    target_detail = d
+                    break
+            if target_detail is None and details:
+                target_detail = details[0]
+            if target_detail is not None:
+                max_el = target_detail.find('ns:maxCounter', ns)
+
+        if is_zero_spot:
+            # חסימה 2 + מונה 1 (כיוון ש-0 בשיידט נחשב ללא הגבלה)
+            st_el.text = '2'
+            if max_el is not None:
+                max_el.text = '1'
+            effective_max = 0
+        else:
+            st_el.text = '0'
+            cur_raw_max = int((max_el.text if max_el is not None else '1') or 1)
+            if cur_raw_max < 1 and max_el is not None:
+                max_el.text = '1'
+                cur_raw_max = 1
+            effective_max = cur_raw_max
+
+        xml_payload = ET.tostring(root, encoding='utf-8', method='xml')
+        put_resp = sess.put(url, data=xml_payload, headers=_skidata_headers('application/xml'), verify=False, timeout=15)
+        if put_resp.status_code in (200, 201, 204):
+            return {
+                'success': True,
+                'effectiveMaxCounter': effective_max,
+                'contractStatus': 2 if is_zero_spot else 0
+            }
+        return {'success': False, 'message': f'PUT rejected with HTTP {put_resp.status_code}'}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
 def adjust_apartment_max_counter(project_number, apartment_number, delta):
-    """שינוי maxCounter של דירה ב-+1 או -1 מול שיידט (PUT /contracts/{id}/detail)."""
+    """שינוי מכסת החניות הפעילה של דירה ב-+1 או -1 מול שיידט (PUT /contracts/{id}/detail).
+    מכיוון שבשיידט maxCounter=0 נחשב 'ללא הגבלה':
+    - כאשר המכסה הפעילה יורדת ל-0: שמים בבקר maxCounter=1 ו-status=2 (חסום).
+    - כאשר המכסה הפעילה עולה ל-1 או יותר (למשל דירה ללא חניה שקיבלה חניה משכן): שמים status=0 (משוחרר) ו-maxCounter=המכסה הפעילה."""
     conn = _get_parking_conn(project_number)
     if not conn or not conn.get('ip_address'):
         return {'success': False, 'message': 'לא נמצאו פרטי חיבור לחניון'}
@@ -801,21 +880,40 @@ def adjust_apartment_max_counter(project_number, apartment_number, delta):
         if target_detail is None:
             return {'success': False, 'message': 'No poolingDetail found'}
 
+        st_el = root.find('ns:status', ns)
+        if st_el is None:
+            st_el = ET.SubElement(root, f'{{{ns_uri}}}status')
+            st_el.text = '0'
+        cur_status = int((st_el.text if st_el is not None else '0') or 0)
+
         max_el = target_detail.find('ns:maxCounter', ns)
         pres_el = target_detail.find('ns:presentCounter', ns)
-        old_max = int((max_el.text if max_el is not None else '0') or 0)
+        raw_old_max = int((max_el.text if max_el is not None else '1') or 1)
         pres_val = int((pres_el.text if pres_el is not None else '0') or 0)
-        new_max = max(0, old_max + int(delta))
-        if max_el is not None:
-            max_el.text = str(new_max)
+
+        # אם החוזה היה חסום (status != 0), המכסה הפעילה שלו לפני השינוי הייתה 0
+        old_effective_max = 0 if cur_status != 0 else raw_old_max
+        new_effective_max = max(0, old_effective_max + int(delta))
+
+        if new_effective_max == 0:
+            # 0 חניות פעילות -> בשיידט שמים מונה 1 וסטטוס חסימה 2
+            if max_el is not None:
+                max_el.text = '1'
+            st_el.text = '2'
+        else:
+            # חניה 1 או יותר פעילות -> משחררים חסימה (status=0) ומגדירים את המונה למכסה הפעילה
+            if max_el is not None:
+                max_el.text = str(new_effective_max)
+            st_el.text = '0'
 
         xml_payload = ET.tostring(root, encoding='utf-8', method='xml')
         put_resp = sess.put(url, data=xml_payload, headers=_skidata_headers('application/xml'), verify=False, timeout=15)
         if put_resp.status_code in (200, 201, 204):
             return {
                 'success': True,
-                'oldMaxCounter': old_max,
-                'newMaxCounter': new_max,
+                'oldMaxCounter': old_effective_max,
+                'newMaxCounter': new_effective_max,
+                'contractStatus': 2 if new_effective_max == 0 else 0,
                 'presentCounter': pres_val
             }
         return {'success': False, 'message': f'PUT rejected with HTTP {put_resp.status_code}: {put_resp.text[:200]}'}
@@ -1519,9 +1617,18 @@ def api_tenant_manager_create_tenant():
             if not ex_phone and str(ex.get('apartment_number') or '').strip() == apt:
                 empty_phone_apt_row = ex
 
-        # נסה לשלוף את מכסת החניות הקבועה של הדירה מתוך שיידט
-        pool_info = get_apartment_pooling_status(p_num, apt)
-        base_max = pool_info.get('maxCounter', 1) if pool_info.get('success') else int(data.get('base_max_counter') or 1)
+        is_zero_spot = bool(data.get('is_zero_spot'))
+        if is_zero_spot:
+            set_apartment_zero_spot_mode(p_num, apt, True)
+            base_max = 0
+        else:
+            # נסה לשלוף את מכסת החניות הקבועה של הדירה מתוך שיידט (אם החוזה חסום status=2 יחזור 0)
+            pool_info = get_apartment_pooling_status(p_num, apt)
+            if pool_info.get('success'):
+                base_max = int(pool_info.get('maxCounter') or 0)
+            else:
+                raw_bm = data.get('base_max_counter')
+                base_max = 1 if raw_bm is None else int(raw_bm)
 
         if empty_phone_apt_row:
             TenantStore.update_tenant(
@@ -1825,8 +1932,17 @@ def api_tenant_manager_modify_tenant(tenant_id):
     data = request.get_json() or {}
     p_num = str(mgr.get('project_number') or '')
     apt = str(data.get('apartment_number') or '').strip()
-    pool_info = get_apartment_pooling_status(p_num, apt)
-    auto_max = pool_info.get('maxCounter') if pool_info.get('success') else None
+
+    if 'is_zero_spot' in data and data.get('is_zero_spot') is not None:
+        want_zero = bool(data.get('is_zero_spot'))
+        z_res = set_apartment_zero_spot_mode(p_num, apt, want_zero)
+        if want_zero:
+            auto_max = 0
+        else:
+            auto_max = z_res.get('effectiveMaxCounter', 1) if z_res.get('success') else 1
+    else:
+        pool_info = get_apartment_pooling_status(p_num, apt)
+        auto_max = int(pool_info.get('maxCounter') or 0) if pool_info.get('success') else None
 
     TenantStore.update_tenant(
         tenant_id=tenant_id,
@@ -1836,7 +1952,20 @@ def api_tenant_manager_modify_tenant(tenant_id):
         base_max_counter=auto_max,
         is_active=data.get('is_active', True)
     )
-    return jsonify({'success': True, 'message': 'פרטי הדייר עודכנו והמכסה סונכרנה מהמערכת'})
+    # עדכן את אותו base_max_counter לכל הדיירים הרשומים באותה דירה
+    if auto_max is not None:
+        for other_t in TenantStore.list_tenants(p_num):
+            if str(other_t.get('apartment_number') or '').strip() == apt and int(other_t['id']) != int(tenant_id):
+                TenantStore.update_tenant(
+                    tenant_id=other_t['id'],
+                    full_name=other_t.get('full_name', ''),
+                    phone_number=other_t.get('phone_number', ''),
+                    apartment_number=apt,
+                    base_max_counter=auto_max,
+                    is_active=other_t.get('is_active', True)
+                )
+    status_note = ' (הדירה הוגדרה ללא חניה קבועה - חסומה בבקר עד לקבלת חניה משכן)' if auto_max == 0 else ''
+    return jsonify({'success': True, 'message': f'פרטי הדייר עודכנו והמכסה סונכרנה מול בקר החניון!{status_note}'})
 
 @tenant_bp.route('/api/tenant-manager/monthly-report', methods=['GET'])
 def api_tenant_manager_monthly_report():
@@ -2276,12 +2405,15 @@ def api_tenant_share_spot():
     days_of_week = data.get('days_of_week', '')
     specific_date = data.get('specific_date', '')
 
-    max_allowed_spots = int(tenant.get('base_max_counter') or 1)
+    raw_t_base = tenant.get('base_max_counter')
+    max_allowed_spots = 1 if raw_t_base is None else int(raw_t_base)
     pool_chk = get_apartment_pooling_status(tenant['project_number'], tenant['apartment_number'])
-    if pool_chk.get('success') and int(pool_chk.get('maxCounter') or 0) > max_allowed_spots:
-        max_allowed_spots = int(pool_chk.get('maxCounter'))
-    if spots_offered < 1 or spots_offered > max(1, max_allowed_spots):
-        return jsonify({'success': False, 'message': f'כמות החניות לשחרור חייבת להיות בין 1 ל-{max(1, max_allowed_spots)} (כמות החניות של דירתך)'})
+    if pool_chk.get('success'):
+        max_allowed_spots = int(pool_chk.get('maxCounter') or 0)
+    if max_allowed_spots <= 0:
+        return jsonify({'success': False, 'message': 'לדירתך לא משויכת חניה קבועה לשחרור (0 חניות). באפשרותך לבקש חניה משכנים או לתפוס חניה פנויה!'})
+    if spots_offered < 1 or spots_offered > max_allowed_spots:
+        return jsonify({'success': False, 'message': f'כמות החניות לשחרור חייבת להיות בין 1 ל-{max_allowed_spots} (כמות החניות של דירתך)'})
 
     if not start_time or not end_time or start_time >= end_time:
         return jsonify({'success': False, 'message': 'נא לבחור שעת התחלה ושעת סיום תקינות (שעת סיום אחרי שעת התחלה)'})
