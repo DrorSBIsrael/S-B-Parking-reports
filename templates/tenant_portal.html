@@ -1,0 +1,2633 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>פורטל חניות דיירים - שיידט את בכמן</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, Tahoma, Arial, sans-serif;
+            background: #f0f4f8;
+            color: #1e293b;
+            min-height: 100vh;
+            direction: rtl;
+            padding-bottom: 40px;
+        }
+
+        .top-banner {
+            background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+            color: white;
+            padding: 22px 18px;
+            border-bottom-left-radius: 22px;
+            border-bottom-right-radius: 22px;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.25);
+        }
+
+        .banner-inner {
+            max-width: 640px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .banner-title h1 {
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .banner-title p {
+            font-size: 13px;
+            opacity: 0.9;
+            margin-top: 3px;
+        }
+
+        .main-wrap {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(15, 23, 42, 0.07);
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            color: #1e293b;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .input-group {
+            margin-bottom: 14px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #475569;
+        }
+
+        .input-group input,
+        .input-group select {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            padding: 11px 12px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 15px;
+            background: #f8fafc;
+            box-sizing: border-box;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .input-group input:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #334155;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.14);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 13px 18px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #334155;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #1e293b;
+        }
+
+        .btn-whatsapp {
+            background: #16a34a;
+            color: white;
+        }
+        .btn-whatsapp:hover {
+            background: #15803d;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-outline {
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .stat-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 8px;
+            text-align: center;
+        }
+
+        .stat-box .num {
+            font-size: 24px;
+            font-weight: 800;
+            color: #334155;
+        }
+
+        .stat-box .lbl {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .nav-pills {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+
+        .pill-btn {
+            padding: 11px 4px;
+            border: none;
+            border-radius: 12px;
+            background: white;
+            color: #475569;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            white-space: nowrap;
+        }
+
+        .pill-btn.active {
+            background: #334155;
+            color: white;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
+        }
+
+        .days-selector {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+
+        .day-chip {
+            flex: 1;
+            min-width: 40px;
+            padding: 10px 4px;
+            text-align: center;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            background: white;
+            color: #334155;
+            user-select: none;
+        }
+
+        .day-chip.selected {
+            background: #334155;
+            color: white;
+            border-color: #334155;
+        }
+
+        .slot-item {
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            background: #ffffff;
+        }
+
+        .slot-item.special-for-me {
+            border-color: #16a34a;
+            background: #f0fdf4;
+        }
+
+        .badge {
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            display: inline-block;
+        }
+
+        .badge-green { background: #dcfce7; color: #166534; }
+        .badge-blue { background: #e2e8f0; color: #334155; }
+        .badge-yellow { background: #fef9c3; color: #854d0e; }
+        .badge-purple { background: #e2e8f0; color: #334155; }
+
+        .alert {
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 14px;
+            font-weight: 600;
+            font-size: 14px;
+            display: none;
+        }
+        .alert-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .alert-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    </style>
+</head>
+<body>
+    <div class="top-banner">
+        <div class="banner-inner">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <img id="portalBuildingLogo" src="" alt="לוגו בניין" style="display: none; width: 48px; height: 48px; border-radius: 10px; object-fit: contain; background: white; padding: 3px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                <div class="banner-title">
+                    <h1 id="headerBuildingName">🅿️ חניון הדיירים</h1>
+                    <p id="headerTenantInfo">כניסה מהירה באמצעות וואטסאפ</p>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <button id="portalSettingsBtn" onclick="openLegalModal('portalSettingsModal')" title="הגדרות ושפה" style="background:rgba(255,255,255,0.2); color:white; border:none; padding:7px 10px; border-radius:8px; font-weight:700; font-size:16px; cursor:pointer;">
+                    ⚙️
+                </button>
+                <button id="logoutBtn" onclick="logoutTenant()" style="display:none; background:rgba(255,255,255,0.2); color:white; border:none; padding:7px 12px; border-radius:8px; font-weight:700; cursor:pointer;">
+                    יציאה
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-wrap">
+        <div id="portalAlert" class="alert"></div>
+
+        <!-- מסך 1: כניסה עם טלפון + קוד וואטסאפ -->
+        <div id="loginSection" class="card" style="margin-top: 10px;">
+            <h2 class="card-title" id="i18n_login_title">📲 כניסת דיירים (ללא סיסמה)</h2>
+            <p id="i18n_login_sub" style="font-size: 14px; color: #64748b; margin-bottom: 16px;">
+                הזן את מספר הטלפון הנייד שלך לקבלת קוד כניסה מהיר בוואטסאפ.
+            </p>
+
+            <div id="phoneStep">
+                <div class="input-group">
+                    <label id="i18n_phone_lbl">מספר טלפון נייד</label>
+                    <input type="tel" id="loginPhone" placeholder="050-1234567" autocomplete="tel" style="text-align: right; direction: ltr;" oninput="const box=document.getElementById('chooseParkingBox'); if(box) box.style.display='none';">
+                </div>
+                <div id="chooseParkingBox" style="display: none; margin-bottom: 14px; padding: 12px; border-radius: 12px; background: #eff6ff; border: 1.5px solid #3b82f6;">
+                    <div id="i18n_choose_parking_title" style="font-size: 14px; font-weight: 800; color: #1e3a8a; margin-bottom: 8px;">🏢 בחר חניון / דירה לכניסה:</div>
+                    <div id="chooseParkingButtons" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                </div>
+                <button type="button" class="btn btn-whatsapp" onclick="sendOtp()" id="sendOtpBtn">💬 שלח קוד בוואטסאפ</button>
+                <p style="font-size: 12px; color: #64748b; margin-top: 12px; text-align: center;">
+                    השימוש והכניסה למערכת כפופים ל<a href="javascript:void(0)" onclick="openLegalModal('privacyModal')" style="color:#334155; font-weight:700; text-decoration:underline;">הצהרת הפרטיות ותנאי השימוש</a> ול<a href="javascript:void(0)" onclick="openLegalModal('a11yStatementModal')" style="color:#334155; font-weight:700; text-decoration:underline;">הצהרת הנגישות</a>.
+                </p>
+            </div>
+
+            <div id="otpStep" style="display: none;">
+                <!-- כפתור לחיצה מהירה על הקוד ללא צורך בהקלדה -->
+                <div id="quickCodeBox" style="display: none; margin-bottom: 14px;">
+                    <button type="button" id="quickCodeBtn" class="btn btn-whatsapp"
+                            style="padding: 16px; font-size: 18px; border-radius: 12px; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);"
+                            onclick="clickDetectedCode()">
+                        ✨ לחץ כאן לכניסה עם קוד: <span id="quickCodeValue" style="font-size: 22px; text-decoration: underline;"></span>
+                    </button>
+                </div>
+
+                <div class="input-group">
+                    <label id="i18n_otp_lbl">קוד אימות מוואטסאפ (ניתן ללחוץ על הקוד למעלה או בתיבה)</label>
+                    <input type="text" id="loginOtp" name="otc" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="------"
+                           style="text-align: center; font-size: 26px; letter-spacing: 8px; font-weight: 800;"
+                           onfocus="tryReadClipboardOtp()"
+                           oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6); if(this.value.length===6) verifyOtp();">
+                </div>
+                <button type="button" class="btn btn-primary" onclick="verifyOtp()" id="verifyOtpBtn" style="margin-bottom: 10px;">🔐 כניסה לפורטל הדירה</button>
+                <button type="button" class="btn btn-outline" id="i18n_back_phone_btn" onclick="backToPhoneStep()">חזור להחלפת מספר טלפון</button>
+            </div>
+        </div>
+
+        <!-- מסך 2: פורטל הדייר הפעיל -->
+        <div id="dashboardSection" style="display: none;">
+            <!-- באנר מצב צפייה בלבד (תצוגת הדגמה למספר טלפון שאינו במערכת) -->
+            <div id="demoViewerBannerBox" style="display: none; background: #eff6ff; border: 1.5px solid #3b82f6; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; font-size: 13px; font-weight: 800; color: #1e3a8a;">
+                👁️ מצב צפייה בלבד (תצוגת הדגמה) — מספר הטלפון שהזנת אינו משויך לדירה רשומה במערכת.
+            </div>
+            <!-- בורר מעבר בין חניונים כאשר למספר הטלפון יש יותר מחניון אחד -->
+            <div id="switchParkingDashboardBox" class="card" style="display: none; padding: 12px; margin-bottom: 10px;">
+                <div id="i18n_switch_parking_lbl" style="font-size: 13px; font-weight: 800; color: #334155; margin-bottom: 6px;">🏢 החלף חניון:</div>
+                <div id="switchParkingDashboardButtons" style="display: flex; flex-direction: column; gap: 6px;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 6px; flex-wrap: nowrap;">
+                <div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1;">
+                    <span id="i18n_apt_status_title" style="font-weight: 800; font-size: 14px; color: #334155; white-space: nowrap;">מצב הדירה שלי</span>
+                    <span id="portalStarHoursBadge" class="badge badge-yellow" style="border: 1px solid #eab308; font-size: 12px; font-weight: 800; white-space: nowrap; flex-shrink: 0;">⭐ 0 שעות שתרמתי</span>
+                </div>
+                <button type="button" id="i18n_refresh_quota_btn" onclick="refreshApartmentStatus(this)" class="btn btn-outline" style="width: auto; padding: 6px 10px; font-size: 12px; border-radius: 8px; background: white; white-space: nowrap; flex-shrink: 0;">
+                    🔄 רענן מכסה
+                </button>
+            </div>
+            <!-- סרגל מצב החניות של הדירה -->
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="num" id="statMaxCounter">-</div>
+                    <div class="lbl" id="i18n_stat_max">מכסת חניות פעילה</div>
+                </div>
+                <div class="stat-box">
+                    <div class="num" id="statPresentCounter">-</div>
+                    <div class="lbl" id="i18n_stat_present">רכבים בחניון כעת</div>
+                </div>
+                <div class="stat-box">
+                    <div class="num" id="statAvailableNow" style="color: #16a34a;">-</div>
+                    <div class="lbl" id="i18n_stat_avail">פנויות לכניסה כעת</div>
+                </div>
+            </div>
+
+            <!-- ניווט בין 4 לשוניות ללא אייקונים -->
+            <div class="nav-pills">
+                <button class="pill-btn active" id="i18n_tab_vehicles" onclick="switchPortalTab('vehicles', this)">הרכבים</button>
+                <button class="pill-btn" id="i18n_tab_pool" onclick="switchPortalTab('pool', this)">פנויות</button>
+                <button class="pill-btn" id="i18n_tab_share" onclick="switchPortalTab('share', this)">שחרור</button>
+                <button class="pill-btn" id="i18n_tab_request" onclick="switchPortalTab('request', this)">בקשה</button>
+            </div>
+
+            <!-- לשונית א': הרכבים של הדירה שלי -->
+            <div id="ptab-vehicles">
+                <div class="card">
+                    <div class="card-title">
+                        <span id="i18n_my_cars_title">רכבי הדירה שלי</span>
+                        <button onclick="loadDashboard()" style="background:none; border:none; color:#334155; font-weight:700; cursor:pointer;">🔄 רענן</button>
+                    </div>
+                    <div id="mySubscribersContainer">
+                        <p style="text-align: center; color: #64748b; padding: 16px;">טוען רכבים מבקר החניון...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- לשונית ב': חניות פנויות בבניין והזמנות פעילות -->
+            <div id="ptab-pool" style="display: none;">
+                <div class="card" style="background: #f1f5f9; border: 1px solid #cbd5e1;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; color: #334155;">
+                        <span id="quotaTodayBadge">ניצול יומי: 0/5</span>
+                        <span id="quotaMonthBadge">ניצול חודשי: 0/30</span>
+                    </div>
+                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 800; color: #854d0e;">
+                        <div id="givenHoursMonthBadge">⭐ שעות חניה שתרמתי החודש: 0 שעות</div>
+                        <div id="givenHoursTotalBadge">⭐ סה״כ כללי שתרמתי: 0 שעות</div>
+                    </div>
+                </div>
+
+                <!-- הזמנות פעילות שלי -->
+                <div class="card" id="myActiveBookingsCard" style="display: none;">
+                    <h3 class="card-title" id="i18n_active_bookings_title">📌 חניות פעילות / מוזמנות שלי</h3>
+                    <div id="myActiveBookingsList"></div>
+                </div>
+
+                <!-- חניות פנויות לתפיסה -->
+                <div class="card">
+                    <div class="card-title">
+                        <span id="i18n_avail_slots_title">חניות פנויות לתפיסה בבניין</span>
+                        <button onclick="loadDashboard()" style="background:none; border:none; color:#334155; font-weight:700; cursor:pointer;">🔄 רענן</button>
+                    </div>
+                    <div id="availableSlotsList"></div>
+                </div>
+            </div>
+
+            <!-- לשונית ג': שחרור חניה של הדירה שלי -->
+            <div id="ptab-share" style="display: none;">
+                <div id="zeroSpotShareNotice" class="card" style="display: none; background: #fff1f2; border: 1.5px solid #fecdd3;">
+                    <div style="font-size: 15px; font-weight: 800; color: #9f1239; margin-bottom: 6px;">
+                        🚫 לדירתך לא משויכת חניה קבועה לשחרור (0 חניות)
+                    </div>
+                    <p style="font-size: 13px; color: #881337; margin-bottom: 12px; line-height: 1.5;">
+                        באפשרותך לבקש חניה משכני הבניין בלשונית "בקשת חניה" או לתפוס חניה פנויה בלשונית "חניות פנויות".
+                    </p>
+                    <button type="button" class="btn btn-whatsapp" onclick="switchPortalTab('request', document.getElementById('i18n_tab_request'))">
+                        🙋‍♂️ מעבר לבקשת חניה משכנים
+                    </button>
+                </div>
+                <div class="card">
+                    <div id="fulfillRequestBanner" style="display: none; background: #f0fdf4; border: 2px solid #16a34a; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+                        <div id="fulfillRequestBannerText" style="font-size: 14px; font-weight: 800; color: #166534; line-height: 1.45;"></div>
+                        <div style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
+                            <a id="fulfillOpenAppBtn" href="#" class="btn btn-outline" style="width: auto; padding: 6px 12px; font-size: 12.5px; text-decoration: none; display: inline-block; background: #ffffff; border-color: #16a34a; color: #166534;">
+                                📱 פתח באפליקציית הדיירים
+                            </a>
+                            <button type="button" onclick="clearPendingFulfillRequest()" style="background: none; border: none; color: #64748b; font-size: 12.5px; font-weight: 700; text-decoration: underline; cursor: pointer;">
+                                איפוס טופס
+                            </button>
+                        </div>
+                    </div>
+                    <h3 class="card-title" id="i18n_share_title">שחרר חניה של הדירה שלי</h3>
+                    <p id="i18n_share_desc" style="font-size: 13px; color: #64748b; margin-bottom: 14px;">
+                        בשעות שתגדיר, המערכת תאפשר לשכן להשתמש בחניה שלך (רק אם רכבך אינו בחניון) ותחזיר את החניה אליך אוטומטית בסיום השעה!
+                    </p>
+
+                    <form onsubmit="handleCreateShare(event)">
+                        <div class="input-group">
+                            <label>🅿️ איזו חניה לשחרר? (ניתן לבחור חניה אחת או יותר)</label>
+                            <div id="shParkingSpotChips" style="display:flex; flex-direction:column; gap:8px; margin-bottom:6px;"></div>
+                            <input type="text" id="shParkingSpotNumber" placeholder="לדוגמה: 28ג">
+                            <input type="hidden" id="shSpotsCount" value="1" data-max="1">
+                        </div>
+
+                        <div class="input-group">
+                            <label id="i18n_target_lbl">למי לשחרר את החניה?</label>
+                            <select id="shTargetType" onchange="document.getElementById('shTargetAptGroup').style.display = (this.value === 'APT') ? 'block' : 'none';">
+                                <option value="POOL" id="i18n_opt_pool">🌐 לפול הכללי של הבניין</option>
+                                <option value="APT" id="i18n_opt_apt">🏠 לדירה ספציפית בלבד</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group" id="shTargetAptGroup" style="display: none;">
+                            <label id="i18n_target_apt_lbl">מספר הדירה שעבורה משחררים את החניה *</label>
+                            <input type="text" id="shTargetApt" placeholder="לדוגמה: 202">
+                        </div>
+
+                        <div class="input-group">
+                            <label id="i18n_sched_type_lbl">סוג תזמון</label>
+                            <select id="shScheduleType" onchange="toggleScheduleType()">
+                                <option value="WEEKLY" id="i18n_opt_weekly">📅 קבוע לפי ימים בשבוע</option>
+                                <option value="ONCE" id="i18n_opt_once">📌 תאריך חד-פעמי</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group" id="shWeeklyDaysGroup">
+                            <label id="i18n_days_lbl">בחר ימים בשבוע:</label>
+                            <div class="days-selector" id="daysSelector">
+                                <div class="day-chip" data-day="0" onclick="this.classList.toggle('selected')">א'</div>
+                                <div class="day-chip" data-day="1" onclick="this.classList.toggle('selected')">ב'</div>
+                                <div class="day-chip" data-day="2" onclick="this.classList.toggle('selected')">ג'</div>
+                                <div class="day-chip" data-day="3" onclick="this.classList.toggle('selected')">ד'</div>
+                                <div class="day-chip" data-day="4" onclick="this.classList.toggle('selected')">ה'</div>
+                                <div class="day-chip" data-day="5" onclick="this.classList.toggle('selected')">ו'</div>
+                                <div class="day-chip" data-day="6" onclick="this.classList.toggle('selected')">ש'</div>
+                            </div>
+                        </div>
+
+                        <div class="input-group" id="shOnceDateGroup" style="display: none;">
+                            <label id="i18n_date_lbl">תאריך שחרור החניה:</label>
+                            <input type="date" id="shSpecificDate">
+                        </div>
+
+                        <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                            <label id="i18n_hours_lbl" style="font-size: 14px; font-weight: 600; color: #475569; white-space: nowrap;">שעות השחרור:</label>
+                            <button type="button" id="fullDayBtn" onclick="toggleFullDayShare()"
+                                    style="padding: 8px 18px; border-radius: 10px; border: 1.5px solid #4f46e5; background: #eef2ff; color: #4f46e5; font-weight: 700; font-size: 14px; cursor: pointer; white-space: nowrap; transition: all 0.2s;">
+                                ☀️ יום מלא
+                            </button>
+                        </div>
+
+                        <div id="customHoursGrid" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px;">
+                            <div class="input-group" style="min-width: 0;">
+                                <label id="i18n_from_hour_lbl">משעה:</label>
+                                <input type="time" id="shStartTime" value="08:00" oninput="onManualTimeChange()" required>
+                            </div>
+                            <div class="input-group" style="min-width: 0;">
+                                <label id="i18n_to_hour_lbl">עד שעה:</label>
+                                <input type="time" id="shEndTime" value="17:00" oninput="onManualTimeChange()" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="i18n_publish_btn" class="btn btn-primary">✅ פרסם ושחרר חניה</button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <h3 class="card-title" id="i18n_my_shares_title">📋 השחרורים הפעילים של הדירה שלי</h3>
+                    <div id="mySharesList"></div>
+                </div>
+            </div>
+
+            <!-- לשונית ד': בקשת חניה משכני הבניין -->
+            <div id="ptab-request" style="display: none;">
+                <div class="card">
+                    <h3 class="card-title" id="i18n_request_title">🙋‍♂️ בקשת חניה משכני הבניין</h3>
+                    <p id="i18n_request_desc" style="font-size: 13px; color: #64748b; margin-bottom: 14px; line-height: 1.5;">
+                        צריך חניה נוספת? בחר את התאריך והשעות המבוקשות. המערכת תשלח אליך לוואטסאפ הודעה מוכנה עם קישור חכם — העתק והדבק אותה בקבוצת הוואטסאפ של הבניין. שכן שילחץ על הקישור יועבר אוטומטית לשחרור החניה עבור דירתך כשהפרטים כבר מלאים!
+                    </p>
+
+                    <form onsubmit="handleRequestSpot(event)">
+                        <div class="input-group">
+                            <label id="i18n_req_sched_type_lbl">סוג תזמון הבקשה</label>
+                            <select id="reqScheduleType" onchange="toggleReqScheduleType()">
+                                <option value="ONCE" selected>📌 תאריך חד-פעמי</option>
+                                <option value="WEEKLY">📅 קבוע לפי ימים בשבוע</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group" id="reqOnceDateGroup">
+                            <label id="i18n_req_date_lbl">תאריך מבוקש לחניה:</label>
+                            <input type="date" id="reqSpecificDate">
+                        </div>
+
+                        <div class="input-group" id="reqWeeklyDaysGroup" style="display: none;">
+                            <label id="i18n_req_days_lbl">בחר ימים בשבוע:</label>
+                            <div class="days-selector" id="reqDaysSelector">
+                                <div class="day-chip" data-day="0" onclick="this.classList.toggle('selected')">א'</div>
+                                <div class="day-chip" data-day="1" onclick="this.classList.toggle('selected')">ב'</div>
+                                <div class="day-chip" data-day="2" onclick="this.classList.toggle('selected')">ג'</div>
+                                <div class="day-chip" data-day="3" onclick="this.classList.toggle('selected')">ד'</div>
+                                <div class="day-chip" data-day="4" onclick="this.classList.toggle('selected')">ה'</div>
+                                <div class="day-chip" data-day="5" onclick="this.classList.toggle('selected')">ו'</div>
+                                <div class="day-chip" data-day="6" onclick="this.classList.toggle('selected')">ש'</div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                            <label id="i18n_req_hours_lbl" style="font-size: 14px; font-weight: 600; color: #475569; white-space: nowrap;">שעות מבוקשות:</label>
+                            <button type="button" id="reqFullDayBtn" onclick="toggleReqFullDay()"
+                                    style="padding: 8px 18px; border-radius: 10px; border: 1.5px solid #4f46e5; background: #eef2ff; color: #4f46e5; font-weight: 700; font-size: 14px; cursor: pointer; white-space: nowrap; transition: all 0.2s;">
+                                ☀️ יום מלא
+                            </button>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px;">
+                            <div class="input-group" style="min-width: 0;">
+                                <label>משעה:</label>
+                                <input type="time" id="reqStartTime" value="08:00" oninput="onReqManualTimeChange()" required>
+                            </div>
+                            <div class="input-group" style="min-width: 0;">
+                                <label>עד שעה:</label>
+                                <input type="time" id="reqEndTime" value="17:00" oninput="onReqManualTimeChange()" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="reqSubmitBtn" class="btn btn-whatsapp">💬 שלח בקשת חניה לוואטסאפ שלי</button>
+                    </form>
+
+                    <div id="reqResultBox" style="display: none; margin-top: 16px; padding: 14px; border-radius: 12px; background: #f0fdf4; border: 1.5px solid #86efac;">
+                        <div style="font-size: 13.5px; font-weight: 800; color: #166534; margin-bottom: 8px;">
+                            ✅ ההודעה נשלחה לוואטסאפ שלך! ניתן גם להעתיק אותה מכאן ולהדביק בקבוצת הבניין:
+                        </div>
+                        <textarea id="reqShareTextArea" readonly rows="6" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; font-size: 13px; background: #ffffff; color: #1e293b; resize: vertical; margin-bottom: 8px;"></textarea>
+                        <button type="button" class="btn btn-primary" onclick="copyRequestShareText()">📋 העתק הודעה להדבקה בקבוצת הבניין</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const I18N = {
+            he: {
+                dir: 'rtl',
+                days: ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'],
+                days_short: ["א'", "ב'", "ג'", "ד'", "ה'", "ו'", "ש'"],
+                header_default: '🅿️ חניון הדיירים',
+                header_sub_default: 'כניסה מהירה באמצעות וואטסאפ',
+                hello_apt: (name, apt) => `שלום ${name} | דירה ${apt}`,
+                logout: 'יציאה',
+                login_title: '📲 כניסת דיירים (ללא סיסמה)',
+                login_sub: 'הזן את מספר הטלפון הנייד שלך לקבלת קוד כניסה מהיר בוואטסאפ.',
+                phone_lbl: 'מספר טלפון נייד',
+                send_otp_btn: '💬 שלח קוד בוואטסאפ',
+                sending_otp: 'שולח קוד לוואטסאפ...',
+                otp_lbl: 'קוד אימות מוואטסאפ (ניתן ללחוץ על הקוד למעלה או בתיבה)',
+                quick_code_prefix: '✨ לחץ כאן לכניסה עם קוד: ',
+                verify_btn: '🔐 כניסה לפורטל הדירה',
+                back_phone_btn: 'חזור להחלפת מספר טלפון',
+                apt_status_title: 'מצב הדירה שלי',
+                refresh_quota_btn: '🔄 רענן מכסה',
+                stat_max: 'מכסת חניות פעילה',
+                stat_present: 'רכבים בחניון כעת',
+                stat_avail: 'פנויות לכניסה כעת',
+                tab_vehicles: 'הרכבים',
+                tab_pool: 'פנויות',
+                tab_share: 'שחרור',
+                tab_request: 'בקשה',
+                my_cars_title: 'רכבי הדירה שלי',
+                no_subscribers: 'לא נמצאו מנויים משויכים לדירה זו בבקר החניון.',
+                status_in_parking: '🟢 נמצא בחניון',
+                status_out_parking: '⚪ מחוץ לחניון',
+                car_1: 'רכב 1',
+                car_2: 'רכב 2',
+                car_3: 'רכב 3',
+                no_car: 'ללא רכב',
+                save_plates_btn: '💾 שמור מספרי רכב בחניון',
+                active_bookings_title: '📌 חניות פעילות / מוזמנות שלי',
+                avail_slots_title: '🅿️ חניות פנויות לתפיסה בבניין',
+                no_avail_slots: 'אין כרגע חניות פנויות בפול הכללי או עבור דירתך.',
+                spot_from_apt: (apt) => `🏠 חניה מדירה ${apt}`,
+                for_me_badge: '🎁 פונה במיוחד עבורך!',
+                pool_badge: '🌐 פול כללי',
+                claim_btn: 'קח חניה',
+                end_return_btn: 'סיים / החזר',
+                share_title: '🤝 שחרר חניה של הדירה שלי',
+                share_desc: 'בשעות שתגדיר, המערכת תאפשר לשכן להשתמש בחניה שלך (רק אם רכבך אינו בחניון) ותחזיר את החניה אליך אוטומטית בסיום השעה!',
+                spots_count_lbl: 'כמה חניות לשחרר?',
+                max_spots_hint: (n) => `(מקסימום לדירתך: ${n})`,
+                target_lbl: 'למי לשחרר את החניה?',
+                opt_pool: '🌐 לפול הכללי של הבניין',
+                opt_apt: '🏠 לדירה ספציפית בלבד',
+                target_apt_lbl: 'מספר הדירה שעבורה משחררים את החניה *',
+                sched_type_lbl: 'סוג תזמון',
+                opt_weekly: '📅 קבוע לפי ימים בשבוע',
+                opt_once: '📌 תאריך חד-פעמי',
+                days_lbl: 'בחר ימים בשבוע:',
+                date_lbl: 'תאריך שחרור החניה:',
+                hours_lbl: 'שעות השחרור:',
+                full_day_off: '☀️ יום מלא',
+                full_day_on: '✓ יום מלא פעיל',
+                from_hour_lbl: 'משעה:',
+                to_hour_lbl: 'עד שעה:',
+                publish_btn: '✅ פרסם ושחרר חניה',
+                my_shares_title: '📋 השחרורים הפעילים של הדירה שלי',
+                no_my_shares: 'אין לך כרגע שחרורי חניה פעילים.',
+                cancel_btn: 'בטל',
+                quota_today: (u, m) => `ניצול יומי: ${u} מתוך ${m}`,
+                quota_month: (u, m) => `ניצול חודשי: ${u} מתוך ${m}`,
+            },
+            en: {
+                dir: 'ltr',
+                days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+                days_short: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
+                header_default: '🅿️ Residents Parking',
+                header_sub_default: 'Quick Login via WhatsApp',
+                hello_apt: (name, apt) => `Hello ${name} | Apt ${apt}`,
+                logout: 'Logout',
+                login_title: '📲 Resident Login (Passwordless)',
+                login_sub: 'Enter your mobile number to receive a quick login code via WhatsApp.',
+                phone_lbl: 'Mobile Phone Number',
+                send_otp_btn: '💬 Send Code via WhatsApp',
+                sending_otp: 'Sending WhatsApp code...',
+                otp_lbl: 'WhatsApp Verification Code (Tap code above or enter below)',
+                quick_code_prefix: '✨ Tap here to login with code: ',
+                verify_btn: '🔐 Enter Apartment Portal',
+                back_phone_btn: 'Back to change phone number',
+                apt_status_title: 'My Apartment Status',
+                refresh_quota_btn: '🔄 Refresh Quota',
+                stat_max: 'Active Quota',
+                stat_present: 'Cars Parked Now',
+                stat_avail: 'Available to Enter',
+                tab_vehicles: 'Vehicles',
+                tab_pool: 'Available',
+                tab_share: 'Release',
+                tab_request: 'Request',
+                my_cars_title: 'My Apartment Vehicles',
+                no_subscribers: 'No subscribers linked to this apartment in the controller.',
+                status_in_parking: '🟢 In Parking Lot',
+                status_out_parking: '⚪ Outside',
+                car_1: 'Car 1',
+                car_2: 'Car 2',
+                car_3: 'Car 3',
+                no_car: 'No Car',
+                save_plates_btn: '💾 Save License Plates',
+                active_bookings_title: '📌 My Active / Reserved Spots',
+                avail_slots_title: '🅿️ Available Spots in Building',
+                no_avail_slots: 'No available parking spots in the pool right now.',
+                spot_from_apt: (apt) => `🏠 Spot from Apt ${apt}`,
+                for_me_badge: '🎁 Released for you!',
+                pool_badge: '🌐 Building Pool',
+                claim_btn: 'Claim Spot',
+                end_return_btn: 'End / Return',
+                share_title: '🤝 Share My Apartment Spot',
+                share_desc: 'During the hours you set, a neighbor can use your spot (only if your car is outside) and it automatically returns to you when time ends!',
+                spots_count_lbl: 'Spots to release:',
+                max_spots_hint: (n) => `(Max for your apt: ${n})`,
+                target_lbl: 'Release spot to:',
+                opt_pool: '🌐 Building General Pool',
+                opt_apt: '🏠 Specific Apartment Only',
+                target_apt_lbl: 'Target Apartment Number *',
+                sched_type_lbl: 'Schedule Type',
+                opt_weekly: '📅 Recurring Weekly Days',
+                opt_once: '📌 One-Time Date',
+                days_lbl: 'Select Days of Week:',
+                date_lbl: 'Release Date:',
+                hours_lbl: 'Release Hours:',
+                full_day_off: '☀️ Full Day',
+                full_day_on: '✓ Full Day Active',
+                from_hour_lbl: 'From:',
+                to_hour_lbl: 'Until:',
+                publish_btn: '✅ Publish & Share Spot',
+                my_shares_title: '📋 My Active Spot Shares',
+                no_my_shares: 'You have no active spot shares.',
+                cancel_btn: 'Cancel',
+                quota_today: (u, m) => `Daily usage: ${u}/${m}`,
+                quota_month: (u, m) => `Monthly usage: ${u}/${m}`,
+            },
+            ru: {
+                dir: 'ltr',
+                days: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+                days_short: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+                header_default: '🅿️ Парковка жильцов',
+                header_sub_default: 'Быстрый вход через WhatsApp',
+                hello_apt: (name, apt) => `Здравствуйте, ${name} | Кв. ${apt}`,
+                logout: 'Выход',
+                login_title: '📲 Вход для жильцов (без пароля)',
+                login_sub: 'Введите номер мобильного телефона для получения кода в WhatsApp.',
+                phone_lbl: 'Номер мобильного телефона',
+                send_otp_btn: '💬 Отправить код в WhatsApp',
+                sending_otp: 'Отправка кода...',
+                otp_lbl: 'Код из WhatsApp (нажмите на код выше или введите ниже)',
+                quick_code_prefix: '✨ Нажмите для входа с кодом: ',
+                verify_btn: '🔐 Войти в портал квартиры',
+                back_phone_btn: 'Изменить номер телефона',
+                apt_status_title: 'Статус моей квартиры',
+                refresh_quota_btn: '🔄 Обновить квоту',
+                stat_max: 'Активная квота',
+                stat_present: 'Машин на парковке',
+                stat_avail: 'Свободно для въезда',
+                tab_vehicles: 'Авто',
+                tab_pool: 'Свободные',
+                tab_share: 'Отдать',
+                tab_request: 'Запрос',
+                my_cars_title: 'Автомобили моей квартиры',
+                no_subscribers: 'Нет абонентов, привязанных к этой квартире.',
+                status_in_parking: '🟢 На парковке',
+                status_out_parking: '⚪ Вне парковки',
+                car_1: 'Авто 1',
+                car_2: 'Авто 2',
+                car_3: 'Авто 3',
+                no_car: 'Нет авто',
+                save_plates_btn: '💾 Сохранить номера авто',
+                active_bookings_title: '📌 Мои активные бронирования',
+                avail_slots_title: '🅿️ Свободные места в доме',
+                no_avail_slots: 'Сейчас нет свободных парковочных мест.',
+                spot_from_apt: (apt) => `🏠 Место от кв. ${apt}`,
+                for_me_badge: '🎁 Специально для вас!',
+                pool_badge: '🌐 Общий пул',
+                claim_btn: 'Занять',
+                end_return_btn: 'Завершить',
+                share_title: '🤝 Освободить парковочное место',
+                share_desc: 'В указанные часы сосед сможет воспользоваться вашим местом (если вашей машины нет на парковке), а по окончании времени место вернется вам автоматически!',
+                spots_count_lbl: 'Сколько мест освободить?',
+                max_spots_hint: (n) => `(Макс. для квартиры: ${n})`,
+                target_lbl: 'Кому передать место?',
+                opt_pool: '🌐 В общий пул дома',
+                opt_apt: '🏠 Конкретной квартире',
+                target_apt_lbl: 'Номер квартиры получателя *',
+                sched_type_lbl: 'Тип расписания',
+                opt_weekly: '📅 По дням недели',
+                opt_once: '📌 На одну дату',
+                days_lbl: 'Выберите дни недели:',
+                date_lbl: 'Дата освобождения:',
+                hours_lbl: 'Часы:',
+                full_day_off: '☀️ Весь день',
+                full_day_on: '✓ Весь день активен',
+                from_hour_lbl: 'С:',
+                to_hour_lbl: 'До:',
+                publish_btn: '✅ Опубликовать и освободить',
+                my_shares_title: '📋 Мои активные публикации',
+                no_my_shares: 'У вас нет активных освобождений мест.',
+                cancel_btn: 'Отмена',
+                quota_today: (u, m) => `За день: ${u}/${m}`,
+                quota_month: (u, m) => `За месяц: ${u}/${m}`,
+            },
+            ar: {
+                dir: 'rtl',
+                days: ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
+                days_short: ['أحد', 'إثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت'],
+                header_default: '🅿️ موقف السكان',
+                header_sub_default: 'دخول سريع عبر واتساب',
+                hello_apt: (name, apt) => `مرحباً ${name} | شقة ${apt}`,
+                logout: 'خروج',
+                login_title: '📲 دخول السكان (بدون كلمة مرور)',
+                login_sub: 'أدخل رقم هاتفك المحمول للحصول على رمز دخول سريع عبر واتساب.',
+                phone_lbl: 'رقم الهاتف المحمول',
+                send_otp_btn: '💬 إرسال الرمز عبر واتساب',
+                sending_otp: 'جارٍ إرسال الرمز...',
+                otp_lbl: 'رمز التحقق من واتساب (اضغط على الرمز أعلاه أو أدخله)',
+                quick_code_prefix: '✨ اضغط هنا للدخول بالرمز: ',
+                verify_btn: '🔐 الدخول إلى بوابة الشقة',
+                back_phone_btn: 'العودة لتغيير رقم الهاتف',
+                apt_status_title: 'حالة شقتي',
+                refresh_quota_btn: '🔄 تحديث الحصة',
+                stat_max: 'حصة المواقف النشطة',
+                stat_present: 'سيارات بالموقف الآن',
+                stat_avail: 'متاحة للدخول الآن',
+                tab_vehicles: 'المركبات',
+                tab_pool: 'متاحة',
+                tab_share: 'تحرير',
+                tab_request: 'طلب',
+                my_cars_title: 'سيارات شقتي',
+                no_subscribers: 'لا يوجد مشتركون مرتبطون بهذه الشقة.',
+                status_in_parking: '🟢 داخل الموقف',
+                status_out_parking: '⚪ خارج الموقف',
+                car_1: 'سيارة 1',
+                car_2: 'سيارة 2',
+                car_3: 'سيارة 3',
+                no_car: 'بدون سيارة',
+                save_plates_btn: '💾 حفظ أرقام السيارات',
+                active_bookings_title: '📌 حجوزاتي النشطة',
+                avail_slots_title: '🅿️ مواقف متاحة في المبنى',
+                no_avail_slots: 'لا توجد مواقف متاحة حالياً.',
+                spot_from_apt: (apt) => `🏠 موقف من شقة ${apt}`,
+                for_me_badge: '🎁 مخصص لشقتك!',
+                pool_badge: '🌐 المجمع العام',
+                claim_btn: 'احجز الموقف',
+                end_return_btn: 'إنهاء / إرجاع',
+                share_title: '🤝 مشاركة موقف شقتي',
+                share_desc: 'خلال الساعات المحددة، يمكن للجار استخدام موقفك (فقط إذا كانت سيارتك بالخارج) ويعود الموقف إليك تلقائياً عند انتهاء الوقت!',
+                spots_count_lbl: 'عدد المواقف للمشاركة؟',
+                max_spots_hint: (n) => `(الحد الأقصى لشقتك: ${n})`,
+                target_lbl: 'لمن تشارك الموقف؟',
+                opt_pool: '🌐 للمجمع العام للمبنى',
+                opt_apt: '🏠 لشقة محددة فقط',
+                target_apt_lbl: 'رقم الشقة المستهدفة *',
+                sched_type_lbl: 'نوع الجدولة',
+                opt_weekly: '📅 ثابت حسب أيام الأسبوع',
+                opt_once: '📌 تاريخ لمرة واحدة',
+                days_lbl: 'اختر أيام الأسبوع:',
+                date_lbl: 'تاريخ مشاركة الموقف:',
+                hours_lbl: 'ساعات المشاركة:',
+                full_day_off: '☀️ يوم كامل',
+                full_day_on: '✓ يوم كامل مفعل',
+                from_hour_lbl: 'من الساعة:',
+                to_hour_lbl: 'حتى الساعة:',
+                publish_btn: '✅ نشر ومشاركة الموقف',
+                my_shares_title: '📋 مشاركاتي النشطة',
+                no_my_shares: 'لا توجد لديك مشاركات نشطة حالياً.',
+                cancel_btn: 'إلغاء',
+                quota_today: (u, m) => `الاستخدام اليومي: ${u}/${m}`,
+                quota_month: (u, m) => `الاستخدام الشهري: ${u}/${m}`,
+            },
+            fr: {
+                dir: 'ltr',
+                days: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
+                days_short: ['Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa'],
+                header_default: '🅿️ Parking Résidents',
+                header_sub_default: 'Connexion rapide via WhatsApp',
+                hello_apt: (name, apt) => `Bonjour ${name} | Appt ${apt}`,
+                logout: 'Sortie',
+                login_title: '📲 Connexion Résidents (Sans mot de passe)',
+                login_sub: 'Entrez votre numéro de mobile pour recevoir un code de connexion rapide sur WhatsApp.',
+                phone_lbl: 'Numéro de téléphone mobile',
+                send_otp_btn: '💬 Envoyer le code via WhatsApp',
+                sending_otp: 'Envoi du code...',
+                otp_lbl: 'Code de vérification WhatsApp (6 chiffres)',
+                quick_code_prefix: '✨ Appuyez ici pour entrer avec le code : ',
+                verify_btn: '🔐 Accéder au portail de l’appartement',
+                back_phone_btn: 'Retour pour changer de numéro',
+                apt_status_title: 'Statut de mon appartement',
+                refresh_quota_btn: '🔄 Actualiser',
+                stat_max: 'Quota actif',
+                stat_present: 'Véhicules garés',
+                stat_avail: 'Places libres',
+                tab_vehicles: 'Véhicules',
+                tab_pool: 'Libres',
+                tab_share: 'Libérer',
+                tab_request: 'Demande',
+                my_cars_title: 'Véhicules de mon appartement',
+                no_subscribers: 'Aucun abonné associé à cet appartement.',
+                status_in_parking: '🟢 Dans le parking',
+                status_out_parking: '⚪ À l’extérieur',
+                car_1: 'Véhicule 1',
+                car_2: 'Véhicule 2',
+                car_3: 'Véhicule 3',
+                no_car: 'Aucun véhicule',
+                save_plates_btn: '💾 Enregistrer les plaques',
+                active_bookings_title: '📌 Mes réservations actives',
+                avail_slots_title: '🅿️ Places disponibles dans l’immeuble',
+                no_avail_slots: 'Aucune place disponible dans le pool actuellement.',
+                spot_from_apt: (apt) => `🏠 Place de l’appt ${apt}`,
+                for_me_badge: '🎁 Libérée pour vous !',
+                pool_badge: '🌐 Pool général',
+                claim_btn: 'Prendre',
+                end_return_btn: 'Terminer',
+                share_title: '🤝 Libérer une place de mon appartement',
+                share_desc: 'Pendant les heures définies, un voisin pourra utiliser votre place (uniquement si votre véhicule est dehors) et elle vous sera automatiquement restituée à la fin !',
+                spots_count_lbl: 'Nombre de places à libérer :',
+                max_spots_hint: (n) => `(Max pour votre appt : ${n})`,
+                target_lbl: 'Pour qui libérer la place ?',
+                opt_pool: '🌐 Pool général de l’immeuble',
+                opt_apt: '🏠 Un appartement spécifique uniquement',
+                target_apt_lbl: 'Numéro de l’appartement bénéficiaire *',
+                sched_type_lbl: 'Type de planification',
+                opt_weekly: '📅 Récurrent par jours de la semaine',
+                opt_once: '📌 Date unique',
+                days_lbl: 'Sélectionnez les jours :',
+                date_lbl: 'Date de libération :',
+                hours_lbl: 'Heures de libération :',
+                full_day_off: '☀️ Journée entière',
+                full_day_on: '✓ Journée entière active',
+                from_hour_lbl: 'De :',
+                to_hour_lbl: 'À :',
+                publish_btn: '✅ Publier et libérer la place',
+                my_shares_title: '📋 Mes partages actifs',
+                no_my_shares: 'Vous n’avez aucun partage de place actif.',
+                cancel_btn: 'Annuler',
+                quota_today: (u, m) => `Jour : ${u}/${m}`,
+                quota_month: (u, m) => `Mois : ${u}/${m}`,
+            }
+        };
+
+        let currentLang = localStorage.getItem('tenant_lang') || 'he';
+        if (!I18N[currentLang]) currentLang = 'he';
+        let DAY_NAMES = I18N[currentLang].days;
+        let currentTenant = null;
+
+        function t(key) {
+            const dict = I18N[currentLang] || I18N.he;
+            return dict[key] !== undefined ? dict[key] : (I18N.he[key] || key);
+        }
+
+        function setPortalLanguage(lang) {
+            if (!I18N[lang]) lang = 'he';
+            currentLang = lang;
+            localStorage.setItem('tenant_lang', lang);
+            const d = I18N[lang];
+            DAY_NAMES = d.days;
+            document.documentElement.lang = lang;
+            document.documentElement.dir = d.dir;
+            const sel = document.getElementById('langSelector');
+            if (sel && sel.value !== lang) sel.value = lang;
+
+            const mapIds = {
+                'logoutBtn': 'logout',
+                'i18n_login_title': 'login_title',
+                'i18n_login_sub': 'login_sub',
+                'i18n_phone_lbl': 'phone_lbl',
+                'sendOtpBtn': 'send_otp_btn',
+                'i18n_otp_lbl': 'otp_lbl',
+                'verifyOtpBtn': 'verify_btn',
+                'i18n_back_phone_btn': 'back_phone_btn',
+                'i18n_apt_status_title': 'apt_status_title',
+                'i18n_refresh_quota_btn': 'refresh_quota_btn',
+                'i18n_stat_max': 'stat_max',
+                'i18n_stat_present': 'stat_present',
+                'i18n_stat_avail': 'stat_avail',
+                'i18n_tab_vehicles': 'tab_vehicles',
+                'i18n_tab_pool': 'tab_pool',
+                'i18n_tab_share': 'tab_share',
+                'i18n_tab_request': 'tab_request',
+                'i18n_my_cars_title': 'my_cars_title',
+                'i18n_active_bookings_title': 'active_bookings_title',
+                'i18n_avail_slots_title': 'avail_slots_title',
+                'i18n_share_title': 'share_title',
+                'i18n_share_desc': 'share_desc',
+                'i18n_spots_count_lbl': 'spots_count_lbl',
+                'i18n_target_lbl': 'target_lbl',
+                'i18n_opt_pool': 'opt_pool',
+                'i18n_opt_apt': 'opt_apt',
+                'i18n_target_apt_lbl': 'target_apt_lbl',
+                'i18n_sched_type_lbl': 'sched_type_lbl',
+                'i18n_opt_weekly': 'opt_weekly',
+                'i18n_opt_once': 'opt_once',
+                'i18n_days_lbl': 'days_lbl',
+                'i18n_date_lbl': 'date_lbl',
+                'i18n_hours_lbl': 'hours_lbl',
+                'i18n_from_hour_lbl': 'from_hour_lbl',
+                'i18n_to_hour_lbl': 'to_hour_lbl',
+                'i18n_publish_btn': 'publish_btn',
+                'i18n_my_shares_title': 'my_shares_title'
+            };
+            Object.keys(mapIds).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = d[mapIds[id]];
+            });
+
+            // Update day chips
+            document.querySelectorAll('#daysSelector .day-chip').forEach((chip, idx) => {
+                if (d.days_short[idx]) chip.textContent = d.days_short[idx];
+            });
+
+            // Update full day button
+            const fdBtn = document.getElementById('fullDayBtn');
+            if (fdBtn) fdBtn.innerHTML = isFullDaySelected ? d.full_day_on : d.full_day_off;
+
+            if (!currentTenant) {
+                document.getElementById('headerTenantInfo').textContent = d.header_sub_default;
+            } else {
+                document.getElementById('headerTenantInfo').textContent = d.hello_apt(currentTenant.full_name, currentTenant.apartment_number);
+            }
+
+            if (lastDashboardData) {
+                const spotsInput = document.getElementById('shSpotsCount');
+                const spotsHint = document.getElementById('maxSpotsHint');
+                if (spotsHint && spotsInput) {
+                    spotsHint.textContent = d.max_spots_hint(spotsInput.max || 1);
+                }
+                if (lastDashboardData.quota_limits) {
+                    document.getElementById('quotaTodayBadge').textContent = d.quota_today(lastDashboardData.quota_limits.used_today, lastDashboardData.quota_limits.max_per_day);
+                    document.getElementById('quotaMonthBadge').textContent = d.quota_month(lastDashboardData.quota_limits.used_this_month, lastDashboardData.quota_limits.max_per_month);
+                }
+                renderMySubscribers(lastDashboardData.subscribers || []);
+                renderActiveBookings(lastDashboardData.active_bookings || []);
+                renderAvailableSlots(lastDashboardData.available_slots || []);
+                renderMyShares(lastDashboardData.my_shares || []);
+            }
+        }
+
+        let _portalActionBusy = false;
+        let selectedPortalProject = localStorage.getItem('tenant_selected_project') || '';
+        let selectedPortalTenantId = localStorage.getItem('tenant_selected_tid') || '';
+
+        function getPortalAuthHeaders(extra = {}) {
+            const tk = localStorage.getItem('tenant_auth_token') || '';
+            const ph = localStorage.getItem('tenant_last_phone') || '';
+            const proj = selectedPortalProject || (currentTenant && currentTenant.project_number) || '';
+            const headers = { ...extra };
+            if (tk) headers['X-Tenant-Token'] = tk;
+            if (ph) headers['X-Tenant-Phone'] = ph;
+            if (proj) headers['X-Tenant-Project'] = String(proj);
+            return headers;
+        }
+
+        function captureFulfillRequestFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const action = params.get('action');
+            const reqApt = params.get('req_apt');
+            if (action === 'fulfill_request' && reqApt) {
+                const reqObj = {
+                    req_apt: reqApt,
+                    req_name: params.get('req_name') || '',
+                    sched: (params.get('sched') || 'ONCE').toUpperCase(),
+                    date: params.get('date') || new Date().toISOString().split('T')[0],
+                    days: params.get('days') || '',
+                    start: params.get('start') || '08:00',
+                    end: params.get('end') || '17:00'
+                };
+                try {
+                    localStorage.setItem('tenant_pending_fulfill_req', JSON.stringify(reqObj));
+                } catch (e) {}
+                const rawQuery = window.location.search.replace(/^\?/, '');
+                // נקה את ה-URL כדי שרענון דף לא ידרוס שינויים ידניים לאחר מילוי
+                const cleanUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+
+                // אם המשתמש פתח מנייד (iOS / Android), נסה לפתוח אוטומטית את האפליקציה המותקנת; אם אינה מותקנת או אינה מעודכנת, המשתמש נשאר באתר שכבר מוכן עם הטופס המלא!
+                const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+                if (isMobileDevice && rawQuery) {
+                    setTimeout(() => {
+                        try {
+                            window.location.href = `sbtenants://fulfill?${rawQuery}`;
+                        } catch (err) {}
+                    }, 150);
+                }
+            }
+        }
+
+        function applyPendingFulfillRequest() {
+            let raw = null;
+            try {
+                raw = localStorage.getItem('tenant_pending_fulfill_req');
+            } catch (e) {}
+            if (!raw) return;
+            try {
+                const reqObj = JSON.parse(raw);
+                if (!reqObj || !reqObj.req_apt) return;
+
+                // 1. עבור אוטומטית ללשונית "שחרור חניה"
+                switchPortalTab('share', document.getElementById('i18n_tab_share'));
+
+                // 2. מלא את הדירה המבקשת ("לדירה ספציפית בלבד")
+                const targetTypeEl = document.getElementById('shTargetType');
+                const targetAptGroup = document.getElementById('shTargetAptGroup');
+                const targetAptEl = document.getElementById('shTargetApt');
+                if (targetTypeEl) targetTypeEl.value = 'APT';
+                if (targetAptGroup) targetAptGroup.style.display = 'block';
+                if (targetAptEl) targetAptEl.value = reqObj.req_apt;
+
+                // 3. מלא סוג תזמון (חד-פעמי או קבוע לפי ימים)
+                const schedEl = document.getElementById('shScheduleType');
+                if (schedEl) {
+                    schedEl.value = (reqObj.sched === 'WEEKLY') ? 'WEEKLY' : 'ONCE';
+                    toggleScheduleType();
+                }
+
+                if (reqObj.sched === 'WEEKLY') {
+                    const reqDays = String(reqObj.days || '').split(',').map(x => x.trim()).filter(Boolean);
+                    document.querySelectorAll('#daysSelector .day-chip').forEach(chip => {
+                        const dAttr = chip.getAttribute('data-day');
+                        chip.classList.toggle('selected', reqDays.includes(dAttr));
+                    });
+                } else if (reqObj.date) {
+                    const dateEl = document.getElementById('shSpecificDate');
+                    if (dateEl) dateEl.value = reqObj.date;
+                }
+
+                // 4. מלא שעות (או יום מלא)
+                const startEl = document.getElementById('shStartTime');
+                const endEl = document.getElementById('shEndTime');
+                if (startEl && reqObj.start) startEl.value = reqObj.start;
+                if (endEl && reqObj.end) endEl.value = reqObj.end;
+                onManualTimeChange();
+
+                // 5. הצג באנר הסבר ברור + כפתור פתיחה באפליקציה
+                const banner = document.getElementById('fulfillRequestBanner');
+                const bannerTxt = document.getElementById('fulfillRequestBannerText');
+                const openAppBtn = document.getElementById('fulfillOpenAppBtn');
+                if (banner && bannerTxt) {
+                    const namePart = reqObj.req_name ? ` (${reqObj.req_name})` : '';
+                    bannerTxt.textContent = `🎁 מענה לבקשת חניה מדירה ${reqObj.req_apt}${namePart}: כל פרטי הבקשה הוזנו אוטומטית — בדוק את החניה המסומנת ולחץ על "✅ פרסם ושחרר חניה"!`;
+                    banner.style.display = 'block';
+                }
+                if (openAppBtn) {
+                    const qs = new URLSearchParams({
+                        action: 'fulfill_request',
+                        req_apt: reqObj.req_apt,
+                        req_name: reqObj.req_name || '',
+                        sched: reqObj.sched || 'ONCE',
+                        date: reqObj.date || '',
+                        days: reqObj.days || '',
+                        start: reqObj.start || '08:00',
+                        end: reqObj.end || '17:00'
+                    }).toString();
+                    openAppBtn.href = `sbtenants://fulfill?${qs}`;
+                }
+            } catch (e) {}
+        }
+
+        function clearPendingFulfillRequest() {
+            try {
+                localStorage.removeItem('tenant_pending_fulfill_req');
+            } catch (e) {}
+            const banner = document.getElementById('fulfillRequestBanner');
+            if (banner) banner.style.display = 'none';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const todayIso = new Date().toISOString().split('T')[0];
+            document.getElementById('shSpecificDate').value = todayIso;
+            const reqDateEl = document.getElementById('reqSpecificDate');
+            if (reqDateEl) reqDateEl.value = todayIso;
+            setPortalLanguage(currentLang);
+
+            // קליטת לינק חכם של בקשת חניה (אם הגענו מקבוצת הוואטסאפ של הבניין)
+            captureFulfillRequestFromUrl();
+
+            // הצגה מיידית מהזיכרון המקומי של המכשיר (0.0 שניות המתנה!)
+            try {
+                const cachedRaw = localStorage.getItem('tenant_cached_dashboard');
+                if (cachedRaw) {
+                    const cachedData = JSON.parse(cachedRaw);
+                    if (cachedData && cachedData.success && cachedData.tenant) {
+                        renderDashboardData(cachedData);
+                    }
+                }
+            } catch (e) {}
+
+            // בדיקה אם הגענו מקישור מוואטסאפ (עם phone או עם phone + code)
+            const params = new URLSearchParams(window.location.search);
+            const urlPhone = params.get('phone') || localStorage.getItem('tenant_last_phone') || '';
+            const urlCode = params.get('code');
+            if (urlPhone) {
+                document.getElementById('loginPhone').value = urlPhone;
+                fetch(`/api/tenant/building-info?phone=${encodeURIComponent(urlPhone)}`)
+                    .then(r => r.json())
+                    .then(b => {
+                        if (b && b.success) {
+                            if (b.parking_name) document.getElementById('headerBuildingName').textContent = b.parking_name;
+                            if (b.logo_data) {
+                                const logoEl = document.getElementById('portalBuildingLogo');
+                                logoEl.src = b.logo_data;
+                                logoEl.style.display = 'block';
+                            }
+                        }
+                    }).catch(() => {});
+            }
+            const savedPendingPhone = sessionStorage.getItem('tenant_pending_phone');
+            const savedPendingOtp = sessionStorage.getItem('tenant_pending_otp');
+            if (!urlCode && savedPendingPhone) {
+                document.getElementById('loginPhone').value = savedPendingPhone;
+                document.getElementById('phoneStep').style.display = 'none';
+                document.getElementById('otpStep').style.display = 'block';
+                if (savedPendingOtp) {
+                    showClickableCode(savedPendingOtp);
+                }
+            }
+            if (urlPhone && urlCode) {
+                document.getElementById('phoneStep').style.display = 'none';
+                document.getElementById('otpStep').style.display = 'block';
+                showClickableCode(urlCode);
+                document.getElementById('loginOtp').value = urlCode;
+                verifyOtp();
+                window.history.replaceState({}, document.title, window.location.pathname);
+                return;
+            }
+
+            // כשחוזרים מהוואטסאפ לדפדפן, נזהה אוטומטית קוד בן 6 ספרות מהלוח ונציג אותו ככפתור לחיץ!
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    tryReadClipboardOtp();
+                }
+            });
+            window.addEventListener('focus', () => {
+                tryReadClipboardOtp();
+            });
+
+            // בדיקה ורענון מול השרת (כולל שחזור סשן אוטומטי מהטוקן השמור במכשיר)
+            loadDashboard(true);
+        });
+
+        function showPortalAlert(msg, type = 'success') {
+            const el = document.getElementById('portalAlert');
+            el.className = `alert alert-${type}`;
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 5000);
+        }
+
+        function switchPortalTab(tab, btnEl) {
+            ['vehicles', 'pool', 'share', 'request'].forEach(t => {
+                const el = document.getElementById(`ptab-${t}`);
+                if (el) el.style.display = (t === tab) ? 'block' : 'none';
+            });
+            document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+        }
+
+        let isReqFullDaySelected = false;
+
+        function toggleReqScheduleType() {
+            const st = document.getElementById('reqScheduleType').value;
+            document.getElementById('reqWeeklyDaysGroup').style.display = (st === 'WEEKLY') ? 'block' : 'none';
+            document.getElementById('reqOnceDateGroup').style.display = (st === 'ONCE') ? 'block' : 'none';
+        }
+
+        function toggleReqFullDay() {
+            isReqFullDaySelected = !isReqFullDaySelected;
+            const btn = document.getElementById('reqFullDayBtn');
+            const startEl = document.getElementById('reqStartTime');
+            const endEl = document.getElementById('reqEndTime');
+            if (isReqFullDaySelected) {
+                startEl.value = '00:00';
+                endEl.value = '23:59';
+                btn.style.background = '#4f46e5';
+                btn.style.color = '#ffffff';
+                btn.innerHTML = '✓ יום מלא פעיל';
+            } else {
+                startEl.value = '08:00';
+                endEl.value = '17:00';
+                btn.style.background = '#eef2ff';
+                btn.style.color = '#4f46e5';
+                btn.innerHTML = '☀️ יום מלא';
+            }
+        }
+
+        function onReqManualTimeChange() {
+            const startEl = document.getElementById('reqStartTime');
+            const endEl = document.getElementById('reqEndTime');
+            const btn = document.getElementById('reqFullDayBtn');
+            if (startEl.value === '00:00' && endEl.value === '23:59') {
+                isReqFullDaySelected = true;
+                btn.style.background = '#4f46e5';
+                btn.style.color = '#ffffff';
+                btn.innerHTML = '✓ יום מלא פעיל';
+            } else {
+                isReqFullDaySelected = false;
+                btn.style.background = '#eef2ff';
+                btn.style.color = '#4f46e5';
+                btn.innerHTML = '☀️ יום מלא';
+            }
+        }
+
+        async function handleRequestSpot(e) {
+            e.preventDefault();
+            if (_portalActionBusy) return;
+            const schedule_type = document.getElementById('reqScheduleType').value;
+            const specific_date = document.getElementById('reqSpecificDate').value;
+            const start_time = document.getElementById('reqStartTime').value;
+            const end_time = document.getElementById('reqEndTime').value;
+            const selectedDays = Array.from(document.querySelectorAll('#reqDaysSelector .day-chip.selected'))
+                .map(el => el.getAttribute('data-day'))
+                .join(',');
+
+            const btn = document.getElementById('reqSubmitBtn');
+            const origText = btn ? btn.textContent : '';
+            _portalActionBusy = true;
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '⏳ שולח בקשה לוואטסאפ...';
+            }
+            try {
+                const res = await fetch('/api/tenant/request-spot', {
+                    method: 'POST',
+                    headers: getPortalAuthHeaders({'Content-Type': 'application/json'}),
+                    body: JSON.stringify({
+                        schedule_type,
+                        specific_date,
+                        days_of_week: selectedDays,
+                        start_time,
+                        end_time
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showPortalAlert(data.message, 'success');
+                    if (data.share_text) {
+                        const resBox = document.getElementById('reqResultBox');
+                        const txtArea = document.getElementById('reqShareTextArea');
+                        if (txtArea) txtArea.value = data.share_text;
+                        if (resBox) resBox.style.display = 'block';
+                    }
+                } else {
+                    showPortalAlert(data.message || 'שגיאה בשליחת בקשת החניה', 'danger');
+                }
+            } catch (err) {
+                showPortalAlert('שגיאת תקשורת מול השרת', 'danger');
+            } finally {
+                _portalActionBusy = false;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = origText;
+                }
+            }
+        }
+
+        function copyRequestShareText() {
+            const txtArea = document.getElementById('reqShareTextArea');
+            if (!txtArea || !txtArea.value) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(txtArea.value).then(() => {
+                    showPortalAlert('ההודעה הועתקה! כעת הדבק אותה בקבוצת הוואטסאפ של הבניין.', 'success');
+                }).catch(() => {});
+            } else {
+                txtArea.select();
+                document.execCommand('copy');
+                showPortalAlert('ההודעה הועתקה! כעת הדבק אותה בקבוצת הוואטסאפ של הבניין.', 'success');
+            }
+        }
+
+        let isFullDaySelected = false;
+
+        function toggleFullDayShare() {
+            isFullDaySelected = !isFullDaySelected;
+            const btn = document.getElementById('fullDayBtn');
+            const startEl = document.getElementById('shStartTime');
+            const endEl = document.getElementById('shEndTime');
+            if (isFullDaySelected) {
+                startEl.value = '00:00';
+                endEl.value = '23:59';
+                btn.style.background = '#4f46e5';
+                btn.style.color = '#ffffff';
+                btn.innerHTML = '✓ יום מלא פעיל';
+            } else {
+                startEl.value = '08:00';
+                endEl.value = '17:00';
+                btn.style.background = '#eef2ff';
+                btn.style.color = '#4f46e5';
+                btn.innerHTML = '☀️ יום מלא';
+            }
+        }
+
+        function onManualTimeChange() {
+            const startEl = document.getElementById('shStartTime');
+            const endEl = document.getElementById('shEndTime');
+            const btn = document.getElementById('fullDayBtn');
+            if (startEl.value === '00:00' && endEl.value === '23:59') {
+                isFullDaySelected = true;
+                btn.style.background = '#4f46e5';
+                btn.style.color = '#ffffff';
+                btn.innerHTML = '✓ יום מלא פעיל';
+            } else {
+                isFullDaySelected = false;
+                btn.style.background = '#eef2ff';
+                btn.style.color = '#4f46e5';
+                btn.innerHTML = '☀️ יום מלא';
+            }
+        }
+
+        function formatHoursDisplay(start, end) {
+            if (start === '00:00' && end === '23:59') {
+                return '☀️ יום מלא';
+            }
+            return `<span dir="ltr">${start} – ${end}</span>`;
+        }
+
+        function toggleScheduleType() {
+            const st = document.getElementById('shScheduleType').value;
+            document.getElementById('shWeeklyDaysGroup').style.display = (st === 'WEEKLY') ? 'block' : 'none';
+            document.getElementById('shOnceDateGroup').style.display = (st === 'ONCE') ? 'block' : 'none';
+        }
+
+        async function sendOtp(chosenPkg = null) {
+            const phone = document.getElementById('loginPhone').value.trim();
+            if (!phone || phone.length < 9) {
+                showPortalAlert('נא להזין מספר טלפון נייד תקין', 'danger');
+                return;
+            }
+            const btn = document.getElementById('sendOtpBtn');
+            btn.disabled = true;
+            btn.textContent = 'שולח קוד לוואטסאפ...';
+            try {
+                const payload = { phone_number: phone };
+                if (chosenPkg && chosenPkg.project_number) {
+                    payload.project_number = chosenPkg.project_number;
+                    payload.tenant_id = chosenPkg.tenant_id;
+                    selectedPortalProject = String(chosenPkg.project_number);
+                    selectedPortalTenantId = String(chosenPkg.tenant_id || '');
+                    try {
+                        localStorage.setItem('tenant_selected_project', selectedPortalProject);
+                        localStorage.setItem('tenant_selected_tid', selectedPortalTenantId);
+                    } catch (e) {}
+                }
+                const res = await fetch('/api/tenant/send-otp', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    if (data.demo_viewer && data.tenant) {
+                        // מספר שאינו במערכת -> כניסה מיידית למצב צפייה בלבד (הדגמה)!
+                        try {
+                            localStorage.setItem('tenant_last_phone', phone);
+                            if (data.auth_token) localStorage.setItem('tenant_auth_token', data.auth_token);
+                            localStorage.setItem('tenant_user_data', JSON.stringify(data.tenant));
+                            localStorage.setItem('tenant_selected_project', 'DEMO');
+                        } catch (e) {}
+                        selectedPortalProject = 'DEMO';
+                        showPortalAlert(data.message, 'success');
+                        loadDashboard();
+                        return;
+                    }
+                    if (data.choose_parking && Array.isArray(data.parkings)) {
+                        const box = document.getElementById('chooseParkingBox');
+                        const btns = document.getElementById('chooseParkingButtons');
+                        if (box && btns) {
+                            btns.innerHTML = data.parkings.map(p => `
+                                <button type="button" class="btn btn-outline" style="width:100%; border-color:#3b82f6; background:#ffffff; color:#1e3a8a; font-weight:800; padding:11px 14px;"
+                                        onclick='sendOtp(${JSON.stringify({project_number: p.project_number, tenant_id: p.tenant_id})})'>
+                                    🏢 ${p.parking_name} — דירה ${p.apartment_number} (${p.full_name})
+                                </button>
+                            `).join('');
+                            box.style.display = 'block';
+                        }
+                        showPortalAlert(data.message, 'success');
+                        return;
+                    }
+                    if (data.selected_project) {
+                        selectedPortalProject = String(data.selected_project);
+                        try { localStorage.setItem('tenant_selected_project', selectedPortalProject); } catch (e) {}
+                    }
+                    if (data.selected_tenant_id) {
+                        selectedPortalTenantId = String(data.selected_tenant_id);
+                        try { localStorage.setItem('tenant_selected_tid', selectedPortalTenantId); } catch (e) {}
+                    }
+                    try {
+                        sessionStorage.setItem('tenant_pending_phone', phone);
+                        if (data.otp_code) sessionStorage.setItem('tenant_pending_otp', data.otp_code);
+                    } catch (err) {}
+                    document.getElementById('phoneStep').style.display = 'none';
+                    document.getElementById('otpStep').style.display = 'block';
+                    if (data.otp_code) {
+                        showClickableCode(data.otp_code);
+                    }
+                    showPortalAlert(data.message, 'success');
+                } else {
+                    showPortalAlert(data.message || 'שגיאה בשליחת קוד', 'danger');
+                }
+            } catch (e) {
+                showPortalAlert('שגיאת תקשורת מול השרת', 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '💬 שלח קוד בוואטסאפ';
+            }
+        }
+
+        let detectedOtpCode = '';
+
+        function showClickableCode(codeStr) {
+            const clean = String(codeStr || '').replace(/\D/g, '');
+            if (clean.length === 6) {
+                detectedOtpCode = clean;
+                document.getElementById('quickCodeValue').textContent = clean;
+                document.getElementById('quickCodeBox').style.display = 'block';
+                document.getElementById('loginOtp').value = clean;
+            }
+        }
+
+        function clickDetectedCode() {
+            if (!detectedOtpCode) return;
+            document.getElementById('loginOtp').value = detectedOtpCode;
+            verifyOtp();
+        }
+
+        async function tryReadClipboardOtp() {
+            if (document.getElementById('otpStep').style.display === 'none') return;
+            try {
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    const text = await navigator.clipboard.readText();
+                    const match = String(text || '').match(/\b(\d{6})\b/);
+                    if (match && match[1]) {
+                        showClickableCode(match[1]);
+                    }
+                }
+            } catch (e) {}
+        }
+
+        function backToPhoneStep() {
+            try {
+                sessionStorage.removeItem('tenant_pending_phone');
+                sessionStorage.removeItem('tenant_pending_otp');
+            } catch (err) {}
+            document.getElementById('otpStep').style.display = 'none';
+            document.getElementById('phoneStep').style.display = 'block';
+        }
+
+        async function verifyOtp() {
+            if (_portalActionBusy) return;
+            const phone = document.getElementById('loginPhone').value.trim();
+            const code = document.getElementById('loginOtp').value.trim();
+            if (code.length !== 6) {
+                showPortalAlert('נא להזין קוד בן 6 ספרות', 'danger');
+                return;
+            }
+            const btn = document.getElementById('verifyOtpBtn');
+            _portalActionBusy = true;
+            btn.disabled = true;
+            btn.textContent = '⏳ נכנס...';
+            try {
+                const res = await fetch('/api/tenant/verify-otp', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        phone_number: phone,
+                        otp_code: code,
+                        project_number: selectedPortalProject || undefined,
+                        tenant_id: selectedPortalTenantId || undefined
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    try {
+                        sessionStorage.removeItem('tenant_pending_phone');
+                        sessionStorage.removeItem('tenant_pending_otp');
+                        localStorage.setItem('tenant_last_phone', phone);
+                        if (data.auth_token) localStorage.setItem('tenant_auth_token', data.auth_token);
+                        if (data.tenant) localStorage.setItem('tenant_user_data', JSON.stringify(data.tenant));
+                    } catch (err) {}
+                    // מעבר מיידי למסך הפורטל ללא המתנה לטעינת בקר החניון!
+                    if (data.tenant) {
+                        currentTenant = data.tenant;
+                        lastDashboardData = data;
+                        document.getElementById('loginSection').style.display = 'none';
+                        document.getElementById('dashboardSection').style.display = 'block';
+                        document.getElementById('logoutBtn').style.display = 'block';
+                        document.getElementById('headerBuildingName').textContent = `🅿️ ${data.tenant.parking_name || 'חניון הדיירים'}`;
+                        const famName = (data.pooling && data.pooling.contractName) || data.tenant.family_name || '';
+                        const famSuffix = (famName && famName !== data.tenant.full_name) ? ` (${famName})` : '';
+                        document.getElementById('headerTenantInfo').textContent = `שלום ${data.tenant.full_name} | דירה ${data.tenant.apartment_number}${famSuffix}`;
+                    }
+                    loadDashboard();
+                } else {
+                    showPortalAlert(data.message || 'קוד שגוי', 'danger');
+                }
+            } catch (e) {
+                showPortalAlert('שגיאת תקשורת', 'danger');
+            } finally {
+                _portalActionBusy = false;
+                btn.disabled = false;
+                btn.textContent = '🔐 כניסה לפורטל הדירה';
+            }
+        }
+
+        function openPortalWaze() {
+            const lat = currentTenant && currentTenant.parking_lat;
+            const lng = currentTenant && currentTenant.parking_lng;
+            const addr = currentTenant && currentTenant.parking_address;
+            const pName = (currentTenant && currentTenant.parking_name) || document.getElementById('headerBuildingName').textContent || 'חניון';
+            if (lat !== null && lat !== undefined && lat !== '' && lng !== null && lng !== undefined && lng !== '' && !isNaN(Number(lat)) && !isNaN(Number(lng))) {
+                window.open(`https://waze.com/ul?ll=${Number(lat)},${Number(lng)}&navigate=yes`, '_blank');
+                return;
+            }
+            const q = (addr || pName).replace(/^🅿️\s*/, '').trim();
+            window.open(`https://waze.com/ul?q=${encodeURIComponent(q)}&navigate=yes`, '_blank');
+        }
+
+        async function logoutTenant() {
+            try {
+                localStorage.removeItem('tenant_auth_token');
+                localStorage.removeItem('tenant_user_data');
+                localStorage.removeItem('tenant_cached_dashboard');
+            } catch (e) {}
+            await fetch('/api/tenant/logout', { method: 'POST' });
+            currentTenant = null;
+            document.getElementById('dashboardSection').style.display = 'none';
+            document.getElementById('logoutBtn').style.display = 'none';
+            document.getElementById('loginSection').style.display = 'block';
+            backToPhoneStep();
+        }
+
+        async function refreshApartmentStatus(btnEl) {
+            if (_portalActionBusy) return;
+            const orig = btnEl ? btnEl.innerHTML : '';
+            _portalActionBusy = true;
+            if (btnEl) {
+                btnEl.disabled = true;
+                btnEl.innerHTML = '⏳ מרענן...';
+            }
+            try {
+                await loadDashboard();
+                showPortalAlert('נתוני הדירה וכמות החניות רועננו מבקר החניון!', 'success');
+            } finally {
+                _portalActionBusy = false;
+                if (btnEl) {
+                    btnEl.disabled = false;
+                    btnEl.innerHTML = orig;
+                }
+            }
+        }
+
+        async function switchPortalParking(tenantId, projectNumber) {
+            if (_portalActionBusy) return;
+            _portalActionBusy = true;
+            try {
+                const res = await fetch('/api/tenant/switch-parking', {
+                    method: 'POST',
+                    headers: getPortalAuthHeaders({'Content-Type': 'application/json'}),
+                    body: JSON.stringify({ tenant_id: tenantId, project_number: projectNumber })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    selectedPortalProject = String(data.tenant.project_number);
+                    selectedPortalTenantId = String(data.tenant.id);
+                    try {
+                        if (data.auth_token) localStorage.setItem('tenant_auth_token', data.auth_token);
+                        localStorage.setItem('tenant_user_data', JSON.stringify(data.tenant));
+                        localStorage.setItem('tenant_selected_project', selectedPortalProject);
+                        localStorage.setItem('tenant_selected_tid', selectedPortalTenantId);
+                    } catch (e) {}
+                    await loadDashboard();
+                }
+            } finally {
+                _portalActionBusy = false;
+            }
+        }
+
+        function renderDashboardData(data) {
+            if (!data || !data.tenant) return;
+            currentTenant = data.tenant;
+            lastDashboardData = data;
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('dashboardSection').style.display = 'block';
+            document.getElementById('logoutBtn').style.display = 'block';
+
+            const demoBannerEl = document.getElementById('demoViewerBannerBox');
+            if (demoBannerEl) {
+                demoBannerEl.style.display = (data.is_demo_viewer || data.tenant.is_demo_viewer) ? 'block' : 'none';
+            }
+
+            const swBox = document.getElementById('switchParkingDashboardBox');
+            const swBtns = document.getElementById('switchParkingDashboardButtons');
+            if (swBox && swBtns) {
+                const pOpts = data.parkings_options || [];
+                if (!data.is_demo_viewer && pOpts.length > 1) {
+                    swBtns.innerHTML = pOpts.map(p => {
+                        const isCur = String(p.project_number) === String(data.tenant.project_number) && String(p.apartment_number) === String(data.tenant.apartment_number);
+                        const st = isCur
+                            ? 'width:100%; padding:9px 12px; font-size:13.5px; border-radius:10px; border:1.5px solid #334155; background:#e2e8f0; color:#1e293b; font-weight:800;'
+                            : 'width:100%; padding:9px 12px; font-size:13.5px; border-radius:10px; border:1.5px solid #cbd5e1; background:#ffffff; color:#334155; font-weight:700;';
+                        return `<button type="button" class="btn" style="${st}" ${isCur ? 'disabled' : ''} onclick="switchPortalParking(${p.tenant_id}, '${p.project_number}')">${isCur ? '✓ ' : ''}🏢 ${p.parking_name} — דירה ${p.apartment_number}</button>`;
+                    }).join('');
+                    swBox.style.display = 'block';
+                } else {
+                    swBox.style.display = 'none';
+                }
+            }
+
+            const logoEl = document.getElementById('portalBuildingLogo');
+            if (data.tenant.logo_data) {
+                logoEl.src = data.tenant.logo_data;
+                logoEl.style.display = 'block';
+                document.getElementById('headerBuildingName').textContent = data.tenant.parking_name;
+            } else {
+                logoEl.style.display = 'none';
+                document.getElementById('headerBuildingName').textContent = `🅿️ ${data.tenant.parking_name}`;
+            }
+            const famName = (data.pooling && data.pooling.contractName) || data.tenant.family_name || '';
+            const famSuffix = (famName && famName !== data.tenant.full_name) ? ` (${famName})` : '';
+            document.getElementById('headerTenantInfo').textContent = `שלום ${data.tenant.full_name} | דירה ${data.tenant.apartment_number}${famSuffix}`;
+
+            const aptMaxSpots = Math.max(1, parseInt((data.pooling && data.pooling.success) ? data.pooling.maxCounter : (data.tenant.base_max_counter || 1), 10) || 1);
+            const spotsInput = document.getElementById('shSpotsCount');
+            const spotsHint = document.getElementById('maxSpotsHint');
+            if (spotsInput) {
+                spotsInput.max = String(aptMaxSpots);
+                if (parseInt(spotsInput.value, 10) > aptMaxSpots) {
+                    spotsInput.value = String(aptMaxSpots);
+                }
+            }
+            if (spotsHint) {
+                spotsHint.textContent = `(מקסימום לדירתך: ${aptMaxSpots})`;
+            }
+
+            const isZeroApt = (parseInt(data.tenant.base_max_counter ?? 1, 10) === 0) && (!data.pooling || parseInt(data.pooling.maxCounter ?? 0, 10) === 0);
+            const zeroNoticeEl = document.getElementById('zeroSpotShareNotice');
+            if (zeroNoticeEl) {
+                zeroNoticeEl.style.display = isZeroApt ? 'block' : 'none';
+            }
+
+            if (data.pooling && data.pooling.success) {
+                document.getElementById('statMaxCounter').textContent = data.pooling.maxCounter;
+                document.getElementById('statPresentCounter').textContent = data.pooling.presentCounter;
+                document.getElementById('statAvailableNow').textContent = data.pooling.availableSpots;
+            } else {
+                document.getElementById('statMaxCounter').textContent = '-';
+                document.getElementById('statPresentCounter').textContent = '-';
+                document.getElementById('statAvailableNow').textContent = '-';
+            }
+
+            if (data.quota_limits) {
+                document.getElementById('quotaTodayBadge').textContent = `ניצול יומי: ${data.quota_limits.used_today} מתוך ${data.quota_limits.max_per_day}`;
+                document.getElementById('quotaMonthBadge').textContent = `ניצול חודשי: ${data.quota_limits.used_this_month} מתוך ${data.quota_limits.max_per_month}`;
+                const gMonth = data.quota_limits.given_used_hours_month ?? 0;
+                const gTot = data.quota_limits.given_used_hours_total ?? 0;
+                const starTop = document.getElementById('portalStarHoursBadge');
+                if (starTop) starTop.textContent = `⭐ ${gTot} שעות שתרמתי`;
+                const gM = document.getElementById('givenHoursMonthBadge');
+                if (gM) gM.textContent = `⭐ שעות חניה שתרמתי החודש: ${gMonth} שעות`;
+                const gT = document.getElementById('givenHoursTotalBadge');
+                if (gT) gT.textContent = `⭐ סה״כ כללי שתרמתי: ${gTot} שעות`;
+            }
+
+            renderMySubscribers(data.subscribers || []);
+            renderActiveBookings(data.active_bookings || []);
+            renderAvailableSlots(data.available_slots || []);
+            renderMyShares(data.my_shares || []);
+
+            // אם הגענו מלינק בקשת חניה של שכן, מלא אוטומטית את הלשונית "שחרור חניה"!
+            applyPendingFulfillRequest();
+        }
+
+        async function loadDashboard(silentIfUnauth = false) {
+            try {
+                const res = await fetch('/api/tenant/dashboard', {
+                    headers: getPortalAuthHeaders()
+                });
+                if (res.status === 401) {
+                    if (!silentIfUnauth) {
+                        document.getElementById('dashboardSection').style.display = 'none';
+                        document.getElementById('loginSection').style.display = 'block';
+                    }
+                    return;
+                }
+                const data = await res.json();
+                if (!data.success) return;
+
+                try {
+                    localStorage.setItem('tenant_cached_dashboard', JSON.stringify(data));
+                } catch (e) {}
+
+                renderDashboardData(data);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        let lastDashboardData = null;
+
+        function sanitizePlateInput(rawVal) {
+            // מתיר אך ורק ספרות (0-9), הצירופים CC או CD (דיפלומטי), או האות מ' (משטרה)
+            let s = String(rawVal || '').toUpperCase().replace(/[^0-9CDמ]/g, '');
+            let digits = '';
+            let letters = '';
+            for (let i = 0; i < s.length; i++) {
+                const ch = s[i];
+                if (ch >= '0' && ch <= '9') {
+                    digits += ch;
+                } else if (ch === 'מ') {
+                    if (letters === '') letters = 'מ';
+                } else if (ch === 'C') {
+                    if (letters === '') letters = 'C';
+                    else if (letters === 'C') letters = 'CC';
+                } else if (ch === 'D') {
+                    if (letters === 'C') letters = 'CD';
+                }
+            }
+            return (digits + letters).slice(0, 10);
+        }
+
+        function isValidPlateValue(val) {
+            const s = String(val || '').trim().toUpperCase();
+            if (!s) return true;
+            const letters = s.replace(/[0-9]/g, '');
+            const digits = s.replace(/[^0-9]/g, '');
+            if (!digits) return false;
+            return (letters === '' || letters === 'CC' || letters === 'CD' || letters === 'מ');
+        }
+
+        function alertParkedCarLocked(carLabel) {
+            showPortalAlert(`לא ניתן לשנות את ${carLabel} בזמן שהרכב נמצא בחניון (פחות מ-7 ימים). ניתן לשנות את הרכבים האחרים במנוי שאינם בחניון!`, 'danger');
+        }
+
+        function renderSingleCarSlot(s, slotKey, labelKey) {
+            const pSlot = s.present ? (s.parked_slot || 'lpn1') : null;
+            const isThisParked = (pSlot === slotKey);
+            const isLocked = isThisParked && (s.can_edit_parked === false);
+            const val = s[slotKey] || '';
+            const labelHtml = `${t(labelKey)}${isThisParked ? ' <span title="רכב זה נמצא כעת בחניון">🟢</span>' : ''}`;
+            const inputStyle = isLocked
+                ? 'width:100%; padding:9px 4px; border:1.5px solid #16a34a; background:#f0fdf4; border-radius:8px; text-align:center; font-size:16px; font-weight:800; color:#15803d; direction:ltr; cursor:not-allowed;'
+                : 'width:100%; padding:9px 4px; border:1.5px solid #eab308; background:#fefce8; border-radius:8px; text-align:center; font-size:16px; font-weight:800; color:#0f172a; direction:ltr;';
+            const lockAttrs = isLocked
+                ? `readonly onclick="alertParkedCarLocked('${t(labelKey)}')"`
+                : `oninput="this.value = sanitizePlateInput(this.value)"`;
+            return `
+                <div>
+                    <label for="${slotKey}_${s.id}" style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:3px; text-align:center; white-space:nowrap;">${labelHtml}</label>
+                    <input type="text" id="${slotKey}_${s.id}" maxlength="10" value="${val}" placeholder="-"
+                           ${lockAttrs}
+                           style="${inputStyle}">
+                </div>
+            `;
+        }
+
+        function renderShareSpotChips(subs) {
+            const chipsBox = document.getElementById('shParkingSpotChips');
+            const spotInput = document.getElementById('shParkingSpotNumber');
+            if (!chipsBox || !spotInput) return;
+            const withSpots = (subs || []).filter(s => s.parking_spot);
+            if (withSpots.length === 0) {
+                chipsBox.innerHTML = '';
+                spotInput.style.display = 'block';
+                return;
+            }
+            spotInput.style.display = 'none';
+            if (!spotInput.value.trim()) {
+                spotInput.value = String(withSpots[0].parking_spot).trim();
+            }
+            const selectedList = spotInput.value.split(',').map(x => x.trim()).filter(Boolean);
+            chipsBox.innerHTML = withSpots.map(s => {
+                const sp = String(s.parking_spot).trim();
+                const nameLbl = s.firstName || s.lastName || ('#' + s.id);
+                const isSel = selectedList.includes(sp);
+                const btnStyle = isSel
+                    ? 'width:100%; padding:11px 14px; font-size:14px; border-radius:10px; border:1.5px solid #334155; background:#e2e8f0; color:#1e293b; font-weight:800; text-align:center;'
+                    : 'width:100%; padding:11px 14px; font-size:14px; border-radius:10px; border:1.5px solid #cbd5e1; background:#ffffff; color:#334155; font-weight:700; text-align:center;';
+                return `<button type="button" class="btn" style="${btnStyle}" onclick="selectShareSpotChip('${sp.replace(/'/g, "\\'")}')">${isSel ? '✓ ' : ''}🅿️ חניה ${sp} (${nameLbl})</button>`;
+            }).join('');
+            const spotsCountEl = document.getElementById('shSpotsCount');
+            if (spotsCountEl) {
+                spotsCountEl.value = String(Math.max(1, selectedList.length));
+            }
+        }
+
+        function selectShareSpotChip(spotVal) {
+            const spotInput = document.getElementById('shParkingSpotNumber');
+            if (!spotInput) return;
+            const cur = spotInput.value.split(',').map(x => x.trim()).filter(Boolean);
+            let next;
+            if (cur.includes(spotVal)) {
+                next = cur.filter(x => x !== spotVal);
+            } else {
+                next = [...cur, spotVal];
+            }
+            if (next.length === 0) next = [spotVal];
+            spotInput.value = next.join(', ');
+            const spotsCountEl = document.getElementById('shSpotsCount');
+            if (spotsCountEl) {
+                spotsCountEl.value = String(Math.max(1, next.length));
+            }
+            if (lastDashboardData && lastDashboardData.subscribers) {
+                renderShareSpotChips(lastDashboardData.subscribers);
+            }
+        }
+
+        function renderMySubscribers(subs) {
+            renderShareSpotChips(subs);
+            const container = document.getElementById('mySubscribersContainer');
+            if (!subs || subs.length === 0) {
+                container.innerHTML = `<p style="text-align:center; color:#64748b; padding:14px;">${t('no_subscribers')}</p>`;
+                return;
+            }
+
+            container.innerHTML = subs.map(s => `
+                <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 12px; background: #f8fafc;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:nowrap; gap:8px;">
+                        <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+                            <strong style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">👤 ${s.firstName || ''} ${s.lastName || ('#' + s.id)}</strong>
+                            ${s.parking_spot ? `<span class="badge badge-blue" style="border:1px solid #94a3b8; white-space:nowrap;">🅿️ חניה: ${s.parking_spot}</span>` : ''}
+                        </div>
+                        <span title="${s.present ? t('status_in_parking') : t('status_out_parking')}" style="font-size:16px; line-height:1; flex-shrink:0;">${s.present ? '🟢' : '🔴'}</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:6px; margin-bottom:12px;">
+                        ${renderSingleCarSlot(s, 'lpn1', 'car_1')}
+                        ${renderSingleCarSlot(s, 'lpn2', 'car_2')}
+                        ${renderSingleCarSlot(s, 'lpn3', 'car_3')}
+                    </div>
+                    <button class="btn btn-primary" style="padding:10px;" onclick="saveSubscriberPlates('${s.id}', this)">${t('save_plates_btn')}</button>
+                </div>
+            `).join('');
+        }
+
+        async function saveSubscriberPlates(subId, btnEl) {
+            if (_portalActionBusy) return;
+            const lpn1 = document.getElementById(`lpn1_${subId}`).value.trim();
+            const lpn2 = document.getElementById(`lpn2_${subId}`).value.trim();
+            const lpn3 = document.getElementById(`lpn3_${subId}`).value.trim();
+
+            if (!isValidPlateValue(lpn1) || !isValidPlateValue(lpn2) || !isValidPlateValue(lpn3)) {
+                showPortalAlert('במספר רכב מותר להזין ספרות בלבד, או CC / CD לרכב דיפלומטי, או מ׳ לרכב משטרה.', 'danger');
+                return;
+            }
+
+            _portalActionBusy = true;
+            const origText = btnEl ? btnEl.textContent : '';
+            if (btnEl) {
+                btnEl.disabled = true;
+                btnEl.textContent = '⏳ שומר מספרי רכב...';
+            }
+            try {
+                const res = await fetch('/api/tenant/update-plates', {
+                    method: 'POST',
+                    headers: getPortalAuthHeaders({'Content-Type': 'application/json'}),
+                    body: JSON.stringify({ subscriber_id: subId, lpn1, lpn2, lpn3 })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showPortalAlert(data.message, 'success');
+                    await loadDashboard();
+                } else {
+                    showPortalAlert(data.message || 'שגיאה בעדכון מספרי הרכב', 'danger');
+                }
+            } catch (e) {
+                showPortalAlert('שגיאת תקשורת מול השרת', 'danger');
+            } finally {
+                _portalActionBusy = false;
+                if (btnEl) {
+                    btnEl.disabled = false;
+                    btnEl.textContent = origText;
+                }
+            }
+        }
+
+        function renderActiveBookings(bookings) {
+            const card = document.getElementById('myActiveBookingsCard');
+            const list = document.getElementById('myActiveBookingsList');
+            if (!bookings || bookings.length === 0) {
+                card.style.display = 'none';
+                return;
+            }
+            card.style.display = 'block';
+            const statusLabels = {
+                'ACTIVE': '<span class="badge badge-green">פעיל כעת בחניון (+1 למכסה)</span>',
+                'WAITING_FOR_EXIT': '<span class="badge badge-yellow">ממתין ליציאת הרכב של המשחרר</span>',
+                'SCHEDULED': '<span class="badge badge-blue">משוריין</span>'
+            };
+            list.innerHTML = bookings.map(b => {
+                const isBorrower = String(b.to_apartment) === String(currentTenant.apartment_number);
+                const spotBadge = b.parking_spot_number ? ` <span class="badge badge-green">🅿️ חניה: ${b.parking_spot_number}</span>` : '';
+                const desc = isBorrower
+                    ? `שאלת חניה מדירה <strong>${b.from_apartment}</strong>${spotBadge}`
+                    : `השאלת חניה לדירה <strong>${b.to_apartment}</strong>${spotBadge}`;
+                return `
+                    <div class="slot-item">
+                        <div>
+                            <div style="font-size:15px;">${desc}</div>
+                            <div style="font-size:13px; color:#64748b; margin-top:3px;">📅 ${b.booking_date} | 🕒 ${b.start_time} עד ${b.end_time}</div>
+                            <div style="margin-top:5px;">${statusLabels[b.status] || b.status}</div>
+                        </div>
+                        <button class="btn btn-danger" style="width:auto; padding:8px 14px; font-size:13px;" onclick="releaseBooking(${b.id})">
+                            סיים / החזר
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderAvailableSlots(slots) {
+            const container = document.getElementById('availableSlotsList');
+            const openSlots = (slots || []).filter(s => !s.is_mine && s.spots_remaining > 0);
+            if (openSlots.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#64748b; padding:16px;">אין כרגע חניות פנויות בפול הכללי או עבור דירתך.</p>';
+                return;
+            }
+
+            container.innerHTML = openSlots.map(s => {
+                const ownerExtra = (s.owner_name && !String(s.owner_name).startsWith('דירה')) ? ` (${s.owner_name})` : '';
+                const spotBadge = s.parking_spot_number ? `<span class="badge badge-green" style="border:1px solid #86efac;">🅿️ מספר חניה: ${s.parking_spot_number}</span>` : '';
+                return `
+                <div class="slot-item ${s.is_for_me_specifically ? 'special-for-me' : ''}">
+                    <div>
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <strong>🏠 חניה מדירה ${s.owner_apartment}${ownerExtra}</strong>
+                            ${spotBadge}
+                            ${s.is_for_me_specifically
+                                ? '<span class="badge badge-green">🎁 פונה במיוחד עבורך!</span>'
+                                : '<span class="badge badge-purple">🌐 פול כללי</span>'}
+                        </div>
+                        <div style="font-size:13px; color:#475569; margin-top:4px;">
+                            📅 תאריך: <strong>${s.booking_date}</strong> | 🕒 שעות: <strong>${formatHoursDisplay(s.start_time, s.end_time)}</strong>
+                        </div>
+                        <div style="font-size:12px; color:#64748b; margin-top:2px;">
+                            חניות פנויות בחלון זה: <strong>${s.spots_remaining}</strong> מתוך ${s.spots_offered}
+                        </div>
+                    </div>
+                    <button class="btn btn-whatsapp" style="width:auto; padding:10px 16px; font-size:14px;"
+                            onclick="claimSpot(${s.share_id}, '${s.booking_date}', this)">
+                        קח חניה
+                    </button>
+                </div>
+            `}).join('');
+        }
+
+        async function claimSpot(shareId, bookingDate, btnEl) {
+            if (_portalActionBusy) return;
+            _portalActionBusy = true;
+            const origText = btnEl ? btnEl.textContent : '';
+            if (btnEl) {
+                btnEl.disabled = true;
+                btnEl.textContent = '⏳ משריין...';
+            }
+            try {
+                const res = await fetch('/api/tenant/claim-spot', {
+                    method: 'POST',
+                    headers: getPortalAuthHeaders({'Content-Type': 'application/json'}),
+                    body: JSON.stringify({ share_id: shareId, booking_date: bookingDate })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showPortalAlert(data.message, 'success');
+                    await loadDashboard();
+                } else {
+                    showPortalAlert(data.message || 'לא ניתן להזמין חניה זו', 'danger');
+                }
+            } catch (e) {
+                showPortalAlert('שגיאת תקשורת מול השרת', 'danger');
+            } finally {
+                _portalActionBusy = false;
+                if (btnEl) {
+                    btnEl.disabled = false;
+                    btnEl.textContent = origText;
+                }
+            }
+        }
+
+        async function releaseBooking(transferId) {
+            if (_portalActionBusy) return;
+            if (!confirm('האם לסיים את השאלת החניה ולהחזיר את המכסה לבעל החניה?')) return;
+            _portalActionBusy = true;
+            try {
+                const res = await fetch(`/api/tenant/release-booking/${transferId}`, {
+                    method: 'POST',
+                    headers: getPortalAuthHeaders()
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showPortalAlert(data.message, 'success');
+                    await loadDashboard();
+                }
+            } finally {
+                _portalActionBusy = false;
+            }
+        }
+
+        async function handleCreateShare(e) {
+            e.preventDefault();
+            if (_portalActionBusy) return;
+            const parking_spot_number = (document.getElementById('shParkingSpotNumber')?.value || '').trim();
+            const selectedSpotsList = parking_spot_number.split(',').map(x => x.trim()).filter(Boolean);
+            const spots_offered = selectedSpotsList.length > 0 ? selectedSpotsList.length : (parseInt(document.getElementById('shSpotsCount')?.value || '1', 10) || 1);
+            const share_target_type = document.getElementById('shTargetType').value;
+            const target_apartment = document.getElementById('shTargetApt').value.trim();
+            const schedule_type = document.getElementById('shScheduleType').value;
+            const specific_date = document.getElementById('shSpecificDate').value;
+            const start_time = document.getElementById('shStartTime').value;
+            const end_time = document.getElementById('shEndTime').value;
+
+            const selectedDays = Array.from(document.querySelectorAll('#daysSelector .day-chip.selected'))
+                .map(el => el.getAttribute('data-day'))
+                .join(',');
+
+            const btn = document.getElementById('i18n_publish_btn');
+            const origText = btn ? btn.textContent : '';
+            _portalActionBusy = true;
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '⏳ מפרסם ומשחרר חניה...';
+            }
+            try {
+                const res = await fetch('/api/tenant/share-spot', {
+                    method: 'POST',
+                    headers: getPortalAuthHeaders({'Content-Type': 'application/json'}),
+                    body: JSON.stringify({
+                        spots_offered,
+                        parking_spot_number,
+                        share_target_type,
+                        target_apartment,
+                        schedule_type,
+                        days_of_week: selectedDays,
+                        specific_date,
+                        start_time,
+                        end_time
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    clearPendingFulfillRequest();
+                    showPortalAlert(data.message, 'success');
+                    await loadDashboard();
+                } else {
+                    showPortalAlert(data.message || 'שגיאה בשמירת שחרור חניה', 'danger');
+                }
+            } catch (err) {
+                showPortalAlert('שגיאת תקשורת מול השרת', 'danger');
+            } finally {
+                _portalActionBusy = false;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = origText;
+                }
+            }
+        }
+
+        function renderMyShares(shares) {
+            const container = document.getElementById('mySharesList');
+            if (!shares || shares.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#64748b; padding:12px;">אין לך כרגע שחרורי חניה פעילים.</p>';
+                return;
+            }
+            container.innerHTML = shares.map(sh => {
+                let schedDesc = '';
+                if (sh.schedule_type === 'ONCE') {
+                    schedDesc = `📅 חד-פעמי בתאריך ${sh.specific_date}`;
+                } else {
+                    const dNames = String(sh.days_of_week || '').split(',').filter(Boolean).map(d => `יום ${DAY_NAMES[parseInt(d,10)] || d}`).join(', ');
+                    schedDesc = `📅 קבוע: ${dNames}`;
+                }
+                const targetDesc = (sh.share_target_type === 'APT')
+                    ? `<span class="badge badge-green">לדירה ${sh.target_apartment} בלבד</span>`
+                    : `<span class="badge badge-purple">לפול הכללי</span>`;
+                const spotPart = sh.parking_spot_number ? `<span class="badge badge-blue">🅿️ חניה: ${sh.parking_spot_number}</span> | ` : '';
+
+                return `
+                    <div class="slot-item">
+                        <div>
+                            <div>${spotPart}<strong>${sh.spots_offered} חניה/ות</strong> | ${targetDesc}</div>
+                            <div style="font-size:13px; color:#475569; margin-top:4px;">${schedDesc}</div>
+                            <div style="font-size:13px; color:#64748b;">🕒 שעות: <strong>${formatHoursDisplay(sh.start_time, sh.end_time)}</strong></div>
+                        </div>
+                        <button class="btn btn-danger" style="width:auto; padding:8px 12px; font-size:13px;" onclick="cancelShare(${sh.id})">
+                            בטל
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function cancelShare(shareId) {
+            if (_portalActionBusy) return;
+            if (!confirm('האם לבטל את שחרור החניה הזה?')) return;
+            _portalActionBusy = true;
+            try {
+                const res = await fetch(`/api/tenant/cancel-share/${shareId}`, {
+                    method: 'POST',
+                    headers: getPortalAuthHeaders()
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showPortalAlert(data.message, 'success');
+                    await loadDashboard();
+                }
+            } finally {
+                _portalActionBusy = false;
+            }
+        }
+    </script>
+
+    <!-- ==================== רכיב נגישות והצהרת פרטיות (ת"י 5568 וחוק הגנת הפרטיות) ==================== -->
+    <style>
+        /* מצבי נגישות */
+        html.a11y-grayscale {
+            filter: grayscale(100%) !important;
+        }
+        body.a11y-high-contrast-dark,
+        body.a11y-high-contrast-dark .card,
+        body.a11y-high-contrast-dark .header,
+        body.a11y-high-contrast-dark .stat-box,
+        body.a11y-high-contrast-dark .slot-item,
+        body.a11y-high-contrast-dark .modal-content,
+        body.a11y-high-contrast-dark table,
+        body.a11y-high-contrast-dark th,
+        body.a11y-high-contrast-dark td {
+            background: #000000 !important;
+            color: #ffff00 !important;
+            border-color: #ffff00 !important;
+        }
+        body.a11y-high-contrast-dark input,
+        body.a11y-high-contrast-dark select,
+        body.a11y-high-contrast-dark button {
+            background: #111111 !important;
+            color: #ffffff !important;
+            border: 2px solid #ffff00 !important;
+        }
+        body.a11y-high-contrast-light,
+        body.a11y-high-contrast-light .card,
+        body.a11y-high-contrast-light .header,
+        body.a11y-high-contrast-light .stat-box,
+        body.a11y-high-contrast-light .slot-item {
+            background: #ffffff !important;
+            color: #000000 !important;
+            border: 2px solid #000000 !important;
+        }
+        body.a11y-highlight-links a,
+        body.a11y-highlight-links button {
+            text-decoration: underline !important;
+            outline: 2px solid #d97706 !important;
+            outline-offset: 2px !important;
+        }
+        body.a11y-readable-font,
+        body.a11y-readable-font * {
+            font-family: Arial, Helvetica, sans-serif !important;
+            letter-spacing: 0.4px !important;
+        }
+        body.a11y-no-animations *,
+        body.a11y-no-animations *::before,
+        body.a11y-no-animations *::after {
+            animation: none !important;
+            transition: none !important;
+        }
+
+        /* כפתור נגישות צף (כיסא גלגלים) */
+        .a11y-fab {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: #1d4ed8;
+            color: #ffffff;
+            border: 3px solid #ffffff;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            font-size: 28px;
+            cursor: pointer;
+            z-index: 9998;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+        .a11y-fab:hover, .a11y-fab:focus {
+            transform: scale(1.08);
+            outline: 3px solid #facc15;
+        }
+
+        /* חלונית תפריט הנגישות */
+        .a11y-panel {
+            display: none;
+            position: fixed;
+            bottom: 84px;
+            left: 20px;
+            width: 310px;
+            max-width: calc(100vw - 40px);
+            background: #ffffff;
+            color: #1e293b;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+            border: 2px solid #1d4ed8;
+            z-index: 9999;
+            padding: 16px;
+            direction: rtl;
+        }
+        .a11y-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+            font-weight: 800;
+            font-size: 16px;
+            color: #1d4ed8;
+        }
+        .a11y-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .a11y-btn {
+            padding: 10px 6px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            background: #f8fafc;
+            color: #1e293b;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .a11y-btn.active {
+            background: #1d4ed8;
+            color: #ffffff;
+            border-color: #1d4ed8;
+        }
+        .a11y-btn:hover {
+            background: #e2e8f0;
+        }
+        .a11y-btn.active:hover {
+            background: #1e40af;
+        }
+
+        /* פוטר משפטי ונגישות */
+        .legal-footer {
+            max-width: 640px;
+            margin: 24px auto 10px auto;
+            padding: 14px 16px;
+            text-align: center;
+            font-size: 13px;
+            color: #475569;
+            border-top: 1px solid #cbd5e1;
+        }
+        .legal-footer a {
+            color: #1d4ed8;
+            font-weight: 700;
+            text-decoration: underline;
+            margin: 0 8px;
+            cursor: pointer;
+        }
+
+        /* מודאל הצהרת פרטיות והצהרת נגישות */
+        .legal-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .legal-modal-box {
+            background: #ffffff;
+            color: #1e293b;
+            border-radius: 16px;
+            max-width: 620px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 24px;
+            direction: rtl;
+            line-height: 1.65;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+        }
+        .legal-modal-box h2 {
+            color: #1d4ed8;
+            font-size: 20px;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+        .legal-modal-box h3 {
+            font-size: 15px;
+            margin-top: 14px;
+            margin-bottom: 4px;
+            color: #0f172a;
+        }
+        .legal-modal-box p, .legal-modal-box li {
+            font-size: 13.5px;
+            color: #334155;
+        }
+        .legal-modal-box ul {
+            padding-right: 20px;
+            margin-bottom: 10px;
+        }
+    </style>
+
+    <!-- פוטר משפטי קבוע -->
+    <footer class="legal-footer" role="contentinfo">
+        <div style="font-weight: 700;">© 2026 HINT LTD — כל הזכויות שמורות | גרסה 1.0.7</div>
+        <div style="font-size: 12px; margin-top: 2px;">שיידט את בכמן ישראל בע"מ</div>
+        <div style="margin-top: 6px;">
+            <a role="button" tabindex="0" onclick="openLegalModal('privacyModal')">🔒 הצהרת פרטיות ותנאי שימוש</a> |
+            <a role="button" tabindex="0" onclick="openLegalModal('a11yStatementModal')">♿ הצהרת נגישות</a> |
+            <a role="button" tabindex="0" onclick="toggleA11yPanel()">⚙️ כלי נגישות</a>
+        </div>
+    </footer>
+
+    <!-- מודאל הגדרות, שפה וניווט Waze -->
+    <div class="legal-modal" id="portalSettingsModal" role="dialog" aria-modal="true" aria-label="הגדרות">
+        <div class="legal-modal-box" style="max-width: 440px;">
+            <h2>⚙️ הגדרות וניווט</h2>
+            <div class="input-group" style="margin-top: 12px;">
+                <label>🌐 בחירת שפה / Language:</label>
+                <select id="langSelector" onchange="setPortalLanguage(this.value)" aria-label="בחירת שפה / Language">
+                    <option value="he">🇮🇱 עברית</option>
+                    <option value="en">🇬🇧 English</option>
+                    <option value="ru">🇷🇺 Русский</option>
+                    <option value="ar">🇸🇦 العربية</option>
+                    <option value="fr">🇫🇷 Français</option>
+                </select>
+            </div>
+            <button type="button" class="btn btn-outline" style="margin-bottom: 12px;" onclick="openPortalWaze()">
+                🧭 פתח ניווט ב-Waze לחניון הבניין
+            </button>
+            <button type="button" class="btn btn-primary" onclick="closeLegalModal('portalSettingsModal')">סגור</button>
+        </div>
+    </div>
+
+    <!-- כפתור נגישות צף (סמל כיסא גלגלים) -->
+    <button type="button" class="a11y-fab" id="a11yFabBtn" onclick="toggleA11yPanel()" aria-label="פתח תפריט נגישות" title="נגישות האתר">
+        ♿
+    </button>
+
+    <!-- פאנל כלי נגישות -->
+    <div class="a11y-panel" id="a11yPanel" role="dialog" aria-label="כלי נגישות">
+        <div class="a11y-panel-header">
+            <span>♿ התאמת נגישות האתר</span>
+            <button type="button" onclick="toggleA11yPanel()" aria-label="סגור תפריט נגישות" style="background:none; border:none; font-size:18px; cursor:pointer;">✖</button>
+        </div>
+        <div class="a11y-grid">
+            <button type="button" class="a11y-btn" onclick="a11yChangeFontSize(1)">🔍+ הגדל טקסט</button>
+            <button type="button" class="a11y-btn" onclick="a11yChangeFontSize(-1)">🔎- הקטן טקסט</button>
+            <button type="button" class="a11y-btn" id="btnA11yGray" onclick="a11yToggleClass('grayscale')">⚫⚪ שחור-לבן</button>
+            <button type="button" class="a11y-btn" id="btnA11yDark" onclick="a11yToggleClass('dark')">🌓 ניגודיות כהה</button>
+            <button type="button" class="a11y-btn" id="btnA11yLight" onclick="a11yToggleClass('light')">☀️ ניגודיות בהירה</button>
+            <button type="button" class="a11y-btn" id="btnA11yLinks" onclick="a11yToggleClass('links')">🔗 הדגש קישורים</button>
+            <button type="button" class="a11y-btn" id="btnA11yFont" onclick="a11yToggleClass('font')">🔤 פונט קריא</button>
+            <button type="button" class="a11y-btn" id="btnA11yAnim" onclick="a11yToggleClass('anim')">⏸️ עצור אנימציות</button>
+        </div>
+        <button type="button" class="a11y-btn" style="width:100%; margin-bottom:8px; background:#fee2e2; color:#991b1b; border-color:#fecaca;" onclick="a11yResetAll()">
+            🔄 איפוס הגדרות נגישות
+        </button>
+        <div style="display:flex; justify-content:space-between; font-size:12px; padding-top:6px; border-top:1px solid #e2e8f0;">
+            <a href="javascript:void(0)" onclick="openLegalModal('a11yStatementModal')" style="color:#1d4ed8; font-weight:700;">הצהרת נגישות</a>
+            <a href="javascript:void(0)" onclick="openLegalModal('privacyModal')" style="color:#1d4ed8; font-weight:700;">הצהרת פרטיות</a>
+        </div>
+    </div>
+
+    <!-- מודאל הצהרת פרטיות ותנאי שימוש (לפי חוק הגנת הפרטיות, התשמ"א-1981 ותיקון 13) -->
+    <div class="legal-modal" id="privacyModal" role="dialog" aria-modal="true" aria-labelledby="privacyModalTitle">
+        <div class="legal-modal-box">
+            <h2 id="privacyModalTitle">🔒 הצהרת פרטיות ותנאי שימוש במערכת</h2>
+            <p>מערכת ניהול ושיתוף החניות לדיירים מופעלת על ידי <strong>שיידט את בכמן ישראל בע"מ</strong> עבור הנהלת המתחם/הבניין, ופועלת בהתאם להוראות <strong>חוק הגנת הפרטיות, התשמ"א-1981</strong> (כולל תיקון 13 לחוק) והתקנות מכוחו.</p>
+
+            <h3>1. המידע הנאסף במערכת</h3>
+            <ul>
+                <li>פרטי זיהוי בסיסיים של הדייר כפי שנמסרו על ידי הנהלת הבניין: שם הדייר/משפחה, מספר דירה ומספר טלפון נייד.</li>
+                <li>מספרי הרישוי של הרכבים המשויכים למנוי הדירה בבקר החניון (שיידט את בכמן).</li>
+                <li>תיעוד פעולות שחרור חניה ותפיסת חניה פנויה (תאריכים, שעות וכמות חניות) לצורך ניהול המכסות ובקרת הוגנות במתחם.</li>
+            </ul>
+
+            <h3>2. מטרות השימוש במידע</h3>
+            <ul>
+                <li>זיהוי ואימות כניסת הדייר למערכת באמצעות קוד חד-פעמי (OTP) הנשלח בהודעת WhatsApp למספר הנייד הרשום.</li>
+                <li>מתן אפשרות לדייר לצפות ולעדכן את מספרי הרכב של דירתו מול בקר השערים בחניון.</li>
+                <li>ניהול אוטומטי של השאלת חניות בין דיירי הבניין (התאמת מכסת החניות המותרת לכניסה בשעות שהוגדרו והחזרתה אוטומטית בסיום).</li>
+                <li>שליחת הודעות תפעוליות בלבד ב-WhatsApp (כגון הודעה על זמינות חניה שהוזמנה ותזכורת 30 דקות לפני סיום חלון החניה). לא יישלחו הודעות פרסומיות או שיווקיות.</li>
+                <li>הפקת דוח סיכום חודשי למנהל המתחם לצורך התחשבנות/זיכוי דיירים בבניין.</li>
+            </ul>
+
+            <h3>3. שמירה על סודיות ואי-העברה לצד שלישי</h3>
+            <p>המידע האישי ומספרי הרכב נשמרים במאגר מאובטח ומשמשים אך ורק לתפעול חניון הבניין. המידע <strong>אינו נמכר ואינו מועבר</strong> לשום גורם מסחרי או צד שלישי מחוץ למערכות התפעול של החניון.</p>
+
+            <h3>4. אבטחת מידע וניתוק אוטומטי</h3>
+            <p>התקשורת באתר מוצפנת בפרוטוקול SSL/HTTPS. המערכת משתמשת בעוגיות (Cookies) תפעוליות בלבד לשמירת החיבור, ומבצעת ניתוק סשן אוטומטי לאחר 30 דקות של חוסר פעילות להגנה על פרטיות הדייר.</p>
+
+            <h3>5. זכות עיון, תיקון ומחיקה (סעיפים 13–14 לחוק)</h3>
+            <p>כל דייר זכאי לעיין במידע השמור עליו במערכת, לעדכן את מספרי הרכב שלו באופן עצמאי דרך הפורטל, או לפנות למנהל המתחם בבקשה לעדכון או מחיקה של פרטיו ממאגר הדיירים של הבניין.</p>
+
+            <div style="margin-top: 18px; text-align: left;">
+                <button type="button" class="btn btn-primary" style="width: auto; padding: 10px 24px;" onclick="closeLegalModal('privacyModal')">קראתי והבנתי – סגור</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- מודאל הצהרת נגישות (לפי תקן ישראלי ת"י 5568 / WCAG 2.0 AA) -->
+    <div class="legal-modal" id="a11yStatementModal" role="dialog" aria-modal="true" aria-labelledby="a11yModalTitle">
+        <div class="legal-modal-box">
+            <h2 id="a11yModalTitle">♿ הצהרת נגישות</h2>
+            <p>אנו ב<strong>שיידט את בכמן ישראל בע"מ</strong> רואים חשיבות עליונה בהנגשת שירותינו הדיגיטליים לאנשים עם מוגבלות, ופועלים בהתאם לחוק שוויון זכויות לאנשים עם מוגבלות, התשנ"ח-1998 והתקנות שהותקנו מכוחו.</p>
+
+            <h3>1. רמת הנגישות באתר</h3>
+            <p>מערכת זו הותאמה לדרישות תקנות שוויון זכויות לאנשים עם מוגבלות (התאמות נגישות לשירות), ולתקן הישראלי <strong>ת"י 5568</strong> המבוסס על הנחיות <strong>WCAG 2.0 ברמת AA</strong>.</p>
+
+            <h3>2. התאמות הנגישות שבוצעו באתר</h3>
+            <ul>
+                <li><strong>תפריט נגישות ייעודי (סמל ♿):</strong> מאפשר הגדלה והקטנה של גופנים, מעבר למצב מסך שחור-לבן (גווני אפור), מצבי ניגודיות גבוהה (כהה ובהירה), הדגשת קישורים וכפתורים, החלפה לפונט קריא ועצירת אנימציות.</li>
+                <li><strong>קריאות ובולטות:</strong> שדות מספרי הרישוי והנתונים מוצגים בגופן גדול, מודגש ובעל ניגודיות גבוהה.</li>
+                <li><strong>תמיכה במקלדת ובקוראי מסך:</strong> אפשרות לניווט מלא באמצעות מקש <code>Tab</code>, סימון פוקוס ברור ותגיות ARIA מתאימות.</li>
+                <li><strong>התאמה למובייל ולכל הדפדפנים:</strong> עיצוב רספונסיבי מלא לתצוגה נוחה בטלפונים חכמים (iOS ו-Android) ובמחשבים.</li>
+            </ul>
+
+            <h3>3. יצירת קשר בנושא נגישות</h3>
+            <p>אם נתקלתם בקושי בגלישה באתר או שיש לכם הצעה לשיפור הנגישות, נשמח לעמוד לרשותכם דרך מנהל המתחם או מוקד השירות של שיידט את בכמן ישראל.</p>
+
+            <div style="margin-top: 18px; text-align: left;">
+                <button type="button" class="btn btn-primary" style="width: auto; padding: 10px 24px;" onclick="closeLegalModal('a11yStatementModal')">סגור</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let a11yFontStep = 0;
+        let a11yState = {
+            grayscale: false,
+            dark: false,
+            light: false,
+            links: false,
+            font: false,
+            anim: false
+        };
+
+        function toggleA11yPanel() {
+            const p = document.getElementById('a11yPanel');
+            p.style.display = (p.style.display === 'block') ? 'none' : 'block';
+        }
+
+        function a11yChangeFontSize(dir) {
+            a11yFontStep = Math.max(-1, Math.min(3, a11yFontStep + dir));
+            const zoomPct = 100 + (a11yFontStep * 12);
+            document.documentElement.style.fontSize = zoomPct + '%';
+            saveA11yPrefs();
+        }
+
+        function a11yToggleClass(mode) {
+            if (mode === 'dark' && !a11yState.dark) a11yState.light = false;
+            if (mode === 'light' && !a11yState.light) a11yState.dark = false;
+            a11yState[mode] = !a11yState[mode];
+            applyA11yState();
+            saveA11yPrefs();
+        }
+
+        function applyA11yState() {
+            document.documentElement.classList.toggle('a11y-grayscale', !!a11yState.grayscale);
+            document.body.classList.toggle('a11y-high-contrast-dark', !!a11yState.dark);
+            document.body.classList.toggle('a11y-high-contrast-light', !!a11yState.light);
+            document.body.classList.toggle('a11y-highlight-links', !!a11yState.links);
+            document.body.classList.toggle('a11y-readable-font', !!a11yState.font);
+            document.body.classList.toggle('a11y-no-animations', !!a11yState.anim);
+
+            const mapBtn = {
+                grayscale: 'btnA11yGray',
+                dark: 'btnA11yDark',
+                light: 'btnA11yLight',
+                links: 'btnA11yLinks',
+                font: 'btnA11yFont',
+                anim: 'btnA11yAnim'
+            };
+            Object.entries(mapBtn).forEach(([k, btnId]) => {
+                const el = document.getElementById(btnId);
+                if (el) el.classList.toggle('active', !!a11yState[k]);
+            });
+        }
+
+        function a11yResetAll() {
+            a11yFontStep = 0;
+            document.documentElement.style.fontSize = '100%';
+            a11yState = { grayscale: false, dark: false, light: false, links: false, font: false, anim: false };
+            applyA11yState();
+            try { localStorage.removeItem('sb_a11y_prefs'); } catch (e) {}
+        }
+
+        function saveA11yPrefs() {
+            try {
+                localStorage.setItem('sb_a11y_prefs', JSON.stringify({ fontStep: a11yFontStep, state: a11yState }));
+            } catch (e) {}
+        }
+
+        function loadA11yPrefs() {
+            try {
+                const raw = localStorage.getItem('sb_a11y_prefs');
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                if (typeof parsed.fontStep === 'number') {
+                    a11yFontStep = parsed.fontStep;
+                    document.documentElement.style.fontSize = (100 + a11yFontStep * 12) + '%';
+                }
+                if (parsed.state) {
+                    a11yState = { ...a11yState, ...parsed.state };
+                    applyA11yState();
+                }
+            } catch (e) {}
+        }
+
+        function openLegalModal(id) {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'flex';
+        }
+
+        function closeLegalModal(id) {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        }
+
+        document.addEventListener('DOMContentLoaded', loadA11yPrefs);
+    </script>
+
+</body>
+</html>

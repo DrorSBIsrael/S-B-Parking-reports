@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ניהול משתמשים - מאסטר</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            direction: rtl;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            font-size: 28px;
+        }
+        
+        .back-btn {
+            background: #6c757d;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .back-btn:hover {
+            background: #5a6268;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+        }
+        
+        .create-user-section {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+        
+        .users-list-section {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .section-title {
+            color: #495057;
+            font-size: 22px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .users-table th,
+        .users-table td {
+            padding: 12px;
+            text-align: right;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .users-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .users-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-temp {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+        
+        .search-box {
+            width: 300px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .users-table {
+                font-size: 14px;
+            }
+            
+            .users-table th,
+            .users-table td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 ניהול משתמשים - מאסטר</h1>
+            <a href="/dashboard" class="back-btn">חזרה לדשבורד</a>
+        </div>
+        
+        <div class="main-content">
+            <!-- יצירת משתמש חדש -->
+            <div class="create-user-section">
+                <h2 class="section-title">➕ יצירת משתמש חדש</h2>
+                
+                <div id="createAlert" style="display: none;"></div>
+                
+                <form id="createUserForm">
+                    <div class="form-group">
+                        <label for="username">שם משתמש *</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">כתובת אימייל *</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="projectNumber">מספר פרויקט</label>
+                        <input type="number" id="projectNumber" name="projectNumber" placeholder="0 = כל החניונים">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="codeType">סוג קוד</label>
+                        <select id="codeType" name="codeType" onchange="document.getElementById('standaloneModeGroup').style.display = (this.value === 'tenant_manager') ? 'block' : 'none';">
+                            <option value="dashboard">Dashboard</option>
+                            <option value="parking_manager">Parking Manager</option>
+                            <option value="tenant_manager">Tenant Manager (מנהל מתחם דיירים)</option>
+                            <option value="master">Master</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="role">תפקיד</label>
+                        <select id="role" name="role">
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                            <option value="group_manager">Group Manager</option>
+                        </select>
+                    </div>
+                    
+	<div class="form-group">
+	    <label for="accessLevel">רמת גישה</label>
+	    <select id="accessLevel" name="accessLevel">
+	        <option value="single_parking">חניון בודד</option>
+	        <option value="group_access">גישה קבוצתית</option>
+	        <option value="group_manager">מנהל קבוצה</option>
+	        <option value="company_manager">מנהל חברות</option>
+	    </select>
+	</div>
+                    
+                    <div class="form-group">
+                        <label for="companyType">סוג חברה</label>
+                        <input type="text" id="companyType" name="companyType" placeholder="לדוגמה: מבנה, צי, פרטי">
+                    </div>
+                    
+	<div class="form-group">
+	    <label for="companyList">רשימת מספרי חברות</label>
+	    <input type="text" id="companyList" name="companyList" 
+	           placeholder="לדוגמה: 123456789-987654321-555666777">
+	    <small style="color: #6c757d; font-size: 12px;">
+	        הזינו מספרי חברות מופרדים במקף (-) בלבד. השאירו ריק אם לא רלוונטי.
+ 	   </small>
+	</div>
+
+                    <div class="form-group">
+                        <label for="parkingName">שם חניון</label>
+                        <input type="text" id="parkingName" name="parkingName">
+                    </div>
+
+                    <div class="form-group" id="standaloneModeGroup" style="display: none; background: #f0fdfa; border: 1px solid #99f6e4; padding: 12px; border-radius: 8px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 0; color: #0f766e; font-size: 14.5px;">
+                            <input type="checkbox" id="standaloneMode" name="standaloneMode" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span>📂 חניון עצמאי ללא מערכת חניה (עבודה מבוססת קובץ דירות ורכבים ללא בקר)</span>
+                        </label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" id="createBtn">
+                        ✅ צור משתמש חדש
+                    </button>
+                </form>
+            </div>
+            
+            <!-- רשימת משתמשים -->
+            <div class="users-list-section">
+                <h2 class="section-title">👥 רשימת משתמשים</h2>
+                
+                <input type="text" class="search-box" id="searchBox" placeholder="🔍 חפש לפי שם משתמש או אימייל...">
+                
+                <div id="usersLoading" class="loading">🔄 טוען רשימת משתמשים...</div>
+                <div id="usersContent" style="display: none;">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>שם משתמש</th>
+                                <th>אימייל</th>
+                                <th>תפקיד</th>
+                                <th>סוג קוד</th>
+                                <th>פרויקט</th>
+                                <th>סטטוס</th>
+                                <th>פעולות</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allUsers = [];
+        
+        // טעינת רשימת משתמשים
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/master/get-all-users');
+                const data = await response.json();
+                
+                if (data.success) {
+                    allUsers = data.users;
+                    displayUsers(allUsers);
+                    document.getElementById('usersLoading').style.display = 'none';
+                    document.getElementById('usersContent').style.display = 'block';
+                } else {
+                    showAlert('createAlert', 'error', data.message);
+                }
+            } catch (error) {
+                showAlert('createAlert', 'error', 'שגיאה בטעינת רשימת משתמשים');
+            }
+        }
+        
+        // הצגת משתמשים
+        function displayUsers(users) {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+            
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                
+                const statusClass = user.is_temp_password ? 'status-temp' : 'status-active';
+                const statusText = user.is_temp_password ? 'סיסמה זמנית' : 'פעיל';
+                
+                row.innerHTML = `
+                    <td><strong>${user.username}</strong></td>
+                    <td>${user.email}</td>
+                    <td>${user.role}</td>
+                    <td>${user.code_type}</td>
+                    <td>${user.project_number || 'כל החניונים'}</td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    <td>
+                        <button onclick="resetPassword('${user.username}')" class="btn btn-danger">
+                            🔄 איפוס סיסמה
+                        </button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        // חיפוש משתמשים
+        document.getElementById('searchBox').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const filteredUsers = allUsers.filter(user => 
+                user.username.toLowerCase().includes(searchTerm) ||
+                user.email.toLowerCase().includes(searchTerm)
+            );
+            displayUsers(filteredUsers);
+        });
+        
+        // יצירת משתמש חדש
+        document.getElementById('createUserForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const createBtn = document.getElementById('createBtn');
+            const originalText = createBtn.textContent;
+            createBtn.textContent = '🔄 יוצר משתמש...';
+            createBtn.disabled = true;
+            
+            const formData = new FormData(e.target);
+	const userData = {
+	    username: formData.get('username'),
+	    email: formData.get('email'),
+	    project_number: formData.get('projectNumber') || 0,
+ 	   code_type: formData.get('codeType'),
+ 	   role: formData.get('role'),
+	    access_level: formData.get('accessLevel'),
+	    company_type: formData.get('companyType'),
+	    parking_name: formData.get('parkingName'),
+	    company_list: formData.get('companyList'),
+	    standalone_mode: document.getElementById('standaloneMode') ? document.getElementById('standaloneMode').checked : false
+	};
+            
+            try {
+                const response = await fetch('/api/master/create-user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('createAlert', 'success', data.message);
+                    e.target.reset();
+                    loadUsers(); // רענון רשימת המשתמשים
+                } else {
+                    showAlert('createAlert', 'error', data.message);
+                }
+            } catch (error) {
+                showAlert('createAlert', 'error', 'שגיאה ביצירת משתמש');
+            }
+            
+            createBtn.textContent = originalText;
+            createBtn.disabled = false;
+        });
+        
+        // איפוס סיסמה
+        async function resetPassword(username) {
+            if (!confirm(`האם אתה בטוח שברצונך לאפס את הסיסמה של המשתמש ${username}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/master/reset-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('הסיסמה אופסה בהצלחה! המשתמש יקבל מייל עם הסיסמה החדשה: Dd123456');
+                    loadUsers(); // רענון הרשימה
+                } else {
+                    alert('שגיאה באיפוס סיסמה: ' + data.message);
+                }
+            } catch (error) {
+                alert('שגיאה באיפוס סיסמה');
+            }
+        }
+        
+        // הצגת התראות
+        function showAlert(elementId, type, message) {
+            const alertDiv = document.getElementById(elementId);
+            alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'}`;
+            alertDiv.textContent = message;
+            alertDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                alertDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        // טעינה ראשונית
+        window.addEventListener('load', loadUsers);
+    </script>
+</body>
+</html>
