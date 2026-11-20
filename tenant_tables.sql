@@ -86,10 +86,28 @@ CREATE TABLE IF NOT EXISTS public.tenant_quota_transfers (
 CREATE INDEX IF NOT EXISTS idx_tenant_transfers_project_date ON public.tenant_quota_transfers (project_number, booking_date);
 CREATE INDEX IF NOT EXISTS idx_tenant_transfers_status ON public.tenant_quota_transfers (status);
 
--- הוספת עמודות לוגו, קואורדינטות חניון ומספר חניה אם הטבלה כבר קיימת:
+-- הוספת עמודות לוגו, קואורדינטות חניון, מצב עצמאי ומספר חניה אם הטבלה כבר קיימת:
 ALTER TABLE public.tenant_building_settings ADD COLUMN IF NOT EXISTS logo_data TEXT;
 ALTER TABLE public.tenant_building_settings ADD COLUMN IF NOT EXISTS parking_lat DOUBLE PRECISION;
 ALTER TABLE public.tenant_building_settings ADD COLUMN IF NOT EXISTS parking_lng DOUBLE PRECISION;
 ALTER TABLE public.tenant_building_settings ADD COLUMN IF NOT EXISTS parking_address TEXT;
+ALTER TABLE public.tenant_building_settings ADD COLUMN IF NOT EXISTS standalone_mode INTEGER DEFAULT 0;
 ALTER TABLE public.tenant_spot_shares ADD COLUMN IF NOT EXISTS parking_spot_number TEXT;
 ALTER TABLE public.tenant_quota_transfers ADD COLUMN IF NOT EXISTS parking_spot_number TEXT;
+
+-- 5. טבלת מנויים ורכבים מקומית לחניון עצמאי (ללא מערכת בקר חניון)
+CREATE TABLE IF NOT EXISTS public.tenant_local_subscribers (
+    id BIGSERIAL PRIMARY KEY,
+    project_number TEXT NOT NULL,
+    apartment_number TEXT NOT NULL,
+    subscriber_index INTEGER DEFAULT 1,
+    family_name TEXT DEFAULT '',
+    first_name TEXT DEFAULT '',
+    parking_spot TEXT DEFAULT '',
+    lpn1 TEXT DEFAULT '',
+    lpn2 TEXT DEFAULT '',
+    lpn3 TEXT DEFAULT '',
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_tenant_local_subs_proj_apt ON public.tenant_local_subscribers (project_number, apartment_number);

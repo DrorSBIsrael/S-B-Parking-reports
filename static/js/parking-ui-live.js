@@ -32,38 +32,6 @@ class ParkingUIIntegrationXML {
             this.setupSorting();
         }
     }
-    
-    _syncCache() {
-        if (!this.currentContract || !this.currentContract.id) return;
-        // שמירת מטמון מיועדת אך ורק לחברות גדולות (מעל 500 מנויים)
-        if (!this.subscribers || this.subscribers.length <= 500) {
-            try {
-                localStorage.removeItem('skidata_cache_company_' + this.currentContract.id);
-            } catch(e) {}
-            return;
-        }
-        try {
-            const cacheKey = 'skidata_cache_company_' + this.currentContract.id;
-            let cacheTimestamp = Date.now();
-            try {
-                const existing = localStorage.getItem(cacheKey);
-                if (existing) {
-                    const parsed = JSON.parse(existing);
-                    if (parsed && parsed.timestamp) {
-                        cacheTimestamp = parsed.timestamp;
-                    }
-                }
-            } catch(err) {}
-            const payload = {
-                timestamp: cacheTimestamp,
-                subscribers: this.subscribers
-            };
-            localStorage.setItem(cacheKey, JSON.stringify(payload));
-            console.log(`[Cache] Synchronized local cache for large company ${this.currentContract.id} (${this.subscribers.length} items)`);
-        } catch(e) {
-            console.warn('[Cache] Could not sync cache:', e);
-        }
-    }
 
     /**
      * Setup filter listeners
@@ -265,8 +233,7 @@ class ParkingUIIntegrationXML {
         parkings.forEach(parking => {
             const card = document.createElement('div');
             card.className = 'company-card';
-            card.setAttribute('data-parking-id', parking.id);
-            card.onclick = (e) => this.selectParking(parking, e);
+            card.onclick = () => this.selectParking(parking);
 
             card.innerHTML = `
                 <div class="company-header">
@@ -295,7 +262,7 @@ class ParkingUIIntegrationXML {
     /**
      * Select a parking and then load its companies
      */
-    async selectParking(parking, evt) {
+    async selectParking(parking) {
         // Selected parking
 
         // Show loading message immediately
@@ -326,11 +293,8 @@ class ParkingUIIntegrationXML {
             card.classList.remove('selected');
         });
 
-        if (evt && evt.currentTarget) {
-            evt.currentTarget.classList.add('selected');
-        } else {
-            const matchingCard = document.querySelector(`.company-card[data-parking-id="${parking.id}"]`);
-            if (matchingCard) matchingCard.classList.add('selected');
+        if (event && event.currentTarget) {
+            event.currentTarget.classList.add('selected');
         }
 
         // Now load companies/contracts from this parking
@@ -474,8 +438,7 @@ class ParkingUIIntegrationXML {
         companies.forEach(async (company) => {
             const card = document.createElement('div');
             card.className = 'company-card';
-            card.setAttribute('data-company-id', company.id);
-            card.onclick = (e) => this.selectCompany(company, e);
+            card.onclick = () => this.selectCompany(company);
 
             // Start with basic info
             card.innerHTML = `
@@ -516,16 +479,10 @@ class ParkingUIIntegrationXML {
             `;
 
             companyList.appendChild(card);
-        });
 
-        // Load company card details in controlled batches of 2 so we don't flood the parking server
-        (async () => {
-            const CARD_CONCURRENCY = 2;
-            for (let i = 0; i < companies.length; i += CARD_CONCURRENCY) {
-                const batch = companies.slice(i, i + CARD_CONCURRENCY);
-                await Promise.all(batch.map(company => this.loadCompanyCardData(company)));
-            }
-        })();
+            // Load additional data asynchronously
+            this.loadCompanyCardData(company);
+        });
     }
 
     /**
@@ -583,7 +540,11 @@ class ParkingUIIntegrationXML {
             // Get company contract data with facility info
             // Loading detailed data for company
 
-            // Get enhanced details with pooling data (removed redundant /contracts/${id} request)
+            // Get company basic data
+            const directResult = await this.api.makeRequest(`/contracts/${company.id}`);
+            // Direct API response received
+
+            // Get enhanced details with pooling data
             const result = await this.api.getEnhancedContractDetails(company.id);
 
             if (result.success && result.data) {
@@ -765,11 +726,7 @@ class ParkingUIIntegrationXML {
     /**
      * Select a company and load its subscribers
      */
-    async selectCompany(company, evt) {
-        // Cancel any previous company's background loading immediately
-        if (this.api && typeof this.api.cancelActiveLoad === 'function') {
-            this.api.cancelActiveLoad();
-        }
+    async selectCompany(company) {
         // Store the full company object with correct name
         // If no name, use the parking name or a default
         const contractName = company.name || company.firstName || company.companyName ||
@@ -790,16 +747,17 @@ class ParkingUIIntegrationXML {
             card.classList.remove('selected');
         });
 
-        if (evt && evt.currentTarget) {
-            evt.currentTarget.classList.add('selected');
-        } else {
-            const matchingCard = document.querySelector(`.company-card[data-company-id="${company.id}"]`);
-            if (matchingCard) matchingCard.classList.add('selected');
+        if (event && event.currentTarget) {
+            event.currentTarget.classList.add('selected');
         }
+
+        // Log company name for debugging
+        // Company selected
 
         // Keep company selector visible even with one company (for occupancy data)
         const companySelector = document.getElementById('companySelector');
         const companies = document.querySelectorAll('.company-card');
+        // Removed hiding logic - always show company card for occupancy info
 
         // Show main content
         const mainContent = document.getElementById('mainContent');
@@ -810,9 +768,6 @@ class ParkingUIIntegrationXML {
                 companyNameElement.textContent = `- ${company.name || company.companyName}`;
             }
         }
-
-        // Show sub notice with loading status initially
-        this.updateLoadedTimestamp(null, false, true);
 
         // Load subscribers
         await this.loadSubscribers();
@@ -908,6 +863,7 @@ class ParkingUIIntegrationXML {
                 <td>${subscriber.lpn3 || ''}</td>
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(validUntil) || ''}</td>
                 <td style="color: #888;" title="פרופיל ${subscriber.profile || ''}">${subscriber.profileName || (subscriber.profile ? `פרופיל ${subscriber.profile}` : '')}</td>
+                <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                 <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
 
@@ -926,16 +882,11 @@ class ParkingUIIntegrationXML {
     async loadSubscribers(forceFullLoad = false) {
         if (!this.currentContract) return;
 
-        const requestedContractId = this.currentContract.id;
-
         // Clear any existing progress messages first
         this.hideProgressMessage();
 
         this.setLoading(true, 'loadingState');
         this.showProgressMessage(forceFullLoad ? 'טוען את כל נתוני המנויים...' : 'טוען רשימת מנויים...');
-        this.updateLoadedTimestamp(null, false, true);
-
-        let loadCompleted = false;
 
         try {
             // Get performance settings from config
@@ -948,9 +899,7 @@ class ParkingUIIntegrationXML {
                 forceFullLoad: forceFullLoad,  // Force loading all details if requested
 
                 // Callback when basic data is ready
-                onBasicLoaded: (basicSubscribers, fromCache = false, cachedTimestamp = null) => {
-                    if (!this.currentContract || String(this.currentContract.id) !== String(requestedContractId)) return;
-                    
+                onBasicLoaded: (basicSubscribers) => {
                     this.subscribers = basicSubscribers;
 
                     // Update the actual subscriber count in the company card
@@ -961,7 +910,7 @@ class ParkingUIIntegrationXML {
 
                     // Update all subscribers with correct company name and loading strategy
                     const companyName = this.currentContract.name || this.currentContract.firstName || `חברה ${this.currentContract.id}`;
-                    const isLargeCompany = this.subscribers.length > 500;
+                    const isLargeCompany = this.subscribers.length > 300;
                     this.subscribers.forEach(sub => {
                         // Only update company name if it's missing
                         if (!sub.companyName) {
@@ -999,22 +948,15 @@ class ParkingUIIntegrationXML {
                         this.setupFilters();
                     }, 100);
 
-                    // Show subtle progress indicator only for fresh network loads
-                    if (fromCache) {
-                        this.hideBackgroundProgress();
-                        // Cached data is already complete, update timestamp at end of loading
-                        this.updateLoadedTimestamp(cachedTimestamp || Date.now(), true);
-                        loadCompleted = true;
-                    } else if (isLargeCompany) {
-                        this.hideBackgroundProgress();
-                    } else if (basicSubscribers.length > 30) {
+                    // Show subtle progress indicator only for medium/large companies
+                    // Small companies (≤30) load instantly, so no need for progress
+                    if (basicSubscribers.length > 30) {
                         this.showBackgroundProgress('טוען פרטים מלאים ברקע...');
                     }
                 },
 
                 // Callback when each detail is loaded
                 onDetailLoaded: (subscriber, index) => {
-                    if (!this.currentContract || String(this.currentContract.id) !== String(requestedContractId)) return;
                     // Update the specific row in the table
                     this.updateSubscriberRow(subscriber, index);
                     // Update present count in header
@@ -1023,8 +965,6 @@ class ParkingUIIntegrationXML {
 
                 // Progress callback
                 onProgress: (progress) => {
-                    if (!this.currentContract || String(this.currentContract.id) !== String(requestedContractId)) return;
-
                     // Check if this is a large company notification
                     if (progress.message && progress.message.includes('חברה גדולה')) {
                         this.updateBackgroundProgress(progress.message);
@@ -1058,17 +998,6 @@ class ParkingUIIntegrationXML {
                             this.hideBackgroundProgress();
                         }
                     }
-                },
-
-                // Callback when full load is completely finished
-                onComplete: (completedSubscribers, fromCache = false, timestamp = Date.now()) => {
-                    if (!this.currentContract || String(this.currentContract.id) !== String(requestedContractId)) return;
-                    loadCompleted = true;
-                    this.subscribers = completedSubscribers;
-                    this.hideBackgroundProgress();
-                    this.hideProgressMessage();
-                    this.updateLoadedTimestamp(timestamp, fromCache);
-                    this.updatePresentCount();
                 }
             });
 
@@ -1079,9 +1008,6 @@ class ParkingUIIntegrationXML {
                 this.displaySubscribers([]);
                 // Make sure loading is cleared
                 this.setLoading(false, 'loadingState');
-            } else if (!loadCompleted && (!result.progressive || result.fromCache)) {
-                loadCompleted = true;
-                this.updateLoadedTimestamp(result.timestamp || Date.now(), !!result.fromCache);
             }
         } catch (error) {
             console.error('Error loading subscribers:', error);
@@ -1093,10 +1019,8 @@ class ParkingUIIntegrationXML {
             // Make sure loading is cleared on error
             this.setLoading(false, 'loadingState');
         } finally {
-            if (loadCompleted) {
-                this.hideBackgroundProgress();
-                this.hideProgressMessage();
-            }
+            // Hide background loading message
+            this.hideBackgroundProgress();
 
             // If we're still showing the progress message after 5 seconds, something went wrong
             setTimeout(() => {
@@ -1147,52 +1071,13 @@ class ParkingUIIntegrationXML {
     }
 
     /**
-     * Update last loaded time in company subtitle
-     */
-    updateLoadedTimestamp(timestamp, fromCache = false, isLoading = false) {
-        const subNotice = document.getElementById('companySubNotice');
-        if (subNotice) {
-            subNotice.style.display = 'block';
-            const isLarge = this.subscribers && this.subscribers.length > 500;
-            const noticeText = document.getElementById('subNoticeText');
-            if (noticeText) {
-                noticeText.style.display = isLarge ? 'inline' : 'none';
-            }
-            const timeSpan = document.getElementById('lastLoadedTime');
-            if (timeSpan) {
-                const prefix = isLarge ? '| ' : '';
-                if (isLoading) {
-                    timeSpan.textContent = `${prefix}טוען נתונים...`;
-                } else if (timestamp) {
-                    const d = new Date(timestamp);
-                    const timeStr = d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                    if (fromCache) {
-                        timeSpan.textContent = `${prefix}שעת טעינה אחרונה: ${timeStr} (מטמון)`;
-                    } else {
-                        timeSpan.textContent = `${prefix}שעת טעינה אחרונה: ${timeStr}`;
-                    }
-                }
-            }
-        }
-    }
-
-    /**
      * Update company info in header
      */
     async updateCompanyInfo() {
         try {
-            let companyName = this.currentContract?.name || this.currentContract?.companyName || '';
-            if (!companyName || companyName.startsWith('חברה ')) {
-                const companyResult = await this.api.getContractDetails(this.currentContract.id);
-                if (companyResult.success && companyResult.data) {
-                    companyName = companyResult.data.name || `חברה ${this.currentContract.id}`;
-                    this.currentContract.name = companyName;
-                }
-            }
-            if (!companyName) {
-                companyName = `חברה ${this.currentContract.id}`;
-            }
-            if (true) {
+            const companyResult = await this.api.getContractDetails(this.currentContract.id);
+            if (companyResult.success) {
+                const companyName = companyResult.data.name || `חברה ${this.currentContract.id}`;
 
                 // Update company name in subscribers
                 this.subscribers.forEach(sub => {
@@ -1206,8 +1091,9 @@ class ParkingUIIntegrationXML {
                 const companyNameElement = document.getElementById('companyName');
                 if (companyNameElement) {
                     // Check if this is a large company
-                    const isLargeCompany = this.subscribers.length > 500;
-                    companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''})`;
+                    const isLargeCompany = this.subscribers.length > 300;
+                    const statusText = isLargeCompany ? ' 🚀' : '';
+                    companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''})${statusText}`;
 
                     // Add tooltip for large companies
                     if (isLargeCompany) {
@@ -1218,18 +1104,6 @@ class ParkingUIIntegrationXML {
                     const reloadButton = document.getElementById('reloadFullButton');
                     if (reloadButton) {
                         reloadButton.style.display = isLargeCompany ? 'inline-block' : 'none';
-                    }
-
-                    // Notice text: only display for large companies
-                    const noticeText = document.getElementById('subNoticeText');
-                    if (noticeText) {
-                        noticeText.style.display = isLargeCompany ? 'inline' : 'none';
-                    }
-
-                    // Ensure notice under title is visible
-                    const subNotice = document.getElementById('companySubNotice');
-                    if (subNotice) {
-                        subNotice.style.display = 'block';
                     }
                 }
             }
@@ -1245,13 +1119,14 @@ class ParkingUIIntegrationXML {
         const companyNameElement = document.getElementById('companyName');
         if (companyNameElement) {
             const currentText = companyNameElement.textContent;
-            const companyName = currentText.split('(')[0].trim().replace('- ', '');
+            const companyName = currentText.split('(')[0].trim().replace('- ', '').replace(' 🚀', '');
 
             // Check if this is a large company
-            const isLargeCompany = this.subscribers.length > 500;
+            const isLargeCompany = this.subscribers.length > 300;
+            const statusText = isLargeCompany ? ' 🚀 מצב מהיר' : '';
 
-            // Update with clean format without rocket icon
-            companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''})`;
+            // Update with clean format
+            companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''})${statusText}`;
 
             // Add tooltip for large companies
             if (isLargeCompany) {
@@ -1273,18 +1148,13 @@ class ParkingUIIntegrationXML {
             }
 
             // Find the subscriber in our list
-            const existingIndex = this.subscribers.findIndex(s => String(s.subscriberNum) === String(subscriberNum));
+            const existingIndex = this.subscribers.findIndex(s => s.subscriberNum === subscriberNum);
 
             // Get the updated subscriber data from server
             const result = await this.api.getSubscriber(this.currentContract.id, subscriberNum);
 
             if (result.success && result.data) {
-                const existingSub = existingIndex >= 0 ? this.subscribers[existingIndex] : {};
-                const updatedSubscriber = {
-                    ...existingSub,
-                    ...result.data,
-                    companyName: result.data.companyName || existingSub.companyName || this.currentContract.name || ''
-                };
+                const updatedSubscriber = result.data;
 
                 if (existingIndex >= 0) {
                     // Update existing subscriber
@@ -1363,6 +1233,7 @@ class ParkingUIIntegrationXML {
                 <td>${subscriber.vehicle3 || subscriber.lpn3 || ''}</td>
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil || subscriber.xValidUntil)}</td>
                 <td style="color: #888;" title="פרופיל ${subscriber.profile || ''}">${subscriber.profileName || (subscriber.profile ? `פרופיל ${subscriber.profile}` : '')}</td>
+                <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                 <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
 
@@ -1679,9 +1550,6 @@ class ParkingUIIntegrationXML {
                         Object.assign(subscriber, {
                             ...detail,
                             ...preservedFields,  // This must come AFTER detail to preserve our fields
-                            firstName: detail.person?.firstName || detail.firstName || subscriber.firstName || '',
-                            lastName: detail.person?.surname || detail.lastName || subscriber.lastName || '',
-                            name: detail.person?.surname || detail.lastName || subscriber.name || '',
                             // Map profile correctly
                             profile: detail.identification?.usageProfile?.id || detail.profile || subscriber.profile,
                             profileName: detail.identification?.usageProfile?.name || detail.profileName || subscriber.profileName,
@@ -1776,9 +1644,13 @@ class ParkingUIIntegrationXML {
         const permissions = window.userPermissions || '';
         const canEdit = permissions !== 'B' && permissions !== '';
 
-        // Initialize column resizing if available
-        if (typeof window.initTableColumnResizing === 'function') {
-            window.initTableColumnResizing();
+        // Ensure the actions column header exists
+        const tableHead = document.querySelector('#subscribersTable thead tr');
+        if (tableHead && !tableHead.querySelector('th[data-translate="actions"]')) {
+            const actionsHeader = document.createElement('th');
+            actionsHeader.setAttribute('data-translate', 'actions');
+            actionsHeader.textContent = 'פעולות';
+            tableHead.appendChild(actionsHeader);
         }
 
         tbody.innerHTML = '';
@@ -1866,6 +1738,7 @@ class ParkingUIIntegrationXML {
                 <td>${subscriber.vehicle3 || subscriber.lpn3 || ''}</td>
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil || subscriber.xValidUntil) || ''}</td>
                 <td style="color: #888;" title="פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}">${subscriber.profileName || `פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}`}</td>
+                <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                 <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
                 // Add to fragment for better performance
@@ -1940,9 +1813,12 @@ class ParkingUIIntegrationXML {
                 row.onclick = () => {
                     // Find the current subscriber data
                     const currentSubscriber = this.subscribers.find(s =>
-                        String(s.subscriberNum) === String(subscriber.subscriberNum)
+                        s.subscriberNum === subscriber.subscriberNum
                     ) || subscriber;
-                    this.editSubscriber(currentSubscriber);
+                    // Trigger the edit function from the HTML page
+                    if (window.editSubscriber) {
+                        window.editSubscriber(currentSubscriber);
+                    }
                 };
 
                 row.dataset.subscriberNum = subscriber.subscriberNum;
@@ -1986,6 +1862,7 @@ class ParkingUIIntegrationXML {
                     <td>${subscriber.vehicle3 || subscriber.lpn3 || ''}</td>
                     <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil || subscriber.xValidUntil) || ''}</td>
                     <td style="color: #888;" title="פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}">${subscriber.profileName || `פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}`}</td>
+                    <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                     <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
                 tbody.appendChild(row);
@@ -2246,25 +2123,11 @@ class ParkingUIIntegrationXML {
                     subscriber.subscriberNum
                 );
 
-                if (result.success && result.data) {
+                if (result.success) {
                     const detail = result.data;
-                    const person = detail.person || {};
-                    const ident = detail.identification || {};
-                    const usageProf = ident.usageProfile || {};
 
-                    const fname = person.firstName || detail.firstName || subscriber.firstName || '';
-                    const lname = person.surname || detail.lastName || subscriber.lastName || '';
-                    const tag = ident.cardno || detail.tagNum || detail.cardno || subscriber.tagNum || '';
-                    const profId = usageProf.id || detail.profile || detail.profileId || subscriber.profile || '1';
-                    const profName = usageProf.name || detail.profileName || subscriber.profileName || '';
-                    const vFrom = ident.validFrom || detail.validFrom || subscriber.validFrom;
-                    const vUntil = ident.validUntil || detail.validUntil || subscriber.validUntil;
-                    const isPres = ident.present === 'true' || ident.present === true || subscriber.presence || false;
-                    const l1 = detail.lpn1 || subscriber.vehicle1 || '';
-                    const l2 = detail.lpn2 || subscriber.vehicle2 || '';
-                    const l3 = detail.lpn3 || subscriber.vehicle3 || '';
 
-                    // Preserve important fields
+                    // Preserve important fields and map correctly
                     const preservedFields = {
                         companyName: subscriber.companyName,
                         companyNum: subscriber.companyNum,
@@ -2276,39 +2139,34 @@ class ParkingUIIntegrationXML {
                     // Update subscriber with full details - map fields properly
                     Object.assign(subscriber, {
                         ...detail,
-                        ...preservedFields,
-                        firstName: fname,
-                        lastName: lname,
-                        name: lname,
-                        tagNum: tag,
-                        cardno: tag,
-                        profile: profId,
-                        profileId: profId,
-                        profileName: profName,
-                        extCardProfile: profId,
-                        validFrom: vFrom,
-                        validUntil: vUntil,
-                        xValidFrom: vFrom,
-                        xValidUntil: vUntil,
-                        vehicle1: l1,
-                        vehicle2: l2,
-                        vehicle3: l3,
-                        lpn1: l1,
-                        lpn2: l2,
-                        lpn3: l3,
-                        presence: isPres,
-                        present: isPres,
+                        ...preservedFields,  // Preserve our fields
+                        // Map profile correctly from identification.usageProfile
+                        profile: detail.identification?.usageProfile?.id || detail.profile || detail.extCardProfile || subscriber.profile,
+                        profileName: detail.identification?.usageProfile?.name || detail.profileName || subscriber.profileName,
+                        extCardProfile: detail.identification?.usageProfile?.id || detail.extCardProfile || subscriber.extCardProfile,
+                        // Map dates correctly
+                        validFrom: detail.identification?.validFrom || detail.validFrom || subscriber.validFrom,
+                        validUntil: detail.identification?.validUntil || detail.validUntil || subscriber.validUntil,
+                        // Map vehicles
+                        vehicle1: detail.lpn1 || subscriber.vehicle1 || '',
+                        vehicle2: detail.lpn2 || subscriber.vehicle2 || '',
+                        vehicle3: detail.lpn3 || subscriber.vehicle3 || '',
+                        // Map presence correctly
+                        presence: detail.identification?.present === 'true' || detail.presence,
+                        // Mark as having full details
                         hasFullDetails: true
                     });
 
-                    // Update the row in the table and local array
+                    // Update the row in the table
                     const index = this.subscribers.findIndex(s =>
-                        String(s.subscriberNum) === String(subscriber.subscriberNum) ||
-                        String(s.id) === String(subscriber.subscriberNum)
+                        s.subscriberNum === subscriber.subscriberNum
                     );
                     if (index !== -1) {
-                        this.subscribers[index] = subscriber;
                         this.updateSubscriberRow(subscriber, index);
+                    }
+
+                    if (subscriber.isLargeCompany) {
+                        // Full details loaded successfully
                     }
                 }
             } catch (error) {
@@ -2342,24 +2200,6 @@ class ParkingUIIntegrationXML {
     async saveSubscriber(subscriberData) {
         if (!this.currentContract) return;
 
-        // Prevent double submission / duplicate creation
-        if (this.isSaving) {
-            console.warn('[saveSubscriber] Save already in progress, ignoring duplicate call');
-            return false;
-        }
-        this.isSaving = true;
-
-        const saveTopBtn = document.getElementById('saveTopBtn');
-        const saveBottomBtn = document.querySelector('#editForm button[type="submit"]');
-        if (saveTopBtn) {
-            saveTopBtn.disabled = true;
-            saveTopBtn.style.opacity = '0.6';
-        }
-        if (saveBottomBtn) {
-            saveBottomBtn.disabled = true;
-            saveBottomBtn.style.opacity = '0.6';
-        }
-
         // Check if trying to update profile
         const permissions = window.userPermissions || '';
         const currentSubscriber = this.subscribers.find(s =>
@@ -2372,29 +2212,6 @@ class ParkingUIIntegrationXML {
             !permissions.includes('P')) {
             this.showNotification('אין לך הרשאה לשנות פרופיל (דרושה הרשאת P)', 'error');
             return;
-        }
-
-        // tagNum: only send if the user explicitly provided one in the form!
-        // Never auto-populate or fallback to arbitrary numbers because duplicates trigger errors
-        const tagNum = (subscriberData.tagNum && subscriberData.tagNum.trim() !== '')
-            ? subscriberData.tagNum.trim()
-            : '';
-
-        // Ensure subscriber validUntil does not exceed the contract's expiration date
-        let contractValidUntil = this.currentContract?.xValidUntil || this.currentContract?.validUntil;
-        if (contractValidUntil) {
-            const cleanContractDate = String(contractValidUntil).split(/[ T+]/)[0];
-            let cleanSubDate = String(subscriberData.validUntil || '').trim();
-            if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cleanSubDate)) {
-                const p = cleanSubDate.split('/');
-                cleanSubDate = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
-            } else {
-                cleanSubDate = cleanSubDate.split(/[ T+]/)[0];
-            }
-            if (cleanContractDate && (!cleanSubDate || cleanSubDate > cleanContractDate)) {
-                console.warn(`[saveSubscriber] Capping subscriber validUntil (${cleanSubDate}) to contract validUntil (${cleanContractDate})`);
-                subscriberData.validUntil = cleanContractDate;
-            }
         }
 
         this.setLoading(true);
@@ -2447,17 +2264,6 @@ class ParkingUIIntegrationXML {
                 const firstName = rawFirstName || ' '; // If empty, set to space to force update
                 const fullName = `${lastName} ${firstName}`.trim();
 
-                // Filial ID from subscriber or contract
-                const filialId = currentSubscriber?.filialId || this.currentContract.filialId || '1093';
-
-                // Tag and identification handling: if no tag, strictly use LPR (55 / 0) and NO cardno
-                const hasTag = Boolean(tagNum && tagNum.trim() !== '');
-                const identType = hasTag ? '54' : '55';
-                const cardClass = hasTag ? '1' : '0';
-                const ptcptGrp = currentSubscriber?.ptcptGrpNo || currentSubscriber?.identification?.ptcptGrpNo || '0';
-                const currentPres = currentSubscriber?.presence || currentSubscriber?.present ? 'true' : 'false';
-                const ignPres = currentSubscriber?.ignorePresence ? '1' : '0';
-
                 consumerData = {
                     consumer: {
                         id: subscriberData.subscriberNum,
@@ -2466,35 +2272,32 @@ class ParkingUIIntegrationXML {
                         // Send dates with timezone
                         xValidFrom: formatDateWithTimezone(subscriberData.validFrom),
                         xValidUntil: formatDateWithTimezone(subscriberData.validUntil),
-                        filialId: filialId
+                        filialId: this.currentContract.filialId || '2228'  // Add filialId
                     },
                     person: {
                         firstName: firstName,
                         surname: lastName
                     },
                     identification: {
-                        ptcptType: '2',
-                        cardno: hasTag ? tagNum : '',
-                        cardclass: cardClass,
-                        identificationType: identType,
+                        ptcptType: '2',  // Required field from documentation
+                        cardno: subscriberData.tagNum || '',
+                        cardclass: '1',  // Keep as 1
+                        identificationType: '54',  // Back to 54 as per your requirement
                         validFrom: formatDateWithTimezone(subscriberData.validFrom),
                         validUntil: formatDateWithTimezone(subscriberData.validUntil),
                         usageProfile: {
-                            id: subscriberData.profileId || currentSubscriber?.profileId || currentSubscriber?.profile || '1',
-                            name: subscriberData.profile || currentSubscriber?.profileName || 'Standard'
+                            id: subscriberData.profileId || '1',
+                            name: subscriberData.profile || 'Standard'
                         },
-                        admission: '',
-                        present: currentPres,
-                        ignorePresence: ignPres,
-                        status: '0',
-                        ptcptGrpNo: ptcptGrp,
-                        chrgOvdrftAcct: '0'
+                        admission: '',  // Empty as in documentation
+                        status: '0',  // Active status (0 = active, 6 = locked)
+                        ptcptGrpNo: '-1',  // Default group
+                        chrgOvdrftAcct: '0'  // Don't charge overdraft
                     },
                     displayText: '-1',
                     limit: '9999900',
-                    status: '0',
-                    delete: '0',
-                    ignorePresence: ignPres,
+                    status: '0',  // Active status
+                    delete: '0',  // Not deleted
                     // Vehicle data - clean dashes from vehicle numbers, send space if empty to force update
                     lpn1: subscriberData.vehicle1 ? subscriberData.vehicle1.replace(/-/g, '') : ' ',
                     lpn2: subscriberData.vehicle2 ? subscriberData.vehicle2.replace(/-/g, '') : ' ',
@@ -2529,7 +2332,6 @@ class ParkingUIIntegrationXML {
                 const firstName = rawFirstName || ' '; // If empty, set to space
                 const fullName = `${lastName} ${firstName}`.trim();
 
-                const newHasTag = Boolean(subscriberData.tagNum && subscriberData.tagNum.trim() !== '');
                 consumerData = {
                     consumer: {
                         id: '',  // Empty for new subscriber
@@ -2537,7 +2339,7 @@ class ParkingUIIntegrationXML {
                         name: fullName,
                         xValidFrom: formatDateWithTimezone(subscriberData.validFrom),
                         xValidUntil: formatDateWithTimezone(subscriberData.validUntil),
-                        filialId: this.currentContract.filialId || '1093'
+                        filialId: this.currentContract.filialId || '2228'
                     },
                     person: {
                         firstName: firstName,
@@ -2545,9 +2347,9 @@ class ParkingUIIntegrationXML {
                     },
                     identification: {
                         ptcptType: '2',
-                        cardno: newHasTag ? subscriberData.tagNum.trim() : '',
-                        cardclass: newHasTag ? '1' : '0',
-                        identificationType: newHasTag ? '54' : '55',
+                        cardno: subscriberData.tagNum || '',
+                        cardclass: '1',  // Keep as 1
+                        identificationType: '54',  // Back to 54 as per your requirement
                         validFrom: formatDateWithTimezone(subscriberData.validFrom),
                         validUntil: formatDateWithTimezone(subscriberData.validUntil),
 
@@ -2676,64 +2478,74 @@ class ParkingUIIntegrationXML {
 
 
 
-                // If update failed, check if it's validity error 30001 (exceeds contract validity)
-                const isValidityError = !result.success && result.error && (
-                    result.error.includes('30001') ||
-                    result.error.includes('validity') ||
-                    result.error.includes('Validity') ||
-                    result.error.includes('חורג')
-                );
+                // If update failed with 500 error, try different approaches
+                if (!result.success && result.error && result.error.includes('500')) {
+                    // Update failed with 500
 
-                if (isValidityError) {
-                    console.warn('[saveSubscriber] Update failed with validity error 30001, fetching contract validity and retrying...');
-                    try {
-                        const cRes = await this.api.getContractDetails(this.currentContract.id);
-                        if (cRes.success && cRes.data) {
-                            const cData = Array.isArray(cRes.data) ? cRes.data[0] : (cRes.data.contract || cRes.data);
-                            const realContractDate = (cData.xValidUntil || cData.validUntil || '').split(/[ T+]/)[0];
-                            if (realContractDate) {
-                                this.currentContract.xValidUntil = realContractDate;
-                                subscriberData.validUntil = realContractDate;
-                                consumerData.consumer.xValidUntil = formatDateWithTimezone(realContractDate);
-                                if (consumerData.identification) {
-                                    consumerData.identification.validUntil = formatDateWithTimezone(realContractDate);
-                                }
-                                result = await this.api.updateConsumer(
-                                    this.currentContract.id,
-                                    subscriberData.subscriberNum,
-                                    consumerData
-                                );
-                            }
+                    // Check if this is company 8 or other large companies
+                    const isLargeCompany = this.currentContract.id === '8' ||
+                        this.currentContract.id === '4' ||
+                        this.currentContract.id === '10';
+
+                    if (isLargeCompany) {
+                        // Large company detected
+
+                        // For large companies, try WITHOUT identification at all
+                        const minimalData = {
+                            firstName: consumerData.person.firstName,
+                            surname: consumerData.person.surname,
+                            lpn1: consumerData.lpn1 || ' ',
+                            lpn2: consumerData.lpn2 || ' ',
+                            lpn3: consumerData.lpn3 || ' ',
+                            consumer: consumerData.consumer
+                            // NO identification block at all for large companies
+                        };
+
+                        // Trying with minimal data
+                        result = await this.api.updateConsumer(
+                            this.currentContract.id,
+                            subscriberData.subscriberNum,
+                            minimalData
+                        );
+
+                        if (result.success) {
+                            // Consumer updated successfully
+                            this.showNotification('✅ הנתונים הבסיסיים נשמרו בהצלחה', 'success');
                         }
-                    } catch (retryErr) {
-                        console.error('[saveSubscriber] Failed to retry with contract validity:', retryErr);
+                    }
+
+                    // If still failed, try without identification at all for problematic companies
+                    if (!result.success) {
+                        // Still failing
+
+                        // Create a copy without identification
+                        const dataWithoutIdentification = {
+                            firstName: consumerData.firstName || consumerData.surname || 'Unknown',
+                            surname: consumerData.surname || consumerData.firstName || 'Unknown',
+                            lpn1: consumerData.lpn1 || '',
+                            // Only include lpn2 if not empty
+                            ...(consumerData.lpn2 ? { lpn2: consumerData.lpn2 } : {}),
+                            // Only include lpn3 if lpn2 exists
+                            ...(consumerData.lpn2 && consumerData.lpn3 ? { lpn3: consumerData.lpn3 } : {}),
+                            consumer: consumerData.consumer
+                            // NO identification at all
+                        };
+
+                        result = await this.api.updateConsumer(
+                            this.currentContract.id,
+                            subscriberData.subscriberNum,
+                            dataWithoutIdentification
+                        );
+
+                        if (result.success) {
+                            // Consumer updated successfully
+                            this.showNotification('⚠️ הנתונים נשמרו ללא פרופיל שימוש', 'warning');
+                        }
                     }
                 }
 
-                // If update failed with 500 error, try fallback WITHOUT identification block
-                // In Scheidt & Bachmann, when identification has constraints or card errors, updating without identification succeeds cleanly
-                if (!result.success && result.error && (result.error.includes('500') || result.status === 500)) {
-                    console.warn('[saveSubscriber] Primary update failed with 500, attempting fallback without identification block');
-
-                    const minimalData = {
-                        consumer: {
-                            ...consumerData.consumer,
-                            xValidUntil: consumerData.consumer.xValidUntil
-                        },
-                        person: {
-                            firstName: consumerData.person.firstName,
-                            surname: consumerData.person.surname
-                        },
-                        lpn1: consumerData.lpn1 || ' ',
-                        lpn2: consumerData.lpn2 || ' ',
-                        lpn3: consumerData.lpn3 || ' '
-                    };
-
-                    result = await this.api.updateConsumer(
-                        this.currentContract.id,
-                        subscriberData.subscriberNum,
-                        minimalData
-                    );
+                if (result.success) {
+                    // Consumer updated successfully
                 }
             }
 
@@ -2749,12 +2561,18 @@ class ParkingUIIntegrationXML {
                     // Convert to string for comparison
                     const subscriberNumStr = String(subscriberData.subscriberNum);
 
+                    // Looking for subscriber in array
+
                     const index = this.subscribers.findIndex(s =>
                         String(s.subscriberNum) === subscriberNumStr ||
                         String(s.id) === subscriberNumStr
                     );
 
+                    // Found subscriber
+
                     if (index !== -1) {
+                        // Updating subscriber
+
                         // Update local data - preserve important fields
                         const updatedSubscriber = {
                             ...this.subscribers[index],
@@ -2771,8 +2589,8 @@ class ParkingUIIntegrationXML {
                             validUntil: subscriberData.validUntil,
                             xValidFrom: subscriberData.validFrom,
                             xValidUntil: subscriberData.validUntil,
-                            tagNum: subscriberData.tagNum || tagNum || this.subscribers[index].tagNum || '',
-                            cardno: subscriberData.tagNum || tagNum || this.subscribers[index].cardno || '',
+                            tagNum: subscriberData.tagNum,
+                            cardno: subscriberData.tagNum,
                             profile: subscriberData.profileId,
                             profileName: subscriberData.profile,
                             // Keep current presence - it will be updated from server on next load
@@ -2782,12 +2600,11 @@ class ParkingUIIntegrationXML {
                             companyName: this.subscribers[index].companyName,
                             isLargeCompany: this.subscribers[index].isLargeCompany,
                             loadingStrategy: this.subscribers[index].loadingStrategy,
-                            hasFullDetails: true  // Retain full details so subsequent edits don't lose data
+                            hasFullDetails: false  // Reset to force reload on next edit
                         };
 
                         // CRITICAL: Actually update the subscriber in the array!
                         this.subscribers[index] = updatedSubscriber;
-                        this._syncCache();
 
                         // Updated subscriber in array
 
@@ -2821,7 +2638,6 @@ class ParkingUIIntegrationXML {
 
                     // Add to subscribers array
                     this.subscribers.push(newSubscriber);
-                    this._syncCache();
 
                     // Add only the new row instead of re-displaying the entire table
                     const tbody = document.querySelector('#subscribersTable tbody');
@@ -2855,6 +2671,7 @@ class ParkingUIIntegrationXML {
                             <td>${newSubscriber.vehicle3 || ''}</td>
                             <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(newSubscriber.validUntil) || ''}</td>
                             <td style="color: #888;" title="פרופיל ${newSubscriber.profile || ''}">${newSubscriber.profileName || `פרופיל ${newSubscriber.profile || ''}`}</td>
+                            <td>${this.formatDate(newSubscriber.validFrom) || ''}</td>
                             <td style="text-align: center; font-size: 18px;">${newSubscriber.presence ? '✅' : '❌'}</td>
                         `;
 
@@ -2898,15 +2715,16 @@ class ParkingUIIntegrationXML {
 
                 return true;
             } else {
-                let errorMessage = 'שגיאה בשמירת הנתונים';
                 // Provide clearer error messages based on the error type
+                let errorMessage = 'שגיאה בשמירת הנתונים';
+
                 if (result.error) {
                     if (result.error.includes('500') || result.error.includes('Internal Server Error')) {
-                        // Check if it's a confirmed present subscriber error
-                        if (currentSubscriber && (currentSubscriber.presence || currentSubscriber.present)) {
+                        // Check if it's a present subscriber error
+                        if (consumerData.identification && consumerData.identification.present === 'true') {
                             errorMessage = '⚠️ לא ניתן לעדכן מנוי נוכח בחניון - יש להוציא את הרכב מהחניון לפני עדכון פרטים';
                         } else {
-                            errorMessage = `⚠️ שגיאת שרת בעדכון הנתונים (${result.error || '500'})`;
+                            errorMessage = '⚠️ שגיאת שרת - ייתכן שהמנוי נוכח בחניון או שיש בעיה בנתונים שנשלחו';
                         }
                     } else if (result.error.includes('400') || result.error.includes('Bad Request')) {
                         errorMessage = '❌ הנתונים שהוזנו אינם תקינים - אנא בדוק את הפרטים';
@@ -2941,17 +2759,6 @@ class ParkingUIIntegrationXML {
             return false;
         } finally {
             this.setLoading(false);
-            this.isSaving = false;
-            const saveTopBtn = document.getElementById('saveTopBtn');
-            const saveBottomBtn = document.querySelector('#editForm button[type="submit"]');
-            if (saveTopBtn) {
-                saveTopBtn.disabled = false;
-                saveTopBtn.style.opacity = '1';
-            }
-            if (saveBottomBtn) {
-                saveBottomBtn.disabled = false;
-                saveBottomBtn.style.opacity = '1';
-            }
         }
     }
 
@@ -2972,10 +2779,7 @@ class ParkingUIIntegrationXML {
 
             if (result.success) {
                 this.showNotification('המנוי נמחק בהצלחה', 'success');
-                // Remove from local array and update cache
-                this.subscribers = this.subscribers.filter(s => String(s.subscriberNum) !== String(subscriberId) && String(s.id) !== String(subscriberId));
-                this._syncCache();
-                this.displaySubscribers(this.subscribers);
+                await this.loadSubscribers(); // Refresh the list
             } else {
                 this.showNotification('שגיאה במחיקת המנוי', 'error');
             }
@@ -3292,19 +3096,14 @@ class ParkingUIIntegrationXML {
                         document.getElementById('editModal')?.classList.contains('guest-mode')
                 };
 
-                try {
-                    // Save via API
-                    const success = await this.saveSubscriber(formData);
+                // Save via API
+                const success = await this.saveSubscriber(formData);
 
-                    if (success) {
-                        // Close modal
-                        if (window.closeModal) {
-                            window.closeModal();
-                        }
+                if (success) {
+                    // Close modal
+                    if (window.closeModal) {
+                        window.closeModal();
                     }
-                } catch (err) {
-                    console.error('Error during saveSubscriber execution:', err);
-                    if (this.setLoading) this.setLoading(false);
                 }
             };
         }

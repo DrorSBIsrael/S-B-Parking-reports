@@ -591,7 +591,7 @@ function EditSubscriberScreen({ route, navigation }) {
   }
   const [sId, setSId] = useState(initialSId);
 
-  const [fname, setFname] = useState(typeof subscriber.firstName === 'string' ? subscriber.firstName : (subscriber.firstName?.['#text'] || (isGuestFlow ? 'אורח' : '')));
+  const [fname, setFname] = useState(typeof subscriber.firstName === 'string' ? subscriber.firstName : (subscriber.firstName?.['#text'] || ''));
   const [lname, setLname] = useState(typeof subscriber.lastName === 'string' ? subscriber.lastName : (subscriber.lastName?.['#text'] || ''));
 
   const extractLpn = (lpnObj) => typeof lpnObj === 'string' ? lpnObj : (lpnObj?.plate || '');

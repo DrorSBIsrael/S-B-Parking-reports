@@ -262,7 +262,7 @@
                     
                     <div class="form-group">
                         <label for="codeType">סוג קוד</label>
-                        <select id="codeType" name="codeType">
+                        <select id="codeType" name="codeType" onchange="document.getElementById('standaloneModeGroup').style.display = (this.value === 'tenant_manager') ? 'block' : 'none';">
                             <option value="dashboard">Dashboard</option>
                             <option value="parking_manager">Parking Manager</option>
                             <option value="tenant_manager">Tenant Manager (מנהל מתחם דיירים)</option>
@@ -306,6 +306,13 @@
                     <div class="form-group">
                         <label for="parkingName">שם חניון</label>
                         <input type="text" id="parkingName" name="parkingName">
+                    </div>
+
+                    <div class="form-group" id="standaloneModeGroup" style="display: none; background: #f0fdfa; border: 1px solid #99f6e4; padding: 12px; border-radius: 8px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 0; color: #0f766e; font-size: 14.5px;">
+                            <input type="checkbox" id="standaloneMode" name="standaloneMode" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span>📂 חניון עצמאי ללא מערכת חניה (עבודה מבוססת קובץ דירות ורכבים ללא בקר)</span>
+                        </label>
                     </div>
                     
                     <button type="submit" class="btn btn-primary" id="createBtn">
@@ -422,7 +429,8 @@
 	    access_level: formData.get('accessLevel'),
 	    company_type: formData.get('companyType'),
 	    parking_name: formData.get('parkingName'),
-	    company_list: formData.get('companyList')
+	    company_list: formData.get('companyList'),
+	    standalone_mode: document.getElementById('standaloneMode') ? document.getElementById('standaloneMode').checked : false
 	};
             
             try {

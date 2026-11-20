@@ -336,10 +336,10 @@
         <div id="dashboardSection" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 6px; flex-wrap: nowrap;">
                 <div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1;">
-                    <span id="i18n_apt_status_title" style="font-weight: 800; font-size: 14.5px; color: #334155; white-space: nowrap;">🏠 מצב הדירה שלי</span>
-                    <span id="portalStarHoursBadge" class="badge badge-yellow" style="border: 1px solid #eab308; font-size: 12px; font-weight: 800; white-space: nowrap;">⭐ 0 שעות שתרמתי</span>
+                    <span id="i18n_apt_status_title" style="font-weight: 800; font-size: 14px; color: #334155; white-space: nowrap;">מצב הדירה שלי</span>
+                    <span id="portalStarHoursBadge" class="badge badge-yellow" style="border: 1px solid #eab308; font-size: 12px; font-weight: 800; white-space: nowrap; flex-shrink: 0;">⭐ 0 שעות שתרמתי</span>
                 </div>
-                <button type="button" id="i18n_refresh_quota_btn" onclick="refreshApartmentStatus(this)" class="btn btn-outline" style="width: auto; padding: 6px 10px; font-size: 12.5px; border-radius: 8px; background: white; white-space: nowrap; flex-shrink: 0;">
+                <button type="button" id="i18n_refresh_quota_btn" onclick="refreshApartmentStatus(this)" class="btn btn-outline" style="width: auto; padding: 6px 10px; font-size: 12px; border-radius: 8px; background: white; white-space: nowrap; flex-shrink: 0;">
                     🔄 רענן מכסה
                 </button>
             </div>
@@ -361,10 +361,10 @@
 
             <!-- ניווט בין 4 לשוניות ללא אייקונים -->
             <div class="nav-pills">
-                <button class="pill-btn active" id="i18n_tab_vehicles" onclick="switchPortalTab('vehicles', this)">הרכבים שלי</button>
-                <button class="pill-btn" id="i18n_tab_pool" onclick="switchPortalTab('pool', this)">חניות פנויות</button>
-                <button class="pill-btn" id="i18n_tab_share" onclick="switchPortalTab('share', this)">שחרור חניה</button>
-                <button class="pill-btn" id="i18n_tab_request" onclick="switchPortalTab('request', this)">בקשת חניה</button>
+                <button class="pill-btn active" id="i18n_tab_vehicles" onclick="switchPortalTab('vehicles', this)">הרכבים</button>
+                <button class="pill-btn" id="i18n_tab_pool" onclick="switchPortalTab('pool', this)">פנויות</button>
+                <button class="pill-btn" id="i18n_tab_share" onclick="switchPortalTab('share', this)">שחרור</button>
+                <button class="pill-btn" id="i18n_tab_request" onclick="switchPortalTab('request', this)">בקשה</button>
             </div>
 
             <!-- לשונית א': הרכבים של הדירה שלי -->
@@ -372,7 +372,6 @@
                 <div class="card">
                     <div class="card-title">
                         <span id="i18n_my_cars_title">רכבי הדירה שלי</span>
-                        <span style="font-size: 18px;">🚗</span>
                         <button onclick="loadDashboard()" style="background:none; border:none; color:#334155; font-weight:700; cursor:pointer;">🔄 רענן</button>
                     </div>
                     <div id="mySubscribersContainer">
@@ -443,7 +442,7 @@
                     <form onsubmit="handleCreateShare(event)">
                         <div class="input-group">
                             <label>🅿️ איזו חניה לשחרר? (ניתן לבחור חניה אחת או יותר)</label>
-                            <div id="shParkingSpotChips" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px;"></div>
+                            <div id="shParkingSpotChips" style="display:flex; flex-direction:column; gap:8px; margin-bottom:6px;"></div>
                             <input type="text" id="shParkingSpotNumber" placeholder="לדוגמה: 28ג">
                             <input type="hidden" id="shSpotsCount" value="1" data-max="1">
                         </div>
@@ -604,14 +603,14 @@
                 quick_code_prefix: '✨ לחץ כאן לכניסה עם קוד: ',
                 verify_btn: '🔐 כניסה לפורטל הדירה',
                 back_phone_btn: 'חזור להחלפת מספר טלפון',
-                apt_status_title: '🏠 מצב הדירה שלי',
+                apt_status_title: 'מצב הדירה שלי',
                 refresh_quota_btn: '🔄 רענן מכסה',
                 stat_max: 'מכסת חניות פעילה',
                 stat_present: 'רכבים בחניון כעת',
                 stat_avail: 'פנויות לכניסה כעת',
-                tab_vehicles: 'הרכבים שלי',
-                tab_pool: 'חניות פנויות',
-                tab_share: 'שחרור חניה',
+                tab_vehicles: 'הרכבים',
+                tab_pool: 'פנויות',
+                tab_share: 'שחרור',
                 my_cars_title: 'רכבי הדירה שלי',
                 no_subscribers: 'לא נמצאו מנויים משויכים לדירה זו בבקר החניון.',
                 status_in_parking: '🟢 נמצא בחניון',
@@ -957,8 +956,10 @@
 
         function getPortalAuthHeaders(extra = {}) {
             const tk = localStorage.getItem('tenant_auth_token') || '';
+            const ph = localStorage.getItem('tenant_last_phone') || '';
             const headers = { ...extra };
             if (tk) headers['X-Tenant-Token'] = tk;
+            if (ph) headers['X-Tenant-Phone'] = ph;
             return headers;
         }
 
@@ -979,9 +980,20 @@
                 try {
                     localStorage.setItem('tenant_pending_fulfill_req', JSON.stringify(reqObj));
                 } catch (e) {}
+                const rawQuery = window.location.search.replace(/^\?/, '');
                 // נקה את ה-URL כדי שרענון דף לא ידרוס שינויים ידניים לאחר מילוי
                 const cleanUrl = window.location.pathname;
                 window.history.replaceState({}, document.title, cleanUrl);
+
+                // אם המשתמש פתח מנייד (iOS / Android), נסה לפתוח אוטומטית את האפליקציה המותקנת; אם אינה מותקנת או אינה מעודכנת, המשתמש נשאר באתר שכבר מוכן עם הטופס המלא!
+                const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+                if (isMobileDevice && rawQuery) {
+                    setTimeout(() => {
+                        try {
+                            window.location.href = `sbtenants://fulfill?${rawQuery}`;
+                        } catch (err) {}
+                    }, 150);
+                }
             }
         }
 
@@ -1671,8 +1683,8 @@
                 const nameLbl = s.firstName || s.lastName || ('#' + s.id);
                 const isSel = selectedList.includes(sp);
                 const btnStyle = isSel
-                    ? 'flex:1; min-width:130px; padding:10px 12px; font-size:13.5px; border-radius:10px; border:1.5px solid #334155; background:#e2e8f0; color:#1e293b; font-weight:800;'
-                    : 'flex:1; min-width:130px; padding:10px 12px; font-size:13.5px; border-radius:10px; border:1.5px solid #cbd5e1; background:#ffffff; color:#334155; font-weight:700;';
+                    ? 'width:100%; padding:11px 14px; font-size:14px; border-radius:10px; border:1.5px solid #334155; background:#e2e8f0; color:#1e293b; font-weight:800; text-align:center;'
+                    : 'width:100%; padding:11px 14px; font-size:14px; border-radius:10px; border:1.5px solid #cbd5e1; background:#ffffff; color:#334155; font-weight:700; text-align:center;';
                 return `<button type="button" class="btn" style="${btnStyle}" onclick="selectShareSpotChip('${sp.replace(/'/g, "\\'")}')">${isSel ? '✓ ' : ''}🅿️ חניה ${sp} (${nameLbl})</button>`;
             }).join('');
             const spotsCountEl = document.getElementById('shSpotsCount');
@@ -2207,7 +2219,7 @@
 
     <!-- פוטר משפטי קבוע -->
     <footer class="legal-footer" role="contentinfo">
-        <div style="font-weight: 700;">© 2026 HINT LTD — כל הזכויות שמורות | גרסה 1.0.6</div>
+        <div style="font-weight: 700;">© 2026 HINT LTD — כל הזכויות שמורות | גרסה 1.0.7</div>
         <div style="font-size: 12px; margin-top: 2px;">שיידט את בכמן ישראל בע"מ</div>
         <div style="margin-top: 6px;">
             <a role="button" tabindex="0" onclick="openLegalModal('privacyModal')">🔒 הצהרת פרטיות ותנאי שימוש</a> |

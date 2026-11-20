@@ -361,6 +361,9 @@
                         <button class="btn btn-primary" onclick="openImportApartmentsModal()" style="font-size: 13px; padding: 8px 14px; background: #4f46e5;">
                             📥 טעינת דירות מהחניון
                         </button>
+                        <button class="btn btn-success" onclick="openUploadApartmentsFileModal()" style="font-size: 13px; padding: 8px 14px; background: #0d9488;">
+                            📂 טעינת קובץ דירות ורכבים (ללא מערכת חניון)
+                        </button>
                         <button class="btn btn-outline" onclick="refreshAllTenantsQuotas(this)" style="font-size: 13px; padding: 8px 14px;">
                             🔄 רענון כללי (בדוק מכסות לכל הדירות מול המערכת)
                         </button>
@@ -576,6 +579,13 @@
                             </div>
                         </div>
                     </div>
+                    <div style="margin-top: 18px; padding: 14px 16px; border: 1px solid #99f6e4; border-radius: 12px; background: #f0fdfa;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 700; color: #0f766e;">
+                            <input type="checkbox" id="setStandaloneMode" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span>📂 מצב חניון עצמאי ללא מערכת חניה (עבודה מבוססת קובץ דירות, רכבים ומספרי חניה ללא בדיקות נוכחות בבקר)</span>
+                        </label>
+                    </div>
+
                     <div style="margin-top: 18px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc;">
                         <label style="display: block; font-weight: 700; margin-bottom: 8px; color: #334155;">🖼️ לוגו הבניין / המתחם (יוצג לכל דיירי הבניין בפורטל):</label>
                         <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
@@ -646,6 +656,36 @@
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
                 <button class="btn btn-outline" onclick="closeImportApartmentsModal()">ביטול</button>
                 <button class="btn btn-primary" id="confirmImportBtn" onclick="confirmImportApartments()">📥 בצע טעינת ועדכון דירות</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal טעינת קובץ דירות, רכבים וחניות (ללא מערכת חניון) -->
+    <div id="uploadApartmentsFileModal" class="modal">
+        <div class="modal-content" style="max-width: 520px;">
+            <h3 style="margin-bottom: 10px;">📂 טעינת קובץ דירות, רכבים וחניות (ללא מערכת חניון)</h3>
+            <p style="font-size: 13.5px; color: #495057; margin-bottom: 12px; line-height: 1.5;">
+                העלה קובץ אקסל (<code>.xlsx</code>) או <code>.csv</code> עם העמודות:<br>
+                <strong>מספר דירה | שם משפחה | שם פרטי | רכב 1 | רכב 2 | רכב 3 | מספר חניה | טלפון נייד (אופציונלי)</strong><br>
+                <span style="color: #0f766e; font-weight: 600;">💡 דירה עם 2 חניות יכולה להופיע ב-2 שורות עם אותו מספר דירה. מספרי טלפון קיימים במערכת נשמרים ואינם נדרסים!</span>
+            </p>
+            <div style="margin-bottom: 14px;">
+                <a href="/api/tenant-manager/sample-apartments-csv" class="btn btn-outline" style="font-size: 12.5px; padding: 7px 12px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
+                    ⬇️ הורד קובץ תבנית לדוגמה (Excel / CSV)
+                </a>
+            </div>
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label>בחר קובץ אקסל (.xlsx) או CSV *</label>
+                <input type="file" id="uploadApartmentsFileInput" accept=".csv,.xlsx,.xls,.txt">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label>הזן קוד מיוחד לאישור הפעולה *</label>
+                <input type="password" id="uploadApartmentsSpecialCodeInput" placeholder="הזן סיסמה מיוחדת..." autocomplete="off"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault(); confirmUploadApartmentsFile();}">
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-outline" onclick="closeUploadApartmentsFileModal()">ביטול</button>
+                <button class="btn btn-success" id="confirmUploadFileBtn" style="background: #0d9488;" onclick="confirmUploadApartmentsFile()">📂 טען קובץ והפעל מצב עצמאי</button>
             </div>
         </div>
     </div>
@@ -757,7 +797,9 @@
         function applyManagerInitData(data) {
             if (!data || !data.manager) return;
             currentProjectNumber = data.manager.project_number;
-            document.getElementById('buildingTitle').textContent = `🏢 ${data.manager.parking_name} (#${currentProjectNumber})`;
+            const isStandalone = !!(data.standalone_mode || (data.settings && Number(data.settings.standalone_mode || 0) === 1));
+            const modeBadge = isStandalone ? ' [📂 מצב עצמאי ללא בקר]' : '';
+            document.getElementById('buildingTitle').textContent = `🏢 ${data.manager.parking_name} (#${currentProjectNumber})${modeBadge}`;
             document.getElementById('portalUrlDisplay').textContent = `${window.location.origin}/tenant-portal`;
 
             if (data.settings) {
@@ -769,6 +811,10 @@
                 document.getElementById('setParkingAddress').value = data.settings.parking_address || '';
                 document.getElementById('setParkingLat').value = (data.settings.parking_lat !== null && data.settings.parking_lat !== undefined) ? data.settings.parking_lat : '';
                 document.getElementById('setParkingLng').value = (data.settings.parking_lng !== null && data.settings.parking_lng !== undefined) ? data.settings.parking_lng : '';
+                const standaloneChk = document.getElementById('setStandaloneMode');
+                if (standaloneChk) {
+                    standaloneChk.checked = !!(data.standalone_mode || Number(data.settings.standalone_mode || 0) === 1);
+                }
                 currentLogoData = data.settings.logo_data || '';
                 applyManagerLogoPreview(currentLogoData);
             }
@@ -949,6 +995,62 @@
 
         function closeImportApartmentsModal() {
             document.getElementById('importApartmentsModal').style.display = 'none';
+        }
+
+        function openUploadApartmentsFileModal() {
+            document.getElementById('uploadApartmentsSpecialCodeInput').value = '';
+            document.getElementById('uploadApartmentsFileInput').value = '';
+            document.getElementById('uploadApartmentsFileModal').style.display = 'flex';
+        }
+
+        function closeUploadApartmentsFileModal() {
+            document.getElementById('uploadApartmentsFileModal').style.display = 'none';
+        }
+
+        async function confirmUploadApartmentsFile() {
+            if (_mgrActionBusy) return;
+            const fileInput = document.getElementById('uploadApartmentsFileInput');
+            const codeVal = (document.getElementById('uploadApartmentsSpecialCodeInput').value || '').trim();
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                showAlert('נא לבחור קובץ אקסל (.xlsx) או CSV לטעינה', 'danger');
+                return;
+            }
+            if (!codeVal) {
+                showAlert('נא להזין את הקוד המיוחד לאישור הפעולה', 'danger');
+                return;
+            }
+            const btn = document.getElementById('confirmUploadFileBtn');
+            const origHtml = btn ? btn.innerHTML : '';
+            _mgrActionBusy = true;
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '⏳ קורא קובץ ומעדכן דירות ורכבים...';
+            }
+            try {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                formData.append('special_password', codeVal);
+                const res = await fetch('/api/tenant-manager/upload-apartments-file', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    closeUploadApartmentsFileModal();
+                    showAlert(data.message, 'success');
+                    await initManagerPage();
+                } else {
+                    showAlert(data.message || 'שגיאה בטעינת הקובץ', 'danger');
+                }
+            } catch (e) {
+                showAlert('שגיאת תקשורת בטעינת הקובץ', 'danger');
+            } finally {
+                _mgrActionBusy = false;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = origHtml;
+                }
+            }
         }
 
         async function confirmImportApartments() {
@@ -1299,6 +1401,7 @@
             e.preventDefault();
             const latVal = document.getElementById('setParkingLat').value.trim();
             const lngVal = document.getElementById('setParkingLng').value.trim();
+            const standaloneChk = document.getElementById('setStandaloneMode');
             const payload = {
                 parking_name: document.getElementById('setParkingName').value.trim(),
                 max_bookings_per_day: parseInt(document.getElementById('setMaxDay').value, 10) || 5,
@@ -1308,6 +1411,7 @@
                 parking_address: document.getElementById('setParkingAddress').value.trim(),
                 parking_lat: latVal !== '' ? parseFloat(latVal) : '',
                 parking_lng: lngVal !== '' ? parseFloat(lngVal) : '',
+                standalone_mode: standaloneChk ? !!standaloneChk.checked : false,
                 logo_data: currentLogoData
             };
             const res = await fetch('/api/tenant-manager/settings', {

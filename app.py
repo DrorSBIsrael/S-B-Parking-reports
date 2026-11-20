@@ -3151,6 +3151,18 @@ def master_create_user():
         
         if result.data:
             print(f" User created successfully: {username} (ID: {next_user_id})")
+
+            # אם הוקם מנהל מתחם דיירים (tenant_manager) וסומן כחניון עצמאי ללא מערכת חניה - נשמור את ההגדרה בטבלת המתחם
+            try:
+                if code_type == 'tenant_manager' and project_number:
+                    from tenant_system import TenantStore
+                    TenantStore.save_building_settings(
+                        project_number=str(project_number),
+                        parking_name=parking_name or f'מתחם {project_number}',
+                        standalone_mode=bool(data.get('standalone_mode'))
+                    )
+            except Exception as _tm_err:
+                print(f" Warning: Failed to init tenant_building_settings for {project_number}: {_tm_err}")
             
             # שליחת מייל למשתמש החדש
             email_sent = send_new_user_welcome_email(

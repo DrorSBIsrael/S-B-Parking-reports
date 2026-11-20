@@ -122,11 +122,27 @@ def _init_sqlite():
                 created_at TEXT
             )
         """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS tenant_local_subscribers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_number TEXT NOT NULL,
+                apartment_number TEXT NOT NULL,
+                subscriber_index INTEGER DEFAULT 1,
+                family_name TEXT,
+                first_name TEXT,
+                parking_spot TEXT,
+                lpn1 TEXT,
+                lpn2 TEXT,
+                lpn3 TEXT,
+                updated_at TEXT
+            )
+        """)
         for col_sql in [
             "ALTER TABLE tenant_building_settings ADD COLUMN logo_data TEXT",
             "ALTER TABLE tenant_building_settings ADD COLUMN parking_lat REAL",
             "ALTER TABLE tenant_building_settings ADD COLUMN parking_lng REAL",
             "ALTER TABLE tenant_building_settings ADD COLUMN parking_address TEXT",
+            "ALTER TABLE tenant_building_settings ADD COLUMN standalone_mode INTEGER DEFAULT 0",
             "ALTER TABLE tenant_spot_shares ADD COLUMN parking_spot_number TEXT",
             "ALTER TABLE tenant_quota_transfers ADD COLUMN parking_spot_number TEXT"
         ]:
@@ -188,7 +204,7 @@ class TenantStore:
                 local_row = dict(row)
         if sb_row:
             if local_row:
-                for k in ('logo_data', 'parking_lat', 'parking_lng', 'parking_address'):
+                for k in ('logo_data', 'parking_lat', 'parking_lng', 'parking_address', 'standalone_mode'):
                     if sb_row.get(k) in (None, '') and local_row.get(k) not in (None, ''):
                         sb_row[k] = local_row[k]
             return sb_row
@@ -204,16 +220,18 @@ class TenantStore:
             'logo_data': '',
             'parking_lat': None,
             'parking_lng': None,
-            'parking_address': ''
+            'parking_address': '',
+            'standalone_mode': 0
         }
 
     @staticmethod
-    def save_building_settings(project_number, parking_name, max_day, max_month, check_interval=30, reminder_mins=30, logo_data=None, parking_lat=None, parking_lng=None, parking_address=None):
+    def save_building_settings(project_number, parking_name, max_day, max_month, check_interval=30, reminder_mins=30, logo_data=None, parking_lat=None, parking_lng=None, parking_address=None, standalone_mode=None):
         p_num = str(project_number)
         now_iso = get_il_now().isoformat()
         existing = TenantStore.get_building_settings(p_num, parking_name)
         final_logo = logo_data if logo_data is not None else (existing.get('logo_data') or '')
         final_addr = str(parking_address).strip() if parking_address is not None else (existing.get('parking_address') or '')
+        final_standalone = (1 if bool(standalone_mode) else 0) if standalone_mode is not None else int(existing.get('standalone_mode') or 0)
 
         def _parse_coord(val, fallback):
             if val is None:
@@ -240,6 +258,7 @@ class TenantStore:
             'parking_lat': final_lat,
             'parking_lng': final_lng,
             'parking_address': final_addr,
+            'standalone_mode': final_standalone,
             'updated_at': now_iso
         }
         sb = _get_supabase()
@@ -249,7 +268,7 @@ class TenantStore:
             except Exception as _sbe:
                 # אם העמודות החדשות טרם נוספו ב-Supabase, שמור את עמודות הבסיס כדי שלא תיכשל השמירה
                 try:
-                    base_payload = {k: v for k, v in payload.items() if k not in ('parking_lat', 'parking_lng', 'parking_address')}
+                    base_payload = {k: v for k, v in payload.items() if k not in ('parking_lat', 'parking_lng', 'parking_address', 'standalone_mode')}
                     sb.table('tenant_building_settings').upsert(base_payload).execute()
                 except Exception as _sbe2:
                     _trip_sb_circuit_if_missing(_sbe2)
@@ -257,8 +276,8 @@ class TenantStore:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.execute("""
                 INSERT INTO tenant_building_settings
-                (project_number, parking_name, max_bookings_per_day, max_bookings_per_month, check_interval_minutes, reminder_minutes_before, logo_data, parking_lat, parking_lng, parking_address, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (project_number, parking_name, max_bookings_per_day, max_bookings_per_month, check_interval_minutes, reminder_minutes_before, logo_data, parking_lat, parking_lng, parking_address, standalone_mode, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(project_number) DO UPDATE SET
                     parking_name=excluded.parking_name,
                     max_bookings_per_day=excluded.max_bookings_per_day,
@@ -269,13 +288,123 @@ class TenantStore:
                     parking_lat=excluded.parking_lat,
                     parking_lng=excluded.parking_lng,
                     parking_address=excluded.parking_address,
+                    standalone_mode=excluded.standalone_mode,
                     updated_at=excluded.updated_at
             """, (p_num, payload['parking_name'], payload['max_bookings_per_day'], payload['max_bookings_per_month'],
                   payload['check_interval_minutes'], payload['reminder_minutes_before'], final_logo,
-                  final_lat, final_lng, final_addr, now_iso))
+                  final_lat, final_lng, final_addr, final_standalone, now_iso))
             conn.commit()
             conn.close()
         return payload
+
+    @staticmethod
+    def list_local_subscribers(project_number, apartment_number=None):
+        p_num = str(project_number)
+        sb = _get_supabase()
+        if sb:
+            try:
+                q = sb.table('tenant_local_subscribers').select('*').eq('project_number', p_num)
+                if apartment_number is not None:
+                    q = q.eq('apartment_number', str(apartment_number).strip())
+                res = q.order('id').execute()
+                if res.data:
+                    return [dict(r) for r in res.data]
+            except Exception:
+                pass
+        with _db_lock:
+            conn = sqlite3.connect(SQLITE_PATH)
+            conn.row_factory = sqlite3.Row
+            if apartment_number is not None:
+                rows = conn.execute(
+                    "SELECT * FROM tenant_local_subscribers WHERE project_number = ? AND apartment_number = ? ORDER BY subscriber_index, id",
+                    (p_num, str(apartment_number).strip())
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM tenant_local_subscribers WHERE project_number = ? ORDER BY CAST(apartment_number AS INTEGER), apartment_number, subscriber_index, id",
+                    (p_num,)
+                ).fetchall()
+            conn.close()
+            return [dict(r) for r in rows]
+
+    @staticmethod
+    def upsert_local_subscribers_for_apartment(project_number, apartment_number, subs_rows):
+        """מחליף/מעדכן את רשימת המנויים והרכבים המקומיים של דירה ספציפית (למתחם ללא בקר חניון)."""
+        p_num = str(project_number)
+        apt_str = str(apartment_number).strip()
+        now_iso = get_il_now().isoformat()
+        sb = _get_supabase()
+        if sb:
+            try:
+                sb.table('tenant_local_subscribers').delete().eq('project_number', p_num).eq('apartment_number', apt_str).execute()
+                for idx, sr in enumerate(subs_rows, start=1):
+                    sb.table('tenant_local_subscribers').insert({
+                        'project_number': p_num,
+                        'apartment_number': apt_str,
+                        'subscriber_index': idx,
+                        'family_name': (sr.get('family_name') or '').strip(),
+                        'first_name': (sr.get('first_name') or '').strip(),
+                        'parking_spot': (sr.get('parking_spot') or '').strip(),
+                        'lpn1': (sr.get('lpn1') or '').strip(),
+                        'lpn2': (sr.get('lpn2') or '').strip(),
+                        'lpn3': (sr.get('lpn3') or '').strip(),
+                        'updated_at': now_iso
+                    }).execute()
+            except Exception:
+                pass
+        with _db_lock:
+            conn = sqlite3.connect(SQLITE_PATH)
+            conn.execute("DELETE FROM tenant_local_subscribers WHERE project_number = ? AND apartment_number = ?", (p_num, apt_str))
+            for idx, sr in enumerate(subs_rows, start=1):
+                conn.execute("""
+                    INSERT INTO tenant_local_subscribers
+                    (project_number, apartment_number, subscriber_index, family_name, first_name, parking_spot, lpn1, lpn2, lpn3, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    p_num,
+                    apt_str,
+                    idx,
+                    (sr.get('family_name') or '').strip(),
+                    (sr.get('first_name') or '').strip(),
+                    (sr.get('parking_spot') or '').strip(),
+                    (sr.get('lpn1') or '').strip(),
+                    (sr.get('lpn2') or '').strip(),
+                    (sr.get('lpn3') or '').strip(),
+                    now_iso
+                ))
+            conn.commit()
+            conn.close()
+
+    @staticmethod
+    def update_local_subscriber_plates(project_number, apartment_number, subscriber_id, lpn1, lpn2, lpn3):
+        p_num = str(project_number)
+        apt_str = str(apartment_number).strip()
+        sid_str = str(subscriber_id).strip()
+        now_iso = get_il_now().isoformat()
+        sb = _get_supabase()
+        if sb:
+            try:
+                sb.table('tenant_local_subscribers').update({
+                    'lpn1': lpn1, 'lpn2': lpn2, 'lpn3': lpn3, 'updated_at': now_iso
+                }).eq('project_number', p_num).eq('apartment_number', apt_str).eq('subscriber_index', int(sid_str)).execute()
+            except Exception:
+                pass
+        with _db_lock:
+            conn = sqlite3.connect(SQLITE_PATH)
+            cur = conn.execute("""
+                UPDATE tenant_local_subscribers
+                SET lpn1 = ?, lpn2 = ?, lpn3 = ?, updated_at = ?
+                WHERE project_number = ? AND apartment_number = ? AND (subscriber_index = ? OR id = ?)
+            """, (lpn1, lpn2, lpn3, now_iso, p_num, apt_str, int(sid_str) if sid_str.isdigit() else -1, int(sid_str) if sid_str.isdigit() else -1))
+            if cur.rowcount == 0:
+                conn.execute("""
+                    INSERT INTO tenant_local_subscribers
+                    (project_number, apartment_number, subscriber_index, family_name, first_name, parking_spot, lpn1, lpn2, lpn3, updated_at)
+                    VALUES (?, ?, 1, '', ?, '', ?, ?, ?, ?)
+                """, (p_num, apt_str, f'דירה {apt_str}', lpn1, lpn2, lpn3, now_iso))
+            conn.commit()
+            conn.close()
+        return True
 
     @staticmethod
     def list_tenants(project_number):
@@ -723,11 +852,66 @@ def _skidata_headers(content_type=None):
         h['Content-Type'] = content_type
     return h
 
+def is_standalone_building(project_number):
+    """בודק האם המתחם פועל במצב עצמאי (ללא מערכת בקר חניון - מבוסס קובץ דירות)."""
+    p_num = str(project_number)
+    b_settings = TenantStore.get_building_settings(p_num)
+    if int(b_settings.get('standalone_mode') or 0) == 1:
+        return True
+    conn = _get_parking_conn(p_num)
+    ip_val = str((conn or {}).get('ip_address') or '').strip().lower()
+    if not conn or not ip_val or ip_val in ('0', '0.0.0.0', 'none', 'standalone', 'local', 'no-system', '-'):
+        return True
+    return False
+
+def _get_standalone_pooling_status(project_number, apartment_number):
+    """חישוב מכסת חניות של דירה במתחם עצמאי (ללא בקר חניון): אין בדיקות נוכחות, המכסה נקבעת לפי בסיס הדירה +- השאלות פעילות כעת."""
+    p_num = str(project_number)
+    apt_str = str(apartment_number).strip()
+    local_subs = TenantStore.list_local_subscribers(p_num, apt_str)
+    tenants = [t for t in TenantStore.list_tenants(p_num) if str(t.get('apartment_number') or '').strip() == apt_str]
+
+    family_name = ''
+    for ls in local_subs:
+        if ls.get('family_name'):
+            family_name = str(ls['family_name']).strip()
+            break
+    if not family_name and tenants:
+        family_name = (tenants[0].get('full_name') or '').strip()
+
+    if tenants and tenants[0].get('base_max_counter') is not None:
+        base_max = int(tenants[0].get('base_max_counter') or 0)
+    else:
+        spots_with_num = [s for s in local_subs if (s.get('parking_spot') or '').strip()]
+        base_max = len(spots_with_num) if spots_with_num else (len(local_subs) if local_subs else 1)
+
+    active_trs = TenantStore.list_transfers(project_number=p_num, statuses=['ACTIVE'])
+    lent_now = sum(1 for tr in active_trs if str(tr.get('from_apartment') or '').strip() == apt_str)
+    borrowed_now = sum(1 for tr in active_trs if str(tr.get('to_apartment') or '').strip() == apt_str)
+
+    effective_max = max(0, base_max - lent_now + borrowed_now)
+    return {
+        'success': True,
+        'standaloneMode': True,
+        'apartment': apt_str,
+        'contractName': family_name,
+        'contractStatus': 2 if effective_max == 0 else 0,
+        'isBlockedZeroSpot': (base_max == 0 and borrowed_now == 0),
+        'rawMaxCounter': base_max,
+        'maxCounter': effective_max,
+        'presentCounter': 0,
+        'availableSpots': effective_max
+    }
+
 def get_apartment_pooling_status(project_number, apartment_number):
-    """קריאת maxCounter, presentCounter ו-status של דירה (חברה) מתוך שיידט.
-    בשיידט: maxCounter=0 נחשב ללא הגבלה, לכן דירה עם 0 חניות מוגדרת בבקר עם maxCounter=1 ו-status=2 (חסום)."""
+    """קריאת maxCounter, presentCounter ו-status של דירה (חברה) מתוך שיידט, או מקומית במתחם ללא בקר חניון."""
+    if is_standalone_building(project_number):
+        return _get_standalone_pooling_status(project_number, apartment_number)
     conn = _get_parking_conn(project_number)
     if not conn or not conn.get('ip_address'):
+        local_subs = TenantStore.list_local_subscribers(project_number, apartment_number)
+        if local_subs:
+            return _get_standalone_pooling_status(project_number, apartment_number)
         return {'success': False, 'message': 'לא נמצאו פרטי חיבור לחניון'}
     ip = conn['ip_address']
     port = conn.get('port', 8443)
@@ -782,9 +966,19 @@ def get_apartment_pooling_status(project_number, apartment_number):
 def set_apartment_zero_spot_mode(project_number, apartment_number, is_zero_spot):
     """הגדרת דירה בבקר שיידט כ'דירה ללא חניה (0 חניות)' באמצעות status=2 ו-maxCounter=1,
     או שחרור החסימה (status=0) לדירה עם חניה."""
+    if is_standalone_building(project_number):
+        local_subs = TenantStore.list_local_subscribers(project_number, apartment_number)
+        spots_with_num = [s for s in local_subs if (s.get('parking_spot') or '').strip() not in ('', '0', '-')]
+        restored_max = len(spots_with_num) if spots_with_num else (len(local_subs) if local_subs else 1)
+        return {
+            'success': True,
+            'standaloneMode': True,
+            'effectiveMaxCounter': 0 if is_zero_spot else max(1, restored_max),
+            'contractStatus': 2 if is_zero_spot else 0
+        }
     conn = _get_parking_conn(project_number)
     if not conn or not conn.get('ip_address'):
-        return {'success': False, 'message': 'לא נמצאו פרטי חיבור לחניון'}
+        return {'success': True, 'effectiveMaxCounter': 0 if is_zero_spot else 1, 'contractStatus': 2 if is_zero_spot else 0}
     ip = conn['ip_address']
     port = conn.get('port', 8443)
     url = f"https://{ip}:{port}/CustomerMediaWebService/contracts/{apartment_number}/detail"
@@ -846,9 +1040,9 @@ def set_apartment_zero_spot_mode(project_number, apartment_number, is_zero_spot)
 
 def adjust_apartment_max_counter(project_number, apartment_number, delta):
     """שינוי מכסת החניות הפעילה של דירה ב-+1 או -1 מול שיידט (PUT /contracts/{id}/detail).
-    מכיוון שבשיידט maxCounter=0 נחשב 'ללא הגבלה':
-    - כאשר המכסה הפעילה יורדת ל-0: שמים בבקר maxCounter=1 ו-status=2 (חסום).
-    - כאשר המכסה הפעילה עולה ל-1 או יותר (למשל דירה ללא חניה שקיבלה חניה משכן): שמים status=0 (משוחרר) ו-maxCounter=המכסה הפעילה."""
+    במתחם עצמאי (ללא בקר חניון) המכסה מחושבת אוטומטית מההעברות הפעילות."""
+    if is_standalone_building(project_number):
+        return {'success': True, 'standaloneMode': True}
     conn = _get_parking_conn(project_number)
     if not conn or not conn.get('ip_address'):
         return {'success': False, 'message': 'לא נמצאו פרטי חיבור לחניון'}
@@ -1013,10 +1207,66 @@ def _get_subscriber_parked_info(sess, ip, port, apt_str, sid_str, cur_lpn1='', c
         'entry_time_str': entry_time_str
     }
 
+def _get_standalone_subscribers(project_number, apartment_number):
+    p_num = str(project_number)
+    apt_str = str(apartment_number).strip()
+    rows = TenantStore.list_local_subscribers(p_num, apt_str)
+    if not rows:
+        tenants = [t for t in TenantStore.list_tenants(p_num) if str(t.get('apartment_number') or '').strip() == apt_str]
+        if tenants:
+            t0 = tenants[0]
+            return {
+                'success': True,
+                'standaloneMode': True,
+                'subscribers': [{
+                    'id': '1',
+                    'apartment': apt_str,
+                    'firstName': (t0.get('full_name') or '').strip(),
+                    'lastName': '',
+                    'parking_spot': '',
+                    'present': False,
+                    'parked_slot': None,
+                    'parked_lpn': '',
+                    'days_in_parking': 0.0,
+                    'can_edit_parked': True,
+                    'standaloneMode': True,
+                    'lpn1': '',
+                    'lpn2': '',
+                    'lpn3': ''
+                }]
+            }
+        return {'success': True, 'standaloneMode': True, 'subscribers': []}
+
+    subs = []
+    for idx, r in enumerate(rows, start=1):
+        sid = str(r.get('subscriber_index') or idx)
+        subs.append({
+            'id': sid,
+            'apartment': apt_str,
+            'firstName': (r.get('first_name') or '').strip(),
+            'lastName': (r.get('family_name') or '').strip(),
+            'parking_spot': (r.get('parking_spot') or '').strip(),
+            'present': False,
+            'parked_slot': None,
+            'parked_lpn': '',
+            'days_in_parking': 0.0,
+            'can_edit_parked': True,
+            'standaloneMode': True,
+            'lpn1': (r.get('lpn1') or '').strip(),
+            'lpn2': (r.get('lpn2') or '').strip(),
+            'lpn3': (r.get('lpn3') or '').strip()
+        })
+    return {'success': True, 'standaloneMode': True, 'subscribers': subs}
+
 def get_apartment_subscribers(project_number, apartment_number):
-    """שליפת המנויים והרכבים של הדירה מתוך שיידט, כולל זיהוי הרכב הספציפי שנמצא בחניון."""
+    """שליפת המנויים והרכבים של הדירה מתוך שיידט, או מתוך הקובץ המקומי במתחם ללא בקר חניון."""
+    if is_standalone_building(project_number):
+        return _get_standalone_subscribers(project_number, apartment_number)
     conn = _get_parking_conn(project_number)
     if not conn or not conn.get('ip_address'):
+        local_rows = TenantStore.list_local_subscribers(project_number, apartment_number)
+        if local_rows:
+            return _get_standalone_subscribers(project_number, apartment_number)
         return {'success': False, 'message': 'לא נמצאו פרטי חיבור לחניון', 'subscribers': []}
     ip = conn['ip_address']
     port = conn.get('port', 8443)
@@ -1077,12 +1327,35 @@ def get_apartment_subscribers(project_number, apartment_number):
 
 def update_apartment_subscriber_plates(project_number, apartment_number, subscriber_id, lpn1, lpn2, lpn3):
     """
-    עדכון מספרי רכב של מנוי בדירה בשיידט:
-    - בודק איזה רכב ספציפי (רכב 1 / רכב 2 / רכב 3) נמצא כעת בחניון (לפי /parktrans).
-    - אם הרכב הספציפי שמבקשים לשנות נמצא בחניון ופחות מ-7 ימים עברו מהפעולה האחרונה -> חוסם את השינוי של אותו רכב.
-    - אם מבקשים לשנות רכב אחר של אותו מנוי (שאינו הרכב שנמצא בחניון) -> מאפשר את השינוי!
-    - אם עברו 7 ימים או יותר מהפעולה האחרונה של הרכב שבחניון (רכב תקוע) -> מאפס נוכחות ומאפשר את העדכון.
+    עדכון מספרי רכב של מנוי בדירה:
+    - במתחם עצמאי (ללא בקר חניון): מעדכן ישירות בטבלת המנויים המקומית ללא בדיקת נוכחות.
+    - במתחם עם בקר שיידט: מעדכן מול הבקר כולל בדיקת נוכחות רכב ספציפי ו-7 ימים.
     """
+    def _validate_plate_common(raw_val):
+        s = re.sub(r'[\s\-]', '', str(raw_val or '').strip()).upper()
+        if not s:
+            return True, ''
+        rem = s.replace('CC', '', 1).replace('CD', '', 1).replace('מ', '', 1)
+        if not rem.isdigit() or not any(ch.isdigit() for ch in s):
+            return False, s
+        letters_only = ''.join(ch for ch in s if not ch.isdigit())
+        if letters_only not in ('', 'CC', 'CD', 'מ'):
+            return False, s
+        return True, s
+
+    if is_standalone_building(project_number):
+        clean_vals = {}
+        for k, v in [('lpn1', lpn1), ('lpn2', lpn2), ('lpn3', lpn3)]:
+            ok, cl = _validate_plate_common(v)
+            if not ok:
+                return {'success': False, 'message': 'במספר רכב מותר להזין ספרות בלבד, או CC / CD לרכב דיפלומטי, או האות מ׳ לרכב משטרה.'}
+            clean_vals[k] = cl
+        TenantStore.update_local_subscriber_plates(
+            project_number, apartment_number, subscriber_id,
+            clean_vals['lpn1'], clean_vals['lpn2'], clean_vals['lpn3']
+        )
+        return {'success': True, 'message': 'מספרי הרכב עודכנו ונשמרו בהצלחה!'}
+
     conn = _get_parking_conn(project_number)
     if not conn or not conn.get('ip_address'):
         return {'success': False, 'message': 'לא נמצאו פרטי חיבור לחניון'}
@@ -1282,6 +1555,27 @@ def try_activate_transfer(transfer):
     to_apt = transfer['to_apartment']
     now_iso = get_il_now().isoformat()
 
+    # במתחם עצמאי (ללא בקר חניון): אין בדיקות נוכחות - מפעילים מיד עם הגעת שעת ההתחלה!
+    if is_standalone_building(p_num):
+        TenantStore.update_transfer(t_id, {
+            'status': 'ACTIVE',
+            'actual_activated_at': now_iso,
+            'last_checked_at': now_iso,
+            'notified_start': True
+        })
+        borrower_phone = transfer.get('borrower_phone')
+        if borrower_phone:
+            spot_no = (transfer.get('parking_spot_number') or '').strip()
+            spot_line = f"🅿️ מספר חניה: *{spot_no}*\n" if spot_no else ""
+            msg = (
+                f"שלום {transfer.get('borrower_name') or ''}! 🚗\n"
+                f"החניה שהזמנת (מדירה {from_apt}) פנויה וזמינה עבורך כעת ועד השעה *{transfer.get('end_time')}*.\n"
+                f"{spot_line}"
+                f"חניה נעימה!"
+            )
+            send_whatsapp_message(borrower_phone, msg)
+        return {'activated': True, 'status': 'ACTIVE'}
+
     status_res = get_apartment_pooling_status(p_num, from_apt)
     if not status_res.get('success'):
         TenantStore.update_transfer(t_id, {'last_checked_at': now_iso})
@@ -1341,6 +1635,14 @@ def restore_active_transfer(transfer, early_cancel=False):
     now_iso = get_il_now().isoformat()
 
     if cur_status == 'ACTIVE':
+        if is_standalone_building(p_num):
+            TenantStore.update_transfer(t_id, {
+                'status': 'CANCELLED' if early_cancel else 'RESTORED',
+                'actual_restored_at': now_iso,
+                'late_exit_flag': False
+            })
+            return True
+
         # בדיקה האם הדייר השואל איחר בפינוי החניה
         late_flag = False
         if not early_cancel:
@@ -1550,6 +1852,7 @@ def api_tenant_manager_init():
             'parking_name': b_settings.get('parking_name') or p_name
         },
         'settings': b_settings,
+        'standalone_mode': is_standalone_building(p_num),
         'tenants': tenants,
         'shares': shares,
         'active_transfers': active_transfers
@@ -1572,7 +1875,8 @@ def api_tenant_manager_save_settings():
         logo_data=data.get('logo_data'),
         parking_lat=data.get('parking_lat'),
         parking_lng=data.get('parking_lng'),
-        parking_address=data.get('parking_address')
+        parking_address=data.get('parking_address'),
+        standalone_mode=data.get('standalone_mode')
     )
     return jsonify({'success': True, 'message': 'הגדרות המתחם נשמרו בהצלחה', 'settings': saved})
 
@@ -1899,6 +2203,245 @@ def api_tenant_manager_import_apartments():
         'message': f'טעינת דירות הושלמה בהצלחה! נוספו {added_count} דירות חדשות ועודכנו {updated_count} דירות קיימות (מספרי הטלפון הקיימים נשמרו ללא שינוי).'
     })
 
+def _parse_uploaded_apartments_table(file_storage):
+    """קורא קובץ Excel (.xlsx) או CSV של רשימת דירות, שמות, רכבים (1-3) ומספרי חניה."""
+    import io, csv
+    filename = (file_storage.filename or '').lower()
+    raw_bytes = file_storage.read()
+    rows_2d = []
+
+    if filename.endswith('.xlsx') or filename.endswith('.xls'):
+        import openpyxl
+        wb = openpyxl.load_workbook(io.BytesIO(raw_bytes), data_only=True)
+        ws = wb.active
+        for row in ws.iter_rows(values_only=True):
+            if any(c is not None and str(c).strip() != '' for c in row):
+                rows_2d.append([str(c).strip() if c is not None else '' for c in row])
+    else:
+        text = None
+        for enc in ('utf-8-sig', 'utf-8', 'cp1255', 'iso-8859-8'):
+            try:
+                text = raw_bytes.decode(enc)
+                break
+            except Exception:
+                continue
+        if text is None:
+            text = raw_bytes.decode('utf-8', errors='replace')
+        reader = csv.reader(io.StringIO(text))
+        for r in reader:
+            if any(str(c).strip() != '' for c in r):
+                rows_2d.append([str(c).strip() for c in r])
+
+    if not rows_2d:
+        return []
+
+    header = [h.strip() for h in rows_2d[0]]
+    has_header = any(
+        any(k in h for k in ('דירה', 'משפחה', 'שם', 'רכב', 'חניה', 'טלפון', 'נייד', 'apartment', 'name', 'car', 'spot', 'phone'))
+        for h in header
+    )
+
+    col_map = {
+        'apt': 0,
+        'last_name': 1,
+        'first_name': 2,
+        'plate_1': 3,
+        'plate_2': 4,
+        'plate_3': 5,
+        'spot': 6,
+        'phone': 7
+    }
+
+    if has_header:
+        custom_map = {}
+        car_cols = []
+        for idx, h in enumerate(header):
+            hl = h.lower()
+            if ('דירה' in hl or 'חברה' in hl or 'apt' in hl or 'apartment' in hl) and 'apt' not in custom_map:
+                custom_map['apt'] = idx
+            elif ('משפחה' in hl or 'last' in hl or 'family' in hl) and 'last_name' not in custom_map:
+                custom_map['last_name'] = idx
+            elif ('פרטי' in hl or 'שם' in hl or 'first' in hl or 'name' in hl) and 'first_name' not in custom_map:
+                custom_map['first_name'] = idx
+            elif ('חניה' in hl or 'מקום' in hl or 'spot' in hl or 'parking' in hl) and 'spot' not in custom_map:
+                custom_map['spot'] = idx
+            elif ('טלפון' in hl or 'נייד' in hl or 'phone' in hl or 'mobile' in hl) and 'phone' not in custom_map:
+                custom_map['phone'] = idx
+            elif 'רכב' in hl or 'רישוי' in hl or 'car' in hl or 'plate' in hl:
+                car_cols.append(idx)
+        if len(car_cols) >= 1:
+            custom_map['plate_1'] = car_cols[0]
+        if len(car_cols) >= 2:
+            custom_map['plate_2'] = car_cols[1]
+        if len(car_cols) >= 3:
+            custom_map['plate_3'] = car_cols[2]
+        if 'apt' in custom_map:
+            col_map.update(custom_map)
+        data_rows = rows_2d[1:]
+    else:
+        data_rows = rows_2d
+
+    def _val(r, key):
+        idx = col_map.get(key)
+        if idx is None or idx >= len(r):
+            return ''
+        v = str(r[idx] or '').strip()
+        if v.endswith('.0') and v[:-2].isdigit():
+            v = v[:-2]
+        return v
+
+    parsed = []
+    for r in data_rows:
+        apt = _val(r, 'apt')
+        if not apt:
+            continue
+        parsed.append({
+            'apartment_number': apt,
+            'last_name': _val(r, 'last_name'),
+            'family_name': _val(r, 'last_name'),
+            'first_name': _val(r, 'first_name'),
+            'lpn1': re.sub(r'[^0-9A-Za-zמ]', '', _val(r, 'plate_1')),
+            'lpn2': re.sub(r'[^0-9A-Za-zמ]', '', _val(r, 'plate_2')),
+            'lpn3': re.sub(r'[^0-9A-Za-zמ]', '', _val(r, 'plate_3')),
+            'plate_1': re.sub(r'[^0-9A-Za-zמ]', '', _val(r, 'plate_1')),
+            'plate_2': re.sub(r'[^0-9A-Za-zמ]', '', _val(r, 'plate_2')),
+            'plate_3': re.sub(r'[^0-9A-Za-zמ]', '', _val(r, 'plate_3')),
+            'parking_spot': _val(r, 'spot'),
+            'parking_spot_number': _val(r, 'spot'),
+            'phone_number': _val(r, 'phone')
+        })
+    return parsed
+
+@tenant_bp.route('/api/tenant-manager/sample-apartments-csv', methods=['GET'])
+def api_tenant_manager_sample_apartments_csv():
+    """הורדת קובץ תבנית CSV לדוגמה לטעינת דירות, רכבים וחניות (ללא מערכת חניון)."""
+    import io, csv
+    from flask import Response
+    output = io.StringIO()
+    output.write('\ufeff')  # UTF-8 BOM for Excel Hebrew support
+    writer = csv.writer(output)
+    writer.writerow(['מספר דירה', 'שם משפחה', 'שם פרטי', 'רכב 1', 'רכב 2', 'רכב 3', 'מספר חניה', 'טלפון נייד'])
+    writer.writerow(['301', 'פרינץ', 'דרור', '12345678', '', '', '28ג', '0525551234'])
+    writer.writerow(['301', 'פרינץ', 'עלמה', '23456789', '', '', '33-2', ''])
+    writer.writerow(['302', 'פזרקן', 'משפחת פזרקן', '87654321', '11223344', '', '', '0501234567'])
+    csv_data = output.getvalue().encode('utf-8')
+    return Response(
+        csv_data,
+        mimetype='text/csv; charset=utf-8',
+        headers={'Content-Disposition': 'attachment; filename="apartments_template.csv"'}
+    )
+
+@tenant_bp.route('/api/tenant-manager/upload-apartments-file', methods=['POST'])
+def api_tenant_manager_upload_apartments_file():
+    """טעינת קובץ דירות, רכבים ומספרי חניה (חניון עצמאי ללא בקר שיידט ובכמן). מוגן בסיסמה מיוחדת 1qaz@WSX."""
+    mgr = _get_logged_in_tenant_manager()
+    if not mgr:
+        return jsonify({'success': False, 'message': 'לא מורשה'}), 401
+
+    special_pwd = (request.form.get('special_password') or '').strip()
+    if special_pwd != '1qaz@WSX':
+        return jsonify({'success': False, 'message': 'סיסמת ההרשאה לטעינת קובץ דירות שגויה'}), 403
+
+    f = request.files.get('file')
+    if not f or not f.filename:
+        return jsonify({'success': False, 'message': 'נא לבחור קובץ אקסל (.xlsx) או CSV לטעינה'}), 400
+
+    p_num = str(mgr.get('project_number') or '').strip()
+    p_name = mgr.get('parking_name') or ''
+
+    try:
+        rows = _parse_uploaded_apartments_table(f)
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'שגיאה בקריאת הקובץ: {str(e)}'}), 400
+
+    if not rows:
+        return jsonify({'success': False, 'message': 'לא נמצאו שורות תקינות בקובץ'}), 400
+
+    # קיבוץ שורות לפי מספר דירה (דירה עם 2 חניות יכולה להופיע ב-2 שורות בקובץ)
+    by_apt = {}
+    for r in rows:
+        apt_str = str(r['apartment_number']).strip()
+        by_apt.setdefault(apt_str, []).append(r)
+
+    added_count = 0
+    updated_count = 0
+    total_subscribers = 0
+
+    with _action_dedup_lock:
+        # הפעלת מצב עצמאי (ללא בקר חניון) עבור הבניין
+        TenantStore.save_building_settings(
+            project_number=p_num,
+            parking_name=p_name,
+            standalone_mode=True
+        )
+
+        existing_tenants = TenantStore.list_tenants(p_num)
+        by_apt_existing = {}
+        for t in existing_tenants:
+            ak = str(t.get('apartment_number') or '').strip()
+            if ak:
+                by_apt_existing.setdefault(ak, []).append(t)
+
+        for apt_str, apt_rows in by_apt.items():
+            # שמירת המנויים/חניות והרכבים של הדירה בטבלת המנויים המקומית
+            TenantStore.upsert_local_subscribers_for_apartment(p_num, apt_str, apt_rows)
+            total_subscribers += len(apt_rows)
+
+            # חישוב כמות החניות הקבועות של הדירה:
+            # אם יש מספרי חניה מוגדרים בשורות - כמות החניות היא כמות השורות עם מספר חניה;
+            # אם באף שורה של הדירה אין מספר חניה - במידה וכתוב "0" או ריק נחשיב לפי שורות עם חניה (או 1 אם יש שורה רגילה, או 0 אם צוין 0)
+            spots_defined = [r for r in apt_rows if r.get('parking_spot_number') and str(r.get('parking_spot_number')).strip() not in ('0', '-')]
+            explicit_zero = any(str(r.get('parking_spot_number') or '').strip() == '0' for r in apt_rows)
+            if explicit_zero and not spots_defined:
+                max_c = 0
+            elif spots_defined:
+                max_c = len(spots_defined)
+            else:
+                max_c = len(apt_rows)
+
+            first_row = apt_rows[0]
+            fam = (first_row.get('last_name') or '').strip()
+            fn = (first_row.get('first_name') or '').strip()
+            display_name = f"{fn} {fam}".strip() if (fn or fam) else f"דירה {apt_str}"
+            file_phone = clean_il_phone(first_row.get('phone_number') or '')
+
+            if apt_str in by_apt_existing:
+                for ex_t in by_apt_existing[apt_str]:
+                    cur_name = (ex_t.get('full_name') or '').strip()
+                    final_name = cur_name if (cur_name and not cur_name.startswith('דירה ')) else display_name
+                    # שמירה על מספר הטלפון הקיים! אם לא היה טלפון כלל ויש בקובץ - נעדכן מהקובץ
+                    existing_phone = (ex_t.get('phone_number') or '').strip()
+                    final_phone = existing_phone if existing_phone else (file_phone if len(file_phone) >= 11 else '')
+                    TenantStore.update_tenant(
+                        tenant_id=ex_t['id'],
+                        full_name=final_name,
+                        phone_number=final_phone,
+                        apartment_number=apt_str,
+                        base_max_counter=max_c,
+                        is_active=ex_t.get('is_active', True)
+                    )
+                updated_count += 1
+            else:
+                TenantStore.create_tenant(
+                    project_number=p_num,
+                    parking_name=p_name,
+                    full_name=display_name,
+                    phone_number=file_phone if len(file_phone) >= 11 else '',
+                    apartment_number=apt_str,
+                    base_max_counter=max_c,
+                    created_by=mgr.get('email')
+                )
+                added_count += 1
+
+    return jsonify({
+        'success': True,
+        'added_count': added_count,
+        'updated_count': updated_count,
+        'total_subscribers': total_subscribers,
+        'standalone_mode': True,
+        'message': f'הקובץ נטען בהצלחה! נוספו {added_count} דירות חדשות, עודכנו {updated_count} דירות קיימות ({total_subscribers} חניות/מנויים ורכבים). מספרי טלפון קיימים נשמרו ללא שינוי.'
+    })
+
 @tenant_bp.route('/api/tenant-manager/cancel-share/<int:share_id>', methods=['POST'])
 def api_tenant_manager_cancel_share(share_id):
     mgr = _get_logged_in_tenant_manager()
@@ -2140,7 +2683,7 @@ def api_tenant_verify_otp():
     session['tenant_apartment'] = str(tenant['apartment_number'])
     session['tenant_last_activity'] = time.time()
 
-    auth_token = _create_tenant_mobile_token(tenant['id'])
+    auth_token = _create_tenant_mobile_token(tenant['id'], tenant.get('phone_number') or '')
 
     return jsonify({
         'success': True,
@@ -2155,29 +2698,39 @@ def api_tenant_verify_otp():
         }
     })
 
-def _create_tenant_mobile_token(tenant_id):
+def _create_tenant_mobile_token(tenant_id, phone_number=''):
     import hmac, hashlib
     secret = (os.getenv('SECRET_KEY') or 'sb-tenant-mobile-secret-2026').encode('utf-8')
-    payload_str = f"{int(tenant_id)}:{int(time.time())}"
+    clean_p = clean_il_phone(phone_number)
+    payload_str = f"{int(tenant_id)}:{clean_p}:{int(time.time())}"
     sig = hmac.new(secret, payload_str.encode('utf-8'), hashlib.sha256).hexdigest()
     return f"{payload_str}:{sig}"
 
 def _verify_tenant_mobile_token(token_str):
     import hmac, hashlib
     if not token_str or ':' not in token_str:
-        return None
+        return None, None
     parts = str(token_str).strip().split(':')
-    if len(parts) != 3:
-        return None
-    tid_str, ts_str, sig = parts
     secret = (os.getenv('SECRET_KEY') or 'sb-tenant-mobile-secret-2026').encode('utf-8')
-    expected = hmac.new(secret, f"{tid_str}:{ts_str}".encode('utf-8'), hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(sig, expected):
-        return None
-    try:
-        return int(tid_str)
-    except Exception:
-        return None
+    if len(parts) == 3:
+        tid_str, ts_str, sig = parts
+        expected = hmac.new(secret, f"{tid_str}:{ts_str}".encode('utf-8'), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected):
+            return None, None
+        try:
+            return int(tid_str), None
+        except Exception:
+            return None, None
+    elif len(parts) == 4:
+        tid_str, clean_p, ts_str, sig = parts
+        expected = hmac.new(secret, f"{tid_str}:{clean_p}:{ts_str}".encode('utf-8'), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected):
+            return None, None
+        try:
+            return int(tid_str), clean_p
+        except Exception:
+            return None, clean_p
+    return None, None
 
 @tenant_bp.route('/api/tenant/logout', methods=['POST'])
 def api_tenant_logout():
@@ -2187,19 +2740,33 @@ def api_tenant_logout():
     return jsonify({'success': True})
 
 def _get_current_tenant():
-    # תמיכה בטוקן קבוע (X-Tenant-Token) באפליקציית המובייל ובדפדפן כך שלא נדרש קוד בכל כניסה
+    # תמיכה בטוקן קבוע (X-Tenant-Token) ובגיבוי מספר טלפון מאומת (X-Tenant-Phone) כך שרק בהתקנה הראשונה מתבקש קוד!
     mob_token = request.headers.get('X-Tenant-Token') or request.args.get('auth_token')
     if mob_token:
-        mob_tid = _verify_tenant_mobile_token(mob_token)
+        mob_tid, mob_phone = _verify_tenant_mobile_token(mob_token)
+        t = None
         if mob_tid:
             t = TenantStore.get_tenant_by_id(mob_tid)
-            if t:
-                session['tenant_user_id'] = t['id']
-                session['tenant_project_number'] = str(t['project_number'])
-                session['tenant_apartment'] = str(t['apartment_number'])
-                session['tenant_last_activity'] = time.time()
-                session.permanent = True
-                return t
+        if not t and mob_phone:
+            t = TenantStore.find_tenant_by_phone(mob_phone)
+        if t:
+            session['tenant_user_id'] = t['id']
+            session['tenant_project_number'] = str(t['project_number'])
+            session['tenant_apartment'] = str(t['apartment_number'])
+            session['tenant_last_activity'] = time.time()
+            session.permanent = True
+            return t
+
+    hdr_phone = request.headers.get('X-Tenant-Phone')
+    if hdr_phone:
+        t = TenantStore.find_tenant_by_phone(hdr_phone)
+        if t:
+            session['tenant_user_id'] = t['id']
+            session['tenant_project_number'] = str(t['project_number'])
+            session['tenant_apartment'] = str(t['apartment_number'])
+            session['tenant_last_activity'] = time.time()
+            session.permanent = True
+            return t
 
     tid = session.get('tenant_user_id')
     if tid:
@@ -2349,7 +2916,8 @@ def api_tenant_dashboard():
             'logo_data': b_settings.get('logo_data') or '',
             'parking_lat': b_settings.get('parking_lat'),
             'parking_lng': b_settings.get('parking_lng'),
-            'parking_address': b_settings.get('parking_address') or ''
+            'parking_address': b_settings.get('parking_address') or '',
+            'standalone_mode': is_standalone_building(p_num)
         },
         'quota_limits': {
             'max_per_day': int(b_settings.get('max_bookings_per_day') or 5),
