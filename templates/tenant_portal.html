@@ -302,7 +302,11 @@
             <div id="phoneStep">
                 <div class="input-group">
                     <label id="i18n_phone_lbl">מספר טלפון נייד</label>
-                    <input type="tel" id="loginPhone" placeholder="050-1234567" autocomplete="tel" style="text-align: right; direction: ltr;">
+                    <input type="tel" id="loginPhone" placeholder="050-1234567" autocomplete="tel" style="text-align: right; direction: ltr;" oninput="const box=document.getElementById('chooseParkingBox'); if(box) box.style.display='none';">
+                </div>
+                <div id="chooseParkingBox" style="display: none; margin-bottom: 14px; padding: 12px; border-radius: 12px; background: #eff6ff; border: 1.5px solid #3b82f6;">
+                    <div id="i18n_choose_parking_title" style="font-size: 14px; font-weight: 800; color: #1e3a8a; margin-bottom: 8px;">🏢 בחר חניון / דירה לכניסה:</div>
+                    <div id="chooseParkingButtons" style="display: flex; flex-direction: column; gap: 8px;"></div>
                 </div>
                 <button type="button" class="btn btn-whatsapp" onclick="sendOtp()" id="sendOtpBtn">💬 שלח קוד בוואטסאפ</button>
                 <p style="font-size: 12px; color: #64748b; margin-top: 12px; text-align: center;">
@@ -334,6 +338,15 @@
 
         <!-- מסך 2: פורטל הדייר הפעיל -->
         <div id="dashboardSection" style="display: none;">
+            <!-- באנר מצב צפייה בלבד (תצוגת הדגמה למספר טלפון שאינו במערכת) -->
+            <div id="demoViewerBannerBox" style="display: none; background: #eff6ff; border: 1.5px solid #3b82f6; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; font-size: 13px; font-weight: 800; color: #1e3a8a;">
+                👁️ מצב צפייה בלבד (תצוגת הדגמה) — מספר הטלפון שהזנת אינו משויך לדירה רשומה במערכת.
+            </div>
+            <!-- בורר מעבר בין חניונים כאשר למספר הטלפון יש יותר מחניון אחד -->
+            <div id="switchParkingDashboardBox" class="card" style="display: none; padding: 12px; margin-bottom: 10px;">
+                <div id="i18n_switch_parking_lbl" style="font-size: 13px; font-weight: 800; color: #334155; margin-bottom: 6px;">🏢 החלף חניון:</div>
+                <div id="switchParkingDashboardButtons" style="display: flex; flex-direction: column; gap: 6px;"></div>
+            </div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 6px; flex-wrap: nowrap;">
                 <div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1;">
                     <span id="i18n_apt_status_title" style="font-weight: 800; font-size: 14px; color: #334155; white-space: nowrap;">מצב הדירה שלי</span>
@@ -611,6 +624,7 @@
                 tab_vehicles: 'הרכבים',
                 tab_pool: 'פנויות',
                 tab_share: 'שחרור',
+                tab_request: 'בקשה',
                 my_cars_title: 'רכבי הדירה שלי',
                 no_subscribers: 'לא נמצאו מנויים משויכים לדירה זו בבקר החניון.',
                 status_in_parking: '🟢 נמצא בחניון',
@@ -670,15 +684,16 @@
                 quick_code_prefix: '✨ Tap here to login with code: ',
                 verify_btn: '🔐 Enter Apartment Portal',
                 back_phone_btn: 'Back to change phone number',
-                apt_status_title: '🏠 My Apartment Status',
+                apt_status_title: 'My Apartment Status',
                 refresh_quota_btn: '🔄 Refresh Quota',
                 stat_max: 'Active Quota',
                 stat_present: 'Cars Parked Now',
                 stat_avail: 'Available to Enter',
-                tab_vehicles: '🚗 My Cars',
-                tab_pool: '🅿️ Free Spots',
-                tab_share: '🤝 Share Spot',
-                my_cars_title: '🚗 My Apartment Vehicles',
+                tab_vehicles: 'Vehicles',
+                tab_pool: 'Available',
+                tab_share: 'Release',
+                tab_request: 'Request',
+                my_cars_title: 'My Apartment Vehicles',
                 no_subscribers: 'No subscribers linked to this apartment in the controller.',
                 status_in_parking: '🟢 In Parking Lot',
                 status_out_parking: '⚪ Outside',
@@ -737,15 +752,16 @@
                 quick_code_prefix: '✨ Нажмите для входа с кодом: ',
                 verify_btn: '🔐 Войти в портал квартиры',
                 back_phone_btn: 'Изменить номер телефона',
-                apt_status_title: '🏠 Статус моей квартиры',
+                apt_status_title: 'Статус моей квартиры',
                 refresh_quota_btn: '🔄 Обновить квоту',
                 stat_max: 'Активная квота',
                 stat_present: 'Машин на парковке',
                 stat_avail: 'Свободно для въезда',
-                tab_vehicles: '🚗 Мои авто',
-                tab_pool: '🅿️ Свободные',
-                tab_share: '🤝 Отдать место',
-                my_cars_title: '🚗 Автомобили моей квартиры',
+                tab_vehicles: 'Авто',
+                tab_pool: 'Свободные',
+                tab_share: 'Отдать',
+                tab_request: 'Запрос',
+                my_cars_title: 'Автомобили моей квартиры',
                 no_subscribers: 'Нет абонентов, привязанных к этой квартире.',
                 status_in_parking: '🟢 На парковке',
                 status_out_parking: '⚪ Вне парковки',
@@ -804,15 +820,16 @@
                 quick_code_prefix: '✨ اضغط هنا للدخول بالرمز: ',
                 verify_btn: '🔐 الدخول إلى بوابة الشقة',
                 back_phone_btn: 'العودة لتغيير رقم الهاتف',
-                apt_status_title: '🏠 حالة شقتي',
+                apt_status_title: 'حالة شقتي',
                 refresh_quota_btn: '🔄 تحديث الحصة',
                 stat_max: 'حصة المواقف النشطة',
                 stat_present: 'سيارات بالموقف الآن',
                 stat_avail: 'متاحة للدخول الآن',
-                tab_vehicles: '🚗 سياراتي',
-                tab_pool: '🅿️ مواقف متاحة',
-                tab_share: '🤝 مشاركة موقف',
-                my_cars_title: '🚗 سيارات شقتي',
+                tab_vehicles: 'المركبات',
+                tab_pool: 'متاحة',
+                tab_share: 'تحرير',
+                tab_request: 'طلب',
+                my_cars_title: 'سيارات شقتي',
                 no_subscribers: 'لا يوجد مشتركون مرتبطون بهذه الشقة.',
                 status_in_parking: '🟢 داخل الموقف',
                 status_out_parking: '⚪ خارج الموقف',
@@ -853,6 +870,74 @@
                 cancel_btn: 'إلغاء',
                 quota_today: (u, m) => `الاستخدام اليومي: ${u}/${m}`,
                 quota_month: (u, m) => `الاستخدام الشهري: ${u}/${m}`,
+            },
+            fr: {
+                dir: 'ltr',
+                days: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
+                days_short: ['Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa'],
+                header_default: '🅿️ Parking Résidents',
+                header_sub_default: 'Connexion rapide via WhatsApp',
+                hello_apt: (name, apt) => `Bonjour ${name} | Appt ${apt}`,
+                logout: 'Sortie',
+                login_title: '📲 Connexion Résidents (Sans mot de passe)',
+                login_sub: 'Entrez votre numéro de mobile pour recevoir un code de connexion rapide sur WhatsApp.',
+                phone_lbl: 'Numéro de téléphone mobile',
+                send_otp_btn: '💬 Envoyer le code via WhatsApp',
+                sending_otp: 'Envoi du code...',
+                otp_lbl: 'Code de vérification WhatsApp (6 chiffres)',
+                quick_code_prefix: '✨ Appuyez ici pour entrer avec le code : ',
+                verify_btn: '🔐 Accéder au portail de l’appartement',
+                back_phone_btn: 'Retour pour changer de numéro',
+                apt_status_title: 'Statut de mon appartement',
+                refresh_quota_btn: '🔄 Actualiser',
+                stat_max: 'Quota actif',
+                stat_present: 'Véhicules garés',
+                stat_avail: 'Places libres',
+                tab_vehicles: 'Véhicules',
+                tab_pool: 'Libres',
+                tab_share: 'Libérer',
+                tab_request: 'Demande',
+                my_cars_title: 'Véhicules de mon appartement',
+                no_subscribers: 'Aucun abonné associé à cet appartement.',
+                status_in_parking: '🟢 Dans le parking',
+                status_out_parking: '⚪ À l’extérieur',
+                car_1: 'Véhicule 1',
+                car_2: 'Véhicule 2',
+                car_3: 'Véhicule 3',
+                no_car: 'Aucun véhicule',
+                save_plates_btn: '💾 Enregistrer les plaques',
+                active_bookings_title: '📌 Mes réservations actives',
+                avail_slots_title: '🅿️ Places disponibles dans l’immeuble',
+                no_avail_slots: 'Aucune place disponible dans le pool actuellement.',
+                spot_from_apt: (apt) => `🏠 Place de l’appt ${apt}`,
+                for_me_badge: '🎁 Libérée pour vous !',
+                pool_badge: '🌐 Pool général',
+                claim_btn: 'Prendre',
+                end_return_btn: 'Terminer',
+                share_title: '🤝 Libérer une place de mon appartement',
+                share_desc: 'Pendant les heures définies, un voisin pourra utiliser votre place (uniquement si votre véhicule est dehors) et elle vous sera automatiquement restituée à la fin !',
+                spots_count_lbl: 'Nombre de places à libérer :',
+                max_spots_hint: (n) => `(Max pour votre appt : ${n})`,
+                target_lbl: 'Pour qui libérer la place ?',
+                opt_pool: '🌐 Pool général de l’immeuble',
+                opt_apt: '🏠 Un appartement spécifique uniquement',
+                target_apt_lbl: 'Numéro de l’appartement bénéficiaire *',
+                sched_type_lbl: 'Type de planification',
+                opt_weekly: '📅 Récurrent par jours de la semaine',
+                opt_once: '📌 Date unique',
+                days_lbl: 'Sélectionnez les jours :',
+                date_lbl: 'Date de libération :',
+                hours_lbl: 'Heures de libération :',
+                full_day_off: '☀️ Journée entière',
+                full_day_on: '✓ Journée entière active',
+                from_hour_lbl: 'De :',
+                to_hour_lbl: 'À :',
+                publish_btn: '✅ Publier et libérer la place',
+                my_shares_title: '📋 Mes partages actifs',
+                no_my_shares: 'Vous n’avez aucun partage de place actif.',
+                cancel_btn: 'Annuler',
+                quota_today: (u, m) => `Jour : ${u}/${m}`,
+                quota_month: (u, m) => `Mois : ${u}/${m}`,
             }
         };
 
@@ -894,6 +979,7 @@
                 'i18n_tab_vehicles': 'tab_vehicles',
                 'i18n_tab_pool': 'tab_pool',
                 'i18n_tab_share': 'tab_share',
+                'i18n_tab_request': 'tab_request',
                 'i18n_my_cars_title': 'my_cars_title',
                 'i18n_active_bookings_title': 'active_bookings_title',
                 'i18n_avail_slots_title': 'avail_slots_title',
@@ -953,13 +1039,17 @@
         }
 
         let _portalActionBusy = false;
+        let selectedPortalProject = localStorage.getItem('tenant_selected_project') || '';
+        let selectedPortalTenantId = localStorage.getItem('tenant_selected_tid') || '';
 
         function getPortalAuthHeaders(extra = {}) {
             const tk = localStorage.getItem('tenant_auth_token') || '';
             const ph = localStorage.getItem('tenant_last_phone') || '';
+            const proj = selectedPortalProject || (currentTenant && currentTenant.project_number) || '';
             const headers = { ...extra };
             if (tk) headers['X-Tenant-Token'] = tk;
             if (ph) headers['X-Tenant-Phone'] = ph;
+            if (proj) headers['X-Tenant-Project'] = String(proj);
             return headers;
         }
 
@@ -1331,7 +1421,7 @@
             document.getElementById('shOnceDateGroup').style.display = (st === 'ONCE') ? 'block' : 'none';
         }
 
-        async function sendOtp() {
+        async function sendOtp(chosenPkg = null) {
             const phone = document.getElementById('loginPhone').value.trim();
             if (!phone || phone.length < 9) {
                 showPortalAlert('נא להזין מספר טלפון נייד תקין', 'danger');
@@ -1341,13 +1431,60 @@
             btn.disabled = true;
             btn.textContent = 'שולח קוד לוואטסאפ...';
             try {
+                const payload = { phone_number: phone };
+                if (chosenPkg && chosenPkg.project_number) {
+                    payload.project_number = chosenPkg.project_number;
+                    payload.tenant_id = chosenPkg.tenant_id;
+                    selectedPortalProject = String(chosenPkg.project_number);
+                    selectedPortalTenantId = String(chosenPkg.tenant_id || '');
+                    try {
+                        localStorage.setItem('tenant_selected_project', selectedPortalProject);
+                        localStorage.setItem('tenant_selected_tid', selectedPortalTenantId);
+                    } catch (e) {}
+                }
                 const res = await fetch('/api/tenant/send-otp', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ phone_number: phone })
+                    body: JSON.stringify(payload)
                 });
                 const data = await res.json();
                 if (data.success) {
+                    if (data.demo_viewer && data.tenant) {
+                        // מספר שאינו במערכת -> כניסה מיידית למצב צפייה בלבד (הדגמה)!
+                        try {
+                            localStorage.setItem('tenant_last_phone', phone);
+                            if (data.auth_token) localStorage.setItem('tenant_auth_token', data.auth_token);
+                            localStorage.setItem('tenant_user_data', JSON.stringify(data.tenant));
+                            localStorage.setItem('tenant_selected_project', 'DEMO');
+                        } catch (e) {}
+                        selectedPortalProject = 'DEMO';
+                        showPortalAlert(data.message, 'success');
+                        loadDashboard();
+                        return;
+                    }
+                    if (data.choose_parking && Array.isArray(data.parkings)) {
+                        const box = document.getElementById('chooseParkingBox');
+                        const btns = document.getElementById('chooseParkingButtons');
+                        if (box && btns) {
+                            btns.innerHTML = data.parkings.map(p => `
+                                <button type="button" class="btn btn-outline" style="width:100%; border-color:#3b82f6; background:#ffffff; color:#1e3a8a; font-weight:800; padding:11px 14px;"
+                                        onclick='sendOtp(${JSON.stringify({project_number: p.project_number, tenant_id: p.tenant_id})})'>
+                                    🏢 ${p.parking_name} — דירה ${p.apartment_number} (${p.full_name})
+                                </button>
+                            `).join('');
+                            box.style.display = 'block';
+                        }
+                        showPortalAlert(data.message, 'success');
+                        return;
+                    }
+                    if (data.selected_project) {
+                        selectedPortalProject = String(data.selected_project);
+                        try { localStorage.setItem('tenant_selected_project', selectedPortalProject); } catch (e) {}
+                    }
+                    if (data.selected_tenant_id) {
+                        selectedPortalTenantId = String(data.selected_tenant_id);
+                        try { localStorage.setItem('tenant_selected_tid', selectedPortalTenantId); } catch (e) {}
+                    }
                     try {
                         sessionStorage.setItem('tenant_pending_phone', phone);
                         if (data.otp_code) sessionStorage.setItem('tenant_pending_otp', data.otp_code);
@@ -1425,7 +1562,12 @@
                 const res = await fetch('/api/tenant/verify-otp', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ phone_number: phone, otp_code: code })
+                    body: JSON.stringify({
+                        phone_number: phone,
+                        otp_code: code,
+                        project_number: selectedPortalProject || undefined,
+                        tenant_id: selectedPortalTenantId || undefined
+                    })
                 });
                 const data = await res.json();
                 if (data.success) {
@@ -1508,6 +1650,32 @@
             }
         }
 
+        async function switchPortalParking(tenantId, projectNumber) {
+            if (_portalActionBusy) return;
+            _portalActionBusy = true;
+            try {
+                const res = await fetch('/api/tenant/switch-parking', {
+                    method: 'POST',
+                    headers: getPortalAuthHeaders({'Content-Type': 'application/json'}),
+                    body: JSON.stringify({ tenant_id: tenantId, project_number: projectNumber })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    selectedPortalProject = String(data.tenant.project_number);
+                    selectedPortalTenantId = String(data.tenant.id);
+                    try {
+                        if (data.auth_token) localStorage.setItem('tenant_auth_token', data.auth_token);
+                        localStorage.setItem('tenant_user_data', JSON.stringify(data.tenant));
+                        localStorage.setItem('tenant_selected_project', selectedPortalProject);
+                        localStorage.setItem('tenant_selected_tid', selectedPortalTenantId);
+                    } catch (e) {}
+                    await loadDashboard();
+                }
+            } finally {
+                _portalActionBusy = false;
+            }
+        }
+
         function renderDashboardData(data) {
             if (!data || !data.tenant) return;
             currentTenant = data.tenant;
@@ -1515,6 +1683,29 @@
             document.getElementById('loginSection').style.display = 'none';
             document.getElementById('dashboardSection').style.display = 'block';
             document.getElementById('logoutBtn').style.display = 'block';
+
+            const demoBannerEl = document.getElementById('demoViewerBannerBox');
+            if (demoBannerEl) {
+                demoBannerEl.style.display = (data.is_demo_viewer || data.tenant.is_demo_viewer) ? 'block' : 'none';
+            }
+
+            const swBox = document.getElementById('switchParkingDashboardBox');
+            const swBtns = document.getElementById('switchParkingDashboardButtons');
+            if (swBox && swBtns) {
+                const pOpts = data.parkings_options || [];
+                if (!data.is_demo_viewer && pOpts.length > 1) {
+                    swBtns.innerHTML = pOpts.map(p => {
+                        const isCur = String(p.project_number) === String(data.tenant.project_number) && String(p.apartment_number) === String(data.tenant.apartment_number);
+                        const st = isCur
+                            ? 'width:100%; padding:9px 12px; font-size:13.5px; border-radius:10px; border:1.5px solid #334155; background:#e2e8f0; color:#1e293b; font-weight:800;'
+                            : 'width:100%; padding:9px 12px; font-size:13.5px; border-radius:10px; border:1.5px solid #cbd5e1; background:#ffffff; color:#334155; font-weight:700;';
+                        return `<button type="button" class="btn" style="${st}" ${isCur ? 'disabled' : ''} onclick="switchPortalParking(${p.tenant_id}, '${p.project_number}')">${isCur ? '✓ ' : ''}🏢 ${p.parking_name} — דירה ${p.apartment_number}</button>`;
+                    }).join('');
+                    swBox.style.display = 'block';
+                } else {
+                    swBox.style.display = 'none';
+                }
+            }
 
             const logoEl = document.getElementById('portalBuildingLogo');
             if (data.tenant.logo_data) {
@@ -2239,6 +2430,7 @@
                     <option value="en">🇬🇧 English</option>
                     <option value="ru">🇷🇺 Русский</option>
                     <option value="ar">🇸🇦 العربية</option>
+                    <option value="fr">🇫🇷 Français</option>
                 </select>
             </div>
             <button type="button" class="btn btn-outline" style="margin-bottom: 12px;" onclick="openPortalWaze()">

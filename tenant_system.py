@@ -425,8 +425,13 @@ class TenantStore:
             return [dict(r) for r in rows]
 
     @staticmethod
-    def find_tenant_by_phone(phone_number, project_number=None):
+    def find_tenants_by_phone(phone_number, project_number=None):
+        """מחזיר את כל רשומות הדייר הפעילות עבור מספר טלפון (יכול להיות משויך ליותר מחניון/דירה אחת)."""
         clean_p = clean_il_phone(phone_number)
+        if not clean_p:
+            return []
+        results = []
+        seen_keys = set()
         sb = _get_supabase()
         if sb:
             try:
@@ -435,18 +440,34 @@ class TenantStore:
                     q = q.eq('project_number', str(project_number))
                 res = q.execute()
                 if res.data:
-                    return res.data[0]
+                    for r in res.data:
+                        d = dict(r)
+                        k = (str(d.get('project_number') or ''), str(d.get('apartment_number') or ''))
+                        if k not in seen_keys:
+                            seen_keys.add(k)
+                            results.append(d)
             except Exception as _sbe:
                 _trip_sb_circuit_if_missing(_sbe)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.row_factory = sqlite3.Row
             if project_number:
-                row = conn.execute("SELECT * FROM tenant_users WHERE phone_number = ? AND project_number = ? AND is_active = 1", (clean_p, str(project_number))).fetchone()
+                rows = conn.execute("SELECT * FROM tenant_users WHERE phone_number = ? AND project_number = ? AND is_active = 1", (clean_p, str(project_number))).fetchall()
             else:
-                row = conn.execute("SELECT * FROM tenant_users WHERE phone_number = ? AND is_active = 1", (clean_p,)).fetchone()
+                rows = conn.execute("SELECT * FROM tenant_users WHERE phone_number = ? AND is_active = 1", (clean_p,)).fetchall()
             conn.close()
-            return dict(row) if row else None
+            for r in rows:
+                d = dict(r)
+                k = (str(d.get('project_number') or ''), str(d.get('apartment_number') or ''))
+                if k not in seen_keys:
+                    seen_keys.add(k)
+                    results.append(d)
+        return results
+
+    @staticmethod
+    def find_tenant_by_phone(phone_number, project_number=None):
+        matches = TenantStore.find_tenants_by_phone(phone_number, project_number)
+        return matches[0] if matches else None
 
     @staticmethod
     def get_tenant_by_id(tenant_id):
@@ -2622,22 +2643,207 @@ def api_tenant_building_info():
         })
     return jsonify({'success': False})
 
+def _make_demo_viewer_tenant(phone_number=''):
+    clean_p = clean_il_phone(phone_number) or '972500000000'
+    return {
+        'id': -1,
+        'project_number': 'DEMO',
+        'parking_name': 'חניון הדגמה (מצב צפייה בלבד)',
+        'full_name': 'אורח (צפייה בלבד)',
+        'phone_number': clean_p,
+        'apartment_number': '101',
+        'base_max_counter': 2,
+        'is_demo_viewer': True
+    }
+
+def _build_demo_viewer_dashboard_payload(tenant):
+    today_str = get_il_now().strftime('%Y-%m-%d')
+    tomorrow_str = (get_il_now() + timedelta(days=1)).strftime('%Y-%m-%d')
+    return {
+        'success': True,
+        'is_demo_viewer': True,
+        'parkings_options': [],
+        'tenant': {
+            'id': -1,
+            'full_name': tenant.get('full_name') or 'אורח (צפייה בלבד)',
+            'family_name': 'הדגמה',
+            'parking_spots': ['12א', '14ב'],
+            'phone_number': display_il_phone(tenant.get('phone_number') or '0500000000'),
+            'apartment_number': '101',
+            'base_max_counter': 2,
+            'project_number': 'DEMO',
+            'parking_name': 'חניון הדגמה (מצב צפייה בלבד)',
+            'logo_data': '',
+            'parking_lat': 32.0853,
+            'parking_lng': 34.7818,
+            'parking_address': 'תל אביב',
+            'standalone_mode': True,
+            'is_demo_viewer': True
+        },
+        'quota_limits': {
+            'max_per_day': 5,
+            'used_today': 1,
+            'max_per_month': 30,
+            'used_this_month': 4,
+            'given_used_hours_month': 12.5,
+            'given_used_hours_total': 36.0,
+            'given_used_count': 6
+        },
+        'pooling': {
+            'success': True,
+            'apartment': '101',
+            'contractName': 'משפחת ישראלי (הדגמה)',
+            'maxCounter': 2,
+            'presentCounter': 1,
+            'availableSpots': 1
+        },
+        'subscribers': [
+            {
+                'id': '1',
+                'firstName': 'ישראל',
+                'lastName': 'ישראלי',
+                'parking_spot': '12א',
+                'present': True,
+                'parked_slot': 'lpn1',
+                'can_edit_parked': True,
+                'lpn1': '12345678',
+                'lpn2': '87654321',
+                'lpn3': ''
+            },
+            {
+                'id': '2',
+                'firstName': 'מיכל',
+                'lastName': 'ישראלי',
+                'parking_spot': '14ב',
+                'present': False,
+                'parked_slot': None,
+                'can_edit_parked': True,
+                'lpn1': '23456789',
+                'lpn2': '',
+                'lpn3': ''
+            }
+        ],
+        'my_shares': [
+            {
+                'id': 9001,
+                'owner_apartment': '101',
+                'owner_name': 'ישראל ישראלי',
+                'spots_offered': 1,
+                'parking_spot_number': '14ב',
+                'share_target_type': 'POOL',
+                'target_apartment': '',
+                'schedule_type': 'WEEKLY',
+                'days_of_week': '0,1,2,3,4',
+                'specific_date': '',
+                'start_time': '08:00',
+                'end_time': '17:00'
+            }
+        ],
+        'available_slots': [
+            {
+                'share_id': 9002,
+                'owner_apartment': '204',
+                'owner_name': 'משפחת כהן',
+                'parking_spot_number': '25ג',
+                'share_target_type': 'POOL',
+                'target_apartment': '',
+                'is_for_me_specifically': False,
+                'is_mine': False,
+                'booking_date': today_str,
+                'start_time': '08:00',
+                'end_time': '18:00',
+                'spots_offered': 1,
+                'spots_remaining': 1
+            },
+            {
+                'share_id': 9003,
+                'owner_apartment': '305',
+                'owner_name': 'משפחת לוי',
+                'parking_spot_number': '31א',
+                'share_target_type': 'APT',
+                'target_apartment': '101',
+                'is_for_me_specifically': True,
+                'is_mine': False,
+                'booking_date': tomorrow_str,
+                'start_time': '09:00',
+                'end_time': '19:00',
+                'spots_offered': 1,
+                'spots_remaining': 1
+            }
+        ],
+        'active_bookings': []
+    }
+
+def _format_parking_options_for_tenants(matches):
+    opts = []
+    for m in matches:
+        p_num = str(m.get('project_number') or '')
+        b_set = TenantStore.get_building_settings(p_num, m.get('parking_name') or '')
+        p_name = b_set.get('parking_name') or m.get('parking_name') or f'חניון {p_num}'
+        opts.append({
+            'tenant_id': m['id'],
+            'project_number': p_num,
+            'parking_name': p_name,
+            'apartment_number': str(m.get('apartment_number') or ''),
+            'full_name': m.get('full_name') or '',
+            'logo_data': b_set.get('logo_data') or ''
+        })
+    return opts
+
 @tenant_bp.route('/api/tenant/send-otp', methods=['POST'])
 def api_tenant_send_otp():
     data = request.get_json() or {}
     phone = data.get('phone_number')
     project_number = data.get('project_number')
+    tenant_id_req = data.get('tenant_id')
 
-    tenant = TenantStore.find_tenant_by_phone(phone, project_number)
-    if not tenant:
-        return jsonify({'success': False, 'message': 'מספר הטלפון לא רשום במערכת הדיירים. אנא פנה למנהל המתחם.'})
+    matches = TenantStore.find_tenants_by_phone(phone, project_number)
+    if tenant_id_req:
+        matches = [m for m in matches if str(m.get('id')) == str(tenant_id_req)] or matches
 
+    if not matches:
+        # מספר טלפון שאינו רשום במערכת -> כניסה אוטומטית למצב צפייה בלבד (Demo / Read-Only Mode) עבור בדיקות ואישור Apple App Store!
+        demo_t = _make_demo_viewer_tenant(phone)
+        session['tenant_user_id'] = -1
+        session['tenant_demo_phone'] = demo_t['phone_number']
+        session['tenant_project_number'] = 'DEMO'
+        session['tenant_apartment'] = '101'
+        session['tenant_last_activity'] = time.time()
+        session.permanent = True
+        auth_token = _create_tenant_mobile_token(-1, demo_t['phone_number'])
+        return jsonify({
+            'success': True,
+            'demo_viewer': True,
+            'auth_token': auth_token,
+            'tenant': {
+                'id': -1,
+                'full_name': demo_t['full_name'],
+                'phone_number': display_il_phone(demo_t['phone_number']),
+                'apartment_number': demo_t['apartment_number'],
+                'project_number': demo_t['project_number'],
+                'parking_name': demo_t['parking_name'],
+                'is_demo_viewer': True
+            },
+            'message': 'מספר זה אינו רשום במתחם — נכנסת למצב צפייה בלבד (תצוגת הדגמה).'
+        })
+
+    if len(matches) > 1 and not project_number and not tenant_id_req:
+        # למספר הטלפון יש יותר מחניון/דירה אחת — החזר רשימת חניונים לבחירה!
+        return jsonify({
+            'success': True,
+            'choose_parking': True,
+            'parkings': _format_parking_options_for_tenants(matches),
+            'message': 'נמצאו מספר חניונים המשויכים למספר הטלפון שלך. נא לבחור חניון לכניסה:'
+        })
+
+    tenant = matches[0]
     otp_code = str(random.randint(100000, 999999))
     expires_iso = (get_il_now() + timedelta(minutes=10)).isoformat()
-    TenantStore.save_otp(tenant['id'], otp_code, expires_iso)
+    for m in matches:
+        TenantStore.save_otp(m['id'], otp_code, expires_iso)
 
     host_url = request.host_url.rstrip('/')
-    magic_link = f"{host_url}/tenant-portal?phone={display_il_phone(tenant['phone_number'])}&code={otp_code}"
+    magic_link = f"{host_url}/tenant-portal?phone={display_il_phone(tenant['phone_number'])}&code={otp_code}&project={tenant['project_number']}"
 
     msg = (
         f"שלום {tenant.get('full_name')} (דירה {tenant.get('apartment_number')})!\n"
@@ -2650,6 +2856,8 @@ def api_tenant_send_otp():
     return jsonify({
         'success': True,
         'otp_code': otp_code,
+        'selected_project': tenant.get('project_number'),
+        'selected_tenant_id': tenant.get('id'),
         'message': 'קוד אימות נשלח לוואטסאפ שלך!'
     })
 
@@ -2659,8 +2867,12 @@ def api_tenant_verify_otp():
     phone = data.get('phone_number')
     code = str(data.get('otp_code') or '').strip()
     project_number = data.get('project_number')
+    tenant_id_req = data.get('tenant_id')
 
-    tenant = TenantStore.find_tenant_by_phone(phone, project_number)
+    matches = TenantStore.find_tenants_by_phone(phone, project_number)
+    if tenant_id_req:
+        matches = [m for m in matches if str(m.get('id')) == str(tenant_id_req)] or matches
+    tenant = matches[0] if matches else None
     if not tenant:
         return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
 
@@ -2684,10 +2896,12 @@ def api_tenant_verify_otp():
     session['tenant_last_activity'] = time.time()
 
     auth_token = _create_tenant_mobile_token(tenant['id'], tenant.get('phone_number') or '')
+    all_for_phone = TenantStore.find_tenants_by_phone(phone)
 
     return jsonify({
         'success': True,
         'auth_token': auth_token,
+        'parkings_options': _format_parking_options_for_tenants(all_for_phone) if len(all_for_phone) > 1 else [],
         'tenant': {
             'id': tenant['id'],
             'full_name': tenant['full_name'],
@@ -2695,6 +2909,43 @@ def api_tenant_verify_otp():
             'apartment_number': tenant['apartment_number'],
             'project_number': tenant['project_number'],
             'parking_name': tenant.get('parking_name') or ''
+        }
+    })
+
+@tenant_bp.route('/api/tenant/switch-parking', methods=['POST'])
+def api_tenant_switch_parking():
+    """מעבר מהיר בין חניונים כאשר למספר הטלפון של הדייר יש יותר מחניון אחד (ללא צורך בקוד OTP נוסף)."""
+    cur = _get_current_tenant()
+    if not cur or cur.get('is_demo_viewer'):
+        return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+    data = request.get_json() or {}
+    target_tid = data.get('tenant_id')
+    target_proj = data.get('project_number')
+    all_matches = TenantStore.find_tenants_by_phone(cur.get('phone_number'))
+    chosen = None
+    if target_tid:
+        chosen = next((m for m in all_matches if str(m.get('id')) == str(target_tid)), None)
+    if not chosen and target_proj:
+        chosen = next((m for m in all_matches if str(m.get('project_number')) == str(target_proj)), None)
+    if not chosen:
+        return jsonify({'success': False, 'message': 'החניון המבוקש לא נמצא עבור מספר הטלפון שלך'}), 404
+
+    session['tenant_user_id'] = chosen['id']
+    session['tenant_project_number'] = str(chosen['project_number'])
+    session['tenant_apartment'] = str(chosen['apartment_number'])
+    session['tenant_last_activity'] = time.time()
+    session.permanent = True
+    new_token = _create_tenant_mobile_token(chosen['id'], chosen.get('phone_number') or '')
+    return jsonify({
+        'success': True,
+        'auth_token': new_token,
+        'tenant': {
+            'id': chosen['id'],
+            'full_name': chosen['full_name'],
+            'phone_number': display_il_phone(chosen['phone_number']),
+            'apartment_number': chosen['apartment_number'],
+            'project_number': chosen['project_number'],
+            'parking_name': chosen.get('parking_name') or ''
         }
     })
 
@@ -2741,14 +2992,21 @@ def api_tenant_logout():
 
 def _get_current_tenant():
     # תמיכה בטוקן קבוע (X-Tenant-Token) ובגיבוי מספר טלפון מאומת (X-Tenant-Phone) כך שרק בהתקנה הראשונה מתבקש קוד!
+    req_proj = request.headers.get('X-Tenant-Project') or request.args.get('project_number') or session.get('tenant_project_number')
     mob_token = request.headers.get('X-Tenant-Token') or request.args.get('auth_token')
     if mob_token:
         mob_tid, mob_phone = _verify_tenant_mobile_token(mob_token)
+        if mob_tid == -1:
+            return _make_demo_viewer_tenant(mob_phone)
         t = None
         if mob_tid:
             t = TenantStore.get_tenant_by_id(mob_tid)
+            if t and req_proj and str(req_proj) != 'DEMO' and str(t.get('project_number')) != str(req_proj):
+                alt = TenantStore.find_tenant_by_phone(t.get('phone_number'), req_proj)
+                if alt:
+                    t = alt
         if not t and mob_phone:
-            t = TenantStore.find_tenant_by_phone(mob_phone)
+            t = TenantStore.find_tenant_by_phone(mob_phone, req_proj if req_proj != 'DEMO' else None)
         if t:
             session['tenant_user_id'] = t['id']
             session['tenant_project_number'] = str(t['project_number'])
@@ -2759,7 +3017,7 @@ def _get_current_tenant():
 
     hdr_phone = request.headers.get('X-Tenant-Phone')
     if hdr_phone:
-        t = TenantStore.find_tenant_by_phone(hdr_phone)
+        t = TenantStore.find_tenant_by_phone(hdr_phone, req_proj if req_proj != 'DEMO' else None)
         if t:
             session['tenant_user_id'] = t['id']
             session['tenant_project_number'] = str(t['project_number'])
@@ -2769,6 +3027,8 @@ def _get_current_tenant():
             return t
 
     tid = session.get('tenant_user_id')
+    if tid == -1:
+        return _make_demo_viewer_tenant(session.get('tenant_demo_phone') or hdr_phone or '')
     if tid:
         session['tenant_last_activity'] = time.time()
         session.permanent = True
@@ -2854,10 +3114,15 @@ def api_tenant_dashboard():
     if not tenant:
         return jsonify({'success': False, 'message': 'לא מחובר'}), 401
 
+    if tenant.get('is_demo_viewer') or int(tenant.get('id') or 0) == -1:
+        return jsonify(_build_demo_viewer_dashboard_payload(tenant))
+
     threading.Thread(target=run_scheduler_cycle, daemon=True).start()
 
     p_num = str(tenant['project_number'])
     my_apt = str(tenant['apartment_number'])
+    all_for_phone = TenantStore.find_tenants_by_phone(tenant.get('phone_number') or '')
+    parkings_options = _format_parking_options_for_tenants(all_for_phone) if len(all_for_phone) > 1 else []
 
     b_settings = TenantStore.get_building_settings(p_num, tenant.get('parking_name') or '')
 
@@ -2903,6 +3168,8 @@ def api_tenant_dashboard():
 
     return jsonify({
         'success': True,
+        'is_demo_viewer': False,
+        'parkings_options': parkings_options,
         'tenant': {
             'id': tenant['id'],
             'full_name': tenant['full_name'],
@@ -2940,6 +3207,8 @@ def api_tenant_update_plates():
     tenant = _get_current_tenant()
     if not tenant:
         return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+    if tenant.get('is_demo_viewer'):
+        return jsonify({'success': False, 'demo_viewer': True, 'message': 'מצב צפייה בלבד (הדגמה) — לא ניתן לשמור שינויים בחניון הדגמה.'})
 
     data = request.get_json() or {}
     sub_id = str(data.get('subscriber_id') or '').strip()
@@ -2961,6 +3230,8 @@ def api_tenant_share_spot():
     tenant = _get_current_tenant()
     if not tenant:
         return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+    if tenant.get('is_demo_viewer'):
+        return jsonify({'success': False, 'demo_viewer': True, 'message': 'מצב צפייה בלבד (הדגמה) — לא ניתן לשחרר חניה בחניון הדגמה.'})
 
     data = request.get_json() or {}
     start_time = (data.get('start_time') or '').strip()
@@ -3071,6 +3342,8 @@ def api_tenant_request_spot():
     tenant = _get_current_tenant()
     if not tenant:
         return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+    if tenant.get('is_demo_viewer'):
+        return jsonify({'success': False, 'demo_viewer': True, 'message': 'מצב צפייה בלבד (הדגמה) — לא ניתן לשלוח בקשת חניה בחניון הדגמה.'})
 
     data = request.get_json() or {}
     schedule_type = (data.get('schedule_type') or 'ONCE').strip().upper()
@@ -3155,6 +3428,8 @@ def api_tenant_cancel_share(share_id):
     tenant = _get_current_tenant()
     if not tenant:
         return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+    if tenant.get('is_demo_viewer'):
+        return jsonify({'success': False, 'demo_viewer': True, 'message': 'מצב צפייה בלבד (הדגמה) — לא ניתן לבטל שחרור חניה בחניון הדגמה.'})
     TenantStore.deactivate_share(share_id, tenant['project_number'])
     return jsonify({'success': True, 'message': 'שחרור החניה בוטל'})
 
@@ -3164,6 +3439,8 @@ def api_tenant_claim_spot():
     tenant = _get_current_tenant()
     if not tenant:
         return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+    if tenant.get('is_demo_viewer'):
+        return jsonify({'success': False, 'demo_viewer': True, 'message': 'מצב צפייה בלבד (הדגמה) — לא ניתן לתפוס חניה בחניון הדגמה.'})
 
     data = request.get_json() or {}
     share_id = int(data.get('share_id') or 0)
@@ -3276,6 +3553,8 @@ def api_tenant_release_booking(transfer_id):
     tenant = _get_current_tenant()
     if not tenant:
         return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+    if tenant.get('is_demo_viewer'):
+        return jsonify({'success': False, 'demo_viewer': True, 'message': 'מצב צפייה בלבד (הדגמה).'})
 
     tr = TenantStore.get_transfer_by_id(transfer_id)
     if not tr or str(tr.get('project_number')) != str(tenant['project_number']):
