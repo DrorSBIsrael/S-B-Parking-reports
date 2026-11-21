@@ -146,7 +146,13 @@ def _init_sqlite():
             "ALTER TABLE tenant_building_settings ADD COLUMN ios_app_url TEXT",
             "ALTER TABLE tenant_building_settings ADD COLUMN android_app_url TEXT",
             "ALTER TABLE tenant_spot_shares ADD COLUMN parking_spot_number TEXT",
-            "ALTER TABLE tenant_quota_transfers ADD COLUMN parking_spot_number TEXT"
+            "ALTER TABLE tenant_quota_transfers ADD COLUMN parking_spot_number TEXT",
+            "CREATE INDEX IF NOT EXISTS idx_tu_phone ON tenant_users (phone_number, is_active)",
+            "CREATE INDEX IF NOT EXISTS idx_tu_proj_apt ON tenant_users (project_number, apartment_number)",
+            "CREATE INDEX IF NOT EXISTS idx_tss_proj_act ON tenant_spot_shares (project_number, is_active)",
+            "CREATE INDEX IF NOT EXISTS idx_tqt_proj_date ON tenant_quota_transfers (project_number, booking_date)",
+            "CREATE INDEX IF NOT EXISTS idx_tqt_status ON tenant_quota_transfers (status)",
+            "CREATE INDEX IF NOT EXISTS idx_tls_proj_apt ON tenant_local_subscribers (project_number, apartment_number)"
         ]:
             try:
                 cur.execute(col_sql)
@@ -343,45 +349,91 @@ class TenantStore:
         p_num = str(project_number)
         apt_str = str(apartment_number).strip()
         now_iso = get_il_now().isoformat()
+        batch_payload = []
+        for idx, sr in enumerate(subs_rows, start=1):
+            batch_payload.append({
+                'project_number': p_num,
+                'apartment_number': apt_str,
+                'subscriber_index': idx,
+                'family_name': (sr.get('family_name') or sr.get('last_name') or '').strip(),
+                'first_name': (sr.get('first_name') or '').strip(),
+                'parking_spot': (sr.get('parking_spot') or sr.get('parking_spot_number') or '').strip(),
+                'lpn1': (sr.get('lpn1') or sr.get('plate_1') or '').strip(),
+                'lpn2': (sr.get('lpn2') or sr.get('plate_2') or '').strip(),
+                'lpn3': (sr.get('lpn3') or sr.get('plate_3') or '').strip(),
+                'updated_at': now_iso
+            })
         sb = _get_supabase()
-        if sb:
+        if sb and batch_payload:
             try:
                 sb.table('tenant_local_subscribers').delete().eq('project_number', p_num).eq('apartment_number', apt_str).execute()
-                for idx, sr in enumerate(subs_rows, start=1):
-                    sb.table('tenant_local_subscribers').insert({
-                        'project_number': p_num,
-                        'apartment_number': apt_str,
-                        'subscriber_index': idx,
-                        'family_name': (sr.get('family_name') or '').strip(),
-                        'first_name': (sr.get('first_name') or '').strip(),
-                        'parking_spot': (sr.get('parking_spot') or '').strip(),
-                        'lpn1': (sr.get('lpn1') or '').strip(),
-                        'lpn2': (sr.get('lpn2') or '').strip(),
-                        'lpn3': (sr.get('lpn3') or '').strip(),
-                        'updated_at': now_iso
-                    }).execute()
+                sb.table('tenant_local_subscribers').insert(batch_payload).execute()
             except Exception:
                 pass
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.execute("DELETE FROM tenant_local_subscribers WHERE project_number = ? AND apartment_number = ?", (p_num, apt_str))
+            conn.executemany("""
+                INSERT INTO tenant_local_subscribers
+                (project_number, apartment_number, subscriber_index, family_name, first_name, parking_spot, lpn1, lpn2, lpn3, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, [
+                (
+                    r['project_number'], r['apartment_number'], r['subscriber_index'],
+                    r['family_name'], r['first_name'], r['parking_spot'],
+                    r['lpn1'], r['lpn2'], r['lpn3'], r['updated_at']
+                )
+                for r in batch_payload
+            ])
+            conn.commit()
+            conn.close()
+
+    @staticmethod
+    def bulk_upsert_local_subscribers_for_project(project_number, by_apt_dict):
+        """שמירה מרוכזת ומהירה של כל המנויים והרכבים של הבניין בבת אחת (מונע אלפי פניות בודדות ל-DB בטעינת קובץ של 400 דיירים!)."""
+        p_num = str(project_number)
+        now_iso = get_il_now().isoformat()
+        all_payloads = []
+        apt_keys = list(by_apt_dict.keys())
+        for apt_str, subs_rows in by_apt_dict.items():
             for idx, sr in enumerate(subs_rows, start=1):
-                conn.execute("""
-                    INSERT INTO tenant_local_subscribers
-                    (project_number, apartment_number, subscriber_index, family_name, first_name, parking_spot, lpn1, lpn2, lpn3, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    p_num,
-                    apt_str,
-                    idx,
-                    (sr.get('family_name') or '').strip(),
-                    (sr.get('first_name') or '').strip(),
-                    (sr.get('parking_spot') or '').strip(),
-                    (sr.get('lpn1') or '').strip(),
-                    (sr.get('lpn2') or '').strip(),
-                    (sr.get('lpn3') or '').strip(),
-                    now_iso
-                ))
+                all_payloads.append({
+                    'project_number': p_num,
+                    'apartment_number': str(apt_str).strip(),
+                    'subscriber_index': idx,
+                    'family_name': (sr.get('family_name') or sr.get('last_name') or '').strip(),
+                    'first_name': (sr.get('first_name') or '').strip(),
+                    'parking_spot': (sr.get('parking_spot') or sr.get('parking_spot_number') or '').strip(),
+                    'lpn1': (sr.get('lpn1') or sr.get('plate_1') or '').strip(),
+                    'lpn2': (sr.get('lpn2') or sr.get('plate_2') or '').strip(),
+                    'lpn3': (sr.get('lpn3') or sr.get('plate_3') or '').strip(),
+                    'updated_at': now_iso
+                })
+        sb = _get_supabase()
+        if sb and all_payloads:
+            try:
+                sb.table('tenant_local_subscribers').delete().eq('project_number', p_num).in_('apartment_number', apt_keys).execute()
+                # Insert in chunks of 200 for Supabase safety
+                for i in range(0, len(all_payloads), 200):
+                    sb.table('tenant_local_subscribers').insert(all_payloads[i:i+200]).execute()
+            except Exception:
+                pass
+        with _db_lock:
+            conn = sqlite3.connect(SQLITE_PATH)
+            for ak in apt_keys:
+                conn.execute("DELETE FROM tenant_local_subscribers WHERE project_number = ? AND apartment_number = ?", (p_num, str(ak).strip()))
+            conn.executemany("""
+                INSERT INTO tenant_local_subscribers
+                (project_number, apartment_number, subscriber_index, family_name, first_name, parking_spot, lpn1, lpn2, lpn3, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, [
+                (
+                    r['project_number'], r['apartment_number'], r['subscriber_index'],
+                    r['family_name'], r['first_name'], r['parking_spot'],
+                    r['lpn1'], r['lpn2'], r['lpn3'], r['updated_at']
+                )
+                for r in all_payloads
+            ])
             conn.commit()
             conn.close()
 
@@ -1765,8 +1817,15 @@ def restore_active_transfer(transfer, early_cancel=False):
         })
         return True
 
-def run_scheduler_cycle():
+_last_scheduler_run_ts = 0.0
+
+def run_scheduler_cycle(min_interval_sec=0):
     """רץ ברקע כל דקה: מפעיל חניות שהגיע זמנן, שולח תזכורת 30 דק' לפני סיום, ומחזיר מונים בסיום."""
+    global _last_scheduler_run_ts
+    now_ts = time.time()
+    if min_interval_sec > 0 and (now_ts - _last_scheduler_run_ts) < min_interval_sec:
+        return
+    _last_scheduler_run_ts = now_ts
     try:
         now = get_il_now()
         active_or_pending = TenantStore.list_transfers(statuses=['SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE'])
@@ -2086,11 +2145,11 @@ def api_tenant_manager_send_invite(tenant_id):
     if not mgr:
         return jsonify({'success': False, 'message': 'לא מורשה'}), 401
     t = TenantStore.get_tenant_by_id(tenant_id)
-    if not t:
-        return jsonify({'success': False, 'message': 'דייר לא נמצא'})
+    p_num = str(mgr.get('project_number') or '')
+    if not t or str(t.get('project_number') or '') != p_num:
+        return jsonify({'success': False, 'message': 'דייר לא נמצא במתחם שלך'}), 404
     host_url = request.host_url.rstrip('/')
     clean_p = clean_il_phone(t.get('phone_number'))
-    p_num = str(t.get('project_number') or mgr.get('project_number') or '')
     p_name = t.get('parking_name') or mgr.get('parking_name') or 'המתחם'
     msg = _build_tenant_invite_whatsapp_text(host_url, p_num, p_name, t.get('full_name'), t.get('apartment_number'), clean_p)
     wa_ok, wa_err = send_whatsapp_message(clean_p, msg)
@@ -2105,10 +2164,10 @@ def api_tenant_manager_refresh_quota(tenant_id):
     if not mgr:
         return jsonify({'success': False, 'message': 'לא מורשה'}), 401
     t = TenantStore.get_tenant_by_id(tenant_id)
-    if not t:
-        return jsonify({'success': False, 'message': 'דייר לא נמצא'})
+    p_num = str(mgr.get('project_number') or '')
+    if not t or str(t.get('project_number') or '') != p_num:
+        return jsonify({'success': False, 'message': 'דייר לא נמצא במתחם שלך'}), 404
 
-    p_num = str(t.get('project_number') or mgr.get('project_number') or '')
     apt = str(t.get('apartment_number') or '').strip()
     pool_info = get_apartment_pooling_status(p_num, apt)
     if not pool_info.get('success'):
@@ -2489,9 +2548,10 @@ def api_tenant_manager_upload_apartments_file():
             if ak:
                 by_apt_existing.setdefault(ak, []).append(t)
 
+        # שמירה מרוכזת (Batch) של כל המנויים והרכבים של הדירות בקובץ בבת אחת (ביצועים מהירים גם ל-400 דירות!)
+        TenantStore.bulk_upsert_local_subscribers_for_project(p_num, by_apt)
+
         for apt_str, apt_rows in by_apt.items():
-            # שמירת המנויים/חניות והרכבים של הדירה בטבלת המנויים המקומית
-            TenantStore.upsert_local_subscribers_for_apartment(p_num, apt_str, apt_rows)
             total_subscribers += len(apt_rows)
 
             # חישוב כמות החניות הקבועות של הדירה:
@@ -2627,12 +2687,15 @@ def api_tenant_manager_modify_tenant(tenant_id):
     mgr = _get_logged_in_tenant_manager()
     if not mgr:
         return jsonify({'success': False, 'message': 'לא מורשה'}), 401
+    p_num = str(mgr.get('project_number') or '')
+    existing_t = TenantStore.get_tenant_by_id(tenant_id)
+    if not existing_t or str(existing_t.get('project_number') or '') != p_num:
+        return jsonify({'success': False, 'message': 'דייר לא נמצא במתחם שלך'}), 404
     if request.method == 'DELETE':
         TenantStore.delete_tenant(tenant_id)
         return jsonify({'success': True, 'message': 'הדייר נמחק בהצלחה'})
 
     data = request.get_json() or {}
-    p_num = str(mgr.get('project_number') or '')
     apt = str(data.get('apartment_number') or '').strip()
 
     if 'is_zero_spot' in data and data.get('is_zero_spot') is not None:
@@ -2785,12 +2848,16 @@ def _resolve_store_urls(project_number=None):
         android_url = DEFAULT_GOOGLE_PLAY_URL
     return ios_url, android_url
 
+def _is_safe_store_redirect_url(url_str):
+    s = str(url_str or '').strip()
+    return s.startswith('https://') or s.startswith('http://') or s.startswith('itms-apps://') or s.startswith('market://')
+
 @tenant_bp.route('/app/ios')
 def tenant_app_ios_redirect():
     from flask import redirect
     proj = request.args.get('project') or ''
     ios_url, _ = _resolve_store_urls(proj)
-    if ios_url:
+    if ios_url and _is_safe_store_redirect_url(ios_url):
         return redirect(ios_url)
     return redirect('/tenant-portal')
 
@@ -2799,7 +2866,7 @@ def tenant_app_android_redirect():
     from flask import redirect
     proj = request.args.get('project') or ''
     _, android_url = _resolve_store_urls(proj)
-    if android_url:
+    if android_url and _is_safe_store_redirect_url(android_url):
         return redirect(android_url)
     return redirect('/tenant-portal')
 
@@ -2809,9 +2876,9 @@ def tenant_app_smart_redirect():
     proj = request.args.get('project') or ''
     ua = (request.headers.get('User-Agent') or '').lower()
     ios_url, android_url = _resolve_store_urls(proj)
-    if ('iphone' in ua or 'ipad' in ua or 'ipod' in ua) and ios_url:
+    if ('iphone' in ua or 'ipad' in ua or 'ipod' in ua) and ios_url and _is_safe_store_redirect_url(ios_url):
         return redirect(ios_url)
-    if 'android' in ua and android_url:
+    if 'android' in ua and android_url and _is_safe_store_redirect_url(android_url):
         return redirect(android_url)
     return redirect('/tenant-portal')
 
@@ -2989,6 +3056,8 @@ def _format_parking_options_for_tenants(matches):
         })
     return opts
 
+_otp_fail_tracker = {}  # phone -> {'count': int, 'locked_until': float}
+
 @tenant_bp.route('/api/tenant/send-otp', methods=['POST'])
 def api_tenant_send_otp():
     data = request.get_json() or {}
@@ -3036,6 +3105,8 @@ def api_tenant_send_otp():
         })
 
     tenant = matches[0]
+    clean_p = clean_il_phone(tenant.get('phone_number') or phone)
+    _otp_fail_tracker.pop(clean_p, None)
     otp_code = str(random.randint(100000, 999999))
     expires_iso = (get_il_now() + timedelta(minutes=10)).isoformat()
     for m in matches:
@@ -3068,6 +3139,13 @@ def api_tenant_verify_otp():
     project_number = data.get('project_number')
     tenant_id_req = data.get('tenant_id')
 
+    clean_p = clean_il_phone(phone)
+    now_ts = time.time()
+    fail_info = _otp_fail_tracker.get(clean_p)
+    if fail_info and now_ts < fail_info.get('locked_until', 0):
+        wait_s = int(fail_info['locked_until'] - now_ts)
+        return jsonify({'success': False, 'message': f'יותר מדי ניסיונות שגויים. נא להמתין {wait_s} שניות או לבקש קוד חדש.'}), 429
+
     matches = TenantStore.find_tenants_by_phone(phone, project_number)
     if tenant_id_req:
         matches = [m for m in matches if str(m.get('id')) == str(tenant_id_req)] or matches
@@ -3077,7 +3155,15 @@ def api_tenant_verify_otp():
 
     saved_otp = str(tenant.get('mobile_otp') or '').strip()
     if not saved_otp or saved_otp != code:
+        cnt = (fail_info.get('count', 0) if fail_info else 0) + 1
+        locked_until = (now_ts + 120) if cnt >= 5 else 0
+        _otp_fail_tracker[clean_p] = {'count': cnt, 'locked_until': locked_until}
+        if cnt >= 5:
+            TenantStore.save_otp(tenant['id'], '', '')
+            return jsonify({'success': False, 'message': 'קוד האימות בוטל עקב 5 ניסיונות שגויים. נא לבקש קוד חדש.'}), 429
         return jsonify({'success': False, 'message': 'קוד האימות שגוי'})
+
+    _otp_fail_tracker.pop(clean_p, None)
 
     if tenant.get('otp_expires_at'):
         try:
@@ -3190,7 +3276,7 @@ def api_tenant_logout():
     return jsonify({'success': True})
 
 def _get_current_tenant():
-    # תמיכה בטוקן קבוע (X-Tenant-Token) ובגיבוי מספר טלפון מאומת (X-Tenant-Phone) כך שרק בהתקנה הראשונה מתבקש קוד!
+    # תמיכה בטוקן קבוע (X-Tenant-Token)חתום криптоגרפית כך שרק בהתקנה הראשונה מתבקש קוד, אך לא ניתן להתחזות עם מספר טלפון ללא חתימה!
     req_proj = request.headers.get('X-Tenant-Project') or request.args.get('project_number') or session.get('tenant_project_number')
     mob_token = request.headers.get('X-Tenant-Token') or request.args.get('auth_token')
     if mob_token:
@@ -3205,18 +3291,8 @@ def _get_current_tenant():
                 if alt:
                     t = alt
         if not t and mob_phone:
+            # אם ה-ID המקומי ב-SQLite השתנה לאחר אתחול שרת ב-Render, החתימה ב-mob_token מאשרת את mob_phone המאומת!
             t = TenantStore.find_tenant_by_phone(mob_phone, req_proj if req_proj != 'DEMO' else None)
-        if t:
-            session['tenant_user_id'] = t['id']
-            session['tenant_project_number'] = str(t['project_number'])
-            session['tenant_apartment'] = str(t['apartment_number'])
-            session['tenant_last_activity'] = time.time()
-            session.permanent = True
-            return t
-
-    hdr_phone = request.headers.get('X-Tenant-Phone')
-    if hdr_phone:
-        t = TenantStore.find_tenant_by_phone(hdr_phone, req_proj if req_proj != 'DEMO' else None)
         if t:
             session['tenant_user_id'] = t['id']
             session['tenant_project_number'] = str(t['project_number'])
@@ -3227,11 +3303,16 @@ def _get_current_tenant():
 
     tid = session.get('tenant_user_id')
     if tid == -1:
-        return _make_demo_viewer_tenant(session.get('tenant_demo_phone') or hdr_phone or '')
+        return _make_demo_viewer_tenant(session.get('tenant_demo_phone') or '')
     if tid:
         session['tenant_last_activity'] = time.time()
         session.permanent = True
-        return TenantStore.get_tenant_by_id(tid)
+        t = TenantStore.get_tenant_by_id(tid)
+        if t and req_proj and str(req_proj) != 'DEMO' and str(t.get('project_number')) != str(req_proj):
+            alt = TenantStore.find_tenant_by_phone(t.get('phone_number'), req_proj)
+            if alt:
+                return alt
+        return t
     return None
 
 def _compute_available_slots_for_tenant(project_number, my_apt, days_ahead=7):
@@ -3316,7 +3397,7 @@ def api_tenant_dashboard():
     if tenant.get('is_demo_viewer') or int(tenant.get('id') or 0) == -1:
         return jsonify(_build_demo_viewer_dashboard_payload(tenant))
 
-    threading.Thread(target=run_scheduler_cycle, daemon=True).start()
+    threading.Thread(target=run_scheduler_cycle, args=(25,), daemon=True).start()
 
     p_num = str(tenant['project_number'])
     my_apt = str(tenant['apartment_number'])
@@ -3648,82 +3729,83 @@ def api_tenant_claim_spot():
     p_num = str(tenant['project_number'])
     my_apt = str(tenant['apartment_number'])
 
-    shares = TenantStore.list_shares(p_num, active_only=True)
-    share = next((s for s in shares if int(s['id']) == share_id), None)
-    if not share:
-        return jsonify({'success': False, 'message': 'שחרור החניה לא נמצא או שבוטל'})
+    with _action_dedup_lock:
+        shares = TenantStore.list_shares(p_num, active_only=True)
+        share = next((s for s in shares if int(s['id']) == share_id), None)
+        if not share:
+            return jsonify({'success': False, 'message': 'שחרור החניה לא נמצא או שבוטל'})
 
-    from_apt = str(share['owner_apartment'])
-    if from_apt == my_apt:
-        return jsonify({'success': False, 'message': 'לא ניתן להזמין חניה של הדירה שלך עצמך'})
+        from_apt = str(share['owner_apartment'])
+        if from_apt == my_apt:
+            return jsonify({'success': False, 'message': 'לא ניתן להזמין חניה של הדירה שלך עצמך'})
 
-    if share.get('share_target_type') == 'APT' and str(share.get('target_apartment')) != my_apt:
-        return jsonify({'success': False, 'message': 'חניה זו שוחררה עבור דירה אחרת בלבד'})
+        if share.get('share_target_type') == 'APT' and str(share.get('target_apartment')) != my_apt:
+            return jsonify({'success': False, 'message': 'חניה זו שוחררה עבור דירה אחרת בלבד'})
 
-    # 1. בדיקת מכסה יומית וחודשית של המתחם
-    b_settings = TenantStore.get_building_settings(p_num)
-    max_day = int(b_settings.get('max_bookings_per_day') or 5)
-    max_month = int(b_settings.get('max_bookings_per_month') or 30)
+        # 1. בדיקת מכסה יומית וחודשית של המתחם
+        b_settings = TenantStore.get_building_settings(p_num)
+        max_day = int(b_settings.get('max_bookings_per_day') or 5)
+        max_month = int(b_settings.get('max_bookings_per_month') or 30)
 
-    month_prefix = booking_date[:7]
-    month_transfers = TenantStore.list_transfers(project_number=p_num, month_prefix=month_prefix)
-    my_month_active = [
-        tr for tr in month_transfers
-        if str(tr.get('to_apartment')) == my_apt and tr.get('status') in ('SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE', 'RESTORED')
-    ]
-    my_day_active = [tr for tr in my_month_active if str(tr.get('booking_date')) == booking_date]
+        month_prefix = booking_date[:7]
+        month_transfers = TenantStore.list_transfers(project_number=p_num, month_prefix=month_prefix)
+        my_month_active = [
+            tr for tr in month_transfers
+            if str(tr.get('to_apartment')) == my_apt and tr.get('status') in ('SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE', 'RESTORED')
+        ]
+        my_day_active = [tr for tr in my_month_active if str(tr.get('booking_date')) == booking_date]
 
-    if len(my_day_active) >= max_day:
-        return jsonify({'success': False, 'message': f'הגעת למגבלת החניות המותרת ליום אחד במתחם ({max_day} חניות ביום)'})
-    if len(my_month_active) >= max_month:
-        return jsonify({'success': False, 'message': f'הגעת למגבלת החניות המותרת לחודש במתחם ({max_month} חניות בחודש)'})
+        if len(my_day_active) >= max_day:
+            return jsonify({'success': False, 'message': f'הגעת למגבלת החניות המותרת ליום אחד במתחם ({max_day} חניות ביום)'})
+        if len(my_month_active) >= max_month:
+            return jsonify({'success': False, 'message': f'הגעת למגבלת החניות המותרת לחודש במתחם ({max_month} חניות בחודש)'})
 
-    # 2. בדיקה שהסלוט עדיין פנוי ולא נתפס ע"י דייר אחר!
-    existing_for_share = [
-        tr for tr in month_transfers
-        if int(tr.get('share_id')) == share_id and str(tr.get('booking_date')) == booking_date
-        and tr.get('status') in ('SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE')
-    ]
-    spots_offered = int(share.get('spots_offered') or 1)
-    if len(existing_for_share) >= spots_offered:
-        return jsonify({'success': False, 'message': 'כל החניות בחלון זמן זה כבר נתפסו על ידי דיירים אחרים'})
+        # 2. בדיקה שהסלוט עדיין פנוי ולא נתפס ע"י דייר אחר!
+        existing_for_share = [
+            tr for tr in month_transfers
+            if int(tr.get('share_id')) == share_id and str(tr.get('booking_date')) == booking_date
+            and tr.get('status') in ('SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE')
+        ]
+        spots_offered = int(share.get('spots_offered') or 1)
+        if len(existing_for_share) >= spots_offered:
+            return jsonify({'success': False, 'message': 'כל החניות בחלון זמן זה כבר נתפסו על ידי דיירים אחרים'})
 
-    used_slots = {int(tr.get('slot_index') or 1) for tr in existing_for_share}
-    slot_index = 1
-    while slot_index in used_slots:
-        slot_index += 1
+        used_slots = {int(tr.get('slot_index') or 1) for tr in existing_for_share}
+        slot_index = 1
+        while slot_index in used_slots:
+            slot_index += 1
 
-    w_start_dt = datetime.datetime.strptime(f"{booking_date} {share['start_time']}", "%Y-%m-%d %H:%M")
-    w_end_dt = datetime.datetime.strptime(f"{booking_date} {share['end_time']}", "%Y-%m-%d %H:%M")
-    now = get_il_now()
+        w_start_dt = datetime.datetime.strptime(f"{booking_date} {share['start_time']}", "%Y-%m-%d %H:%M")
+        w_end_dt = datetime.datetime.strptime(f"{booking_date} {share['end_time']}", "%Y-%m-%d %H:%M")
+        now = get_il_now()
 
-    if w_end_dt <= now:
-        return jsonify({'success': False, 'message': 'חלון הזמן של חניה זו כבר הסתיים'})
+        if w_end_dt <= now:
+            return jsonify({'success': False, 'message': 'חלון הזמן של חניה זו כבר הסתיים'})
 
-    raw_share_spots = str(share.get('parking_spot_number') or '').strip()
-    assigned_spot_no = raw_share_spots
-    if ',' in raw_share_spots:
-        parts = [p.strip() for p in raw_share_spots.split(',') if p.strip()]
-        if parts:
-            assigned_spot_no = parts[min(slot_index - 1, len(parts) - 1)]
+        raw_share_spots = str(share.get('parking_spot_number') or '').strip()
+        assigned_spot_no = raw_share_spots
+        if ',' in raw_share_spots:
+            parts = [p.strip() for p in raw_share_spots.split(',') if p.strip()]
+            if parts:
+                assigned_spot_no = parts[min(slot_index - 1, len(parts) - 1)]
 
-    transfer = TenantStore.create_transfer({
-        'share_id': share_id,
-        'slot_index': slot_index,
-        'project_number': p_num,
-        'from_apartment': from_apt,
-        'to_apartment': my_apt,
-        'parking_spot_number': assigned_spot_no,
-        'borrower_tenant_id': tenant['id'],
-        'borrower_name': tenant['full_name'],
-        'borrower_phone': tenant['phone_number'],
-        'booking_date': booking_date,
-        'start_time': share['start_time'],
-        'end_time': share['end_time'],
-        'window_start': w_start_dt.isoformat(),
-        'window_end': w_end_dt.isoformat(),
-        'status': 'SCHEDULED'
-    })
+        transfer = TenantStore.create_transfer({
+            'share_id': share_id,
+            'slot_index': slot_index,
+            'project_number': p_num,
+            'from_apartment': from_apt,
+            'to_apartment': my_apt,
+            'parking_spot_number': assigned_spot_no,
+            'borrower_tenant_id': tenant['id'],
+            'borrower_name': tenant['full_name'],
+            'borrower_phone': tenant['phone_number'],
+            'booking_date': booking_date,
+            'start_time': share['start_time'],
+            'end_time': share['end_time'],
+            'window_start': w_start_dt.isoformat(),
+            'window_end': w_end_dt.isoformat(),
+            'status': 'SCHEDULED'
+        })
 
     spot_msg_part = f" (חניה מס׳: {assigned_spot_no})" if assigned_spot_no else ""
 

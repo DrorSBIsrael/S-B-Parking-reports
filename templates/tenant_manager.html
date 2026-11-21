@@ -903,6 +903,21 @@
             return s;
         }
 
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function openEditModalById(tenantId) {
+            const t = allTenants.find(x => Number(x.id) === Number(tenantId));
+            if (t) openEditModal(t);
+        }
+
         function renderTenantsTable() {
             const q = (document.getElementById('tenantSearch').value || '').trim().toLowerCase();
             const filtered = allTenants.filter(t => {
@@ -918,15 +933,15 @@
             }
 
             tbody.innerHTML = filtered.map(t => {
-                const dateStr = t.created_at ? t.created_at.split('T')[0] : '-';
+                const dateStr = t.created_at ? escapeHtml(t.created_at.split('T')[0]) : '-';
                 const liveInfo = liveAptStatus[String(t.apartment_number)];
                 const presText = (liveInfo && liveInfo.present !== undefined)
-                    ? ` <span class="badge badge-green" style="margin-right:4px;">בפנים כעת: ${liveInfo.present}</span>`
+                    ? ` <span class="badge badge-green" style="margin-right:4px;">בפנים כעת: ${escapeHtml(liveInfo.present)}</span>`
                     : '';
-                const usedHoursTot = t.given_used_hours_total ?? 0;
-                const usedHoursMonth = t.given_used_hours_month ?? 0;
+                const usedHoursTot = escapeHtml(t.given_used_hours_total ?? 0);
+                const usedHoursMonth = escapeHtml(t.given_used_hours_month ?? 0);
                 const starBadge = `<span class="badge badge-yellow" style="border:1px solid #eab308; margin-right:6px;" title="שעות חניה שתרם הדייר ונוצלו בפועל ע״י שכנים (החודש: ${usedHoursMonth} שעות)">⭐ ${usedHoursTot} שעות שתרם</span>`;
-                const phoneDisp = formatPhoneDisplay(t.phone_number);
+                const phoneDisp = escapeHtml(formatPhoneDisplay(t.phone_number));
                 const phoneCellHtml = phoneDisp
                     ? `<span style="direction: ltr; display: inline-block;">${phoneDisp}</span>`
                     : `<span style="color:#94a3b8; font-style:italic; font-size:12.5px;">טרם הוזן טלפון</span>`;
@@ -934,22 +949,23 @@
                 const quotaHtml = (quotaVal === 0)
                     ? `<span class="badge badge-red" title="דירה ללא חניה קבועה (חסומה בבקר status=2 אלא בזמן השאלת חניה משכן)">🚫 0 חניות (ללא חניה)</span>`
                     : `<strong>${quotaVal} חניות</strong>`;
+                const tid = intOrZero(t.id);
                 return `
                     <tr>
-                        <td><span class="badge badge-blue">דירה ${t.apartment_number}</span></td>
-                        <td style="font-weight: 600;">${t.full_name} ${starBadge}</td>
+                        <td><span class="badge badge-blue">דירה ${escapeHtml(t.apartment_number)}</span></td>
+                        <td style="font-weight: 600;">${escapeHtml(t.full_name)} ${starBadge}</td>
                         <td style="text-align: right;">${phoneCellHtml}</td>
                         <td>
                             ${quotaHtml}${presText}
-                            <button class="btn btn-outline" style="padding: 3px 8px; font-size: 11px; margin-right: 6px;" title="משוך כמות חניות מעודכנת מבקר החניון" onclick="refreshSingleTenantQuota(${t.id}, this)">
+                            <button class="btn btn-outline" style="padding: 3px 8px; font-size: 11px; margin-right: 6px;" title="משוך כמות חניות מעודכנת מבקר החניון" onclick="refreshSingleTenantQuota(${tid}, this)">
                                 🔄 בדוק מכסה מול המערכת
                             </button>
                         </td>
                         <td>${dateStr}</td>
                         <td>
-                            <button class="btn btn-success" style="padding: 5px 10px; font-size: 12px;" onclick="sendWhatsAppInvite(${t.id})">💬 שלח קישור לוואטסאפ</button>
-                            <button class="btn btn-outline" style="padding: 5px 10px; font-size: 12px;" onclick='openEditModal(${JSON.stringify(t)})'>✏️ ערוך</button>
-                            <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="deleteTenant(${t.id})">🗑️ מחק</button>
+                            <button class="btn btn-success" style="padding: 5px 10px; font-size: 12px;" onclick="sendWhatsAppInvite(${tid})">💬 שלח קישור לוואטסאפ</button>
+                            <button class="btn btn-outline" style="padding: 5px 10px; font-size: 12px;" onclick="openEditModalById(${tid})">✏️ ערוך</button>
+                            <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="deleteTenant(${tid})">🗑️ מחק</button>
                         </td>
                     </tr>
                 `;

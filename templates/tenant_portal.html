@@ -1042,6 +1042,16 @@
         let selectedPortalProject = localStorage.getItem('tenant_selected_project') || '';
         let selectedPortalTenantId = localStorage.getItem('tenant_selected_tid') || '';
 
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function getPortalAuthHeaders(extra = {}) {
             const tk = localStorage.getItem('tenant_auth_token') || '';
             const ph = localStorage.getItem('tenant_last_phone') || '';
@@ -1468,8 +1478,8 @@
                         if (box && btns) {
                             btns.innerHTML = data.parkings.map(p => `
                                 <button type="button" class="btn btn-outline" style="width:100%; border-color:#3b82f6; background:#ffffff; color:#1e3a8a; font-weight:800; padding:11px 14px;"
-                                        onclick='sendOtp(${JSON.stringify({project_number: p.project_number, tenant_id: p.tenant_id})})'>
-                                    🏢 ${p.parking_name} — דירה ${p.apartment_number} (${p.full_name})
+                                        onclick="sendOtp({project_number: '${escapeHtml(p.project_number)}', tenant_id: ${parseInt(p.tenant_id, 10) || 0}})">
+                                    🏢 ${escapeHtml(p.parking_name)} — דירה ${escapeHtml(p.apartment_number)} (${escapeHtml(p.full_name)})
                                 </button>
                             `).join('');
                             box.style.display = 'block';
@@ -1699,7 +1709,7 @@
                         const st = isCur
                             ? 'width:100%; padding:9px 12px; font-size:13.5px; border-radius:10px; border:1.5px solid #334155; background:#e2e8f0; color:#1e293b; font-weight:800;'
                             : 'width:100%; padding:9px 12px; font-size:13.5px; border-radius:10px; border:1.5px solid #cbd5e1; background:#ffffff; color:#334155; font-weight:700;';
-                        return `<button type="button" class="btn" style="${st}" ${isCur ? 'disabled' : ''} onclick="switchPortalParking(${p.tenant_id}, '${p.project_number}')">${isCur ? '✓ ' : ''}🏢 ${p.parking_name} — דירה ${p.apartment_number}</button>`;
+                        return `<button type="button" class="btn" style="${st}" ${isCur ? 'disabled' : ''} onclick="switchPortalParking(${parseInt(p.tenant_id, 10) || 0}, '${escapeHtml(p.project_number)}')">${isCur ? '✓ ' : ''}🏢 ${escapeHtml(p.parking_name)} — דירה ${escapeHtml(p.apartment_number)}</button>`;
                     }).join('');
                     swBox.style.display = 'block';
                 } else {
@@ -1917,8 +1927,8 @@
                 <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 12px; background: #f8fafc;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:nowrap; gap:8px;">
                         <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
-                            <strong style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">👤 ${s.firstName || ''} ${s.lastName || ('#' + s.id)}</strong>
-                            ${s.parking_spot ? `<span class="badge badge-blue" style="border:1px solid #94a3b8; white-space:nowrap;">🅿️ חניה: ${s.parking_spot}</span>` : ''}
+                            <strong style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">👤 ${escapeHtml(s.firstName || '')} ${escapeHtml(s.lastName || ('#' + s.id))}</strong>
+                            ${s.parking_spot ? `<span class="badge badge-blue" style="border:1px solid #94a3b8; white-space:nowrap;">🅿️ חניה: ${escapeHtml(s.parking_spot)}</span>` : ''}
                         </div>
                         <span title="${s.present ? t('status_in_parking') : t('status_out_parking')}" style="font-size:16px; line-height:1; flex-shrink:0;">${s.present ? '🟢' : '🔴'}</span>
                     </div>
@@ -1927,7 +1937,7 @@
                         ${renderSingleCarSlot(s, 'lpn2', 'car_2')}
                         ${renderSingleCarSlot(s, 'lpn3', 'car_3')}
                     </div>
-                    <button class="btn btn-primary" style="padding:10px;" onclick="saveSubscriberPlates('${s.id}', this)">${t('save_plates_btn')}</button>
+                    <button class="btn btn-primary" style="padding:10px;" onclick="saveSubscriberPlates('${escapeHtml(s.id)}', this)">${t('save_plates_btn')}</button>
                 </div>
             `).join('');
         }
