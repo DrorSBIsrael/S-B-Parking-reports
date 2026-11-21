@@ -651,9 +651,35 @@
             </div>
         </section>
 
-        <!-- TAB 2: ONLINE PARKING DATA & COUNTERS -->
+        <!-- TAB 2: ONLINE PARKING DATA, COUNTERS & FLEXREP DAILY/HISTORICAL REPORTS -->
         <section id="tabSection_counters" style="display: none;">
             <div class="counters-summary-grid" id="countersSummaryGrid"></div>
+
+            <!-- DAILY & HISTORICAL REVENUE & TRAFFIC REPORT (FLEXREP / UDB) -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 18px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <h3 style="font-size: 17px; font-weight: 800; color: #f8fafc;">💰 דוח הכנסות, תשלומים ותנועות רכבים (FlexRep Online)</h3>
+                        <div id="dailyReportSourceBadge" style="font-size: 12px; color: #38bdf8; margin-top: 2px;">טוען נתוני דוח...</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <button class="filter-chip" onclick="selectReportDateOffset(0)">היום</button>
+                        <button class="filter-chip" onclick="selectReportDateOffset(-1)">אתמול</button>
+                        <input type="date" id="dailyReportDateInput" class="input-box" style="margin-bottom: 0; width: auto; padding: 7px 10px; font-size: 13.5px;" onchange="loadDailyReportByDate(this.value)">
+                        <button class="icon-btn" style="background: var(--primary); border-color: var(--primary);" onclick="loadDailyReportByDate(document.getElementById('dailyReportDateInput').value)">📊 הצג דוח</button>
+                    </div>
+                </div>
+
+                <!-- Quick 7-day chips -->
+                <div id="recentDaysChipsBar" class="filter-bar" style="margin-bottom: 14px;"></div>
+
+                <!-- Revenue & Traffic KPI cards for selected date -->
+                <div class="counters-summary-grid" id="dailyReportKpiGrid" style="margin-bottom: 14px;"></div>
+
+                <!-- Detailed Breakdowns: Payment Methods, Vouchers/Discounts, Hourly & 7-Days -->
+                <div id="dailyReportDetailsContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;"></div>
+            </div>
+
             <div id="facilitiesCountersContainer" style="display: grid; gap: 16px;"></div>
         </section>
 
@@ -1221,19 +1247,144 @@
             `).join('');
         }
 
-        /* TAB 2: ONLINE COUNTERS */
+        /* TAB 2: ONLINE COUNTERS & FLEXREP DAILY/HISTORICAL REPORTS */
+        let selectedReportDate = new Date().toISOString().slice(0, 10);
+
+        function selectReportDateOffset(daysOffset) {
+            const dt = new Date();
+            dt.setDate(dt.getDate() + daysOffset);
+            const iso = dt.toISOString().slice(0, 10);
+            const inp = document.getElementById('dailyReportDateInput');
+            if (inp) inp.value = iso;
+            loadDailyReportByDate(iso);
+        }
+
+        async function loadDailyReportByDate(dateStr) {
+            if (dateStr) selectedReportDate = dateStr;
+            const inp = document.getElementById('dailyReportDateInput');
+            if (inp && !inp.value) inp.value = selectedReportDate;
+            try {
+                const r = await fetch(`/api/parking-control/daily-report?date=${encodeURIComponent(selectedReportDate)}`, { headers: getHeaders() });
+                const d = await r.json();
+                if (d.success && d.daily_report) {
+                    renderDailyReportSection(d.daily_report);
+                }
+            } catch (e) {}
+        }
+
+        function renderDailyReportSection(rep) {
+            if (!rep) return;
+            const inp = document.getElementById('dailyReportDateInput');
+            if (inp && rep.report_date) inp.value = rep.report_date;
+
+            const srcEl = document.getElementById('dailyReportSourceBadge');
+            if (srcEl) {
+                srcEl.innerHTML = `📅 תאריך דוח: <strong>${rep.report_date}</strong> • מקור: <strong>${rep.source_label_he || 'בקר החניון'}</strong>`;
+            }
+
+            const rev = rep.revenue || {};
+            const tr = rep.traffic || {};
+
+            // Quick 7-day chips
+            const chipsBar = document.getElementById('recentDaysChipsBar');
+            if (chipsBar && rep.recent_days && rep.recent_days.length) {
+                chipsBar.innerHTML = rep.recent_days.map(day => `
+                    <button class="filter-chip ${day.date === rep.report_date ? 'active' : ''}" onclick="loadDailyReportByDate('${day.date}')">
+                        ${day.date.slice(5)} • ₪${Number(day.revenue_ils || 0).toLocaleString()} (${day.entries} כניסות)
+                    </button>
+                `).join('');
+            }
+
+            // KPI Cards
+            const kpiGrid = document.getElementById('dailyReportKpiGrid');
+            if (kpiGrid) {
+                kpiGrid.innerHTML = `
+                    <div class="stat-box" style="background:rgba(16,185,129,0.12);border-color:rgba(16,185,129,0.4);">
+                        <div style="color:#6ee7b7;font-size:12.5px;font-weight:700;">💰 סה״כ כסף / פדיון (${rep.report_date})</div>
+                        <div class="stat-num" style="color:#34d399;">₪${Number(rev.total_revenue_ils || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                        <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">נטו: ₪${Number(rev.net_revenue_no_vat_ils || 0).toFixed(2)} | מע״מ: ₪${Number(rev.vat_ils || 0).toFixed(2)}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div style="color:var(--text-muted);font-size:12.5px;">🎟️ עסקאות בתשלום ושוברים</div>
+                        <div class="stat-num" style="color:#fbbf24;">${rev.paid_transactions_count || 0} <span style="font-size:14px;font-weight:600;">תשלומים</span></div>
+                        <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">ברוטו: ₪${Number(rev.gross_tariff_ils || 0).toFixed(1)} | הנחות: ₪${Number(rev.discounts_total_ils || 0).toFixed(1)}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div style="color:var(--text-muted);font-size:12.5px;">🟢 סה״כ כניסות רכבים ביום זה</div>
+                        <div class="stat-num" style="color:#60a5fa;">${Number(tr.entries_total || 0).toLocaleString()}</div>
+                        <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">מזדמן: ${tr.entries_transient || 0} | מנוי: ${tr.entries_subscribers || 0} | אפליקציה: ${tr.entries_app_external || 0}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div style="color:var(--text-muted);font-size:12.5px;">🔴 סה״כ יציאות רכבים ביום זה</div>
+                        <div class="stat-num" style="color:#c084fc;">${Number(tr.exits_total || 0).toLocaleString()}</div>
+                        <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">מזדמן: ${tr.exits_transient || 0} | מנוי: ${tr.exits_subscribers || 0} | חסד חינם: ${tr.exits_grace_free || 0}</div>
+                    </div>
+                `;
+            }
+
+            // Detailed tables: Payment Methods, Discounts/Vouchers, Hourly Traffic
+            const detailsCont = document.getElementById('dailyReportDetailsContainer');
+            if (detailsCont) {
+                const pmRows = (rep.payment_methods || []).map(pm => `
+                    <div style="display:flex;justify-content:space-between;padding:6px 8px;background:var(--bg-input);border-radius:7px;font-size:13px;">
+                        <span>💳 <strong>${pm.name}</strong> (${pm.count} עסקאות)</span>
+                        <strong style="color:#34d399;">₪${Number(pm.amount_ils || 0).toFixed(2)}</strong>
+                    </div>
+                `).join('') || `<div style="color:var(--text-muted);font-size:12.5px;">אין עסקאות תשלום בתאריך זה</div>`;
+
+                const discRows = (rep.discounts_breakdown || []).map(dc => `
+                    <div style="display:flex;justify-content:space-between;padding:6px 8px;background:var(--bg-input);border-radius:7px;font-size:13px;">
+                        <span>🏷️ <strong>${dc.name}</strong> (${dc.count} שוברים)</span>
+                        <strong style="color:#fbbf24;">₪${Number(dc.amount_ils || 0).toFixed(2)}</strong>
+                    </div>
+                `).join('') || `<div style="color:var(--text-muted);font-size:12.5px;">אין שוברים/הנחות בתאריך זה</div>`;
+
+                const hourlyRows = (rep.hourly || []).map(h => `
+                    <div style="display:grid;grid-template-columns:55px 1fr 1fr 1fr;padding:5px 8px;background:var(--bg-input);border-radius:6px;font-size:12.5px;align-items:center;">
+                        <strong>${h.hour}</strong>
+                        <span style="color:#60a5fa;">⬆️ ${h.entries}</span>
+                        <span style="color:#c084fc;">⬇️ ${h.exits}</span>
+                        <strong style="color:#34d399;text-align:left;">₪${Number(h.revenue_ils || 0).toFixed(1)}</strong>
+                    </div>
+                `).join('') || `<div style="color:var(--text-muted);font-size:12.5px;">אין נתונים שעתיים לתאריך זה</div>`;
+
+                detailsCont.innerHTML = `
+                    <div style="background:rgba(15,23,42,0.55);border:1px solid var(--border);border-radius:12px;padding:12px;">
+                        <h4 style="font-size:14px;font-weight:800;margin-bottom:8px;color:#38bdf8;">💳 פילוח אמצעי תשלום</h4>
+                        <div style="display:grid;gap:6px;">${pmRows}</div>
+                        <h4 style="font-size:14px;font-weight:800;margin:12px 0 8px 0;color:#fbbf24;">🏷️ פילוח שוברים והנחות</h4>
+                        <div style="display:grid;gap:6px;">${discRows}</div>
+                        <div style="margin-top:10px;font-size:12px;color:var(--text-muted);display:flex;justify-content:space-between;">
+                            <span>🚧 פתיחות מחסום: <strong>${tr.barrier_manual_opens || 0}</strong></span>
+                            <span>🔄 מעברים פנימיים: <strong>${tr.internal_passages || 0}</strong></span>
+                        </div>
+                    </div>
+                    <div style="background:rgba(15,23,42,0.55);border:1px solid var(--border);border-radius:12px;padding:12px;">
+                        <h4 style="font-size:14px;font-weight:800;margin-bottom:8px;color:#38bdf8;">🕒 תנועות ופדיון לפי שעות היום (${rep.report_date})</h4>
+                        <div style="display:grid;gap:5px;max-height:240px;overflow-y:auto;">${hourlyRows}</div>
+                    </div>
+                `;
+            }
+        }
+
         async function loadOnlineCounters() {
             try {
-                const r = await fetch('/api/parking-control/counters', { headers: getHeaders() });
+                const inp = document.getElementById('dailyReportDateInput');
+                if (inp && !inp.value) inp.value = selectedReportDate;
+                const r = await fetch(`/api/parking-control/counters?date=${encodeURIComponent(selectedReportDate)}`, { headers: getHeaders() });
                 const d = await r.json();
                 if (!d.success) return;
+
+                if (d.daily_report) {
+                    renderDailyReportSection(d.daily_report);
+                }
 
                 const s = d.summary || {};
                 document.getElementById('countersSummaryGrid').innerHTML = `
                     <div class="stat-box"><div style="color:var(--text-muted);font-size:12.5px;">סה״כ מקומות בחניון</div><div class="stat-num">${s.total_max || 0}</div></div>
-                    <div class="stat-box"><div style="color:var(--text-muted);font-size:12.5px;">רכבים בחניון כעת</div><div class="stat-num" style="color:#60a5fa;">${s.total_present || 0}</div></div>
+                    <div class="stat-box"><div style="color:var(--text-muted);font-size:12.5px;">רכבים בחניון כעת (Online)</div><div class="stat-num" style="color:#60a5fa;">${s.total_present || 0}</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">מנויים: ${s.subscribers_present || 0} | מזדמנים: ${s.transient_present || 0}</div></div>
                     <div class="stat-box"><div style="color:var(--text-muted);font-size:12.5px;">מקומות פנויים כעת</div><div class="stat-num" style="color:#34d399;">${s.total_free || 0}</div></div>
-                    <div class="stat-box"><div style="color:var(--text-muted);font-size:12.5px;">אחוז תפוסה</div><div class="stat-num" style="color:${(s.overall_percent||0)>=90?'#f87171':'#fbbf24'};">${s.overall_percent || 0}%</div></div>
+                    <div class="stat-box"><div style="color:var(--text-muted);font-size:12.5px;">אחוז תפוסה כעת</div><div class="stat-num" style="color:${(s.overall_percent||0)>=90?'#f87171':'#fbbf24'};">${s.overall_percent || 0}%</div></div>
                 `;
 
                 const facCont = document.getElementById('facilitiesCountersContainer');
