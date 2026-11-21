@@ -365,6 +365,9 @@
                         <button class="btn btn-success" onclick="openUploadApartmentsFileModal()" style="font-size: 13px; padding: 8px 14px; background: #0d9488;">
                             📂 טעינת קובץ דירות ורכבים (ללא מערכת חניון)
                         </button>
+                        <button class="btn btn-success" onclick="sendBulkWhatsAppInvites(this)" style="font-size: 13px; padding: 8px 14px; background: #16a34a;" title="שליחה מבוקרת ברקע: 10 הודעות כל 10 שניות למניעת חסימה">
+                            💬 שלח וואטסאפ לכל הדיירים (10 ב-10 שניות)
+                        </button>
                         <button class="btn btn-outline" onclick="refreshAllTenantsQuotas(this)" style="font-size: 13px; padding: 8px 14px;">
                             🔄 רענון כללי (בדוק מכסות לכל הדירות מול המערכת)
                         </button>
@@ -678,6 +681,12 @@
             <div class="form-group" style="margin-bottom: 14px;">
                 <label>בחר קובץ אקסל (.xlsx) או CSV *</label>
                 <input type="file" id="uploadApartmentsFileInput" accept=".csv,.xlsx,.xls,.txt">
+            </div>
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: #f0fdf4; border: 1px solid #86efac; padding: 10px 12px; border-radius: 8px; color: #166534; font-size: 13px; margin-bottom: 0;">
+                    <input type="checkbox" id="uploadSendWelcomeWa" style="width: 18px; height: 18px; cursor: pointer;">
+                    <span>💬 שלח הודעת ברוכים הבאים בוואטסאפ לדיירים חדשים מהקובץ (בקצב מבוקר ובטוח של 10 הודעות כל 10 שניות ברקע)</span>
+                </label>
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label>הזן קוד מיוחד לאישור הפעולה *</label>
@@ -1041,6 +1050,10 @@
                 const formData = new FormData();
                 formData.append('file', fileInput.files[0]);
                 formData.append('special_password', codeVal);
+                const sendWaChk = document.getElementById('uploadSendWelcomeWa');
+                if (sendWaChk && sendWaChk.checked) {
+                    formData.append('send_welcome_whatsapp', '1');
+                }
                 const res = await fetch('/api/tenant-manager/upload-apartments-file', {
                     method: 'POST',
                     body: formData
@@ -1318,6 +1331,37 @@
                 showAlert('שגיאת תקשורת בשליחת וואטסאפ', 'danger');
             } finally {
                 _mgrActionBusy = false;
+            }
+        }
+
+        async function sendBulkWhatsAppInvites(btnEl) {
+            if (_mgrActionBusy) return;
+            const withPhoneCount = allTenants.filter(t => (t.phone_number || '').trim().length >= 9).length;
+            if (withPhoneCount === 0) {
+                showAlert('אין דיירים עם מספר טלפון רשום במתחם זה.', 'danger');
+                return;
+            }
+            if (!confirm(`האם לשלוח קישור כניסה בוואטסאפ ל-${withPhoneCount} דיירים במתחם?\nהשליחה תתבצע אוטומטית ברקע בקצב בטוח של 10 הודעות כל 10 שניות.`)) {
+                return;
+            }
+            _mgrActionBusy = true;
+            const origHtml = btnEl ? btnEl.innerHTML : '';
+            if (btnEl) {
+                btnEl.disabled = true;
+                btnEl.innerHTML = '⏳ מכניס לתור שליחה...';
+            }
+            try {
+                const res = await fetch('/api/tenant-manager/send-bulk-invites', { method: 'POST' });
+                const data = await res.json();
+                showAlert(data.message || 'הופעל תור שליחה', data.success ? 'success' : 'danger');
+            } catch (e) {
+                showAlert('שגיאת תקשורת', 'danger');
+            } finally {
+                _mgrActionBusy = false;
+                if (btnEl) {
+                    btnEl.disabled = false;
+                    btnEl.innerHTML = origHtml;
+                }
             }
         }
 

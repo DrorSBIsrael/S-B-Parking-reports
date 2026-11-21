@@ -1539,8 +1539,21 @@ def update_apartment_subscriber_plates(project_number, apartment_number, subscri
         return {'success': False, 'message': str(e)}
 
 # ============================================================================
-# 3. WHATSAPP NOTIFICATIONS HELPER
+# 3. WHATSAPP NOTIFICATIONS HELPER & RATE-LIMITED BULK QUEUE (10 msgs / 10 sec)
 # ============================================================================
+import queue as _py_queue
+
+_wa_bulk_queue = _py_queue.Queue()
+_wa_bulk_worker_started = False
+_wa_bulk_lock = threading.Lock()
+_wa_bulk_stats = {
+    'queued': 0,
+    'sent': 0,
+    'failed': 0,
+    'in_progress': False,
+    'last_sent_at': None
+}
+
 def send_whatsapp_message(phone_number, text_message):
     """שליחת הודעת וואטסאפ דרך GreenAPI הקיים במערכת."""
     try:
@@ -1551,14 +1564,67 @@ def send_whatsapp_message(phone_number, text_message):
             print(f"[WhatsApp Mock] To {phone_number}: {text_message}")
             return False, "הגדרות GreenAPI חסרות"
         clean_p = clean_il_phone(phone_number)
-        if not clean_p:
-            return False, "מספר טלפון חסר"
+        if not clean_p or len(clean_p) < 11:
+            return False, "מספר טלפון חסר או לא תקין"
         url = f"https://api.green-api.com/waInstance{green_id}/sendMessage/{green_token}"
         resp = requests.post(url, json={"chatId": f"{clean_p}@c.us", "message": text_message}, timeout=10)
         return (resp.status_code == 200), resp.text
     except Exception as e:
         print(f"Error sending WhatsApp message: {e}")
         return False, str(e)
+
+def _wa_bulk_worker_loop():
+    """תהליכון רקע לשליחת הודעות וואטסאפ מרוכזות בקצב מבוקר: עד 10 הודעות ב-10 שניות (השהיה בין הודעות ובין קבוצות של 10)."""
+    batch_counter = 0
+    while True:
+        item = _wa_bulk_queue.get()
+        try:
+            _wa_bulk_stats['in_progress'] = True
+            phone, msg = item
+            ok, _ = send_whatsapp_message(phone, msg)
+            if ok:
+                _wa_bulk_stats['sent'] += 1
+            else:
+                _wa_bulk_stats['failed'] += 1
+            _wa_bulk_stats['last_sent_at'] = get_il_now().isoformat()
+            batch_counter += 1
+
+            # קצב מבוקר: 10 הודעות ב-10 שניות (1.0 שניה בין הודעה להודעה + עצירה נוספת כל 10 הודעות במידת הצורך)
+            if not _wa_bulk_queue.empty():
+                if batch_counter >= 10:
+                    batch_counter = 0
+                    time.sleep(2.0)
+                else:
+                    time.sleep(1.0)
+            else:
+                batch_counter = 0
+                _wa_bulk_stats['in_progress'] = False
+        except Exception as e:
+            print(f"Bulk WhatsApp worker error: {e}")
+        finally:
+            _wa_bulk_queue.task_done()
+
+def enqueue_bulk_whatsapp_messages(messages_list):
+    """מוסיף רשימת הודעות [(phone, text), ...] לתור השליחה המבוקר ברקע (10 הודעות ב-10 שניות)."""
+    global _wa_bulk_worker_started
+    if not messages_list:
+        return 0
+    with _wa_bulk_lock:
+        if not _wa_bulk_worker_started:
+            _wa_bulk_worker_started = True
+            t = threading.Thread(target=_wa_bulk_worker_loop, daemon=True)
+            t.start()
+    added = 0
+    seen_phones = set()
+    for phone, msg in messages_list:
+        clean_p = clean_il_phone(phone)
+        if not clean_p or len(clean_p) < 11 or clean_p in seen_phones:
+            continue
+        seen_phones.add(clean_p)
+        _wa_bulk_queue.put((clean_p, msg))
+        _wa_bulk_stats['queued'] += 1
+        added += 1
+    return added
 
 # ============================================================================
 # 4. QUOTA TRANSFER ENGINE & BACKGROUND SCHEDULER
@@ -2387,6 +2453,9 @@ def api_tenant_manager_upload_apartments_file():
     added_count = 0
     updated_count = 0
     total_subscribers = 0
+    send_welcome_flag = str(request.form.get('send_welcome_whatsapp') or '').strip().lower() in ('1', 'true', 'yes', 'on')
+    host_url = request.host_url.rstrip('/')
+    wa_queue_items = []
 
     with _action_dedup_lock:
         # הפעלת מצב עצמאי (ללא בקר חניון) עבור הבניין
@@ -2441,26 +2510,95 @@ def api_tenant_manager_upload_apartments_file():
                         base_max_counter=max_c,
                         is_active=ex_t.get('is_active', True)
                     )
+                    if send_welcome_flag and not existing_phone and len(final_phone) >= 11:
+                        portal_link = f"{host_url}/tenant-portal?phone={display_il_phone(final_phone)}"
+                        w_msg = (
+                            f"שלום {final_name}! 🏢\n"
+                            f"צורפת למערכת ניהול ושיתוף החניות של *{p_name or 'המתחם'}* (דירה {apt_str}).\n\n"
+                            f"לכניסה למערכת (צפייה ועדכון רכבים, שחרור חניה או תפיסת חניה פנויה) לחץ על הקישור:\n"
+                            f"{portal_link}"
+                        )
+                        wa_queue_items.append((final_phone, w_msg))
                 updated_count += 1
             else:
+                valid_ph = file_phone if len(file_phone) >= 11 else ''
                 TenantStore.create_tenant(
                     project_number=p_num,
                     parking_name=p_name,
                     full_name=display_name,
-                    phone_number=file_phone if len(file_phone) >= 11 else '',
+                    phone_number=valid_ph,
                     apartment_number=apt_str,
                     base_max_counter=max_c,
                     created_by=mgr.get('email')
                 )
+                if send_welcome_flag and valid_ph:
+                    portal_link = f"{host_url}/tenant-portal?phone={display_il_phone(valid_ph)}"
+                    w_msg = (
+                        f"שלום {display_name}! 🏢\n"
+                        f"צורפת למערכת ניהול ושיתוף החניות של *{p_name or 'המתחם'}* (דירה {apt_str}).\n\n"
+                        f"לכניסה למערכת (צפייה ועדכון רכבים, שחרור חניה או תפיסת חניה פנויה) לחץ על הקישור:\n"
+                        f"{portal_link}"
+                    )
+                    wa_queue_items.append((valid_ph, w_msg))
                 added_count += 1
+
+    queued_wa = enqueue_bulk_whatsapp_messages(wa_queue_items) if wa_queue_items else 0
+    wa_info_str = f" כמו כן, {queued_wa} הודעות וואטסאפ הוכנסו לתור שליחה מבוקר ברקע (10 הודעות כל 10 שניות)." if queued_wa > 0 else ""
 
     return jsonify({
         'success': True,
         'added_count': added_count,
         'updated_count': updated_count,
         'total_subscribers': total_subscribers,
+        'queued_whatsapp_count': queued_wa,
         'standalone_mode': True,
-        'message': f'הקובץ נטען בהצלחה! נוספו {added_count} דירות חדשות, עודכנו {updated_count} דירות קיימות ({total_subscribers} חניות/מנויים ורכבים). מספרי טלפון קיימים נשמרו ללא שינוי.'
+        'message': f'הקובץ נטען בהצלחה! נוספו {added_count} דירות חדשות, עודכנו {updated_count} דירות קיימות ({total_subscribers} חניות/מנויים ורכבים). מספרי טלפון קיימים נשמרו ללא שינוי.{wa_info_str}'
+    })
+
+@tenant_bp.route('/api/tenant-manager/send-bulk-invites', methods=['POST'])
+def api_tenant_manager_send_bulk_invites():
+    """שליחה מרוכזת של קישור הפורטל בוואטסאפ לכל הדיירים עם מספר טלפון במתחם — בקצב מבוקר של 10 הודעות ב-10 שניות!"""
+    mgr = _get_logged_in_tenant_manager()
+    if not mgr:
+        return jsonify({'success': False, 'message': 'לא מורשה'}), 401
+    p_num = str(mgr.get('project_number') or '').strip()
+    b_set = TenantStore.get_building_settings(p_num, mgr.get('parking_name') or '')
+    p_name = b_set.get('parking_name') or mgr.get('parking_name') or 'המתחם'
+    host_url = request.host_url.rstrip('/')
+
+    tenants = TenantStore.list_tenants(p_num)
+    items = []
+    for t in tenants:
+        clean_p = clean_il_phone(t.get('phone_number') or '')
+        if len(clean_p) >= 11:
+            portal_link = f"{host_url}/tenant-portal?phone={display_il_phone(clean_p)}"
+            msg = (
+                f"שלום {t.get('full_name')}! 🏢\n"
+                f"קישור לכניסה למערכת החניות של *{p_name}* (דירה {t.get('apartment_number')}):\n"
+                f"{portal_link}"
+            )
+            items.append((clean_p, msg))
+
+    if not items:
+        return jsonify({'success': False, 'message': 'לא נמצאו דיירים עם מספר טלפון תקין לשליחה במתחם זה.'})
+
+    queued_count = enqueue_bulk_whatsapp_messages(items)
+    est_seconds = max(10, int((queued_count / 10.0) * 11))
+    return jsonify({
+        'success': True,
+        'queued_count': queued_count,
+        'message': f'{queued_count} הודעות וואטסאפ הוכנסו לתור שליחה מבוקר ברקע (קצב בטוח של 10 הודעות ב-10 שניות, סיום משוער תוך כ-{est_seconds} שניות).'
+    })
+
+@tenant_bp.route('/api/tenant-manager/whatsapp-queue-status', methods=['GET'])
+def api_tenant_manager_whatsapp_queue_status():
+    mgr = _get_logged_in_tenant_manager()
+    if not mgr:
+        return jsonify({'success': False, 'message': 'לא מורשה'}), 401
+    return jsonify({
+        'success': True,
+        'pending_in_queue': _wa_bulk_queue.qsize(),
+        'stats': _wa_bulk_stats
     })
 
 @tenant_bp.route('/api/tenant-manager/cancel-share/<int:share_id>', methods=['POST'])
