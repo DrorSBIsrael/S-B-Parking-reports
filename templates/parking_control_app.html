@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>בקרת ותפעול חניון | Scheidt & Bachmann</title>
+    <link rel="icon" type="image/png" href="/static/control_parking_logo.png">
+    <link rel="apple-touch-icon" href="/static/control_parking_logo.png">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #263449;
+            --bg-input: #0b1120;
+            --border: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --orange: #f97316;
+            --purple: #8b5cf6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            direction: rtl;
+            min-height: 100vh;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+            padding-left: env(safe-area-inset-left, 0px);
+            padding-right: env(safe-area-inset-right, 0px);
+        }
+
+        /* Header */
+        .top-bar {
+            position: sticky;
+            top: 0;
+            z-index: 90;
+            background: rgba(15, 23, 42, 0.94);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .brand-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-badge {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #fff;
+            font-weight: 800;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+        }
+
+        .parking-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .conn-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .conn-pill.offline {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .parking-switcher {
+            background: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 7px 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .icon-btn {
+            background: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 7px 11px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Login Screen */
+        .login-wrap {
+            max-width: 440px;
+            margin: 40px auto;
+            padding: 16px;
+        }
+
+        .login-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px 20px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .login-title {
+            font-size: 21px;
+            font-weight: 800;
+            margin-bottom: 6px;
+            text-align: center;
+        }
+
+        .login-sub {
+            color: var(--text-muted);
+            font-size: 13.5px;
+            text-align: center;
+            margin-bottom: 20px;
+            line-height: 1.45;
+        }
+
+        .field-lbl {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+        }
+
+        .input-box {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: #fff;
+            padding: 13px 14px;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 14px;
+        }
+
+        .input-box:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn-main {
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff;
+            border: none;
+            padding: 13px 16px;
+            border-radius: 10px;
+            font-size: 15.5px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-quick-otp {
+            width: 100%;
+            background: rgba(16, 185, 129, 0.18);
+            color: #34d399;
+            border: 1px dashed #10b981;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 14px;
+        }
+
+        /* Responsive Content Container */
+        .main-wrap {
+            max-width: 1500px;
+            margin: 0 auto;
+            padding: 14px;
+        }
+
+        /* Filter pills */
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+            margin-bottom: 8px;
+        }
+
+        .filter-chip {
+            background: var(--bg-card);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 13.5px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .filter-chip.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        /* Adaptive Split View for Portrait / Landscape / Tablet */
+        .ops-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+        }
+
+        @media (min-width: 720px), (orientation: landscape) and (min-width: 560px) {
+            .ops-layout.has-selected {
+                grid-template-columns: 1.15fr 1fr;
+                align-items: start;
+            }
+        }
+
+        @media (min-width: 1100px) {
+            .ops-layout.has-selected {
+                grid-template-columns: 1.35fr 1fr;
+            }
+        }
+
+        /* Responsive Lanes Grid */
+        .lanes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 11px;
+        }
+
+        @media (max-width: 540px) and (orientation: portrait) {
+            .lanes-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .lane-card {
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 13px;
+            padding: 13px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .lane-card:hover {
+            background: var(--bg-card-hover);
+        }
+
+        .lane-card.selected {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+        }
+
+        .lane-card.locked {
+            border-color: var(--orange);
+        }
+
+        .lane-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            gap: 8px;
+        }
+
+        .lane-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 9px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .lane-badge.entry { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .lane-badge.exit { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+        .lane-badge.passage { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+        .lane-badge.other { background: rgba(139, 92, 246, 0.15); color: #c4b5fd; }
+
+        .lane-title {
+            font-size: 15.5px;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+
+        .lane-fac {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .plate-tag {
+            background: #fde047;
+            color: #0f172a;
+            font-weight: 800;
+            font-family: monospace;
+            font-size: 14px;
+            padding: 3px 8px;
+            border-radius: 5px;
+            border: 1.5px solid #000;
+            letter-spacing: 1px;
+            direction: ltr;
+            display: inline-block;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 7px;
+            margin-top: 10px;
+        }
+
+        .q-btn {
+            padding: 9px 10px;
+            border-radius: 8px;
+            border: none;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .q-btn.open { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+        .q-btn.close { background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); }
+        .q-btn.lock { background: rgba(249, 115, 22, 0.2); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.4); }
+        .q-btn.unlock { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
+
+        /* Selected Lane Inspector Panel */
+        .inspector-panel {
+            background: var(--bg-card);
+            border: 2px solid var(--primary);
+            border-radius: 16px;
+            padding: 16px;
+            position: sticky;
+            top: 72px;
+        }
+
+        .lpr-frame {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #070b14;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 3px solid var(--border);
+            position: relative;
+            margin-bottom: 12px;
+        }
+
+        .lpr-frame.frame-green { border-color: #10b981; }
+        .lpr-frame.frame-yellow { border-color: #f59e0b; }
+        .lpr-frame.frame-red { border-color: #ef4444; }
+        .lpr-frame.frame-blue { border-color: #3b82f6; }
+
+        .lpr-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .lpr-overlay-plate {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: #fde047;
+            color: #000;
+            font-family: monospace;
+            font-size: 18px;
+            font-weight: 900;
+            padding: 4px 12px;
+            border-radius: 6px;
+            border: 2px solid #000;
+            direction: ltr;
+        }
+
+        .cmd-grid-4 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin: 12px 0;
+        }
+
+        /* Counters Tab */
+        .counters-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 11px;
+            margin-bottom: 16px;
+        }
+
+        .stat-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .stat-num {
+            font-size: 26px;
+            font-weight: 800;
+            margin-top: 4px;
+        }
+
+        /* Bottom Tab Navigation */
+        .bottom-tabs {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 95;
+            background: rgba(15, 23, 42, 0.96);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid var(--border);
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px 4px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .tab-btn.active {
+            color: #60a5fa;
+            border-top: 2px solid #3b82f6;
+        }
+
+        .tab-icon {
+            font-size: 19px;
+        }
+
+        /* Modal */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.72);
+            z-index: 200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .modal-backdrop.open {
+            display: flex;
+        }
+
+        .modal-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Header -->
+    <header class="top-bar" id="appTopBar" style="display: none;">
+        <div class="brand-row">
+            <img src="/static/control_parking_logo.png" alt="Logo" style="width: 36px; height: 36px; border-radius: 9px; border: 1px solid #38bdf8; object-fit: cover;">
+            <span class="brand-badge">S&B CONTROL</span>
+            <div>
+                <div class="parking-title" id="hdrParkingName">טוען חניון...</div>
+                <div style="font-size: 11.5px; color: var(--text-muted);" id="hdrManagerName"></div>
+            </div>
+            <span class="conn-pill" id="hdrConnStatus">🟢 מחובר</span>
+        </div>
+        <div class="top-actions">
+            <select id="hdrParkingSwitcher" class="parking-switcher" style="display: none;" onchange="switchActiveParking(this.value)"></select>
+            <button class="icon-btn" onclick="refreshCurrentView()">🔄 רענן</button>
+            <button class="icon-btn" onclick="logoutControlApp()" style="color: #f87171;">יציאה</button>
+        </div>
+    </header>
+
+    <!-- LOGIN VIEW -->
+    <div class="login-wrap" id="loginView">
+        <div class="login-card">
+            <div style="text-align: center; margin-bottom: 12px;">
+                <img src="/static/control_parking_logo.png" alt="בקרה ותפעול חניון" style="width: 92px; height: 92px; border-radius: 22px; border: 1.5px solid #38bdf8; box-shadow: 0 8px 20px rgba(0,0,0,0.45); margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;">
+                <span class="brand-badge" style="font-size: 14px; padding: 6px 14px;">SCHEIDT & BACHMANN</span>
+            </div>
+            <h1 class="login-title">אפליקציית מנהל תפעול ובקרת חניון</h1>
+            <p class="login-sub">מערכת רגישה לשליטה במחסומים, צפייה במצלמות LPR, מונים וניהול מנויים. הזן מספר נייד לקבלת קוד כניסה ישיר בוואטסאפ.</p>
+
+            <div id="loginStepPhone">
+                <label class="field-lbl">מספר טלפון נייד של מנהל החניון</label>
+                <input type="tel" id="loginPhoneInput" class="input-box" placeholder="050-1234567" style="text-align: right;">
+
+                <label class="field-lbl">קוד זיהוי ראשוני (אופציונלי)</label>
+                <input type="text" id="loginInitCodeInput" class="input-box" placeholder="השאר ריק אם מספרך כבר משויך">
+
+                <div id="multiParkingSelectBox" style="display: none; margin-bottom: 14px;">
+                    <label class="field-lbl" style="color: #60a5fa;">🏢 נמצאו מספר חניונים המשויכים למספרך — בחר חניון:</label>
+                    <div id="multiParkingButtons" style="display: grid; gap: 8px;"></div>
+                </div>
+
+                <button class="btn-main" id="btnSendOtp" onclick="sendControlOtp()">💬 שלח קוד כניסה בוואטסאפ</button>
+            </div>
+
+            <div id="loginStepOtp" style="display: none;">
+                <button id="btnQuickOtp" class="btn-quick-otp" style="display: none;" onclick="verifyControlOtp(window._detectedOtpCode)"></button>
+                <label class="field-lbl">קוד אימות מוואטסאפ (6 ספרות)</label>
+                <input type="tel" id="loginOtpInput" class="input-box" maxlength="6" placeholder="------" style="text-align: center; font-size: 24px; letter-spacing: 6px; font-weight: 800;" oninput="if(this.value.replace(/\D/g,'').length===6) verifyControlOtp(this.value)">
+                <button class="btn-main" onclick="verifyControlOtp()">🔐 אמת קוד והיכנס לתפעול החניון</button>
+                <button class="icon-btn" style="width: 100%; margin-top: 10px;" onclick="backToPhoneStep()">חזור להחלפת מספר טלפון</button>
+            </div>
+
+            <div style="margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--border); text-align: center;">
+                <div style="font-size: 12px; font-weight: 700; color: #94a3b8;">© 2026 Hint LTD — כל הזכויות שמורות | גרסה 1.0.0</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 2px;">שיידט את בכמן ישראל בע"מ</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP VIEW -->
+    <main class="main-wrap" id="mainAppView" style="display: none;">
+
+        <!-- TAB 1: OPERATIONS (BARRIERS, LANES, LPR CAMERA & PLATE FIX) -->
+        <section id="tabSection_ops">
+            <div class="filter-bar">
+                <button class="filter-chip active" onclick="setLaneFilter('all', this)">הכל (<span id="cnt_all">0</span>)</button>
+                <button class="filter-chip" onclick="setLaneFilter('entry', this)">🟢 כניסות (<span id="cnt_entry">0</span>)</button>
+                <button class="filter-chip" onclick="setLaneFilter('exit', this)">🔴 יציאות (<span id="cnt_exit">0</span>)</button>
+                <button class="filter-chip" onclick="setLaneFilter('passage', this)">🟡 מעברים (<span id="cnt_passage">0</span>)</button>
+                <button class="filter-chip" onclick="setLaneFilter('locked', this)">🔒 נעולים/חסומים (<span id="cnt_locked">0</span>)</button>
+            </div>
+
+            <div class="ops-layout" id="opsLayoutContainer">
+                <!-- Lanes Grid -->
+                <div>
+                    <div class="lanes-grid" id="lanesGridContainer"></div>
+                </div>
+
+                <!-- Selected Lane Inspector (LPR Photo + Controls + Plate Fix) -->
+                <div class="inspector-panel" id="selectedLanePanel" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div>
+                            <span class="lane-badge" id="inspBadge">נתיב</span>
+                            <h3 style="font-size: 18px; font-weight: 800; display: inline-block; margin-right: 6px;" id="inspTitle">בחר נתיב</h3>
+                        </div>
+                        <button class="icon-btn" onclick="closeInspector()">✕ סגור</button>
+                    </div>
+
+                    <!-- Last Vehicle Camera Image -->
+                    <div class="lpr-frame" id="inspLprFrame">
+                        <img id="inspCameraImg" src="" alt="תמונת רכב אחרונה בנתיב">
+                        <div class="lpr-overlay-plate" id="inspPlateOverlay">---</div>
+                    </div>
+
+                    <!-- Vehicle Subscriber / Transient Status Info -->
+                    <div id="inspVehicleCard" style="background: var(--bg-input); border: 1px solid var(--border); border-radius: 10px; padding: 11px; margin-bottom: 12px; font-size: 13.5px;">
+                    </div>
+
+                    <!-- 4 Main Barrier & Lock Controls -->
+                    <div style="font-size: 12.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px;">שליטה במחסום ובנתיב (נרשם אוטומטית באירועים):</div>
+                    <div class="cmd-grid-4">
+                        <button class="q-btn open" style="padding: 12px;" onclick="executeInspectorCommand('OPEN')">🟢 פתח מחסום</button>
+                        <button class="q-btn close" style="padding: 12px;" onclick="executeInspectorCommand('CLOSE')">🔴 סגור מחסום</button>
+                        <button class="q-btn lock" style="padding: 12px;" onclick="executeInspectorCommand('LOCK_BARRIER')">🔒 נעל מחסום פתוח</button>
+                        <button class="q-btn unlock" style="padding: 12px;" onclick="executeInspectorCommand('UNLOCK_BARRIER')">🔓 שחרר נעילה</button>
+                        <button class="q-btn lock" style="padding: 10px;" onclick="executeInspectorCommand('BLOCK_DEVICE')">⛔ חסום עמדה</button>
+                        <button class="q-btn unlock" style="padding: 10px;" onclick="executeInspectorCommand('UNBLOCK_DEVICE')">✅ בטל חסימת עמדה</button>
+                    </div>
+
+                    <!-- Plate Correction in Lane (Like LPR Screen) -->
+                    <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 11px; padding: 12px; margin-top: 10px;">
+                        <div style="font-size: 13.5px; font-weight: 700; margin-bottom: 8px; color: #93c5fd;">✏️ תיקון מספר רכב בנתיב ופתיחה / שליחת מחיר:</div>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="tel" id="fixPlateInput" class="input-box" placeholder="הקלד 7-8 ספרות" style="margin-bottom: 0; font-family: monospace; font-weight: 800; text-align: center; font-size: 17px;">
+                            <button class="btn-main" style="width: auto; white-space: nowrap; padding: 0 16px;" onclick="submitLanePlateFix(false)">בצע תיקון</button>
+                        </div>
+                        <div style="display: flex; gap: 14px; margin-top: 8px; font-size: 12.5px; color: var(--text-muted);">
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                <input type="checkbox" id="chkManagerOverride"> עקיפת הגבלת דמיון מצלמה
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                <input type="checkbox" id="chkForceOpen"> פתיחת מנהל מאולצת
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Audit Events Log -->
+            <div style="margin-top: 22px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 14px;">
+                <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 10px;">📋 יומן אירועים ופעולות מנהל אחרונות (נשלח גם ל-USER_AUDIT בחניון)</h3>
+                <div id="auditLogList" style="display: grid; gap: 6px; max-height: 220px; overflow-y: auto; font-size: 12.5px;"></div>
+            </div>
+        </section>
+
+        <!-- TAB 2: ONLINE PARKING DATA & COUNTERS -->
+        <section id="tabSection_counters" style="display: none;">
+            <div class="counters-summary-grid" id="countersSummaryGrid"></div>
+            <div id="facilitiesCountersContainer" style="display: grid; gap: 16px;"></div>
+        </section>
+
+        <!-- TAB 3: COMPANIES & SUBSCRIBERS -->
+        <section id="tabSection_companies" style="display: none;">
+            <div id="companiesListView">
+                <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                    <input type="text" id="companySearchInput" class="input-box" style="margin-bottom: 0;" placeholder="🔍 חפש חברה לפי שם או מספר חוזה..." oninput="renderCompaniesList()">
+                </div>
+                <div id="companiesGrid" class="lanes-grid"></div>
+            </div>
+
+            <div id="companySubscribersView" style="display: none;">
+                <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <button class="icon-btn" onclick="backToCompaniesList()" style="margin-bottom: 6px;">➡️ חזרה לרשימת החברות</button>
+                        <h2 id="subViewCompanyTitle" style="font-size: 19px; font-weight: 800;"></h2>
+                        <div id="subViewCompanyStats" style="font-size: 13px; color: #34d399; margin-top: 3px;"></div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="number" id="editCompanyMaxInput" class="input-box" style="width: 90px; margin-bottom: 0; padding: 8px; text-align: center;" placeholder="מכסה">
+                        <button class="icon-btn" style="background: var(--primary); border-color: var(--primary);" onclick="saveCompanyMaxQuota()">💾 עדכן מכסת חברה</button>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                    <input type="text" id="subscriberSearchInput" class="input-box" style="flex: 1; margin-bottom: 0;" placeholder="🔍 חפש מנוי לפי שם או מספר רכב..." oninput="renderSubscribersList()">
+                    <button class="filter-chip" id="btnFilterPresentOnly" onclick="togglePresentSubscribersFilter()">🟢 נוכחים בחניון בלבד</button>
+                </div>
+
+                <div id="subscribersGrid" class="lanes-grid"></div>
+            </div>
+        </section>
+
+        <!-- TAB 4: PATROL & PAYMENT VEHICLE SEARCH -->
+        <section id="tabSection_search" style="display: none;">
+            <div style="max-width: 600px; margin: 0 auto;">
+                <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 16px;">
+                    <h2 style="font-size: 19px; font-weight: 800; margin-bottom: 6px;">🔍 חיפוש רכב בחניון (מנוי / מזדמן ותחשיב תשלום)</h2>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">הקלד מספר רישוי לבדיקה מיידית האם הרכב מנוי או מזדמן, מתי נכנס וכמה עליו לשלם כעת.</p>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="tel" id="patrolPlateInput" class="input-box" style="margin-bottom: 0; font-size: 22px; font-weight: 900; font-family: monospace; text-align: center; letter-spacing: 2px;" placeholder="12-345-67" onkeydown="if(event.key==='Enter') runPatrolVehicleSearch()">
+                        <button class="btn-main" style="width: auto; padding: 0 24px;" onclick="runPatrolVehicleSearch()">חפש</button>
+                    </div>
+                </div>
+
+                <div id="patrolSearchResultBox"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Edit Subscriber Modal -->
+    <div class="modal-backdrop" id="editSubscriberModal">
+        <div class="modal-box">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <h3 style="font-size: 18px; font-weight: 800;" id="editSubModalTitle">עריכת מנוי</h3>
+                <button class="icon-btn" onclick="closeEditSubscriberModal()">✕</button>
+            </div>
+            <input type="hidden" id="editSubContractId">
+            <input type="hidden" id="editSubId">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                    <label class="field-lbl">שם פרטי</label>
+                    <input type="text" id="editSubFirstName" class="input-box">
+                </div>
+                <div>
+                    <label class="field-lbl">שם משפחה</label>
+                    <input type="text" id="editSubLastName" class="input-box">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                <div>
+                    <label class="field-lbl">רכב 1</label>
+                    <input type="text" id="editSubLpn1" class="input-box" style="font-family: monospace; font-weight: 700; text-align: center;">
+                </div>
+                <div>
+                    <label class="field-lbl">רכב 2</label>
+                    <input type="text" id="editSubLpn2" class="input-box" style="font-family: monospace; font-weight: 700; text-align: center;">
+                </div>
+                <div>
+                    <label class="field-lbl">רכב 3</label>
+                    <input type="text" id="editSubLpn3" class="input-box" style="font-family: monospace; font-weight: 700; text-align: center;">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                    <label class="field-lbl">תוקף מתאריך</label>
+                    <input type="date" id="editSubValidFrom" class="input-box">
+                </div>
+                <div>
+                    <label class="field-lbl">תוקף עד תאריך</label>
+                    <input type="date" id="editSubValidUntil" class="input-box">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                    <label class="field-lbl">מספר חניה / קוד התאמה</label>
+                    <input type="text" id="editSubMatchCode" class="input-box">
+                </div>
+                <div>
+                    <label class="field-lbl">הערה (Memo)</label>
+                    <input type="text" id="editSubMemo" class="input-box">
+                </div>
+            </div>
+
+            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; cursor: pointer; background: rgba(245, 158, 11, 0.12); padding: 10px; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);">
+                <input type="checkbox" id="editSubResetPresence">
+                <span style="font-size: 13.5px; font-weight: 600; color: #fbbf24;">🔄 אפס נוכחות בחניון (שחרור חסימת כניסה כפולה)</span>
+            </label>
+
+            <button class="btn-main" onclick="saveSubscriberUpdates()">💾 שמור שינויים בבקר החניון</button>
+        </div>
+    </div>
+
+    <!-- פוטר זכויות יוצרים וגרסה -->
+    <footer style="text-align: center; padding: 14px 10px 85px 10px; color: #94a3b8; font-size: 12px; border-top: 1px solid rgba(51, 65, 85, 0.5); margin-top: 18px;">
+        <div style="font-weight: 700;">© 2026 Hint LTD — כל הזכויות שמורות | גרסה 1.0.0</div>
+        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">שיידט את בכמן ישראל בע"מ</div>
+    </footer>
+
+    <!-- Bottom Tab Bar -->
+    <nav class="bottom-tabs" id="appBottomTabs" style="display: none;">
+        <button class="tab-btn active" onclick="switchTab('ops', this)">
+            <span class="tab-icon">🚧</span>
+            <span>תפעול ונתיבים</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('counters', this)">
+            <span class="tab-icon">📊</span>
+            <span>נתוני חניון</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('companies', this)">
+            <span class="tab-icon">🏢</span>
+            <span>חברות ומנויים</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('search', this)">
+            <span class="tab-icon">🔍</span>
+            <span>חיפוש רכב</span>
+        </button>
+    </nav>
+
+    <script>
+        let authToken = sessionStorage.getItem('sb_ctrl_token') || '';
+        let activeProject = sessionStorage.getItem('sb_ctrl_project') || '';
+        let currentUser = null;
+        let allLanes = [];
+        let currentLaneFilter = 'all';
+        let selectedUnit = null;
+        let allCompanies = [];
+        let currentCompany = null;
+        let currentSubscribers = [];
+        let filterPresentOnly = false;
+        let pendingChosenProject = '';
+        let pendingChosenUserId = null;
+
+        function getHeaders() {
+            const h = { 'Content-Type': 'application/json' };
+            if (authToken) h['X-Control-Token'] = authToken;
+            if (activeProject) h['X-Control-Project'] = activeProject;
+            return h;
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedPhone = localStorage.getItem('sb_ctrl_last_phone') || '';
+            if (savedPhone) document.getElementById('loginPhoneInput').value = savedPhone;
+            if (authToken) {
+                enterMainApp();
+            }
+        });
+
+        async function sendControlOtp(chosenPkg = null) {
+            const phone = document.getElementById('loginPhoneInput').value.trim();
+            const initCode = document.getElementById('loginInitCodeInput').value.trim();
+            if (!phone && !initCode) {
+                alert('נא להזין מספר טלפון נייד');
+                return;
+            }
+            if (phone) localStorage.setItem('sb_ctrl_last_phone', phone);
+
+            const payload = { phone_number: phone, initial_code: initCode };
+            if (chosenPkg) {
+                payload.project_number = chosenPkg.project_number;
+                payload.user_id = chosenPkg.user_id;
+                pendingChosenProject = chosenPkg.project_number;
+                pendingChosenUserId = chosenPkg.user_id;
+            }
+
+            const btn = document.getElementById('btnSendOtp');
+            btn.disabled = true;
+            btn.textContent = '⏳ שולח קוד לוואטסאפ...';
+            try {
+                const r = await fetch('/api/parking-control/auth/send-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const d = await r.json();
+                if (d.success) {
+                    if (d.choose_parking && Array.isArray(d.parkings)) {
+                        const box = document.getElementById('multiParkingSelectBox');
+                        const list = document.getElementById('multiParkingButtons');
+                        list.innerHTML = '';
+                        d.parkings.forEach(p => {
+                            const b = document.createElement('button');
+                            b.className = 'btn-main';
+                            b.style.background = '#1e293b';
+                            b.style.border = '1px solid #3b82f6';
+                            b.textContent = `🅿️ ${p.parking_name} (#${p.project_number})`;
+                            b.onclick = () => sendControlOtp(p);
+                            list.appendChild(b);
+                        });
+                        box.style.display = 'block';
+                        return;
+                    }
+                    if (d.selected_project) pendingChosenProject = d.selected_project;
+                    if (d.selected_user_id) pendingChosenUserId = d.selected_user_id;
+                    document.getElementById('loginStepPhone').style.display = 'none';
+                    document.getElementById('loginStepOtp').style.display = 'block';
+                    if (d.otp_code) {
+                        window._detectedOtpCode = d.otp_code;
+                        const qBtn = document.getElementById('btnQuickOtp');
+                        qBtn.textContent = `✨ לחץ כאן לכניסה מהירה עם קוד הוואטסאפ: ${d.otp_code}`;
+                        qBtn.style.display = 'block';
+                        document.getElementById('loginOtpInput').value = d.otp_code;
+                    }
+                } else {
+                    alert(d.message || 'שגיאה בשליחת קוד');
+                }
+            } catch (e) {
+                alert('שגיאת תקשורת מול השרת');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '💬 שלח קוד כניסה בוואטסאפ';
+            }
+        }
+
+        function backToPhoneStep() {
+            document.getElementById('loginStepOtp').style.display = 'none';
+            document.getElementById('loginStepPhone').style.display = 'block';
+        }
+
+        async function verifyControlOtp(codeOverride) {
+            const phone = document.getElementById('loginPhoneInput').value.trim();
+            const initCode = document.getElementById('loginInitCodeInput').value.trim();
+            const code = String(codeOverride || document.getElementById('loginOtpInput').value).replace(/\D/g, '');
+            if (code.length !== 6) {
+                alert('נא להזין קוד בן 6 ספרות');
+                return;
+            }
+            try {
+                const r = await fetch('/api/parking-control/auth/verify-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phone_number: phone,
+                        initial_code: initCode,
+                        otp_code: code,
+                        project_number: pendingChosenProject || undefined,
+                        user_id: pendingChosenUserId || undefined
+                    })
+                });
+                const d = await r.json();
+                if (d.success) {
+                    authToken = d.auth_token;
+                    currentUser = d.user;
+                    activeProject = String(d.user.project_number || '');
+                    sessionStorage.setItem('sb_ctrl_token', authToken);
+                    sessionStorage.setItem('sb_ctrl_project', activeProject);
+                    populateParkingSwitcher(d.parkings_options || []);
+                    enterMainApp();
+                } else {
+                    alert(d.message || 'קוד אימות שגוי');
+                }
+            } catch (e) {
+                alert('שגיאת תקשורת באימות הקוד');
+            }
+        }
+
+        function populateParkingSwitcher(options) {
+            const sel = document.getElementById('hdrParkingSwitcher');
+            if (!Array.isArray(options) || options.length <= 1) {
+                sel.style.display = 'none';
+                return;
+            }
+            sel.innerHTML = '';
+            options.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.project_number;
+                opt.textContent = `🏢 ${p.parking_name} (#${p.project_number})`;
+                if (String(p.project_number) === String(activeProject)) opt.selected = true;
+                sel.appendChild(opt);
+            });
+            sel.style.display = 'inline-block';
+        }
+
+        async function switchActiveParking(newProj) {
+            if (!newProj) return;
+            try {
+                const r = await fetch('/api/parking-control/switch-parking', {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ project_number: newProj })
+                });
+                const d = await r.json();
+                if (d.success) {
+                    authToken = d.auth_token || authToken;
+                    activeProject = String(d.project_number);
+                    sessionStorage.setItem('sb_ctrl_token', authToken);
+                    sessionStorage.setItem('sb_ctrl_project', activeProject);
+                    closeInspector();
+                    await loadOverview(true);
+                }
+            } catch (e) {}
+        }
+
+        function logoutControlApp() {
+            sessionStorage.removeItem('sb_ctrl_token');
+            sessionStorage.removeItem('sb_ctrl_project');
+            authToken = '';
+            location.reload();
+        }
+
+        function enterMainApp() {
+            document.getElementById('loginView').style.display = 'none';
+            document.getElementById('appTopBar').style.display = 'flex';
+            document.getElementById('mainAppView').style.display = 'block';
+            document.getElementById('appBottomTabs').style.display = 'grid';
+            loadOverview(false);
+        }
+
+        let currentTab = 'ops';
+        function switchTab(tabName, btnEl) {
+            currentTab = tabName;
+            ['ops', 'counters', 'companies', 'search'].forEach(t => {
+                document.getElementById('tabSection_' + t).style.display = (t === tabName) ? 'block' : 'none';
+            });
+            document.querySelectorAll('.bottom-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+            refreshCurrentView();
+        }
+
+        function refreshCurrentView() {
+            if (currentTab === 'ops') loadOverview(true);
+            else if (currentTab === 'counters') loadOnlineCounters();
+            else if (currentTab === 'companies') {
+                if (currentCompany) openCompanySubscribers(currentCompany.id);
+                else loadCompanies();
+            }
+        }
+
+        async function loadOverview(force = false) {
+            try {
+                const r = await fetch(`/api/parking-control/overview?force=${force ? '1' : '0'}`, { headers: getHeaders() });
+                if (r.status === 401) {
+                    logoutControlApp();
+                    return;
+                }
+                const d = await r.json();
+                if (!d.success) return;
+
+                document.getElementById('hdrParkingName').textContent = d.parking_name || `חניון ${d.project_number}`;
+                if (d.user) {
+                    document.getElementById('hdrManagerName').textContent = `${d.user.username || 'מנהל'} | פרויקט #${d.project_number} | עודכן ${d.timestamp}`;
+                }
+                if (d.parkings_options) populateParkingSwitcher(d.parkings_options);
+
+                const connPill = document.getElementById('hdrConnStatus');
+                if (d.server_connected) {
+                    connPill.className = 'conn-pill';
+                    connPill.textContent = '🟢 בקר מחובר';
+                } else {
+                    connPill.className = 'conn-pill offline';
+                    connPill.textContent = '🔴 בקר לא זמין';
+                }
+
+                allLanes = d.lanes || [];
+                updateFilterCounts();
+                renderLanesGrid();
+                renderAuditLog(d.audit_events || []);
+                if (selectedUnit) openLaneInspector(selectedUnit, false);
+            } catch (e) {}
+        }
+
+        function updateFilterCounts() {
+            document.getElementById('cnt_all').textContent = allLanes.length;
+            document.getElementById('cnt_entry').textContent = allLanes.filter(x => x.direction === 'entry').length;
+            document.getElementById('cnt_exit').textContent = allLanes.filter(x => x.direction === 'exit').length;
+            document.getElementById('cnt_passage').textContent = allLanes.filter(x => x.direction === 'passage').length;
+            document.getElementById('cnt_locked').textContent = allLanes.filter(x => x.is_locked).length;
+        }
+
+        function setLaneFilter(flt, btn) {
+            currentLaneFilter = flt;
+            document.querySelectorAll('.filter-bar .filter-chip').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            renderLanesGrid();
+        }
+
+        function renderLanesGrid() {
+            const grid = document.getElementById('lanesGridContainer');
+            grid.innerHTML = '';
+            const filtered = allLanes.filter(l => {
+                if (currentLaneFilter === 'all') return true;
+                if (currentLaneFilter === 'locked') return l.is_locked;
+                return l.direction === currentLaneFilter;
+            });
+
+            filtered.forEach(l => {
+                const card = document.createElement('div');
+                card.className = `lane-card ${selectedUnit === l.number ? 'selected' : ''} ${l.is_locked ? 'locked' : ''}`;
+                card.onclick = (e) => {
+                    if (e.target.tagName === 'BUTTON') return;
+                    openLaneInspector(l.number, true);
+                };
+
+                const plateHtml = l.formatted_plate
+                    ? `<span class="plate-tag">${l.formatted_plate}</span>`
+                    : `<span style="font-size:12px;color:var(--text-muted);">ללא לוחית</span>`;
+
+                const lockBtnHtml = l.is_locked
+                    ? `<button class="q-btn unlock" onclick="quickLaneCommand('${l.number}','${l.cell_number}','${l.name}','UNLOCK_BARRIER')">🔓 שחרר</button>`
+                    : `<button class="q-btn lock" onclick="quickLaneCommand('${l.number}','${l.cell_number}','${l.name}','LOCK_BARRIER')">🔒 נעל</button>`;
+
+                card.innerHTML = `
+                    <div class="lane-top">
+                        <div>
+                            <span class="lane-badge ${l.direction}">${l.category_he} #${l.number}</span>
+                            <div class="lane-title">${l.name}</div>
+                            <div class="lane-fac">${l.facility_name} | ${l.device_state_label}</div>
+                        </div>
+                        <div style="text-align:left;">
+                            ${plateHtml}
+                        </div>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="q-btn open" onclick="quickLaneCommand('${l.number}','${l.cell_number}','${l.name}','OPEN')">🟢 פתח מחסום</button>
+                        <button class="q-btn close" onclick="quickLaneCommand('${l.number}','${l.cell_number}','${l.name}','CLOSE')">🔴 סגור</button>
+                    </div>
+                    <div class="quick-actions" style="margin-top:6px;">
+                        ${lockBtnHtml}
+                        <button class="q-btn" style="background:#334155;color:#e2e8f0;" onclick="openLaneInspector('${l.number}', true)">📷 תמונה ותיקון</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        async function quickLaneCommand(unit, cell, unitName, actionKey) {
+            try {
+                const r = await fetch('/api/parking-control/command', {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ unit, cell, unit_name: unitName, action: actionKey })
+                });
+                const d = await r.json();
+                alert(d.message || '');
+                loadOverview(false);
+            } catch (e) {
+                alert('שגיאה בשליחת פקודה לנתיב');
+            }
+        }
+
+        async function openLaneInspector(unitNum, scrollIfMobile = true) {
+            selectedUnit = String(unitNum);
+            document.getElementById('opsLayoutContainer').classList.add('has-selected');
+            const panel = document.getElementById('selectedLanePanel');
+            panel.style.display = 'block';
+            renderLanesGrid();
+
+            const laneObj = allLanes.find(x => String(x.number) === selectedUnit) || { number: selectedUnit, name: `נתיב ${selectedUnit}`, cell_number: '1', facility_number: '1', category_he: 'נתיב', direction: 'entry' };
+            document.getElementById('inspBadge').className = `lane-badge ${laneObj.direction}`;
+            document.getElementById('inspBadge').textContent = `${laneObj.category_he} #${laneObj.number}`;
+            document.getElementById('inspTitle').textContent = laneObj.name;
+
+            try {
+                const r = await fetch(`/api/parking-control/lane-detail/${selectedUnit}`, { headers: getHeaders() });
+                const d = await r.json();
+                if (!d.success) return;
+
+                document.getElementById('inspPlateOverlay').textContent = d.formatted_plate || 'אין זיהוי';
+                document.getElementById('inspCameraImg').src = d.image_url + `&auth_token=${encodeURIComponent(authToken)}`;
+                document.getElementById('fixPlateInput').value = d.plate || '';
+                window._currentInspectorCameraPlate = d.plate || '';
+
+                const v = d.vehicle || {};
+                const frame = document.getElementById('inspLprFrame');
+                frame.className = `lpr-frame frame-${v.status_color === 'green' ? 'green' : v.status_color === 'yellow' ? 'yellow' : 'red'}`;
+
+                let vHtml = `<div style="font-weight:800;font-size:15px;margin-bottom:4px;">${v.status_title || ''}</div>`;
+                if (v.is_subscriber) {
+                    vHtml += `<div>👤 מנוי: <strong>${v.subscriber_name}</strong> | 🏢 חברה: <strong>${v.company}</strong></div>`;
+                    if (v.capacity) vHtml += `<div>📊 תפוסת חברה: <strong>${v.capacity.present} / ${v.capacity.max}</strong></div>`;
+                    if (v.issues && v.issues.length) vHtml += `<div style="color:#fbbf24;font-weight:700;margin-top:4px;">⚠️ ${v.issues.join(' | ')}</div>`;
+                } else if (v.price_info && v.price_info.found) {
+                    vHtml += `<div>🕒 כניסה: <strong>${v.price_info.entry_time}</strong> (${v.price_info.duration || ''})</div>`;
+                    vHtml += `<div style="font-size:16px;font-weight:900;color:#f87171;margin-top:4px;">💰 לתשלום ביציאה: ${v.price_info.price_display}</div>`;
+                }
+                document.getElementById('inspVehicleCard').innerHTML = vHtml;
+
+                if (scrollIfMobile && window.innerWidth < 720) {
+                    panel.scrollIntoView({ behavior: 'smooth' });
+                }
+            } catch (e) {}
+        }
+
+        function closeInspector() {
+            selectedUnit = null;
+            document.getElementById('opsLayoutContainer').classList.remove('has-selected');
+            document.getElementById('selectedLanePanel').style.display = 'none';
+            renderLanesGrid();
+        }
+
+        async function executeInspectorCommand(actionKey) {
+            if (!selectedUnit) return;
+            const laneObj = allLanes.find(x => String(x.number) === selectedUnit) || { cell_number: '1', name: `נתיב ${selectedUnit}` };
+            await quickLaneCommand(selectedUnit, laneObj.cell_number, laneObj.name, actionKey);
+        }
+
+        async function submitLanePlateFix() {
+            if (!selectedUnit) return;
+            const entered = document.getElementById('fixPlateInput').value.trim();
+            if (!entered) {
+                alert('נא להקליד מספר רכב לתיקון');
+                return;
+            }
+            const laneObj = allLanes.find(x => String(x.number) === selectedUnit) || { cell_number: '1', facility_number: '1' };
+            try {
+                const r = await fetch('/api/parking-control/fix-plate', {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({
+                        unit: selectedUnit,
+                        cell: laneObj.cell_number,
+                        facility_number: laneObj.facility_number,
+                        camera_plate: window._currentInspectorCameraPlate || '',
+                        entered_plate: entered,
+                        manager_override: document.getElementById('chkManagerOverride').checked,
+                        force_open: document.getElementById('chkForceOpen').checked
+                    })
+                });
+                const d = await r.json();
+                alert(d.message || '');
+                openLaneInspector(selectedUnit, false);
+                loadOverview(false);
+            } catch (e) {
+                alert('שגיאה בביצוע תיקון רכב בנתיב');
+            }
+        }
+
+        function renderAuditLog(events) {
+            const box = document.getElementById('auditLogList');
+            if (!events.length) {
+                box.innerHTML = `<div style="color:var(--text-muted);">אין עדיין פעולות רשומות</div>`;
+                return;
+            }
+            box.innerHTML = events.map(ev => `
+                <div style="background:var(--bg-input);padding:8px 10px;border-radius:8px;border-right:3px solid ${ev.sb_command_ok ? '#10b981' : '#ef4444'};display:flex;justify-content:space-between;gap:8px;">
+                    <span><strong>${ev.unit_name || ev.unit_number}</strong>: ${ev.reason}</span>
+                    <span style="color:var(--text-muted);white-space:nowrap;">${(ev.created_at || '').slice(11, 19)}</span>
+                </div>
+            `).join('');
+        }
+
+        /* TAB 2: ONLINE COUNTERS */
+        async function loadOnlineCounters() {
+            try {
+                const r = await fetch('/api/parking-control/counters', { headers: getHeaders() });
+                const d = await r.json();
+                if (!d.success) return;
+
+                const s = d.summary || {};
+                document.getElementById('countersSummaryGrid').innerHTML = `
+                    <div class="stat-box"><div style="color:var(--text-muted);font-size:12.5px;">סה״כ מקומות בחניון</div><div class="stat-num">${s.total_max || 0}</div></div>
+                    <div class="stat-box"><div style="color:var(--text-muted);font-size:12.5px;">רכבים בחניון כעת</div><div class="stat-num" style="color:#60a5fa;">${s.total_present || 0}</div></div>
+                    <div class="stat-box"><div style="color:var(--text-muted);font-size:12.5px;">מקומות פנויים כעת</div><div class="stat-num" style="color:#34d399;">${s.total_free || 0}</div></div>
+                    <div class="stat-box"><div style="color:var(--text-muted);font-size:12.5px;">אחוז תפוסה</div><div class="stat-num" style="color:${(s.overall_percent||0)>=90?'#f87171':'#fbbf24'};">${s.overall_percent || 0}%</div></div>
+                `;
+
+                const facCont = document.getElementById('facilitiesCountersContainer');
+                facCont.innerHTML = (d.facilities || []).map(f => `
+                    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px;">
+                        <h3 style="font-size:17px;font-weight:800;margin-bottom:12px;">🅿️ ${f.facility_name} (אזור #${f.facility_id})</h3>
+                        <div class="lanes-grid">
+                            ${(f.standard_counters || []).concat(f.level_counters || []).map(c => `
+                                <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:11px;padding:13px;">
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                                        <strong>${c.name} (#${c.id})</strong>
+                                        <span class="lane-badge ${c.status_value === 0 ? 'entry' : 'exit'}">${c.status_label}</span>
+                                    </div>
+                                    <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:10px;">
+                                        <span>חונים: <strong>${c.present}</strong></span>
+                                        <span>פנוי: <strong style="color:#34d399;">${c.free}</strong></span>
+                                        <span>מקסימום: <strong>${c.max}</strong></span>
+                                    </div>
+                                    <div class="quick-actions">
+                                        <button class="q-btn open" onclick="updateCounterValue('${f.facility_id}','${c.id}','occupiedstate',0)">שלט: פנוי</button>
+                                        <button class="q-btn close" onclick="updateCounterValue('${f.facility_id}','${c.id}','occupiedstate',1)">שלט: מלא</button>
+                                        <button class="q-btn unlock" onclick="promptCounterFreeAdjust('${f.facility_id}','${c.id}','${c.name}')">± עדכן פנויים</button>
+                                        <button class="q-btn lock" onclick="promptCounterMaxAdjust('${f.facility_id}','${c.id}','${c.name}',${c.max})">קבע מקסימום</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {}
+        }
+
+        async function updateCounterValue(facilityId, counterId, operation, value) {
+            try {
+                const r = await fetch('/api/parking-control/counters/update', {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ facility_id: facilityId, counter_id: counterId, operation, value })
+                });
+                const d = await r.json();
+                alert(d.message || '');
+                loadOnlineCounters();
+            } catch (e) {
+                alert('שגיאה בעדכון מונה');
+            }
+        }
+
+        function promptCounterFreeAdjust(facId, cntId, name) {
+            const val = prompt(`הזן כמות מקומות להוספה (למשל 5) או להפחתה (למשל -5) במונה "${name}":`, "1");
+            if (!val) return;
+            const num = parseInt(val, 10);
+            if (isNaN(num) || num === 0) return;
+            if (num > 0) updateCounterValue(facId, cntId, 'increasefreeplaces', num);
+            else updateCounterValue(facId, cntId, 'decreasefreeplaces', Math.abs(num));
+        }
+
+        function promptCounterMaxAdjust(facId, cntId, name, curMax) {
+            const val = prompt(`הזן כמות מקומות מקסימלית חדשה עבור "${name}":`, String(curMax));
+            if (val === null) return;
+            const num = parseInt(val, 10);
+            if (isNaN(num) || num < 0) return;
+            updateCounterValue(facId, cntId, 'maxplaces', num);
+        }
+
+        /* TAB 3: COMPANIES & SUBSCRIBERS */
+        async function loadCompanies() {
+            try {
+                const r = await fetch('/api/parking-control/companies', { headers: getHeaders() });
+                const d = await r.json();
+                if (d.success) {
+                    allCompanies = d.companies || [];
+                    renderCompaniesList();
+                }
+            } catch (e) {}
+        }
+
+        function renderCompaniesList() {
+            const q = (document.getElementById('companySearchInput').value || '').trim().toLowerCase();
+            const grid = document.getElementById('companiesGrid');
+            const filtered = allCompanies.filter(c => !q || c.name.toLowerCase().includes(q) || String(c.id).includes(q));
+            grid.innerHTML = filtered.map(c => `
+                <div class="lane-card" onclick="openCompanySubscribers('${c.id}')">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <span class="lane-badge ${c.is_blocked_range ? 'exit' : 'other'}">חברה #${c.id}</span>
+                        <span style="font-size:12px;color:#60a5fa;">לחץ לצפייה במנויים ⬅️</span>
+                    </div>
+                    <div style="font-size:16.5px;font-weight:800;margin-top:8px;">${c.name}</div>
+                </div>
+            `).join('');
+        }
+
+        async function openCompanySubscribers(contractId) {
+            document.getElementById('companiesListView').style.display = 'none';
+            document.getElementById('companySubscribersView').style.display = 'block';
+            document.getElementById('subViewCompanyTitle').textContent = `טוען מנויי חברה #${contractId}...`;
+            try {
+                const r = await fetch(`/api/parking-control/companies/${contractId}/subscribers`, { headers: getHeaders() });
+                const d = await r.json();
+                if (!d.success) return;
+                currentCompany = d.company;
+                currentSubscribers = d.subscribers || [];
+                document.getElementById('subViewCompanyTitle').textContent = `🏢 ${currentCompany.name} (חברה #${currentCompany.id})`;
+                document.getElementById('subViewCompanyStats').textContent = `חונים כעת בחניון: ${currentCompany.present_counter} מתוך ${currentCompany.max_counter} מקומות מוקצים | סה״כ מנויים רשומים: ${currentSubscribers.length}`;
+                document.getElementById('editCompanyMaxInput').value = currentCompany.max_counter;
+                renderSubscribersList();
+            } catch (e) {}
+        }
+
+        function backToCompaniesList() {
+            currentCompany = null;
+            document.getElementById('companySubscribersView').style.display = 'none';
+            document.getElementById('companiesListView').style.display = 'block';
+        }
+
+        function togglePresentSubscribersFilter() {
+            filterPresentOnly = !filterPresentOnly;
+            document.getElementById('btnFilterPresentOnly').classList.toggle('active', filterPresentOnly);
+            renderSubscribersList();
+        }
+
+        function renderSubscribersList() {
+            const q = (document.getElementById('subscriberSearchInput').value || '').trim().toLowerCase();
+            const grid = document.getElementById('subscribersGrid');
+            const filtered = currentSubscribers.filter(s => {
+                if (filterPresentOnly && !s.present) return false;
+                if (!q) return true;
+                return s.full_name.toLowerCase().includes(q) || s.lpn1.includes(q) || s.lpn2.includes(q) || s.lpn3.includes(q) || String(s.id).includes(q);
+            });
+
+            grid.innerHTML = filtered.map(s => `
+                <div class="lane-card" onclick='openEditSubscriberModal(${JSON.stringify(s).replace(/'/g, "&#39;")})'>
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <span class="lane-badge ${s.present ? 'entry' : 'other'}">${s.present ? '🟢 נמצא בחניון' : '⚪ מחוץ לחניון'}</span>
+                        <span style="font-size:12px;color:var(--text-muted);">מנוי #${s.id}</span>
+                    </div>
+                    <div style="font-size:16px;font-weight:800;margin:8px 0;">${s.full_name}</div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        ${s.lpn1 ? `<span class="plate-tag">${s.lpn1}</span>` : ''}
+                        ${s.lpn2 ? `<span class="plate-tag">${s.lpn2}</span>` : ''}
+                        ${s.lpn3 ? `<span class="plate-tag">${s.lpn3}</span>` : ''}
+                    </div>
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">תוקף: ${s.valid_until || 'ללא הגבלה'} ${s.match_code ? `| חניה: ${s.match_code}` : ''}</div>
+                </div>
+            `).join('');
+        }
+
+        function openEditSubscriberModal(sub) {
+            document.getElementById('editSubModalTitle').textContent = `עריכת מנוי #${sub.id} (${sub.full_name})`;
+            document.getElementById('editSubContractId').value = sub.contract_id;
+            document.getElementById('editSubId').value = sub.id;
+            document.getElementById('editSubFirstName').value = sub.first_name || '';
+            document.getElementById('editSubLastName').value = sub.last_name || '';
+            document.getElementById('editSubLpn1').value = sub.lpn1 || '';
+            document.getElementById('editSubLpn2').value = sub.lpn2 || '';
+            document.getElementById('editSubLpn3').value = sub.lpn3 || '';
+            document.getElementById('editSubValidFrom').value = sub.valid_from || '';
+            document.getElementById('editSubValidUntil').value = sub.valid_until || '';
+            document.getElementById('editSubMatchCode').value = sub.match_code || '';
+            document.getElementById('editSubMemo').value = sub.memo || '';
+            document.getElementById('editSubResetPresence').checked = false;
+            document.getElementById('editSubscriberModal').classList.add('open');
+        }
+
+        function closeEditSubscriberModal() {
+            document.getElementById('editSubscriberModal').classList.remove('open');
+        }
+
+        async function saveSubscriberUpdates() {
+            const cid = document.getElementById('editSubContractId').value;
+            const sid = document.getElementById('editSubId').value;
+            const resetPres = document.getElementById('editSubResetPresence').checked;
+            const payload = {
+                contract_id: cid,
+                subscriber_id: sid,
+                first_name: document.getElementById('editSubFirstName').value.trim(),
+                last_name: document.getElementById('editSubLastName').value.trim(),
+                lpn1: document.getElementById('editSubLpn1').value.trim(),
+                lpn2: document.getElementById('editSubLpn2').value.trim(),
+                lpn3: document.getElementById('editSubLpn3').value.trim(),
+                valid_from: document.getElementById('editSubValidFrom').value,
+                valid_until: document.getElementById('editSubValidUntil').value,
+                match_code: document.getElementById('editSubMatchCode').value.trim(),
+                memo: document.getElementById('editSubMemo').value.trim()
+            };
+            if (resetPres) payload.present = false;
+
+            try {
+                const r = await fetch('/api/parking-control/subscriber/update', {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                const d = await r.json();
+                alert(d.message || '');
+                if (d.success) {
+                    closeEditSubscriberModal();
+                    openCompanySubscribers(cid);
+                }
+            } catch (e) {
+                alert('שגיאה בעדכון מנוי');
+            }
+        }
+
+        async function saveCompanyMaxQuota() {
+            if (!currentCompany) return;
+            const newMax = parseInt(document.getElementById('editCompanyMaxInput').value, 10);
+            if (isNaN(newMax) || newMax < 0) return;
+            try {
+                const r = await fetch('/api/parking-control/company/update-quota', {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ contract_id: currentCompany.id, max_counter: newMax })
+                });
+                const d = await r.json();
+                alert(d.message || '');
+                if (d.success) openCompanySubscribers(currentCompany.id);
+            } catch (e) {}
+        }
+
+        /* TAB 4: PATROL VEHICLE SEARCH */
+        async function runPatrolVehicleSearch() {
+            const plate = document.getElementById('patrolPlateInput').value.trim();
+            if (!plate) return;
+            const box = document.getElementById('patrolSearchResultBox');
+            box.innerHTML = `<div style="text-align:center;padding:20px;">⏳ בודק רכב במערכת המנויים ובמנוע כרטיסי החניה...</div>`;
+            try {
+                const r = await fetch('/api/parking-control/search-vehicle', {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ plate })
+                });
+                const d = await r.json();
+                if (!d.success) {
+                    box.innerHTML = `<div style="background:var(--bg-card);padding:16px;border-radius:12px;color:#f87171;">${d.message}</div>`;
+                    return;
+                }
+                const v = d.vehicle || {};
+                const tp = d.ticket_payment || {};
+
+                let html = `<div style="background:var(--bg-card);border:2px solid ${d.is_subscriber ? '#10b981' : (d.has_active_ticket ? '#f59e0b' : '#ef4444')};border-radius:16px;padding:18px;">`;
+                html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                    <span class="plate-tag" style="font-size:20px;padding:6px 14px;">${d.formatted_plate}</span>
+                    <span class="lane-badge ${d.is_subscriber ? 'entry' : 'exit'}" style="font-size:14px;padding:6px 12px;">${d.is_subscriber ? '✅ רכב מנוי' : '🎫 רכב מזדמן'}</span>
+                </div>`;
+
+                if (d.is_subscriber) {
+                    html += `
+                        <div style="display:grid;gap:8px;font-size:15px;">
+                            <div>👤 שם המנוי: <strong>${v.subscriber_name}</strong> (#${v.subscriber_id})</div>
+                            <div>🏢 חברה: <strong>${v.company}</strong></div>
+                            <div>📍 סטטוס נוכחות: <strong style="color:${v.present ? '#34d399' : '#94a3b8'};">${v.present ? '🟢 נמצא כעת בחניון' : '⚪ מחוץ לחניון'}</strong></div>
+                            ${v.capacity ? `<div>📊 מכסת חברה: <strong>${v.capacity.present} / ${v.capacity.max} חונים</strong></div>` : ''}
+                            <div>📅 תוקף מנוי: <strong>${v.valid_until || 'ללא הגבלה'}</strong></div>
+                            ${v.last_tx ? `<div>🕒 תנועה אחרונה: <strong>${v.last_tx}</strong> (עמדה ${v.last_tx_device || '-'})</div>` : ''}
+                            ${v.issues && v.issues.length ? `<div style="background:rgba(245,158,11,0.15);color:#fbbf24;padding:10px;border-radius:8px;font-weight:700;">⚠️ ${v.issues.join(' | ')}</div>` : ''}
+                        </div>
+                    `;
+                }
+
+                if (tp && tp.found) {
+                    html += `
+                        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);display:grid;gap:8px;font-size:15px;">
+                            <div style="font-weight:800;color:#93c5fd;">🎫 נתוני כרטיס חניה פעיל (מזדמן):</div>
+                            ${!tp.is_exact_match ? `<div style="color:#fbbf24;font-size:13px;">ℹ️ נמצא בהתאמה מקורבת ללוחית שנקראה בכניסה: <strong>${tp.matched_plate}</strong></div>` : ''}
+                            <div>🕒 שעת כניסה לחניון: <strong>${tp.entry_time}</strong></div>
+                            <div>⏱️ משך שהייה בחניון: <strong>${tp.duration || '-'}</strong></div>
+                            <div>🚪 נתיב כניסה: <strong>עמדה ${tp.entry_device || '-'}</strong></div>
+                            <div style="background:rgba(239,68,68,0.14);border:1px solid rgba(239,68,68,0.35);padding:12px;border-radius:10px;margin-top:6px;display:flex;justify-content:space-between;align-items:center;">
+                                <span style="font-weight:700;">💰 סכום לתשלום כעת:</span>
+                                <span style="font-size:24px;font-weight:900;color:${tp.paid ? '#34d399' : '#f87171'};">${tp.price_display} ${tp.paid ? '(משולם / חינם)' : '(חייב בתשלום)'}</span>
+                            </div>
+                        </div>
+                    `;
+                } else if (!d.is_subscriber) {
+                    html += `<div style="margin-top:10px;color:var(--text-muted);font-size:14.5px;">לא נמצא כרטיס כניסה פתוח עבור רכב זה בחניון.</div>`;
+                    if (tp && tp.similar_plates && tp.similar_plates.length) {
+                        html += `<div style="margin-top:10px;font-size:13px;color:#fbbf24;">לוחיות דומות שנמצאו בחניון: ${tp.similar_plates.map(sp => `<button class="icon-btn" style="margin:2px;" onclick="document.getElementById('patrolPlateInput').value='${sp}';runPatrolVehicleSearch();">${sp}</button>`).join(' ')}</div>`;
+                    }
+                }
+
+                html += `</div>`;
+                box.innerHTML = html;
+            } catch (e) {
+                box.innerHTML = `<div style="color:#f87171;">שגיאה בחיפוש הרכב</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

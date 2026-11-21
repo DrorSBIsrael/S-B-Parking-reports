@@ -254,6 +254,11 @@
                         <label for="email">כתובת אימייל *</label>
                         <input type="email" id="email" name="email" required>
                     </div>
+
+                    <div class="form-group">
+                        <label for="phoneNumber">מספר טלפון נייד (לכניסה מהירה בוואטסאפ לאפליקציה)</label>
+                        <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="050-1234567">
+                    </div>
                     
                     <div class="form-group">
                         <label for="projectNumber">מספר פרויקט</label>
@@ -265,6 +270,7 @@
                         <select id="codeType" name="codeType" onchange="document.getElementById('standaloneModeGroup').style.display = (this.value === 'tenant_manager') ? 'block' : 'none';">
                             <option value="dashboard">Dashboard</option>
                             <option value="parking_manager">Parking Manager</option>
+                            <option value="parking_control_manager">Parking Control Manager (אפליקציית תפעול ובקרת חניון)</option>
                             <option value="tenant_manager">Tenant Manager (מנהל מתחם דיירים)</option>
                             <option value="master">Master</option>
                         </select>
@@ -423,6 +429,7 @@
 	const userData = {
 	    username: formData.get('username'),
 	    email: formData.get('email'),
+	    phone_number: formData.get('phoneNumber') || '',
 	    project_number: formData.get('projectNumber') || 0,
  	   code_type: formData.get('codeType'),
  	   role: formData.get('role'),
