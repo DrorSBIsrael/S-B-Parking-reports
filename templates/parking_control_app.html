@@ -653,7 +653,8 @@
 
         <!-- TAB 2: ONLINE PARKING DATA, COUNTERS & FLEXREP DAILY/HISTORICAL REPORTS -->
         <section id="tabSection_counters" style="display: none;">
-            <div class="counters-summary-grid" id="countersSummaryGrid"></div>
+            <div id="facilitiesCountersContainer" style="display: grid; gap: 14px; margin-bottom: 18px;"></div>
+            <div class="counters-summary-grid" id="countersSummaryGrid" style="display: none;"></div>
 
             <!-- DAILY & HISTORICAL REVENUE & TRAFFIC REPORT (FLEXREP / UDB) -->
             <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 18px;">
@@ -1388,32 +1389,35 @@
                 `;
 
                 const facCont = document.getElementById('facilitiesCountersContainer');
-                facCont.innerHTML = (d.facilities || []).map(f => `
-                    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px;">
-                        <h3 style="font-size:17px;font-weight:800;margin-bottom:12px;">🅿️ ${f.facility_name} (אזור #${f.facility_id})</h3>
-                        <div class="lanes-grid">
-                            ${(f.standard_counters || []).concat(f.level_counters || []).map(c => `
-                                <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:11px;padding:13px;">
-                                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-                                        <strong>${c.name} (#${c.id})</strong>
-                                        <span class="lane-badge ${c.status_value === 0 ? 'entry' : 'exit'}">${c.status_label}</span>
-                                    </div>
-                                    <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:10px;">
-                                        <span>חונים: <strong>${c.present}</strong></span>
-                                        <span>פנוי: <strong style="color:#34d399;">${c.free}</strong></span>
-                                        <span>מקסימום: <strong>${c.max}</strong></span>
-                                    </div>
+                facCont.innerHTML = (d.facilities || []).map(f => {
+                    const allC = (f.standard_counters || []).concat(f.level_counters || []);
+                    const c1 = allC.find(c => String(c.id) === '1');
+                    const c2 = allC.find(c => String(c.id) === '2');
+                    const p1 = c1 ? (c1.present || 0) : 0;
+                    const p2 = c2 ? (c2.present || 0) : 0;
+                    return `
+                    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:14px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                            <h3 style="font-size:16px;font-weight:800;margin:0;">🅿️ ${f.facility_name}</h3>
+                            <span class="conn-pill" style="color:#38bdf8;border-color:#38bdf8;background:rgba(56,189,248,0.14);">סה״כ נוכחים: ${p1 + p2}</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            ${[c2, c1].filter(Boolean).map(c => `
+                                <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:11px;padding:12px;text-align:center;">
+                                    <div style="font-size:13px;color:var(--text-muted);font-weight:700;">${String(c.id)==='2'?'שמורים (מנויים)':'לא שמורים (מזדמנים)'}</div>
+                                    <div style="font-size:26px;font-weight:900;color:${String(c.id)==='2'?'#38bdf8':'#34d399'};margin:4px 0;">${c.present}</div>
+                                    <div style="margin-bottom:8px;"><span class="lane-badge ${c.status_value === 0 ? 'entry' : 'exit'}">${c.status_label}</span></div>
                                     <div class="quick-actions">
-                                        <button class="q-btn open" onclick="updateCounterValue('${f.facility_id}','${c.id}','occupiedstate',0)">שלט: פנוי</button>
-                                        <button class="q-btn close" onclick="updateCounterValue('${f.facility_id}','${c.id}','occupiedstate',1)">שלט: מלא</button>
-                                        <button class="q-btn unlock" onclick="promptCounterFreeAdjust('${f.facility_id}','${c.id}','${c.name}')">± עדכן פנויים</button>
-                                        <button class="q-btn lock" onclick="promptCounterMaxAdjust('${f.facility_id}','${c.id}','${c.name}',${c.max})">קבע מקסימום</button>
+                                        <button class="q-btn open" onclick="updateCounterValue('${f.facility_id}','${c.id}','occupiedstate',0)">🟢 פנוי</button>
+                                        <button class="q-btn close" onclick="updateCounterValue('${f.facility_id}','${c.id}','occupiedstate',1)">🔴 מלא</button>
+                                        <button class="q-btn unlock" onclick="updateCounterValue('${f.facility_id}','${c.id}','increasefreeplaces',1)">+1</button>
+                                        <button class="q-btn lock" onclick="updateCounterValue('${f.facility_id}','${c.id}','decreasefreeplaces',1)">-1</button>
                                     </div>
                                 </div>
                             `).join('')}
                         </div>
                     </div>
-                `).join('');
+                `}).join('');
             } catch (e) {}
         }
 
