@@ -21,6 +21,22 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 parking_control_bp = Blueprint('parking_control_bp', __name__)
 
+@parking_control_bp.before_request
+def _handle_control_cors_preflight():
+    if request.method == 'OPTIONS':
+        resp = Response('', status=200)
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        resp.headers['Access-Control-Allow-Headers'] = 'Content-Type, X-Control-Token, X-Control-Project, Authorization'
+        return resp
+
+@parking_control_bp.after_request
+def _add_control_cors_headers(resp):
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    resp.headers['Access-Control-Allow-Headers'] = 'Content-Type, X-Control-Token, X-Control-Project, Authorization'
+    return resp
+
 # ============================================================================
 # 0. HELPERS & HTTP SESSION POOLING
 # ============================================================================
@@ -118,6 +134,33 @@ def _init_control_sqlite():
                 updated_at TEXT
             )
         """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS control_local_parkings (
+                project_number TEXT PRIMARY KEY,
+                parking_name TEXT,
+                ip_address TEXT,
+                port INTEGER DEFAULT 8443,
+                updated_at TEXT
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS control_local_users (
+                user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT,
+                phone_number TEXT,
+                verification_code TEXT,
+                project_number TEXT,
+                parking_name TEXT,
+                code_type TEXT DEFAULT 'parking_control_manager',
+                company_list TEXT DEFAULT 'ALL',
+                role TEXT DEFAULT 'parking_control_manager'
+            )
+        """)
+        # Seed default local parking 3050 (10.35.122.200) for local server operation (like tenant_system)
+        cur.execute("""
+            INSERT OR IGNORE INTO control_local_parkings (project_number, parking_name, ip_address, port, updated_at)
+            VALUES ('3050', 'מבנה תוצרת הארץ (10.35.122.200)', '10.35.122.200', 8443, ?)
+        """, (get_il_now().isoformat(),))
         conn.commit()
         conn.close()
 
@@ -223,37 +266,77 @@ def _verify_control_token(token_str):
 
 def _find_control_users_by_phone_or_code(phone_raw=None, initial_code=None):
     """
-    מחפש משתמשי מנהל חניון / בקרת חניון בטבלת user_parkings לפי מספר טלפון או קוד זיהוי ראשוני.
+    מחפש משתמשי מנהל חניון / בקרת חניון בטבלת user_parkings (ב-Supabase) ובגיבוי המקומי (control_local_users ב-SQLite, כמו ב-tenant_system).
     """
     sb = _get_supabase()
-    if not sb:
-        return []
     clean_p = clean_il_phone(phone_raw) if phone_raw else ""
-    local_p = ('0' + clean_p[3:]) if (clean_p.startswith('972') and len(clean_p) == 12) else clean_p
 
     matched = []
-    try:
-        res = sb.table('user_parkings').select('*').execute()
-        all_users = res.data or []
-        for u in all_users:
-            ct = str(u.get('code_type') or '').strip().lower().replace('-', '_').replace(' ', '_')
-            role = str(u.get('role') or '').strip().lower()
-            is_allowed_type = (ct in ALLOWED_CONTROL_CODE_TYPES) or (role in ('admin', 'master', 'mobile_controller', 'parking_control_manager'))
-            if not is_allowed_type:
-                continue
+    if sb:
+        try:
+            res = sb.table('user_parkings').select('*').execute()
+            all_users = res.data or []
+            for u in all_users:
+                ct = str(u.get('code_type') or '').strip().lower().replace('-', '_').replace(' ', '_')
+                role = str(u.get('role') or '').strip().lower()
+                is_allowed_type = (ct in ALLOWED_CONTROL_CODE_TYPES) or (role in ('admin', 'master', 'mobile_controller', 'parking_control_manager'))
+                if not is_allowed_type:
+                    continue
 
-            u_phone_clean = clean_il_phone(u.get('phone_number') or '')
-            u_ver_code = str(u.get('verification_code') or '').strip()
-            u_username = str(u.get('username') or '').strip()
+                u_phone_clean = clean_il_phone(u.get('phone_number') or '')
+                u_ver_code = str(u.get('verification_code') or '').strip()
+                u_username = str(u.get('username') or '').strip()
 
-            if clean_p and u_phone_clean == clean_p:
-                matched.append(u)
-            elif initial_code and len(str(initial_code).strip()) >= 4:
-                ic = str(initial_code).strip()
-                if u_ver_code == ic or u_username.lower() == ic.lower():
+                if clean_p and u_phone_clean == clean_p:
                     matched.append(u)
-    except Exception as e:
-        print(f"Error searching control users: {e}")
+                elif initial_code and len(str(initial_code).strip()) >= 4:
+                    ic = str(initial_code).strip()
+                    if u_ver_code == ic or u_username.lower() == ic.lower():
+                        matched.append(u)
+        except Exception as e:
+            print(f"Error searching control users in Supabase: {e}")
+
+    # Check local SQLite mirror/fallback (like tenant_system.py)
+    if not matched:
+        try:
+            with _db_lock:
+                conn = sqlite3.connect(SQLITE_CONTROL_PATH)
+                conn.row_factory = sqlite3.Row
+                local_users = [dict(r) for r in conn.execute("SELECT * FROM control_local_users").fetchall()]
+                for u in local_users:
+                    u_phone_clean = clean_il_phone(u.get('phone_number') or '')
+                    u_ver_code = str(u.get('verification_code') or '').strip()
+                    u_username = str(u.get('username') or '').strip()
+                    if clean_p and u_phone_clean == clean_p:
+                        matched.append(u)
+                    elif initial_code and len(str(initial_code).strip()) >= 3:
+                        ic = str(initial_code).strip()
+                        if u_ver_code == ic or u_username.lower() == ic.lower():
+                            matched.append(u)
+                # If running locally (sb is None) and no user exists yet for this phone, auto-register for local testing against 3050 (10.35.122.200)
+                if not matched and not sb and (clean_p or initial_code):
+                    p_to_save = clean_p or "972500000000"
+                    cur = conn.cursor()
+                    cur.execute("""
+                        INSERT INTO control_local_users (username, phone_number, verification_code, project_number, parking_name, code_type, company_list, role)
+                        VALUES (?, ?, ?, '3050', 'מבנה תוצרת הארץ (10.35.122.200)', 'parking_control_manager', 'ALL', 'parking_control_manager')
+                    """, (f"מנהל חניון ({display_il_phone(p_to_save)})", p_to_save, str(initial_code or '3050')))
+                    new_uid = cur.lastrowid
+                    conn.commit()
+                    matched.append({
+                        'user_id': new_uid,
+                        'username': f"מנהל חניון ({display_il_phone(p_to_save)})",
+                        'phone_number': p_to_save,
+                        'verification_code': str(initial_code or '3050'),
+                        'project_number': '3050',
+                        'parking_name': 'מבנה תוצרת הארץ (10.35.122.200)',
+                        'code_type': 'parking_control_manager',
+                        'company_list': 'ALL',
+                        'role': 'parking_control_manager'
+                    })
+                conn.close()
+        except Exception as e:
+            print(f"Error searching local control users: {e}")
 
     # Prioritize parking_control_manager first
     matched.sort(key=lambda x: 0 if str(x.get('code_type') or '').strip().lower() == 'parking_control_manager' else 1)
@@ -261,9 +344,9 @@ def _find_control_users_by_phone_or_code(phone_raw=None, initial_code=None):
 
 def _get_authenticated_control_user():
     """
-    מאמת את מנהל החניון מתוך Header (X-Control-Token) או מתוך Flask Session.
+    מאמת את מנהל החניון מתוך Header (X-Control-Token) או מתוך Query (auth_token / token) או מתוך Flask Session.
     """
-    hdr_token = request.headers.get('X-Control-Token') or request.args.get('auth_token')
+    hdr_token = request.headers.get('X-Control-Token') or request.args.get('auth_token') or request.args.get('token')
     req_proj = request.headers.get('X-Control-Project') or request.args.get('project_number')
     sb = _get_supabase()
 
@@ -377,12 +460,42 @@ def _get_available_parkings_for_user(user_obj, all_phone_users=None):
 
     for p_num, u_meta in allowed_projects_map.items():
         if p_num not in seen_projs:
+            seen_projs.add(p_num)
+            p_name = u_meta.get('parking_name') or f'חניון {p_num}'
             parkings_list.append({
                 'user_id': u_meta.get('user_id'),
                 'project_number': p_num,
-                'parking_name': u_meta.get('parking_name') or f'חניון {p_num}',
+                'parking_name': p_name,
+                'project_name': p_name,
                 'company_list': u_meta.get('company_list') or 'ALL'
             })
+
+    # Include local SQLite parkings if matching or if parkings_list is empty
+    try:
+        with _db_lock:
+            conn = sqlite3.connect(SQLITE_CONTROL_PATH)
+            conn.row_factory = sqlite3.Row
+            for lp in conn.execute("SELECT * FROM control_local_parkings").fetchall():
+                p_num = str(lp['project_number'])
+                if p_num not in seen_projs and (has_global_access or p_num in allowed_projects_map or not parkings_list):
+                    seen_projs.add(p_num)
+                    p_name = lp['parking_name'] or f'חניון {p_num}'
+                    parkings_list.append({
+                        'user_id': user_obj.get('user_id') if user_obj else 1,
+                        'project_number': p_num,
+                        'parking_name': p_name,
+                        'project_name': p_name,
+                        'company_list': 'ALL',
+                        'ip_address': lp['ip_address'],
+                        'port': lp['port'] or 8443
+                    })
+            conn.close()
+    except Exception:
+        pass
+
+    for item in parkings_list:
+        if 'project_name' not in item:
+            item['project_name'] = item.get('parking_name') or f"חניון {item.get('project_number')}"
 
     return parkings_list
 
@@ -449,6 +562,28 @@ def _get_parking_conn(project_number):
                 return d
         except Exception:
             pass
+
+    # Fallback to local SQLite control_local_parkings (like tenant_system.py)
+    try:
+        with _db_lock:
+            conn = sqlite3.connect(SQLITE_CONTROL_PATH)
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM control_local_parkings WHERE project_number = ?", (p_key,)).fetchone()
+            if not row:
+                row = conn.execute("SELECT * FROM control_local_parkings LIMIT 1").fetchone()
+            conn.close()
+            if row and row['ip_address']:
+                d = {
+                    'ip_address': row['ip_address'],
+                    'port': int(row['port'] or 8443),
+                    'name': row['parking_name'] or f'חניון {p_key}',
+                    'ts': now_ts
+                }
+                with _cache_lock:
+                    _conn_cache[p_key] = d
+                return d
+    except Exception:
+        pass
     return None
 
 def make_sb_request(method, ip, port, endpoint, user="2022", password="2022", params=None, data=None, headers=None, timeout=5):
@@ -725,8 +860,17 @@ def get_parking_geometry_and_states(project_number, ip, port, force_refresh=Fals
                 fmt_plate = f"{raw_plate[:3]}-{raw_plate[3:5]}-{raw_plate[5:]}"
         src_file = str(lpr_unit.get("source_file") or "").strip()
 
+        cat_upper = str(d.get("direction") or "entry").upper()
+        cat_he_map = {"ENTRY": "כניסה", "EXIT": "יציאה", "PASSAGE": "מעבר"}
         item = dict(d)
         item.update({
+            "unit": u_num,
+            "category": cat_upper,
+            "category_he": cat_he_map.get(cat_upper, d.get("type_label_he", "נתיב")),
+            "status_summary_he": "נעול / חסום" if decoded_single["is_locked"] else ("פתוח" if (decoded_single["is_barrier_open"] or barrier_raised_dyn) else st_label),
+            "barrier_locked": decoded_single["is_locked"],
+            "device_blocked": decoded_single["is_out_of_order"] or (st_code in (6, 8)),
+            "always_open": decoded_single["is_barrier_open"],
             "device_state_code": st_code,
             "device_state_label": "נעול / חסום" if decoded_single["is_locked"] else st_label,
             "device_state_color": "orange" if decoded_single["is_locked"] else st_color,
@@ -1408,8 +1552,19 @@ def fetch_online_parking_counters(project_number, ip, port):
             f_xml = re.sub(r'\sxmlns="[^"]+"', '', fac_res["data"].decode("utf-8", errors="replace"))
             f_root = ET.fromstring(f_xml)
             for f_el in f_root.findall(".//facility"):
-                f_id = (f_el.findtext("id") or f_el.findtext("number") or f_el.findtext("facility-no") or "").strip()
-                f_name = (f_el.findtext("name") or f_el.findtext("text") or f"אזור {f_id}").strip()
+                f_id = (
+                    f_el.findtext("facilityid")
+                    or f_el.findtext("id")
+                    or f_el.findtext("number")
+                    or f_el.findtext("facility-no")
+                    or ""
+                ).strip()
+                f_name = (
+                    f_el.findtext("facilityname")
+                    or f_el.findtext("name")
+                    or f_el.findtext("text")
+                    or f"אזור {f_id}"
+                ).strip()
                 if f_id:
                     facilities.append({"id": f_id, "name": f_name})
             if not facilities:
@@ -1500,6 +1655,7 @@ def fetch_online_parking_counters(project_number, ip, port):
                         "facility_id": fid,
                         "type": 0,
                         "name": COUNTER_ID_HE.get(cid, raw_txt or f"מונה {cid}"),
+                        "display_name_he": COUNTER_ID_HE.get(cid, raw_txt or f"מונה {cid}"),
                         "raw_text": raw_txt,
                         "free": free_v,
                         "present": pres_v,
@@ -1507,7 +1663,9 @@ def fetch_online_parking_counters(project_number, ip, port):
                         "percent": pct_v,
                         "status_value": st_val,
                         "status_label": st_lbl,
-                        "status_color": st_clr
+                        "status_color": st_clr,
+                        "occupied": 1 if st_val in (1, 2, 3) else 0,
+                        "occupied_he": st_lbl
                     })
 
                 for lc in c_root.findall(".//level-counter"):
@@ -1525,13 +1683,16 @@ def fetch_online_parking_counters(project_number, ip, port):
                         "facility_id": fid,
                         "type": 1,
                         "name": raw_txt,
+                        "display_name_he": raw_txt,
                         "free": free_v,
                         "present": pres_v,
                         "max": max_v,
                         "percent": pct_v,
                         "status_value": st_val,
                         "status_label": st_lbl,
-                        "status_color": st_clr
+                        "status_color": st_clr,
+                        "occupied": 1 if st_val in (1, 2, 3) else 0,
+                        "occupied_he": st_lbl
                     })
 
                 for sumc in c_root.findall(".//sum-counter"):
@@ -1553,6 +1714,7 @@ def fetch_online_parking_counters(project_number, ip, port):
         return {
             "facility_id": fid,
             "facility_name": fac["name"],
+            "counters": standard_counters + level_counters,
             "standard_counters": standard_counters,
             "level_counters": level_counters,
             "sum_counters": sum_counters
@@ -1568,25 +1730,35 @@ def fetch_online_parking_counters(project_number, ip, port):
     total_max = 0
     total_present = 0
     total_free = 0
+    transient_present = 0
+    subscribers_present = 0
     for fd in facilities_data:
         stds = fd["standard_counters"]
+        c1 = next((c for c in stds if c["id"] == "1"), None)
+        c2 = next((c for c in stds if c["id"] == "2"), None)
+        if c1:
+            transient_present += max(0, c1["present"])
+        if c2:
+            subscribers_present += max(0, c2["present"])
         # Prefer counter id=3 (total), otherwise counter id=1 (not reserved) or sum of 1+2
         c3 = next((c for c in stds if c["id"] == "3" and c["max"] > 0), None)
         if c3:
             total_max += c3["max"]
             total_present += c3["present"]
-            total_free += c3["free"]
+            total_free += max(0, c3["free"])
         else:
-            c1 = next((c for c in stds if c["id"] == "1"), None)
-            c2 = next((c for c in stds if c["id"] == "2"), None)
-            if c1:
+            if c1 and c1["max"] > 0:
                 total_max += c1["max"]
                 total_present += c1["present"]
-                total_free += c1["free"]
-            if c2 and c2["max"] > 0 and c2["max"] != 9999:
+                total_free += max(0, c1["free"])
+            elif c1:
+                total_present += c1["present"]
+            if c2 and 0 < c2["max"] < 9999:
                 total_max += c2["max"]
                 total_present += c2["present"]
-                total_free += c2["free"]
+                total_free += max(0, c2["free"])
+            elif c2:
+                total_present += c2["present"]
 
     overall_pct = round((total_present / total_max) * 100) if total_max > 0 else 0
     return {
@@ -1594,8 +1766,11 @@ def fetch_online_parking_counters(project_number, ip, port):
         "summary": {
             "total_max": total_max,
             "total_present": total_present,
+            "transient_present": transient_present,
+            "subscribers_present": subscribers_present,
             "total_free": total_free,
-            "overall_percent": overall_pct
+            "overall_percent": overall_pct,
+            "occupancy_percent": overall_pct
         }
     }
 
@@ -1654,19 +1829,21 @@ def parking_control_web_app():
 @parking_control_bp.route('/api/parking-control/auth/send-otp', methods=['POST'])
 def api_control_send_otp():
     data = request.get_json(silent=True) or {}
-    phone_raw = (data.get('phone_number') or '').strip()
+    phone_raw = (data.get('phone_number') or data.get('phone') or '').strip()
     initial_code = (data.get('initial_code') or '').strip()
     req_project = str(data.get('project_number') or '').strip()
     req_user_id = data.get('user_id')
 
     if not phone_raw and not initial_code:
-        return jsonify({'success': False, 'message': 'נא להזין מספר טלפון נייד או קוד זיהוי ראשוני'})
+        return jsonify({'success': False, 'message': 'נא להזין מספר טלפון נייד או קוד זיהוי ראשוני', 'error': 'נא להזין מספר טלפון נייד או קוד זיהוי ראשוני'})
 
     matched_users = _find_control_users_by_phone_or_code(phone_raw=phone_raw, initial_code=initial_code)
     if not matched_users:
+        err_msg = 'מספר הטלפון או הקוד אינם מורשים לאפליקציית תפעול ובקרת חניון. ודא שהוגדר קוד מסוג parking_control_manager.'
         return jsonify({
             'success': False,
-            'message': 'מספר הטלפון או הקוד אינם מורשים לאפליקציית תפעול ובקרת חניון. ודא שהוגדר קוד מסוג parking_control_manager.'
+            'message': err_msg,
+            'error': err_msg
         })
 
     # בדוק כמה חניונים שונים משויכים למספר הטלפון הזה
@@ -1745,8 +1922,10 @@ def api_control_send_otp():
         'phone_number': display_il_phone(clean_p),
         'otp_code': otp_code,  # מוחזר לתמיכה בכפתור כניסה מהירה ישירה מהודעת הוואטסאפ כמו באפליקציית הדיירים
         'selected_project': chosen_proj,
+        'selected_parking': {'project_number': chosen_proj, 'parking_name': p_name, 'project_name': p_name},
         'selected_user_id': target_user.get('user_id'),
         'parking_name': p_name,
+        'parkings': available_parkings,
         'parkings_options': available_parkings,
         'message': f'קוד אימות נשלח לוואטסאפ שלך עבור {p_name}!'
     })
@@ -1754,18 +1933,18 @@ def api_control_send_otp():
 @parking_control_bp.route('/api/parking-control/auth/verify-otp', methods=['POST'])
 def api_control_verify_otp():
     data = request.get_json(silent=True) or {}
-    phone_raw = (data.get('phone_number') or '').strip()
+    phone_raw = (data.get('phone_number') or data.get('phone') or '').strip()
     initial_code = (data.get('initial_code') or '').strip()
-    otp_code = re.sub(r'\D', '', str(data.get('otp_code') or ''))
+    otp_code = re.sub(r'\D', '', str(data.get('otp_code') or data.get('otp') or ''))
     req_project = str(data.get('project_number') or '').strip()
     req_user_id = data.get('user_id')
 
     if len(otp_code) != 6:
-        return jsonify({'success': False, 'message': 'נא להזין קוד אימות בן 6 ספרות'})
+        return jsonify({'success': False, 'message': 'נא להזין קוד אימות בן 6 ספרות', 'error': 'נא להזין קוד אימות בן 6 ספרות'})
 
     matched_users = _find_control_users_by_phone_or_code(phone_raw=phone_raw, initial_code=initial_code)
     if not matched_users:
-        return jsonify({'success': False, 'message': 'משתמש לא נמצא'})
+        return jsonify({'success': False, 'message': 'משתמש לא נמצא', 'error': 'משתמש לא נמצא'})
 
     target_user = matched_users[0]
     if req_user_id:
@@ -1794,7 +1973,7 @@ def api_control_verify_otp():
                 break
 
     if not otp_valid:
-        return jsonify({'success': False, 'message': 'קוד האימות שגוי או שפג תוקפו'})
+        return jsonify({'success': False, 'message': 'קוד האימות שגוי או שפג תוקפו', 'error': 'קוד האימות שגוי או שפג תוקפו'})
 
     # Clear used OTP
     with _db_lock:
@@ -1835,6 +2014,7 @@ def api_control_verify_otp():
     return jsonify({
         'success': True,
         'auth_token': auth_token,
+        'token': auth_token,
         'user': {
             'user_id': specific_user.get('user_id'),
             'username': specific_user.get('username'),
@@ -1843,6 +2023,7 @@ def api_control_verify_otp():
             'code_type': specific_user.get('code_type'),
             'project_number': active_proj,
             'parking_name': active_p_name,
+            'project_name': active_p_name,
             'company_list': specific_user.get('company_list') or 'ALL',
             'permissions': specific_user.get('permissions') or 'B'
         },
@@ -2328,8 +2509,347 @@ def api_control_fix_plate_in_lane():
     })
 
 # ============================================================================
-# 8. ROUTES: TAB 2 - ONLINE PARKING COUNTERS & COUNTER MANIPULATION
+# 8. ROUTES: TAB 2 - ONLINE PARKING COUNTERS, FLEXREP & DAILY/HISTORICAL REPORTS
 # ============================================================================
+FLEXREP_REPORT_NAMES_HE = {
+    "$R{1000025_ReportTitle_Stat800}": "דוח תפוסת חניון (Stat800 Occupancy)",
+    "$R{1000026_ReportTitle_Stat801}": "דוח משך שהייה (Stat801 Duration)",
+    "$R{1000027_ReportTitle_Stat802}": "התפלגות פדיון ותנועות (Stat802 Turnover & Movement)",
+    "$R{1000028_ReportTitle_Stat803}": "סיכום פדיון ותנועות (Stat803 Summary Turnover)",
+    "$R{1000029_ReportTitle_Stat804}": "דוח סיכום אירועים (Stat804 Events)",
+    "$R{1000030_ReportTitle_Stat805}": "יומן אירועים מפורט (Stat805 Event Journal)",
+    "$R{1000035_ReportTitle_Duration}": "דוח זמני שהייה בחניון",
+    "$R{1000036_ReportTitle_Occupancy}": "דוח תפוסה לפי שעות",
+    "$R{1000037_ReportTitle_Turnover}": "דוח פדיון והכנסות יומי",
+    "$R{1000038_ReportTitle_TurnoverCYAD}": "דוח פדיון שנתי/חודשי מצטבר",
+    "$R{1000039_ReportTitle_Cashier}": "דוח קופות ומשמרות",
+    "$R{1000041_ReportTitle_Events}": "דוח אירועי מערכת",
+    "$R{1000042_ReportTitle_LaneActivity}": "פעילות נתיבים לפי שעה ויום",
+    "$R{1000043_ReportTitle_LaneActivity}": "פעילות נתיבים וזמני שהייה",
+    "$R{1000044_ReportTitle_VPresenceCustCard}": "נוכחות מנויים בחניון",
+    "$R{1000045_ReportTitle_AVGDuration}": "ממוצע שהייה ופתיחות מחסום",
+    "$R{1000047_ReportTitle_Turnover}": "דוח פדיון מפורט",
+    "$R{1000048_ReportTitle_TurnoverWeekday}": "פדיון לפי ימים בשבוע",
+    "$R{1000049_ReportTitle_BarOpen}": "דוח פתיחות מחסום ידניות",
+    "$R{1000121_ReportTitle_CashContent}": "תכולת מזומן בקופות",
+    "$R{1000174_ReportTitle_Additional_Payment}": "תשלומים נוספים של מנויים",
+    "$R{1000175_ReportTitle_Parking_Tariff_Analysis}": "ניתוח תעריפי חניה"
+}
+
+def _normalize_sb_hebrew_label(txt):
+    if not txt:
+        return ""
+    s = str(txt).strip()
+    if s == "הינח":
+        return "דמי חניה (תעריף מזדמן)"
+    if s.startswith("Turn. "):
+        return "אשראי " + s.replace("Turn. ", "").strip()
+    if s.startswith("Credit "):
+        return "אשראי " + s.replace("Credit ", "").strip()
+    return s
+
+def fetch_online_daily_report(project_number, ip, port, target_date=None):
+    """
+    שולף דוח הכנסות, פילוח אמצעי תשלום, הנחות/שוברים, כניסות ויציאות (מזדמנים/מנויים/אפליקציות)
+    והתפלגות שעתית עבור היום או כל תאריך נבחר (YYYY-MM-DD):
+    1. ישירות מטבלאות ה-FlexRep/UDB בבקר החניון (UDBMOVEMENT & FR_REPORT על פורט 1521).
+    2. ניסיון שליפה מ-/FlexRepWebService/rest/documenttree (אם שירות ה-RMI FlexRepDataService פעיל).
+    3. גיבוי מטבלת csv_import_shekels ב-Supabase אם פורט 1521 חסום ברשת.
+    """
+    import subprocess
+    if not target_date or not re.match(r"^\d{4}-\d{2}-\d{2}$", str(target_date).strip()):
+        target_date = get_il_now().strftime("%Y-%m-%d")
+    else:
+        target_date = str(target_date).strip()
+
+    report = {
+        "report_date": target_date,
+        "is_today": (target_date == get_il_now().strftime("%Y-%m-%d")),
+        "source": "none",
+        "source_label_he": "לא זמין",
+        "revenue": {
+            "total_revenue_ils": 0.0,
+            "net_revenue_no_vat_ils": 0.0,
+            "vat_ils": 0.0,
+            "gross_tariff_ils": 0.0,
+            "discounts_total_ils": 0.0,
+            "paid_transactions_count": 0
+        },
+        "payment_methods": [],
+        "discounts_breakdown": [],
+        "traffic": {
+            "entries_total": 0,
+            "entries_transient": 0,
+            "entries_subscribers": 0,
+            "entries_app_external": 0,
+            "entries_vouchers": 0,
+            "exits_total": 0,
+            "exits_transient": 0,
+            "exits_subscribers": 0,
+            "exits_app_external": 0,
+            "exits_vouchers": 0,
+            "exits_grace_free": 0,
+            "barrier_manual_opens": 0,
+            "internal_passages": 0
+        },
+        "hourly": [],
+        "recent_days": [],
+        "flexrep_catalog": []
+    }
+
+    def _parse_udb_tsv_output(out_text):
+        section = ""
+        gross_ils = 0.0
+        discounts_ils = 0.0
+        net_turnover_ils = 0.0
+        vat_ils = 0.0
+        paid_cnt = 0
+        pay_methods_map = {}
+
+        for raw_line in out_text.splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            if line.startswith("[SECTION:") and line.endswith("]"):
+                section = line[9:-1]
+                continue
+
+            parts = line.split("\t")
+            if section == "BREAKDOWN" and len(parts) >= 6:
+                art_cls = int(parts[0])
+                tt = int(parts[1])
+                ctext = parts[2].strip()
+                qty = int(float(parts[3]))
+                cnt = int(float(parts[4]))
+                ils = float(parts[5])
+
+                if art_cls == 0:
+                    if ils > 0:
+                        gross_ils += ils
+                    if "grace" in ctext.lower():
+                        report["traffic"]["exits_grace_free"] += qty
+                elif art_cls == 10:
+                    report["traffic"]["entries_total"] += qty
+                    if tt == 1:
+                        report["traffic"]["entries_transient"] += qty
+                    elif tt == 2:
+                        report["traffic"]["entries_subscribers"] += qty
+                    elif tt == 3:
+                        report["traffic"]["entries_vouchers"] += qty
+                    elif tt == 4:
+                        report["traffic"]["entries_app_external"] += qty
+                elif art_cls == 11:
+                    report["traffic"]["exits_total"] += qty
+                    if tt == 11:
+                        report["traffic"]["exits_transient"] += qty
+                    elif tt == 12:
+                        report["traffic"]["exits_subscribers"] += qty
+                    elif tt == 13:
+                        report["traffic"]["exits_vouchers"] += qty
+                    elif tt == 14:
+                        report["traffic"]["exits_app_external"] += qty
+                elif art_cls == 17:
+                    if tt == 58:
+                        report["traffic"]["internal_passages"] += qty
+                    elif tt in (88, 90, 51, 63):
+                        report["traffic"]["barrier_manual_opens"] += qty
+                elif art_cls == 901:
+                    discounts_ils += ils
+                    report["discounts_breakdown"].append({
+                        "name": _normalize_sb_hebrew_label(ctext) or "שובר / הנחה",
+                        "count": qty,
+                        "amount_ils": round(ils, 2)
+                    })
+                elif art_cls == 1000:
+                    net_turnover_ils += ils
+                    paid_cnt += qty
+                elif art_cls == 1001:
+                    lbl = _normalize_sb_hebrew_label(ctext)
+                    if lbl not in pay_methods_map:
+                        pay_methods_map[lbl] = {"name": lbl, "count": 0, "amount_ils": 0.0}
+                    pay_methods_map[lbl]["count"] += qty
+                    pay_methods_map[lbl]["amount_ils"] = round(pay_methods_map[lbl]["amount_ils"] + ils, 2)
+                elif art_cls == 1002:
+                    vat_ils += ils
+
+            elif section == "HOURLY" and len(parts) >= 4:
+                hr = parts[0].strip()
+                report["hourly"].append({
+                    "hour": f"{hr}:00",
+                    "entries": int(float(parts[1])),
+                    "exits": int(float(parts[2])),
+                    "revenue_ils": round(float(parts[3]), 2)
+                })
+
+            elif section == "RECENT_DAYS" and len(parts) >= 5:
+                report["recent_days"].append({
+                    "date": parts[0].strip(),
+                    "entries": int(float(parts[1])),
+                    "exits": int(float(parts[2])),
+                    "revenue_ils": round(float(parts[3]), 2),
+                    "paid_count": int(float(parts[4]))
+                })
+
+            elif section == "FLEXREP_REPORTS" and len(parts) >= 2:
+                rid = parts[0].strip()
+                rname = parts[1].strip()
+                rmemo = parts[2].strip() if len(parts) > 2 else ""
+                report["flexrep_catalog"].append({
+                    "id": rid,
+                    "code": rname,
+                    "name_he": FLEXREP_REPORT_NAMES_HE.get(rname, rmemo or rname),
+                    "memo": rmemo
+                })
+
+        if net_turnover_ils == 0.0 and pay_methods_map:
+            net_turnover_ils = sum(v["amount_ils"] for v in pay_methods_map.values())
+
+        report["source"] = "live_udb_flexrep"
+        report["source_label_he"] = "חי מבקר החניון (FlexRep / UDB)"
+        report["revenue"] = {
+            "total_revenue_ils": round(net_turnover_ils, 2),
+            "net_revenue_no_vat_ils": round(net_turnover_ils - vat_ils, 2),
+            "vat_ils": round(vat_ils, 2),
+            "gross_tariff_ils": round(gross_ils if gross_ils > 0 else (net_turnover_ils - discounts_ils), 2),
+            "discounts_total_ils": round(discounts_ils, 2),
+            "paid_transactions_count": paid_cnt
+        }
+        report["payment_methods"] = sorted(
+            list(pay_methods_map.values()),
+            key=lambda x: x["amount_ils"],
+            reverse=True
+        )
+        return report
+
+    # 1. Try HTTPS call from Render to /vehicle-api/daily-report.jsp?date=YYYY-MM-DD on the parking server (port 8443)
+    if ip:
+        try:
+            jsp_res = make_sb_request(
+                "GET",
+                ip,
+                port,
+                "/vehicle-api/daily-report.jsp",
+                params={"date": target_date},
+                timeout=6
+            )
+            if jsp_res["status"] == 200 and "[SECTION:BREAKDOWN]" in (jsp_res.get("text") or ""):
+                return _parse_udb_tsv_output(jsp_res["text"])
+        except Exception:
+            pass
+
+    # 2. Try Supabase csv_import_shekels on Render (includes 7-day history + daily financials & traffic)
+    sb = _get_supabase()
+    if sb and project_number:
+        try:
+            all_q = (
+                sb.table("csv_import_shekels")
+                .select("*")
+                .eq("project_number", str(project_number))
+                .order("report_date", desc=True)
+                .limit(60)
+                .execute()
+            )
+            all_rows = all_q.data or []
+            if all_rows:
+                by_date = {}
+                for r in all_rows:
+                    dt_k = str(r.get("report_date") or "").strip()[:10]
+                    if not dt_k:
+                        continue
+                    by_date.setdefault(dt_k, []).append(r)
+
+                sorted_dates = sorted(by_date.keys(), reverse=True)
+                for dt_k in sorted_dates[:7]:
+                    d_rows = by_date[dt_k]
+                    report["recent_days"].append({
+                        "date": dt_k,
+                        "entries": sum(int(x.get("t_entry_tot") or 0) for x in d_rows),
+                        "exits": sum(int(x.get("t_exit_tot") or 0) for x in d_rows),
+                        "revenue_ils": round(sum(float(x.get("total_revenue_shekels") or 0) for x in d_rows), 2),
+                        "paid_count": len(d_rows)
+                    })
+
+                rows = by_date.get(target_date, [])
+                if not rows and sorted_dates and report["is_today"]:
+                    # If today's CSV hasn't arrived yet in Supabase, show latest available report date
+                    latest_dt = sorted_dates[0]
+                    rows = by_date.get(latest_dt, [])
+                    report["report_date"] = latest_dt
+                    report["is_today"] = False
+
+                if rows:
+                    tot_rev = sum(float(r.get("total_revenue_shekels") or 0) for r in rows)
+                    net_rev = sum(float(r.get("net_revenue_shekels") or 0) for r in rows)
+                    cash_ils = sum(float(r.get("s_cash_shekels") or 0) for r in rows)
+                    cred_ils = sum(float(r.get("s_credit_shekels") or 0) for r in rows)
+                    pango_ils = sum(float(r.get("s_pango_shekels") or 0) for r in rows)
+                    celo_ils = sum(float(r.get("s_celo_shekels") or 0) for r in rows)
+
+                    ent_tot = sum(int(r.get("t_entry_tot") or 0) for r in rows)
+                    ent_s = sum(int(r.get("t_entry_s") or 0) for r in rows)
+                    ent_p = sum(int(r.get("t_entry_p") or 0) for r in rows)
+                    ent_ap = sum(int(r.get("t_entry_ap") or 0) for r in rows)
+                    ext_tot = sum(int(r.get("t_exit_tot") or 0) for r in rows)
+                    ext_s = sum(int(r.get("t_exit_s") or 0) for r in rows)
+                    ext_p = sum(int(r.get("t_exit_p") or 0) for r in rows)
+                    open_b = sum(int(r.get("t_open_b") or 0) for r in rows)
+
+                    report["source"] = "supabase_csv"
+                    report["source_label_he"] = "דוח חניון בשרת הענן (Render / Supabase)"
+                    report["revenue"] = {
+                        "total_revenue_ils": round(tot_rev, 2),
+                        "net_revenue_no_vat_ils": round(net_rev, 2),
+                        "vat_ils": round(max(0.0, tot_rev - net_rev), 2),
+                        "gross_tariff_ils": round(tot_rev, 2),
+                        "discounts_total_ils": 0.0,
+                        "paid_transactions_count": len(rows)
+                    }
+                    pm = []
+                    if cred_ils > 0:
+                        pm.append({"name": "כרטיסי אשראי", "count": 0, "amount_ils": round(cred_ils, 2)})
+                    if cash_ils > 0:
+                        pm.append({"name": "מזומן", "count": 0, "amount_ils": round(cash_ils, 2)})
+                    if pango_ils > 0:
+                        pm.append({"name": "פנגו (Pango)", "count": 0, "amount_ils": round(pango_ils, 2)})
+                    if celo_ils > 0:
+                        pm.append({"name": "סלופארק (Cellopark)", "count": 0, "amount_ils": round(celo_ils, 2)})
+                    report["payment_methods"] = pm
+                    report["traffic"].update({
+                        "entries_total": ent_tot,
+                        "entries_transient": ent_s,
+                        "entries_subscribers": ent_p,
+                        "entries_app_external": ent_ap,
+                        "exits_total": ext_tot,
+                        "exits_transient": ext_s,
+                        "exits_subscribers": ext_p,
+                        "barrier_manual_opens": open_b
+                    })
+                    return report
+        except Exception as e:
+            print(f"Supabase daily report fallback error: {e}")
+
+    # 3. Direct Oracle Helper fallback if available in environment
+    helper_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sb_oracle_helper")
+    jar_path = os.path.join(helper_dir, "ojdbc6.jar")
+    class_file = os.path.join(helper_dir, "SBOracleReportHelper.class")
+
+    if ip and os.path.exists(jar_path) and os.path.exists(class_file):
+        try:
+            cp_sep = ";" if os.name == "nt" else ":"
+            cp_arg = f"{helper_dir}{cp_sep}{jar_path}"
+            proc = subprocess.run(
+                ["java", "-cp", cp_arg, "SBOracleReportHelper", str(ip), target_date],
+                capture_output=True,
+                timeout=10
+            )
+            if proc.returncode == 0 and proc.stdout:
+                out_text = proc.stdout.decode("utf-8", errors="replace")
+                return _parse_udb_tsv_output(out_text)
+        except Exception as e:
+            print(f"Live Oracle FlexRep report fallback notice for {ip}: {e}")
+
+    return report
+
 @parking_control_bp.route('/api/parking-control/counters', methods=['GET'])
 def api_control_get_counters():
     user = _get_authenticated_control_user()
@@ -2337,16 +2857,45 @@ def api_control_get_counters():
         return jsonify({'success': False, 'message': 'לא מחובר'}), 401
 
     proj = str(request.args.get('project_number') or user.get('active_project_number') or user.get('project_number') or '')
+    target_date = request.args.get('date') or get_il_now().strftime('%Y-%m-%d')
     conn = _get_parking_conn(proj)
     if not conn or not conn.get('ip_address'):
         return jsonify({'success': False, 'message': 'אין חיבור לבקר החניון'}), 404
 
-    data = fetch_online_parking_counters(proj, conn['ip_address'], conn.get('port', 8443))
+    ip = conn['ip_address']
+    port = conn.get('port', 8443)
+    with ThreadPoolExecutor(max_workers=2) as ex:
+        f_cnt = ex.submit(fetch_online_parking_counters, proj, ip, port)
+        f_rep = ex.submit(fetch_online_daily_report, proj, ip, port, target_date)
+        data = f_cnt.result()
+        daily_rep = f_rep.result()
+
     return jsonify({
         'success': True,
         'project_number': proj,
         'timestamp': get_il_now().strftime('%H:%M:%S'),
+        'daily_report': daily_rep,
         **data
+    })
+
+@parking_control_bp.route('/api/parking-control/daily-report', methods=['GET'])
+def api_control_get_daily_report():
+    user = _get_authenticated_control_user()
+    if not user:
+        return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+
+    proj = str(request.args.get('project_number') or user.get('active_project_number') or user.get('project_number') or '')
+    target_date = request.args.get('date') or get_il_now().strftime('%Y-%m-%d')
+    conn = _get_parking_conn(proj)
+    if not conn or not conn.get('ip_address'):
+        return jsonify({'success': False, 'message': 'אין חיבור לבקר החניון'}), 404
+
+    daily_rep = fetch_online_daily_report(proj, conn['ip_address'], conn.get('port', 8443), target_date)
+    return jsonify({
+        'success': True,
+        'project_number': proj,
+        'timestamp': get_il_now().strftime('%H:%M:%S'),
+        'daily_report': daily_rep
     })
 
 @parking_control_bp.route('/api/parking-control/counters/update', methods=['POST'])
