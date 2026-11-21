@@ -92,6 +92,8 @@ ALTER TABLE public.tenant_building_settings ADD COLUMN IF NOT EXISTS parking_lat
 ALTER TABLE public.tenant_building_settings ADD COLUMN IF NOT EXISTS parking_lng DOUBLE PRECISION;
 ALTER TABLE public.tenant_building_settings ADD COLUMN IF NOT EXISTS parking_address TEXT;
 ALTER TABLE public.tenant_building_settings ADD COLUMN IF NOT EXISTS standalone_mode INTEGER DEFAULT 0;
+ALTER TABLE public.tenant_building_settings ADD COLUMN IF NOT EXISTS ios_app_url TEXT;
+ALTER TABLE public.tenant_building_settings ADD COLUMN IF NOT EXISTS android_app_url TEXT;
 ALTER TABLE public.tenant_spot_shares ADD COLUMN IF NOT EXISTS parking_spot_number TEXT;
 ALTER TABLE public.tenant_quota_transfers ADD COLUMN IF NOT EXISTS parking_spot_number TEXT;
 

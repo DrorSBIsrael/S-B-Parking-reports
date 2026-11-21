@@ -143,6 +143,8 @@ def _init_sqlite():
             "ALTER TABLE tenant_building_settings ADD COLUMN parking_lng REAL",
             "ALTER TABLE tenant_building_settings ADD COLUMN parking_address TEXT",
             "ALTER TABLE tenant_building_settings ADD COLUMN standalone_mode INTEGER DEFAULT 0",
+            "ALTER TABLE tenant_building_settings ADD COLUMN ios_app_url TEXT",
+            "ALTER TABLE tenant_building_settings ADD COLUMN android_app_url TEXT",
             "ALTER TABLE tenant_spot_shares ADD COLUMN parking_spot_number TEXT",
             "ALTER TABLE tenant_quota_transfers ADD COLUMN parking_spot_number TEXT"
         ]:
@@ -204,7 +206,7 @@ class TenantStore:
                 local_row = dict(row)
         if sb_row:
             if local_row:
-                for k in ('logo_data', 'parking_lat', 'parking_lng', 'parking_address', 'standalone_mode'):
+                for k in ('logo_data', 'parking_lat', 'parking_lng', 'parking_address', 'standalone_mode', 'ios_app_url', 'android_app_url'):
                     if sb_row.get(k) in (None, '') and local_row.get(k) not in (None, ''):
                         sb_row[k] = local_row[k]
             return sb_row
@@ -221,17 +223,21 @@ class TenantStore:
             'parking_lat': None,
             'parking_lng': None,
             'parking_address': '',
-            'standalone_mode': 0
+            'standalone_mode': 0,
+            'ios_app_url': '',
+            'android_app_url': ''
         }
 
     @staticmethod
-    def save_building_settings(project_number, parking_name, max_day, max_month, check_interval=30, reminder_mins=30, logo_data=None, parking_lat=None, parking_lng=None, parking_address=None, standalone_mode=None):
+    def save_building_settings(project_number, parking_name, max_day=5, max_month=30, check_interval=30, reminder_mins=30, logo_data=None, parking_lat=None, parking_lng=None, parking_address=None, standalone_mode=None, ios_app_url=None, android_app_url=None):
         p_num = str(project_number)
         now_iso = get_il_now().isoformat()
         existing = TenantStore.get_building_settings(p_num, parking_name)
         final_logo = logo_data if logo_data is not None else (existing.get('logo_data') or '')
         final_addr = str(parking_address).strip() if parking_address is not None else (existing.get('parking_address') or '')
         final_standalone = (1 if bool(standalone_mode) else 0) if standalone_mode is not None else int(existing.get('standalone_mode') or 0)
+        final_ios_url = str(ios_app_url).strip() if ios_app_url is not None else (existing.get('ios_app_url') or '')
+        final_android_url = str(android_app_url).strip() if android_app_url is not None else (existing.get('android_app_url') or '')
 
         def _parse_coord(val, fallback):
             if val is None:
@@ -259,6 +265,8 @@ class TenantStore:
             'parking_lng': final_lng,
             'parking_address': final_addr,
             'standalone_mode': final_standalone,
+            'ios_app_url': final_ios_url,
+            'android_app_url': final_android_url,
             'updated_at': now_iso
         }
         sb = _get_supabase()
@@ -268,7 +276,7 @@ class TenantStore:
             except Exception as _sbe:
                 # אם העמודות החדשות טרם נוספו ב-Supabase, שמור את עמודות הבסיס כדי שלא תיכשל השמירה
                 try:
-                    base_payload = {k: v for k, v in payload.items() if k not in ('parking_lat', 'parking_lng', 'parking_address', 'standalone_mode')}
+                    base_payload = {k: v for k, v in payload.items() if k not in ('parking_lat', 'parking_lng', 'parking_address', 'standalone_mode', 'ios_app_url', 'android_app_url')}
                     sb.table('tenant_building_settings').upsert(base_payload).execute()
                 except Exception as _sbe2:
                     _trip_sb_circuit_if_missing(_sbe2)
@@ -276,8 +284,8 @@ class TenantStore:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.execute("""
                 INSERT INTO tenant_building_settings
-                (project_number, parking_name, max_bookings_per_day, max_bookings_per_month, check_interval_minutes, reminder_minutes_before, logo_data, parking_lat, parking_lng, parking_address, standalone_mode, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (project_number, parking_name, max_bookings_per_day, max_bookings_per_month, check_interval_minutes, reminder_minutes_before, logo_data, parking_lat, parking_lng, parking_address, standalone_mode, ios_app_url, android_app_url, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(project_number) DO UPDATE SET
                     parking_name=excluded.parking_name,
                     max_bookings_per_day=excluded.max_bookings_per_day,
@@ -289,10 +297,12 @@ class TenantStore:
                     parking_lng=excluded.parking_lng,
                     parking_address=excluded.parking_address,
                     standalone_mode=excluded.standalone_mode,
+                    ios_app_url=excluded.ios_app_url,
+                    android_app_url=excluded.android_app_url,
                     updated_at=excluded.updated_at
             """, (p_num, payload['parking_name'], payload['max_bookings_per_day'], payload['max_bookings_per_month'],
                   payload['check_interval_minutes'], payload['reminder_minutes_before'], final_logo,
-                  final_lat, final_lng, final_addr, final_standalone, now_iso))
+                  final_lat, final_lng, final_addr, final_standalone, final_ios_url, final_android_url, now_iso))
             conn.commit()
             conn.close()
         return payload
@@ -1945,6 +1955,21 @@ def api_tenant_manager_init():
         'active_transfers': active_transfers
     })
 
+def _build_tenant_invite_whatsapp_text(host_url, project_number, parking_name, full_name, apartment_number, clean_phone):
+    disp_p = display_il_phone(clean_phone)
+    portal_link = f"{host_url}/tenant-portal?phone={disp_p}"
+    ios_link = f"{host_url}/app/ios?project={project_number}"
+    android_link = f"{host_url}/app/android?project={project_number}"
+    return (
+        f"שלום {full_name}! 🏢\n"
+        f"צורפת למערכת ניהול ושיתוף החניות של *{parking_name or 'המתחם'}* (דירה {apartment_number}).\n\n"
+        f"📱 *להורדת אפליקציית הדיירים:*\n"
+        f"🍎 לאייפון (Apple): {ios_link}\n"
+        f"🤖 לאנדרואיד (Google): {android_link}\n\n"
+        f"🌐 *או לכניסה ישירה דרך הדפדפן:*\n"
+        f"{portal_link}"
+    )
+
 @tenant_bp.route('/api/tenant-manager/settings', methods=['POST'])
 def api_tenant_manager_save_settings():
     mgr = _get_logged_in_tenant_manager()
@@ -1963,7 +1988,9 @@ def api_tenant_manager_save_settings():
         parking_lat=data.get('parking_lat'),
         parking_lng=data.get('parking_lng'),
         parking_address=data.get('parking_address'),
-        standalone_mode=data.get('standalone_mode')
+        standalone_mode=data.get('standalone_mode'),
+        ios_app_url=data.get('ios_app_url'),
+        android_app_url=data.get('android_app_url')
     )
     return jsonify({'success': True, 'message': 'הגדרות המתחם נשמרו בהצלחה', 'settings': saved})
 
@@ -2045,15 +2072,9 @@ def api_tenant_manager_create_tenant():
                 created_by=mgr.get('email')
             )
 
-    # שליחת הודעת וואטסאפ אוטומטית לדייר החדש עם קישור ישיר לאתר
+    # שליחת הודעת וואטסאפ אוטומטית לדייר החדש עם קישורים לאייפון, לגוגל ולאתר
     host_url = request.host_url.rstrip('/')
-    portal_link = f"{host_url}/tenant-portal?phone={display_il_phone(clean_p)}"
-    welcome_msg = (
-        f"שלום {full_name}! 🏢\n"
-        f"צורפת למערכת ניהול ושיתוף החניות של *{p_name or 'המתחם'}* (דירה {apt}).\n\n"
-        f"לכניסה למערכת (צפייה ועדכון רכבים, שחרור חניה או תפיסת חניה פנויה) לחץ על הקישור:\n"
-        f"{portal_link}"
-    )
+    welcome_msg = _build_tenant_invite_whatsapp_text(host_url, p_num, p_name, full_name, apt, clean_p)
     wa_ok, _ = send_whatsapp_message(clean_p, welcome_msg)
     wa_note = " (נשלחה הודעת וואטסאפ עם קישור לדייר)" if wa_ok else " (הדייר נשמר, אך שליחת וואטסאפ נכשלה)"
 
@@ -2069,13 +2090,9 @@ def api_tenant_manager_send_invite(tenant_id):
         return jsonify({'success': False, 'message': 'דייר לא נמצא'})
     host_url = request.host_url.rstrip('/')
     clean_p = clean_il_phone(t.get('phone_number'))
-    portal_link = f"{host_url}/tenant-portal?phone={display_il_phone(clean_p)}"
+    p_num = str(t.get('project_number') or mgr.get('project_number') or '')
     p_name = t.get('parking_name') or mgr.get('parking_name') or 'המתחם'
-    msg = (
-        f"שלום {t.get('full_name')}! 🏢\n"
-        f"קישור לכניסה למערכת החניות של *{p_name}* (דירה {t.get('apartment_number')}):\n"
-        f"{portal_link}"
-    )
+    msg = _build_tenant_invite_whatsapp_text(host_url, p_num, p_name, t.get('full_name'), t.get('apartment_number'), clean_p)
     wa_ok, wa_err = send_whatsapp_message(clean_p, msg)
     if wa_ok:
         return jsonify({'success': True, 'message': f'הודעת וואטסאפ עם קישור נשלחה ל-{t.get("full_name")}!'})
@@ -2511,13 +2528,7 @@ def api_tenant_manager_upload_apartments_file():
                         is_active=ex_t.get('is_active', True)
                     )
                     if send_welcome_flag and not existing_phone and len(final_phone) >= 11:
-                        portal_link = f"{host_url}/tenant-portal?phone={display_il_phone(final_phone)}"
-                        w_msg = (
-                            f"שלום {final_name}! 🏢\n"
-                            f"צורפת למערכת ניהול ושיתוף החניות של *{p_name or 'המתחם'}* (דירה {apt_str}).\n\n"
-                            f"לכניסה למערכת (צפייה ועדכון רכבים, שחרור חניה או תפיסת חניה פנויה) לחץ על הקישור:\n"
-                            f"{portal_link}"
-                        )
+                        w_msg = _build_tenant_invite_whatsapp_text(host_url, p_num, p_name, final_name, apt_str, final_phone)
                         wa_queue_items.append((final_phone, w_msg))
                 updated_count += 1
             else:
@@ -2532,13 +2543,7 @@ def api_tenant_manager_upload_apartments_file():
                     created_by=mgr.get('email')
                 )
                 if send_welcome_flag and valid_ph:
-                    portal_link = f"{host_url}/tenant-portal?phone={display_il_phone(valid_ph)}"
-                    w_msg = (
-                        f"שלום {display_name}! 🏢\n"
-                        f"צורפת למערכת ניהול ושיתוף החניות של *{p_name or 'המתחם'}* (דירה {apt_str}).\n\n"
-                        f"לכניסה למערכת (צפייה ועדכון רכבים, שחרור חניה או תפיסת חניה פנויה) לחץ על הקישור:\n"
-                        f"{portal_link}"
-                    )
+                    w_msg = _build_tenant_invite_whatsapp_text(host_url, p_num, p_name, display_name, apt_str, valid_ph)
                     wa_queue_items.append((valid_ph, w_msg))
                 added_count += 1
 
@@ -2571,12 +2576,7 @@ def api_tenant_manager_send_bulk_invites():
     for t in tenants:
         clean_p = clean_il_phone(t.get('phone_number') or '')
         if len(clean_p) >= 11:
-            portal_link = f"{host_url}/tenant-portal?phone={display_il_phone(clean_p)}"
-            msg = (
-                f"שלום {t.get('full_name')}! 🏢\n"
-                f"קישור לכניסה למערכת החניות של *{p_name}* (דירה {t.get('apartment_number')}):\n"
-                f"{portal_link}"
-            )
+            msg = _build_tenant_invite_whatsapp_text(host_url, p_num, p_name, t.get('full_name'), t.get('apartment_number'), clean_p)
             items.append((clean_p, msg))
 
     if not items:
@@ -2754,6 +2754,67 @@ def api_tenant_manager_monthly_report():
 # ============================================================================
 # 6. TENANT PORTAL ROUTES (פורטל הדייר - כניסה בוואטסאפ בלבד + ניהול ושיתוף חניה)
 # ============================================================================
+DEFAULT_ANDROID_APK_URL = 'https://expo.dev/artifacts/eas/s8Z1w2Loxm8yQv1wZ7x5bB.apk'
+DEFAULT_GOOGLE_PLAY_URL = 'https://play.google.com/store/apps/details?id=com.drorprince.tenantsapp'
+
+def _resolve_store_urls(project_number=None):
+    ios_url = (os.getenv('TENANT_IOS_APP_URL') or '').strip()
+    android_url = (os.getenv('TENANT_ANDROID_APP_URL') or '').strip()
+    if project_number:
+        b = TenantStore.get_building_settings(project_number)
+        if b.get('ios_app_url'):
+            ios_url = str(b['ios_app_url']).strip()
+        if b.get('android_app_url'):
+            android_url = str(b['android_app_url']).strip()
+    if not ios_url or not android_url:
+        # בדוק אם הוגדר קישור באחד המתחמים במערכת כברירת מחדל גלובלית
+        try:
+            with _db_lock:
+                conn = sqlite3.connect(SQLITE_PATH)
+                conn.row_factory = sqlite3.Row
+                rows = conn.execute("SELECT ios_app_url, android_app_url FROM tenant_building_settings").fetchall()
+                conn.close()
+                for r in rows:
+                    if not ios_url and r['ios_app_url']:
+                        ios_url = str(r['ios_app_url']).strip()
+                    if not android_url and r['android_app_url']:
+                        android_url = str(r['android_app_url']).strip()
+        except Exception:
+            pass
+    if not android_url:
+        android_url = DEFAULT_GOOGLE_PLAY_URL
+    return ios_url, android_url
+
+@tenant_bp.route('/app/ios')
+def tenant_app_ios_redirect():
+    from flask import redirect
+    proj = request.args.get('project') or ''
+    ios_url, _ = _resolve_store_urls(proj)
+    if ios_url:
+        return redirect(ios_url)
+    return redirect('/tenant-portal')
+
+@tenant_bp.route('/app/android')
+def tenant_app_android_redirect():
+    from flask import redirect
+    proj = request.args.get('project') or ''
+    _, android_url = _resolve_store_urls(proj)
+    if android_url:
+        return redirect(android_url)
+    return redirect('/tenant-portal')
+
+@tenant_bp.route('/app')
+def tenant_app_smart_redirect():
+    from flask import redirect
+    proj = request.args.get('project') or ''
+    ua = (request.headers.get('User-Agent') or '').lower()
+    ios_url, android_url = _resolve_store_urls(proj)
+    if ('iphone' in ua or 'ipad' in ua or 'ipod' in ua) and ios_url:
+        return redirect(ios_url)
+    if 'android' in ua and android_url:
+        return redirect(android_url)
+    return redirect('/tenant-portal')
+
 @tenant_bp.route('/tenant-portal')
 def tenant_portal_page():
     return render_template('tenant_portal.html')

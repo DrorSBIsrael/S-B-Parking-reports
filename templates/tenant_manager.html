@@ -582,6 +582,14 @@
                                 <button type="button" class="btn btn-outline" style="padding: 8px 10px; font-size: 12px; white-space: nowrap;" onclick="detectCurrentBuildingLocation()">📍 מיקום נוכחי</button>
                             </div>
                         </div>
+                        <div class="form-group">
+                            <label>🍎 קישור לאפליקציה ב-Apple App Store / TestFlight (אופציונלי)</label>
+                            <input type="text" id="setIosAppUrl" placeholder="לדוגמה: https://apps.apple.com/app/id..." style="direction: ltr;">
+                        </div>
+                        <div class="form-group">
+                            <label>🤖 קישור לאפליקציה ב-Google Play / הורדת APK (אופציונלי)</label>
+                            <input type="text" id="setAndroidAppUrl" placeholder="https://play.google.com/store/apps/details?id=com.drorprince.tenantsapp" style="direction: ltr;">
+                        </div>
                     </div>
                     <div style="margin-top: 18px; padding: 14px 16px; border: 1px solid #99f6e4; border-radius: 12px; background: #f0fdfa;">
                         <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 700; color: #0f766e;">
@@ -831,6 +839,10 @@
                 document.getElementById('setParkingAddress').value = data.settings.parking_address || '';
                 document.getElementById('setParkingLat').value = (data.settings.parking_lat !== null && data.settings.parking_lat !== undefined) ? data.settings.parking_lat : '';
                 document.getElementById('setParkingLng').value = (data.settings.parking_lng !== null && data.settings.parking_lng !== undefined) ? data.settings.parking_lng : '';
+                const iosUrlEl = document.getElementById('setIosAppUrl');
+                if (iosUrlEl) iosUrlEl.value = data.settings.ios_app_url || '';
+                const androidUrlEl = document.getElementById('setAndroidAppUrl');
+                if (androidUrlEl) androidUrlEl.value = data.settings.android_app_url || '';
                 const standaloneChk = document.getElementById('setStandaloneMode');
                 if (standaloneChk) {
                     standaloneChk.checked = !!(data.standalone_mode || Number(data.settings.standalone_mode || 0) === 1);
@@ -1466,6 +1478,8 @@
                 parking_address: document.getElementById('setParkingAddress').value.trim(),
                 parking_lat: latVal !== '' ? parseFloat(latVal) : '',
                 parking_lng: lngVal !== '' ? parseFloat(lngVal) : '',
+                ios_app_url: (document.getElementById('setIosAppUrl') && document.getElementById('setIosAppUrl').value.trim()) || '',
+                android_app_url: (document.getElementById('setAndroidAppUrl') && document.getElementById('setAndroidAppUrl').value.trim()) || '',
                 standalone_mode: standaloneChk ? !!standaloneChk.checked : false,
                 logo_data: currentLogoData
             };
