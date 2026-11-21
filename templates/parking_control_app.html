@@ -666,8 +666,12 @@
                     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                         <button class="filter-chip" onclick="selectReportDateOffset(0)">היום</button>
                         <button class="filter-chip" onclick="selectReportDateOffset(-1)">אתמול</button>
-                        <input type="date" id="dailyReportDateInput" class="input-box" style="margin-bottom: 0; width: auto; padding: 7px 10px; font-size: 13.5px;" onchange="loadDailyReportByDate(this.value)">
-                        <button class="icon-btn" style="background: var(--primary); border-color: var(--primary);" onclick="loadDailyReportByDate(document.getElementById('dailyReportDateInput').value)">📊 הצג דוח</button>
+                        <button class="filter-chip" onclick="selectReportRange7Days()">7 ימים</button>
+                        <span style="font-size:12px;color:#94a3b8;">מתאריך:</span>
+                        <input type="date" id="dailyReportDateInput" class="input-box" style="margin-bottom: 0; width: auto; padding: 7px 10px; font-size: 13.5px;" onchange="loadDailyReportByDate(this.value, document.getElementById('dailyReportEndDateInput').value)">
+                        <span style="font-size:12px;color:#94a3b8;">עד:</span>
+                        <input type="date" id="dailyReportEndDateInput" class="input-box" style="margin-bottom: 0; width: auto; padding: 7px 10px; font-size: 13.5px;" onchange="loadDailyReportByDate(document.getElementById('dailyReportDateInput').value, this.value)">
+                        <button class="icon-btn" style="background: var(--primary); border-color: var(--primary);" onclick="loadDailyReportByDate(document.getElementById('dailyReportDateInput').value, document.getElementById('dailyReportEndDateInput').value)">📊 הצג דוח</button>
                     </div>
                 </div>
 
@@ -1250,22 +1254,41 @@
 
         /* TAB 2: ONLINE COUNTERS & FLEXREP DAILY/HISTORICAL REPORTS */
         let selectedReportDate = new Date().toISOString().slice(0, 10);
+        let selectedReportEndDate = selectedReportDate;
 
         function selectReportDateOffset(daysOffset) {
             const dt = new Date();
             dt.setDate(dt.getDate() + daysOffset);
             const iso = dt.toISOString().slice(0, 10);
-            const inp = document.getElementById('dailyReportDateInput');
-            if (inp) inp.value = iso;
-            loadDailyReportByDate(iso);
+            const inp1 = document.getElementById('dailyReportDateInput');
+            const inp2 = document.getElementById('dailyReportEndDateInput');
+            if (inp1) inp1.value = iso;
+            if (inp2) inp2.value = iso;
+            loadDailyReportByDate(iso, iso);
         }
 
-        async function loadDailyReportByDate(dateStr) {
+        function selectReportRange7Days() {
+            const eDt = new Date();
+            const sDt = new Date();
+            sDt.setDate(eDt.getDate() - 6);
+            const sIso = sDt.toISOString().slice(0, 10);
+            const eIso = eDt.toISOString().slice(0, 10);
+            const inp1 = document.getElementById('dailyReportDateInput');
+            const inp2 = document.getElementById('dailyReportEndDateInput');
+            if (inp1) inp1.value = sIso;
+            if (inp2) inp2.value = eIso;
+            loadDailyReportByDate(sIso, eIso);
+        }
+
+        async function loadDailyReportByDate(dateStr, endDateStr) {
             if (dateStr) selectedReportDate = dateStr;
-            const inp = document.getElementById('dailyReportDateInput');
-            if (inp && !inp.value) inp.value = selectedReportDate;
+            selectedReportEndDate = endDateStr || selectedReportDate;
+            const inp1 = document.getElementById('dailyReportDateInput');
+            const inp2 = document.getElementById('dailyReportEndDateInput');
+            if (inp1 && !inp1.value) inp1.value = selectedReportDate;
+            if (inp2 && !inp2.value) inp2.value = selectedReportEndDate;
             try {
-                const r = await fetch(`/api/parking-control/daily-report?date=${encodeURIComponent(selectedReportDate)}`, { headers: getHeaders() });
+                const r = await fetch(`/api/parking-control/daily-report?date=${encodeURIComponent(selectedReportDate)}&start_date=${encodeURIComponent(selectedReportDate)}&end_date=${encodeURIComponent(selectedReportEndDate)}`, { headers: getHeaders() });
                 const d = await r.json();
                 if (d.success && d.daily_report) {
                     renderDailyReportSection(d.daily_report);
@@ -1275,12 +1298,14 @@
 
         function renderDailyReportSection(rep) {
             if (!rep) return;
-            const inp = document.getElementById('dailyReportDateInput');
-            if (inp && rep.report_date) inp.value = rep.report_date;
+            const inp1 = document.getElementById('dailyReportDateInput');
+            const inp2 = document.getElementById('dailyReportEndDateInput');
+            if (inp1 && (rep.start_date || rep.report_date)) inp1.value = rep.start_date || rep.report_date;
+            if (inp2 && (rep.end_date || rep.report_date)) inp2.value = rep.end_date || rep.report_date;
 
             const srcEl = document.getElementById('dailyReportSourceBadge');
             if (srcEl) {
-                srcEl.innerHTML = `📅 תאריך דוח: <strong>${rep.report_date}</strong> • מקור: <strong>${rep.source_label_he || 'בקר החניון'}</strong>`;
+                srcEl.innerHTML = `📅 תאריך דוח: <strong>${rep.date_display || rep.report_date}</strong> • מקור: <strong>${rep.source_label_he || 'בקר החניון'}</strong>`;
             }
 
             const rev = rep.revenue || {};
@@ -1290,7 +1315,7 @@
             const chipsBar = document.getElementById('recentDaysChipsBar');
             if (chipsBar && rep.recent_days && rep.recent_days.length) {
                 chipsBar.innerHTML = rep.recent_days.map(day => `
-                    <button class="filter-chip ${day.date === rep.report_date ? 'active' : ''}" onclick="loadDailyReportByDate('${day.date}')">
+                    <button class="filter-chip ${!rep.is_range && day.date === rep.report_date ? 'active' : ''}" onclick="loadDailyReportByDate('${day.date}', '${day.date}')">
                         ${day.date.slice(5)} • ₪${Number(day.revenue_ils || 0).toLocaleString()} (${day.entries} כניסות)
                     </button>
                 `).join('');
@@ -1301,24 +1326,24 @@
             if (kpiGrid) {
                 kpiGrid.innerHTML = `
                     <div class="stat-box" style="background:rgba(16,185,129,0.12);border-color:rgba(16,185,129,0.4);">
-                        <div style="color:#6ee7b7;font-size:12.5px;font-weight:700;">💰 סה״כ כסף / פדיון (${rep.report_date})</div>
+                        <div style="color:#6ee7b7;font-size:12.5px;font-weight:700;">💰 סה״כ הכנסות בחניון (${rep.date_display || rep.report_date})</div>
                         <div class="stat-num" style="color:#34d399;">₪${Number(rev.total_revenue_ils || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                         <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">נטו: ₪${Number(rev.net_revenue_no_vat_ils || 0).toFixed(2)} | מע״מ: ₪${Number(rev.vat_ils || 0).toFixed(2)}</div>
                     </div>
                     <div class="stat-box">
-                        <div style="color:var(--text-muted);font-size:12.5px;">🎟️ עסקאות בתשלום ושוברים</div>
-                        <div class="stat-num" style="color:#fbbf24;">${rev.paid_transactions_count || 0} <span style="font-size:14px;font-weight:600;">תשלומים</span></div>
-                        <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">ברוטו: ₪${Number(rev.gross_tariff_ils || 0).toFixed(1)} | הנחות: ₪${Number(rev.discounts_total_ils || 0).toFixed(1)}</div>
+                        <div style="color:var(--text-muted);font-size:12.5px;">🎟️ רכבים ששילמו</div>
+                        <div class="stat-num" style="color:#fbbf24;">${rev.paid_transactions_count || 0} <span style="font-size:14px;font-weight:600;">רכבים</span></div>
+                        <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">מזומן: ₪${Number(rev.cash_ils || 0).toFixed(0)} | אשראי: ₪${Number(rev.credit_ils || 0).toFixed(0)} | פנגו: ₪${Number(rev.pango_ils || 0).toFixed(0)} | סלו: ₪${Number(rev.cello_ils || 0).toFixed(0)}</div>
                     </div>
                     <div class="stat-box">
-                        <div style="color:var(--text-muted);font-size:12.5px;">🟢 סה״כ כניסות רכבים ביום זה</div>
+                        <div style="color:var(--text-muted);font-size:12.5px;">🟢 סה״כ כניסות (כל החניונים)</div>
                         <div class="stat-num" style="color:#60a5fa;">${Number(tr.entries_total || 0).toLocaleString()}</div>
                         <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">מזדמן: ${tr.entries_transient || 0} | מנוי: ${tr.entries_subscribers || 0} | אפליקציה: ${tr.entries_app_external || 0}</div>
                     </div>
                     <div class="stat-box">
-                        <div style="color:var(--text-muted);font-size:12.5px;">🔴 סה״כ יציאות רכבים ביום זה</div>
+                        <div style="color:var(--text-muted);font-size:12.5px;">🔴 סה״כ יציאות (כל החניונים)</div>
                         <div class="stat-num" style="color:#c084fc;">${Number(tr.exits_total || 0).toLocaleString()}</div>
-                        <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">מזדמן: ${tr.exits_transient || 0} | מנוי: ${tr.exits_subscribers || 0} | חסד חינם: ${tr.exits_grace_free || 0}</div>
+                        <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">מזדמן: ${tr.exits_transient || 0} | מנוי: ${tr.exits_subscribers || 0} | פתיחות מחסום: 🚧 ${tr.barrier_manual_opens || 0}</div>
                     </div>
                 `;
             }
