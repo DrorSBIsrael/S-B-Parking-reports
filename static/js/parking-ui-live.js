@@ -32,11 +32,52 @@ class ParkingUIIntegrationXML {
             this.setupSorting();
         }
     }
+    
+    _syncCache() {
+        if (!this.currentContract || !this.currentContract.id) return;
+        const cacheKey = (this.api && typeof this.api.getCacheKey === 'function')
+            ? this.api.getCacheKey(this.currentContract.id)
+            : ('skidata_cache_company_' + this.currentContract.id);
+        // שמירת מטמון מיועדת לחברות עם 200+ מנויים
+        if (!this.subscribers || this.subscribers.length < 200) {
+            try {
+                localStorage.removeItem(cacheKey);
+                localStorage.removeItem('skidata_cache_company_' + this.currentContract.id);
+            } catch(e) {}
+            return;
+        }
+        try {
+            let cacheTimestamp = Date.now();
+            try {
+                const existing = localStorage.getItem(cacheKey);
+                if (existing) {
+                    const parsed = JSON.parse(existing);
+                    if (parsed && parsed.timestamp) {
+                        cacheTimestamp = parsed.timestamp;
+                    }
+                }
+            } catch(err) {}
+            if (this.api && typeof this.api._saveToLocalCache === 'function') {
+                this.api._saveToLocalCache(cacheKey, this.currentContract.id, cacheTimestamp, this.subscribers);
+            } else {
+                localStorage.setItem(cacheKey, JSON.stringify({
+                    timestamp: cacheTimestamp,
+                    subscribers: this.subscribers
+                }));
+            }
+            console.log(`[Cache] Synchronized local cache for company ${this.currentContract.id} (${this.subscribers.length} items)`);
+        } catch(e) {
+            console.warn('[Cache] Could not sync cache:', e);
+        }
+    }
 
     /**
-     * Setup filter listeners
+     * Setup filter listeners (guarded so listeners are attached only once)
      */
     setupFilters() {
+        if (this._filtersInitialized) return;
+        this._filtersInitialized = true;
+
         // Setup presence filter
         const presenceFilter = document.getElementById('filterPresence');
         if (presenceFilter) {
@@ -49,17 +90,21 @@ class ParkingUIIntegrationXML {
             dateFilter.addEventListener('change', () => this.applyFilters());
         }
 
-        // Setup search box
+        // Setup search box with light debounce for snappy typing on 1,500+ rows
         const searchBox = document.getElementById('searchBox');
         if (searchBox) {
-            searchBox.addEventListener('input', () => this.applyFilters());
+            let searchDebounce = null;
+            searchBox.addEventListener('input', () => {
+                if (searchDebounce) clearTimeout(searchDebounce);
+                searchDebounce = setTimeout(() => this.applyFilters(), 60);
+            });
         }
     }
 
     /**
      * Apply filters to current subscribers
      */
-    applyFilters() {
+    applyFilters(preserveScroll = false) {
         if (!this.subscribers || this.subscribers.length === 0) return;
 
         const searchTerm = document.getElementById('searchBox')?.value?.toLowerCase() || '';
@@ -120,7 +165,7 @@ class ParkingUIIntegrationXML {
             filtered = this.sortSubscribers(filtered);
         }
 
-        this.displaySubscribers(filtered);
+        this.displaySubscribers(filtered, preserveScroll);
     }
 
     /**
@@ -233,7 +278,8 @@ class ParkingUIIntegrationXML {
         parkings.forEach(parking => {
             const card = document.createElement('div');
             card.className = 'company-card';
-            card.onclick = () => this.selectParking(parking);
+            card.setAttribute('data-parking-id', parking.id);
+            card.onclick = (e) => this.selectParking(parking, e);
 
             card.innerHTML = `
                 <div class="company-header">
@@ -262,7 +308,7 @@ class ParkingUIIntegrationXML {
     /**
      * Select a parking and then load its companies
      */
-    async selectParking(parking) {
+    async selectParking(parking, evt) {
         // Selected parking
 
         // Show loading message immediately
@@ -293,8 +339,11 @@ class ParkingUIIntegrationXML {
             card.classList.remove('selected');
         });
 
-        if (event && event.currentTarget) {
-            event.currentTarget.classList.add('selected');
+        if (evt && evt.currentTarget) {
+            evt.currentTarget.classList.add('selected');
+        } else {
+            const matchingCard = document.querySelector(`.company-card[data-parking-id="${parking.id}"]`);
+            if (matchingCard) matchingCard.classList.add('selected');
         }
 
         // Now load companies/contracts from this parking
@@ -438,7 +487,8 @@ class ParkingUIIntegrationXML {
         companies.forEach(async (company) => {
             const card = document.createElement('div');
             card.className = 'company-card';
-            card.onclick = () => this.selectCompany(company);
+            card.setAttribute('data-company-id', company.id);
+            card.onclick = (e) => this.selectCompany(company, e);
 
             // Start with basic info
             card.innerHTML = `
@@ -479,10 +529,23 @@ class ParkingUIIntegrationXML {
             `;
 
             companyList.appendChild(card);
-
-            // Load additional data asynchronously
-            this.loadCompanyCardData(company);
         });
+
+        // Load company card details in controlled batches of 2, yielding while subscribers of a selected company are loading
+        this._companyCardsGen = (this._companyCardsGen || 0) + 1;
+        const myCardsGen = this._companyCardsGen;
+        (async () => {
+            const CARD_CONCURRENCY = 2;
+            for (let i = 0; i < companies.length; i += CARD_CONCURRENCY) {
+                if (this._companyCardsGen !== myCardsGen) return;
+                while (this._isLoadingSubscribers) {
+                    await new Promise(r => setTimeout(r, 250));
+                    if (this._companyCardsGen !== myCardsGen) return;
+                }
+                const batch = companies.slice(i, i + CARD_CONCURRENCY);
+                await Promise.all(batch.map(company => this.loadCompanyCardData(company)));
+            }
+        })();
     }
 
     /**
@@ -540,11 +603,7 @@ class ParkingUIIntegrationXML {
             // Get company contract data with facility info
             // Loading detailed data for company
 
-            // Get company basic data
-            const directResult = await this.api.makeRequest(`/contracts/${company.id}`);
-            // Direct API response received
-
-            // Get enhanced details with pooling data
+            // Get enhanced details with pooling data (removed redundant /contracts/${id} request)
             const result = await this.api.getEnhancedContractDetails(company.id);
 
             if (result.success && result.data) {
@@ -726,7 +785,11 @@ class ParkingUIIntegrationXML {
     /**
      * Select a company and load its subscribers
      */
-    async selectCompany(company) {
+    async selectCompany(company, evt) {
+        // Cancel any previous company's background loading immediately
+        if (this.api && typeof this.api.cancelActiveLoad === 'function') {
+            this.api.cancelActiveLoad();
+        }
         // Store the full company object with correct name
         // If no name, use the parking name or a default
         const contractName = company.name || company.firstName || company.companyName ||
@@ -747,17 +810,16 @@ class ParkingUIIntegrationXML {
             card.classList.remove('selected');
         });
 
-        if (event && event.currentTarget) {
-            event.currentTarget.classList.add('selected');
+        if (evt && evt.currentTarget) {
+            evt.currentTarget.classList.add('selected');
+        } else {
+            const matchingCard = document.querySelector(`.company-card[data-company-id="${company.id}"]`);
+            if (matchingCard) matchingCard.classList.add('selected');
         }
-
-        // Log company name for debugging
-        // Company selected
 
         // Keep company selector visible even with one company (for occupancy data)
         const companySelector = document.getElementById('companySelector');
         const companies = document.querySelectorAll('.company-card');
-        // Removed hiding logic - always show company card for occupancy info
 
         // Show main content
         const mainContent = document.getElementById('mainContent');
@@ -768,6 +830,9 @@ class ParkingUIIntegrationXML {
                 companyNameElement.textContent = `- ${company.name || company.companyName}`;
             }
         }
+
+        // Show sub notice with loading status initially
+        this.updateLoadedTimestamp(null, false, true);
 
         // Load subscribers
         await this.loadSubscribers();
@@ -863,7 +928,6 @@ class ParkingUIIntegrationXML {
                 <td>${subscriber.lpn3 || ''}</td>
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(validUntil) || ''}</td>
                 <td style="color: #888;" title="פרופיל ${subscriber.profile || ''}">${subscriber.profileName || (subscriber.profile ? `פרופיל ${subscriber.profile}` : '')}</td>
-                <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                 <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
 
@@ -882,11 +946,18 @@ class ParkingUIIntegrationXML {
     async loadSubscribers(forceFullLoad = false) {
         if (!this.currentContract) return;
 
+        const requestedContractId = this.currentContract.id;
+        this._isLoadingSubscribers = true;
+
         // Clear any existing progress messages first
         this.hideProgressMessage();
 
         this.setLoading(true, 'loadingState');
         this.showProgressMessage(forceFullLoad ? 'טוען את כל נתוני המנויים...' : 'טוען רשימת מנויים...');
+        this.updateLoadedTimestamp(null, false, true);
+
+        let loadCompleted = false;
+        let initialTableRendered = false;
 
         try {
             // Get performance settings from config
@@ -898,8 +969,10 @@ class ParkingUIIntegrationXML {
                 companyName: this.currentContract.name || this.currentContract.firstName || this.currentContract.companyName || `חברה ${this.currentContract.id}`,  // Pass correct company name
                 forceFullLoad: forceFullLoad,  // Force loading all details if requested
 
-                // Callback when basic data is ready
-                onBasicLoaded: (basicSubscribers) => {
+                // Callback when basic data (or final data) is ready
+                onBasicLoaded: (basicSubscribers, fromCache = false, cachedTimestamp = null) => {
+                    if (!this.currentContract || String(this.currentContract.id) !== String(requestedContractId)) return;
+                    
                     this.subscribers = basicSubscribers;
 
                     // Update the actual subscriber count in the company card
@@ -910,126 +983,132 @@ class ParkingUIIntegrationXML {
 
                     // Update all subscribers with correct company name and loading strategy
                     const companyName = this.currentContract.name || this.currentContract.firstName || `חברה ${this.currentContract.id}`;
-                    const isLargeCompany = this.subscribers.length > 300;
+                    const isLargeCompany = this.subscribers.length > 500;
                     this.subscribers.forEach(sub => {
-                        // Only update company name if it's missing
                         if (!sub.companyName) {
                             sub.companyName = companyName.trim();
                         }
                         sub.isLargeCompany = isLargeCompany;
                     });
 
-                    // Get company name and display immediately
+                    // Update header info
                     this.updateCompanyInfo();
 
-                    // Display basic data immediately - with fade transition for smooth update
-                    const tbody = document.getElementById('subscribersTableBody');
-                    if (tbody) {
-                        tbody.style.transition = 'opacity 0.3s ease';
-                        tbody.style.opacity = '0.8';
-                    }
-                    this.displaySubscribers(this.subscribers);
-                    if (tbody) {
-                        setTimeout(() => {
-                            tbody.style.opacity = '1';
-                        }, 100);
+                    if (!initialTableRendered) {
+                        initialTableRendered = true;
+                        this.displaySubscribers(this.subscribers, false);
+                    } else {
+                        // Preserve any active search/filter/sort and scroll position when full details arrive
+                        this.applyFilters(true);
                     }
 
-                    // Hide loading but show progress in status bar
+                    // Hide full-screen loading overlay immediately once table is visible
                     this.setLoading(false, 'loadingState');
+                    this.hideProgressMessage();
                     const tableContainer = document.getElementById('tableContainer');
                     if (tableContainer) {
                         tableContainer.style.display = 'block';
                     }
 
-                    // Setup sorting and filters after table is populated
-                    setTimeout(() => {
-                        this.setupSorting();
-                        this.setupFilters();
-                    }, 100);
+                    // Setup sorting and filters once
+                    this.setupSorting();
+                    this.setupFilters();
 
-                    // Show subtle progress indicator only for medium/large companies
-                    // Small companies (≤30) load instantly, so no need for progress
-                    if (basicSubscribers.length > 30) {
-                        this.showBackgroundProgress('טוען פרטים מלאים ברקע...');
+                    // Show subtle non-blocking bottom-right progress indicator during background detail fetch
+                    if (fromCache) {
+                        this.hideBackgroundProgress();
+                        this.updateLoadedTimestamp(cachedTimestamp || Date.now(), true);
+                        loadCompleted = true;
+                        this._isLoadingSubscribers = false;
+                    } else if (cachedTimestamp) {
+                        // Final bulk/chunk load completed
+                        this.hideBackgroundProgress();
+                        this.updateLoadedTimestamp(cachedTimestamp, false);
+                    } else if (basicSubscribers.length > 0) {
+                        this.showBackgroundProgress(`טוען פרטים מלאים (0/${basicSubscribers.length})...`);
                     }
                 },
 
-                // Callback when each detail is loaded
+                // Batch callback when a chunk of details finishes loading (for large companies > 800)
+                onChunkLoaded: (updatedSubscribers, loadedCount, totalCount) => {
+                    if (!this.currentContract || String(this.currentContract.id) !== String(requestedContractId)) return;
+                    this.subscribers = updatedSubscribers;
+                    this.updatePresentCount();
+                    this.applyFilters(true);
+                    const pct = Math.round((loadedCount / totalCount) * 100);
+                    this.showBackgroundProgress(`טוען פרטים מלאים... ${loadedCount}/${totalCount} (${pct}%)`);
+                },
+
+                // Callback when a single detail is loaded (only used in safe-batch fallback)
                 onDetailLoaded: (subscriber, index) => {
-                    // Update the specific row in the table
+                    if (!this.currentContract || String(this.currentContract.id) !== String(requestedContractId)) return;
                     this.updateSubscriberRow(subscriber, index);
-                    // Update present count in header
                     this.updatePresentCount();
                 },
 
-                // Progress callback
+                // Progress callback (non-blocking bottom badge once table is already rendered)
                 onProgress: (progress) => {
-                    // Check if this is a large company notification
-                    if (progress.message && progress.message.includes('חברה גדולה')) {
-                        this.updateBackgroundProgress(progress.message);
-                        // Show a special notification for large companies
-                        setTimeout(() => {
-                            this.showNotification(
-                                `⚠️ ${progress.message}\n💡 עמוד על מנוי או ערוך כדי לטעון פרטים מלאים`,
-                                'warning',
-                                5000 // Show for 5 seconds
-                            );
-                            this.hideBackgroundProgress();
-                        }, 500);
-                    } else if (progress.message) {
-                        // Show progress message
-                        this.showProgressMessage(progress.message);
+                    if (!this.currentContract || String(this.currentContract.id) !== String(requestedContractId)) return;
 
-                        // If we reached 100%, hide progress after a short delay
-                        if (progress.percent && progress.percent >= 100) {
-                            // Show completion message briefly, then hide
-                            setTimeout(() => {
-                                this.hideProgressMessage();
-                            }, 300); // Show completion message for 300ms only
-                        }
-                    } else if (progress.current && progress.total) {
-                        this.updateBackgroundProgress(
-                            `טוען פרטים... ${progress.current}/${progress.total} (${progress.percent}%)`
-                        );
-
-                        if (progress.percent >= 100) {
-                            // Hide immediately when done
-                            this.hideBackgroundProgress();
-                        }
+                    if (progress.percent && progress.percent >= 100) {
+                        this.hideProgressMessage();
+                        this.hideBackgroundProgress();
+                        return;
                     }
+
+                    const msg = progress.message || (progress.current && progress.total
+                        ? `טוען פרטים... ${progress.current}/${progress.total} (${progress.percent}%)`
+                        : 'טוען פרטים...');
+
+                    if (!initialTableRendered) {
+                        this.showProgressMessage(msg);
+                    } else {
+                        this.hideProgressMessage();
+                        this.showBackgroundProgress(msg);
+                    }
+                },
+
+                // Callback when full load is completely finished
+                onComplete: (completedSubscribers, fromCache = false, timestamp = Date.now()) => {
+                    if (!this.currentContract || String(this.currentContract.id) !== String(requestedContractId)) return;
+                    loadCompleted = true;
+                    this._isLoadingSubscribers = false;
+                    this.subscribers = completedSubscribers;
+                    this.hideBackgroundProgress();
+                    this.hideProgressMessage();
+                    this.updateLoadedTimestamp(timestamp, fromCache);
+                    this.updatePresentCount();
                 }
             });
 
             if (!result.success) {
-                console.error('Failed to load subscribers:', result);
-                this.showNotification('לא נמצאו מנויים לחברה זו', 'warning');
-                this.subscribers = [];
-                this.displaySubscribers([]);
-                // Make sure loading is cleared
-                this.setLoading(false, 'loadingState');
+                this._isLoadingSubscribers = false;
+                if (!result.cancelled) {
+                    console.error('Failed to load subscribers:', result);
+                    this.showNotification('לא נמצאו מנויים לחברה זו', 'warning');
+                    this.subscribers = [];
+                    this.displaySubscribers([]);
+                    this.setLoading(false, 'loadingState');
+                }
+            } else if (!loadCompleted && (!result.progressive || result.fromCache)) {
+                loadCompleted = true;
+                this._isLoadingSubscribers = false;
+                this.updateLoadedTimestamp(result.timestamp || Date.now(), !!result.fromCache);
             }
         } catch (error) {
+            this._isLoadingSubscribers = false;
             console.error('Error loading subscribers:', error);
             this.showNotification('שגיאה בטעינת מנויים', 'error');
             this.subscribers = [];
             this.displaySubscribers([]);
-            // Hide progress message on error
             this.hideProgressMessage();
-            // Make sure loading is cleared on error
             this.setLoading(false, 'loadingState');
         } finally {
-            // Hide background loading message
-            this.hideBackgroundProgress();
-
-            // If we're still showing the progress message after 5 seconds, something went wrong
-            setTimeout(() => {
-                const progressMsg = document.getElementById('progressMessage');
-                if (progressMsg && progressMsg.style.display !== 'none') {
-                    this.hideProgressMessage();
-                    this.setLoading(false, 'loadingState');
-                }
-            }, 5000);
+            if (loadCompleted) {
+                this._isLoadingSubscribers = false;
+                this.hideBackgroundProgress();
+                this.hideProgressMessage();
+            }
         }
     }
 
@@ -1071,13 +1150,53 @@ class ParkingUIIntegrationXML {
     }
 
     /**
+     * Update last loaded time in company subtitle
+     */
+    updateLoadedTimestamp(timestamp, fromCache = false, isLoading = false) {
+        const subNotice = document.getElementById('companySubNotice');
+        if (subNotice) {
+            subNotice.style.display = 'block';
+            const isLarge = this.subscribers && this.subscribers.length > 500;
+            const noticeText = document.getElementById('subNoticeText');
+            if (noticeText) {
+                noticeText.style.display = isLarge ? 'inline' : 'none';
+            }
+            const timeSpan = document.getElementById('lastLoadedTime');
+            if (timeSpan) {
+                const prefix = isLarge ? '| ' : '';
+                if (isLoading) {
+                    timeSpan.textContent = `${prefix}טוען נתונים...`;
+                } else if (timestamp) {
+                    const d = new Date(timestamp);
+                    const timeStr = d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    if (fromCache) {
+                        timeSpan.textContent = `${prefix}שעת טעינה אחרונה: ${timeStr} (מטמון)`;
+                    } else {
+                        timeSpan.textContent = `${prefix}שעת טעינה אחרונה: ${timeStr}`;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Update company info in header
      */
     async updateCompanyInfo() {
         try {
-            const companyResult = await this.api.getContractDetails(this.currentContract.id);
-            if (companyResult.success) {
-                const companyName = companyResult.data.name || `חברה ${this.currentContract.id}`;
+            let companyName = this.currentContract?.name || this.currentContract?.companyName || '';
+            if ((!companyName || companyName.startsWith('חברה ')) && !this.currentContract?._nameChecked) {
+                this.currentContract._nameChecked = true;
+                const companyResult = await this.api.getContractDetails(this.currentContract.id);
+                if (companyResult.success && companyResult.data) {
+                    companyName = companyResult.data.name || `חברה ${this.currentContract.id}`;
+                    this.currentContract.name = companyName;
+                }
+            }
+            if (!companyName) {
+                companyName = `חברה ${this.currentContract.id}`;
+            }
+            if (true) {
 
                 // Update company name in subscribers
                 this.subscribers.forEach(sub => {
@@ -1091,9 +1210,8 @@ class ParkingUIIntegrationXML {
                 const companyNameElement = document.getElementById('companyName');
                 if (companyNameElement) {
                     // Check if this is a large company
-                    const isLargeCompany = this.subscribers.length > 300;
-                    const statusText = isLargeCompany ? ' 🚀' : '';
-                    companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''})${statusText}`;
+                    const isLargeCompany = this.subscribers.length > 500;
+                    companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''})`;
 
                     // Add tooltip for large companies
                     if (isLargeCompany) {
@@ -1104,6 +1222,18 @@ class ParkingUIIntegrationXML {
                     const reloadButton = document.getElementById('reloadFullButton');
                     if (reloadButton) {
                         reloadButton.style.display = isLargeCompany ? 'inline-block' : 'none';
+                    }
+
+                    // Notice text: only display for large companies
+                    const noticeText = document.getElementById('subNoticeText');
+                    if (noticeText) {
+                        noticeText.style.display = isLargeCompany ? 'inline' : 'none';
+                    }
+
+                    // Ensure notice under title is visible
+                    const subNotice = document.getElementById('companySubNotice');
+                    if (subNotice) {
+                        subNotice.style.display = 'block';
                     }
                 }
             }
@@ -1119,14 +1249,13 @@ class ParkingUIIntegrationXML {
         const companyNameElement = document.getElementById('companyName');
         if (companyNameElement) {
             const currentText = companyNameElement.textContent;
-            const companyName = currentText.split('(')[0].trim().replace('- ', '').replace(' 🚀', '');
+            const companyName = currentText.split('(')[0].trim().replace('- ', '');
 
             // Check if this is a large company
-            const isLargeCompany = this.subscribers.length > 300;
-            const statusText = isLargeCompany ? ' 🚀 מצב מהיר' : '';
+            const isLargeCompany = this.subscribers.length > 500;
 
-            // Update with clean format
-            companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''})${statusText}`;
+            // Update with clean format without rocket icon
+            companyNameElement.textContent = `- ${companyName} (${this.subscribers.length} מנויים${presentCount > 0 ? ` | ${presentCount} נוכחים` : ''})`;
 
             // Add tooltip for large companies
             if (isLargeCompany) {
@@ -1148,13 +1277,18 @@ class ParkingUIIntegrationXML {
             }
 
             // Find the subscriber in our list
-            const existingIndex = this.subscribers.findIndex(s => s.subscriberNum === subscriberNum);
+            const existingIndex = this.subscribers.findIndex(s => String(s.subscriberNum) === String(subscriberNum));
 
             // Get the updated subscriber data from server
             const result = await this.api.getSubscriber(this.currentContract.id, subscriberNum);
 
             if (result.success && result.data) {
-                const updatedSubscriber = result.data;
+                const existingSub = existingIndex >= 0 ? this.subscribers[existingIndex] : {};
+                const updatedSubscriber = {
+                    ...existingSub,
+                    ...result.data,
+                    companyName: result.data.companyName || existingSub.companyName || this.currentContract.name || ''
+                };
 
                 if (existingIndex >= 0) {
                     // Update existing subscriber
@@ -1233,7 +1367,6 @@ class ParkingUIIntegrationXML {
                 <td>${subscriber.vehicle3 || subscriber.lpn3 || ''}</td>
                 <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil || subscriber.xValidUntil)}</td>
                 <td style="color: #888;" title="פרופיל ${subscriber.profile || ''}">${subscriber.profileName || (subscriber.profile ? `פרופיל ${subscriber.profile}` : '')}</td>
-                <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
                 <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
             `;
 
@@ -1396,10 +1529,14 @@ class ParkingUIIntegrationXML {
     }
 
     /**
-     * Setup sorting functionality on table headers
+     * Setup sorting functionality on table headers (guarded so listeners are attached only once)
      */
     setupSorting() {
+        if (this._sortingInitialized) return;
         const sortableHeaders = document.querySelectorAll('.sortable');
+        if (!sortableHeaders || sortableHeaders.length === 0) return;
+        this._sortingInitialized = true;
+
         sortableHeaders.forEach(header => {
             header.addEventListener('click', () => {
                 const field = header.getAttribute('data-sort');
@@ -1550,6 +1687,9 @@ class ParkingUIIntegrationXML {
                         Object.assign(subscriber, {
                             ...detail,
                             ...preservedFields,  // This must come AFTER detail to preserve our fields
+                            firstName: detail.person?.firstName || detail.firstName || subscriber.firstName || '',
+                            lastName: detail.person?.surname || detail.lastName || subscriber.lastName || '',
+                            name: detail.person?.surname || detail.lastName || subscriber.name || '',
                             // Map profile correctly
                             profile: detail.identification?.usageProfile?.id || detail.profile || subscriber.profile,
                             profileName: detail.identification?.usageProfile?.name || detail.profileName || subscriber.profileName,
@@ -1632,246 +1772,80 @@ class ParkingUIIntegrationXML {
     }
 
     /**
-     * Display subscribers in table
+     * Ensure a single delegated click handler is attached to subscribersTableBody
+     * Avoids creating 1,500+ individual onclick & hover closures on every render
      */
-    displaySubscribers(subscribers) {
-        // Skip debug logs for performance
+    _ensureTableDelegation(tbody) {
+        if (tbody._delegationAttached) return;
+        tbody._delegationAttached = true;
 
+        tbody.addEventListener('click', (e) => {
+            const tr = e.target.closest('tr[data-subscriber-num]');
+            if (!tr) return;
+            const subNum = tr.dataset.subscriberNum;
+            const currentSubscriber = this.subscribers.find(s =>
+                String(s.subscriberNum) === String(subNum) || String(s.id) === String(subNum)
+            );
+            if (currentSubscriber) {
+                this.editSubscriber(currentSubscriber);
+            }
+        });
+    }
+
+    /**
+     * Display subscribers in table using fast single-pass HTML rendering
+     */
+    displaySubscribers(subscribers, preserveScroll = false) {
         const tbody = document.getElementById('subscribersTableBody');
         if (!tbody) return;
 
-        // Check if user can edit subscribers (for permission display)
-        const permissions = window.userPermissions || '';
-        const canEdit = permissions !== 'B' && permissions !== '';
+        this._ensureTableDelegation(tbody);
 
-        // Ensure the actions column header exists
-        const tableHead = document.querySelector('#subscribersTable thead tr');
-        if (tableHead && !tableHead.querySelector('th[data-translate="actions"]')) {
-            const actionsHeader = document.createElement('th');
-            actionsHeader.setAttribute('data-translate', 'actions');
-            actionsHeader.textContent = 'פעולות';
-            tableHead.appendChild(actionsHeader);
+        // Initialize column resizing once if available
+        if (!this._colResizingInit && typeof window.initTableColumnResizing === 'function') {
+            this._colResizingInit = true;
+            window.initTableColumnResizing();
         }
 
-        tbody.innerHTML = '';
+        const tableContainer = document.getElementById('tableContainer');
+        const prevScrollTop = (preserveScroll && tableContainer) ? tableContainer.scrollTop : 0;
+        const prevWindowScrollY = preserveScroll ? window.scrollY : null;
 
-        // For very large lists, use DocumentFragment for better performance
-        let fragment = document.createDocumentFragment();
-        const isVeryLarge = subscribers.length > 500;
+        const nowMs = Date.now();
+        const rowsHtml = new Array(subscribers.length);
 
-        if (isVeryLarge) {
+        for (let i = 0; i < subscribers.length; i++) {
+            const subscriber = subscribers[i];
+            const subNum = subscriber.subscriberNum || subscriber.id || '';
+            const rawValidUntil = subscriber.validUntil || subscriber.xValidUntil || '2030-12-31';
+            const isExpired = new Date(rawValidUntil).getTime() < nowMs;
+            const tag = subscriber.tagNum || subscriber.cardno || '';
+            const profId = subscriber.profile || subscriber.extCardProfile || '';
+            const profText = subscriber.profileName || (profId ? `פרופיל ${profId}` : '');
+            const isPresent = subscriber.presence || subscriber.present;
+            const rowTitle = !subscriber.hasFullDetails ? ' title="לחץ לצפייה או עריכת מנוי"' : '';
 
-            // Show loading message for very large companies
-            const loadingRow = document.createElement('tr');
-            loadingRow.innerHTML = `
-                <td colspan="11" style="text-align: center; padding: 20px;">
-                    <div style="font-size: 18px; color: #667eea;">
-                        <span>⏳ טוען ${subscribers.length} מנויים...</span>
-                        <br>
-                        <span style="font-size: 14px; color: #666;">פרטים מלאים ייטענו בעת מעבר עכבר</span>
-                    </div>
-                </td>
-            `;
-            tbody.appendChild(loadingRow);
+            rowsHtml[i] = `<tr data-subscriber-num="${subNum}" data-index="${i}" style="cursor:pointer;"${rowTitle}>` +
+                `<td>${subscriber.companyNum || ''}</td>` +
+                `<td>${subscriber.companyName || ''}</td>` +
+                `<td>${subNum}</td>` +
+                `<td>${subscriber.firstName || ''}</td>` +
+                `<td>${subscriber.lastName || subscriber.name || ''}</td>` +
+                `<td>${tag ? `<span class="tag-badge">${tag}</span>` : ''}</td>` +
+                `<td>${subscriber.vehicle1 || subscriber.lpn1 || ''}</td>` +
+                `<td>${subscriber.vehicle2 || subscriber.lpn2 || ''}</td>` +
+                `<td>${subscriber.vehicle3 || subscriber.lpn3 || ''}</td>` +
+                `<td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(rawValidUntil) || ''}</td>` +
+                `<td style="color: #888;" title="פרופיל ${profId}">${profText}</td>` +
+                `<td style="text-align: center; font-size: 18px;">${isPresent ? '✅' : '❌'}</td>` +
+                `</tr>`;
         }
 
-        // Batch rendering for very large lists
-        const BATCH_SIZE = 100;
-        let currentBatch = 0;
+        tbody.innerHTML = rowsHtml.join('');
 
-        const renderBatch = () => {
-            const start = currentBatch * BATCH_SIZE;
-            const end = Math.min(start + BATCH_SIZE, subscribers.length);
-
-            for (let index = start; index < end; index++) {
-                const subscriber = subscribers[index];
-                const row = document.createElement('tr');
-
-                // Always allow viewing subscriber details
-                // P permission is only needed for profile updates
-                row.onclick = () => {
-                    const currentSubscriber = this.subscribers.find(s =>
-                        String(s.subscriberNum) === String(subscriber.subscriberNum)
-                    ) || subscriber;
-                    this.editSubscriber(currentSubscriber);
-                };
-                row.style.cursor = 'pointer';
-
-                row.dataset.subscriberNum = subscriber.subscriberNum;
-                row.dataset.index = index;
-
-                // Add hover loading for large companies without full details
-                if (subscriber.isLargeCompany && !subscriber.hasFullDetails) {
-                    row.setAttribute('data-hover-loadable', 'true');
-                    if (canEdit) {
-                        row.title = 'עמוד עם העכבר לטעינת פרטים מלאים';
-                    } else {
-                        row.title = 'אין הרשאה לערוך מנויים (דרושה הרשאת P) | עמוד עם העכבר לטעינת פרטים מלאים';
-                    }
-                    if (!row.style.opacity || row.style.opacity === '1') {
-                        row.style.opacity = '0.85';
-                    }
-                    // Setup hover loading only once
-                    this.setupHoverLoading(row, subscriber, index);
-                } else if (!subscriber.hasFullDetails) {
-                    // For small/medium companies without full details
-                    if (!row.style.opacity || row.style.opacity === '1') {
-                        row.style.opacity = '0.85';
-                    }
-                    if (!row.title) {
-                        row.title = 'נתונים בסיסיים - טוען פרטים...';
-                    }
-                }
-
-                const validUntil = new Date(subscriber.validUntil || subscriber.xValidUntil || '2030-12-31');
-                const isExpired = validUntil < new Date();
-
-                row.innerHTML = `
-                <td>${subscriber.companyNum || ''}</td>
-                <td>${subscriber.companyName || ''}</td>
-                <td>${subscriber.subscriberNum || subscriber.id || ''}</td>
-                <td>${subscriber.firstName || ''}</td>
-                <td>${subscriber.lastName || subscriber.name || ''}</td>
-                <td>${subscriber.tagNum || subscriber.cardno ? `<span class="tag-badge">${subscriber.tagNum || subscriber.cardno}</span>` : ''}</td>
-                <td>${subscriber.vehicle1 || subscriber.lpn1 || ''}</td>
-                <td>${subscriber.vehicle2 || subscriber.lpn2 || ''}</td>
-                <td>${subscriber.vehicle3 || subscriber.lpn3 || ''}</td>
-                <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil || subscriber.xValidUntil) || ''}</td>
-                <td style="color: #888;" title="פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}">${subscriber.profileName || `פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}`}</td>
-                <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
-                <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
-            `;
-                // Add to fragment for better performance
-                if (isVeryLarge) {
-                    fragment.appendChild(row);
-                } else {
-                    tbody.appendChild(row);
-                }
-            }
-
-            // For batch rendering, schedule next batch
-            if (isVeryLarge && end < subscribers.length) {
-                currentBatch++;
-                // Append current batch
-                if (fragment.hasChildNodes()) {
-                    // Remove loading message on first batch
-                    if (currentBatch === 1) {
-                        tbody.innerHTML = '';
-                    }
-                    // Don't use cloneNode - it doesn't copy event listeners!
-                    tbody.appendChild(fragment);
-                    // Create new fragment for next batch
-                    fragment = document.createDocumentFragment();
-                }
-                // Schedule next batch
-                setTimeout(renderBatch, 10);
-            } else if (isVeryLarge) {
-                // Last batch
-                if (currentBatch === 0) {
-                    tbody.innerHTML = '';
-                }
-                tbody.appendChild(fragment);
-
-                // Clear loading state after all batches are done
-                this.setLoading(false, 'loadingState');
-                this.hideProgressMessage();
-                this.hideBackgroundProgress();
-
-                // Force remove any loading overlays
-                const loadingState = document.getElementById('loadingState');
-                if (loadingState) {
-                    loadingState.style.display = 'none';
-                }
-
-                const progressMsg = document.getElementById('progressMessage');
-                if (progressMsg) {
-                    progressMsg.remove();
-                }
-
-                // Make sure table is visible
-                const tableContainer = document.getElementById('tableContainer');
-                if (tableContainer) {
-                    tableContainer.style.display = 'block';
-                }
-
-                // Show completion message
-                this.showNotification(`✅ נטענו ${subscribers.length} מנויים`, 'success', 3000);
-
-            }
-        };
-
-        // Start rendering
-        if (isVeryLarge) {
-            renderBatch();
-        } else {
-            // For smaller lists, use the regular forEach
-            subscribers.forEach((subscriber, index) => {
-                const row = document.createElement('tr');
-
-                // Always allow viewing subscriber details
-                // P permission is only needed for profile updates
-                row.onclick = () => {
-                    // Find the current subscriber data
-                    const currentSubscriber = this.subscribers.find(s =>
-                        s.subscriberNum === subscriber.subscriberNum
-                    ) || subscriber;
-                    // Trigger the edit function from the HTML page
-                    if (window.editSubscriber) {
-                        window.editSubscriber(currentSubscriber);
-                    }
-                };
-
-                row.dataset.subscriberNum = subscriber.subscriberNum;
-                row.dataset.index = index;
-
-                // Add hover loading for large companies without full details
-                if (subscriber.isLargeCompany && !subscriber.hasFullDetails) {
-                    row.setAttribute('data-hover-loadable', 'true');
-                    if (canEdit) {
-                        row.title = 'עמוד עם העכבר לטעינת פרטים מלאים';
-                    } else {
-                        row.title = 'אין הרשאה לערוך מנויים (דרושה הרשאת P) | עמוד עם העכבר לטעינת פרטים מלאים';
-                    }
-                    if (!row.style.opacity || row.style.opacity === '1') {
-                        row.style.opacity = '0.85';
-                    }
-                    // Setup hover loading only once
-                    this.setupHoverLoading(row, subscriber, index);
-                } else if (!subscriber.hasFullDetails) {
-                    // For small/medium companies without full details
-                    if (!row.style.opacity || row.style.opacity === '1') {
-                        row.style.opacity = '0.85';
-                    }
-                    if (!row.title) {
-                        row.title = 'נתונים בסיסיים - טוען פרטים...';
-                    }
-                }
-
-                const validUntil = new Date(subscriber.validUntil || subscriber.xValidUntil || '2030-12-31');
-                const isExpired = validUntil < new Date();
-
-                row.innerHTML = `
-                    <td>${subscriber.companyNum || ''}</td>
-                    <td>${subscriber.companyName || ''}</td>
-                    <td>${subscriber.subscriberNum || subscriber.id || ''}</td>
-                    <td>${subscriber.firstName || ''}</td>
-                    <td>${subscriber.lastName || subscriber.name || ''}</td>
-                    <td>${subscriber.tagNum || subscriber.cardno ? `<span class="tag-badge">${subscriber.tagNum || subscriber.cardno}</span>` : ''}</td>
-                    <td>${subscriber.vehicle1 || subscriber.lpn1 || ''}</td>
-                    <td>${subscriber.vehicle2 || subscriber.lpn2 || ''}</td>
-                    <td>${subscriber.vehicle3 || subscriber.lpn3 || ''}</td>
-                    <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(subscriber.validUntil || subscriber.xValidUntil) || ''}</td>
-                    <td style="color: #888;" title="פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}">${subscriber.profileName || `פרופיל ${subscriber.profile || subscriber.extCardProfile || ''}`}</td>
-                    <td>${this.formatDate(subscriber.validFrom || subscriber.xValidFrom) || ''}</td>
-                    <td style="text-align: center; font-size: 18px;">${subscriber.presence || subscriber.present ? '✅' : '❌'}</td>
-            `;
-                tbody.appendChild(row);
-            });
-
-            // Clear loading state for smaller companies
-            this.setLoading(false, 'loadingState');
-            this.hideProgressMessage();
-            this.hideBackgroundProgress();
+        if (preserveScroll) {
+            if (tableContainer) tableContainer.scrollTop = prevScrollTop;
+            if (prevWindowScrollY !== null) window.scrollTo(window.scrollX, prevWindowScrollY);
         }
     }
 
@@ -2123,11 +2097,25 @@ class ParkingUIIntegrationXML {
                     subscriber.subscriberNum
                 );
 
-                if (result.success) {
+                if (result.success && result.data) {
                     const detail = result.data;
+                    const person = detail.person || {};
+                    const ident = detail.identification || {};
+                    const usageProf = ident.usageProfile || {};
 
+                    const fname = person.firstName || detail.firstName || subscriber.firstName || '';
+                    const lname = person.surname || detail.lastName || subscriber.lastName || '';
+                    const tag = ident.cardno || detail.tagNum || detail.cardno || subscriber.tagNum || '';
+                    const profId = usageProf.id || detail.profile || detail.profileId || subscriber.profile || '1';
+                    const profName = usageProf.name || detail.profileName || subscriber.profileName || '';
+                    const vFrom = ident.validFrom || detail.validFrom || subscriber.validFrom;
+                    const vUntil = ident.validUntil || detail.validUntil || subscriber.validUntil;
+                    const isPres = ident.present === 'true' || ident.present === true || subscriber.presence || false;
+                    const l1 = detail.lpn1 || subscriber.vehicle1 || '';
+                    const l2 = detail.lpn2 || subscriber.vehicle2 || '';
+                    const l3 = detail.lpn3 || subscriber.vehicle3 || '';
 
-                    // Preserve important fields and map correctly
+                    // Preserve important fields
                     const preservedFields = {
                         companyName: subscriber.companyName,
                         companyNum: subscriber.companyNum,
@@ -2139,34 +2127,39 @@ class ParkingUIIntegrationXML {
                     // Update subscriber with full details - map fields properly
                     Object.assign(subscriber, {
                         ...detail,
-                        ...preservedFields,  // Preserve our fields
-                        // Map profile correctly from identification.usageProfile
-                        profile: detail.identification?.usageProfile?.id || detail.profile || detail.extCardProfile || subscriber.profile,
-                        profileName: detail.identification?.usageProfile?.name || detail.profileName || subscriber.profileName,
-                        extCardProfile: detail.identification?.usageProfile?.id || detail.extCardProfile || subscriber.extCardProfile,
-                        // Map dates correctly
-                        validFrom: detail.identification?.validFrom || detail.validFrom || subscriber.validFrom,
-                        validUntil: detail.identification?.validUntil || detail.validUntil || subscriber.validUntil,
-                        // Map vehicles
-                        vehicle1: detail.lpn1 || subscriber.vehicle1 || '',
-                        vehicle2: detail.lpn2 || subscriber.vehicle2 || '',
-                        vehicle3: detail.lpn3 || subscriber.vehicle3 || '',
-                        // Map presence correctly
-                        presence: detail.identification?.present === 'true' || detail.presence,
-                        // Mark as having full details
+                        ...preservedFields,
+                        firstName: fname,
+                        lastName: lname,
+                        name: lname,
+                        tagNum: tag,
+                        cardno: tag,
+                        profile: profId,
+                        profileId: profId,
+                        profileName: profName,
+                        extCardProfile: profId,
+                        validFrom: vFrom,
+                        validUntil: vUntil,
+                        xValidFrom: vFrom,
+                        xValidUntil: vUntil,
+                        vehicle1: l1,
+                        vehicle2: l2,
+                        vehicle3: l3,
+                        lpn1: l1,
+                        lpn2: l2,
+                        lpn3: l3,
+                        presence: isPres,
+                        present: isPres,
                         hasFullDetails: true
                     });
 
-                    // Update the row in the table
+                    // Update the row in the table and local array
                     const index = this.subscribers.findIndex(s =>
-                        s.subscriberNum === subscriber.subscriberNum
+                        String(s.subscriberNum) === String(subscriber.subscriberNum) ||
+                        String(s.id) === String(subscriber.subscriberNum)
                     );
                     if (index !== -1) {
+                        this.subscribers[index] = subscriber;
                         this.updateSubscriberRow(subscriber, index);
-                    }
-
-                    if (subscriber.isLargeCompany) {
-                        // Full details loaded successfully
                     }
                 }
             } catch (error) {
@@ -2200,6 +2193,24 @@ class ParkingUIIntegrationXML {
     async saveSubscriber(subscriberData) {
         if (!this.currentContract) return;
 
+        // Prevent double submission / duplicate creation
+        if (this.isSaving) {
+            console.warn('[saveSubscriber] Save already in progress, ignoring duplicate call');
+            return false;
+        }
+        this.isSaving = true;
+
+        const saveTopBtn = document.getElementById('saveTopBtn');
+        const saveBottomBtn = document.querySelector('#editForm button[type="submit"]');
+        if (saveTopBtn) {
+            saveTopBtn.disabled = true;
+            saveTopBtn.style.opacity = '0.6';
+        }
+        if (saveBottomBtn) {
+            saveBottomBtn.disabled = true;
+            saveBottomBtn.style.opacity = '0.6';
+        }
+
         // Check if trying to update profile
         const permissions = window.userPermissions || '';
         const currentSubscriber = this.subscribers.find(s =>
@@ -2212,6 +2223,29 @@ class ParkingUIIntegrationXML {
             !permissions.includes('P')) {
             this.showNotification('אין לך הרשאה לשנות פרופיל (דרושה הרשאת P)', 'error');
             return;
+        }
+
+        // tagNum: only send if the user explicitly provided one in the form!
+        // Never auto-populate or fallback to arbitrary numbers because duplicates trigger errors
+        const tagNum = (subscriberData.tagNum && subscriberData.tagNum.trim() !== '')
+            ? subscriberData.tagNum.trim()
+            : '';
+
+        // Ensure subscriber validUntil does not exceed the contract's expiration date
+        let contractValidUntil = this.currentContract?.xValidUntil || this.currentContract?.validUntil;
+        if (contractValidUntil) {
+            const cleanContractDate = String(contractValidUntil).split(/[ T+]/)[0];
+            let cleanSubDate = String(subscriberData.validUntil || '').trim();
+            if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cleanSubDate)) {
+                const p = cleanSubDate.split('/');
+                cleanSubDate = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+            } else {
+                cleanSubDate = cleanSubDate.split(/[ T+]/)[0];
+            }
+            if (cleanContractDate && (!cleanSubDate || cleanSubDate > cleanContractDate)) {
+                console.warn(`[saveSubscriber] Capping subscriber validUntil (${cleanSubDate}) to contract validUntil (${cleanContractDate})`);
+                subscriberData.validUntil = cleanContractDate;
+            }
         }
 
         this.setLoading(true);
@@ -2264,6 +2298,17 @@ class ParkingUIIntegrationXML {
                 const firstName = rawFirstName || ' '; // If empty, set to space to force update
                 const fullName = `${lastName} ${firstName}`.trim();
 
+                // Filial ID from subscriber or contract
+                const filialId = currentSubscriber?.filialId || this.currentContract.filialId || '1093';
+
+                // Tag and identification handling: if no tag, strictly use LPR (55 / 0) and NO cardno
+                const hasTag = Boolean(tagNum && tagNum.trim() !== '');
+                const identType = hasTag ? '54' : '55';
+                const cardClass = hasTag ? '1' : '0';
+                const ptcptGrp = currentSubscriber?.ptcptGrpNo || currentSubscriber?.identification?.ptcptGrpNo || '0';
+                const currentPres = currentSubscriber?.presence || currentSubscriber?.present ? 'true' : 'false';
+                const ignPres = currentSubscriber?.ignorePresence ? '1' : '0';
+
                 consumerData = {
                     consumer: {
                         id: subscriberData.subscriberNum,
@@ -2272,32 +2317,35 @@ class ParkingUIIntegrationXML {
                         // Send dates with timezone
                         xValidFrom: formatDateWithTimezone(subscriberData.validFrom),
                         xValidUntil: formatDateWithTimezone(subscriberData.validUntil),
-                        filialId: this.currentContract.filialId || '2228'  // Add filialId
+                        filialId: filialId
                     },
                     person: {
                         firstName: firstName,
                         surname: lastName
                     },
                     identification: {
-                        ptcptType: '2',  // Required field from documentation
-                        cardno: subscriberData.tagNum || '',
-                        cardclass: '1',  // Keep as 1
-                        identificationType: '54',  // Back to 54 as per your requirement
+                        ptcptType: '2',
+                        cardno: hasTag ? tagNum : '',
+                        cardclass: cardClass,
+                        identificationType: identType,
                         validFrom: formatDateWithTimezone(subscriberData.validFrom),
                         validUntil: formatDateWithTimezone(subscriberData.validUntil),
                         usageProfile: {
-                            id: subscriberData.profileId || '1',
-                            name: subscriberData.profile || 'Standard'
+                            id: subscriberData.profileId || currentSubscriber?.profileId || currentSubscriber?.profile || '1',
+                            name: subscriberData.profile || currentSubscriber?.profileName || 'Standard'
                         },
-                        admission: '',  // Empty as in documentation
-                        status: '0',  // Active status (0 = active, 6 = locked)
-                        ptcptGrpNo: '-1',  // Default group
-                        chrgOvdrftAcct: '0'  // Don't charge overdraft
+                        admission: '',
+                        present: currentPres,
+                        ignorePresence: ignPres,
+                        status: '0',
+                        ptcptGrpNo: ptcptGrp,
+                        chrgOvdrftAcct: '0'
                     },
                     displayText: '-1',
                     limit: '9999900',
-                    status: '0',  // Active status
-                    delete: '0',  // Not deleted
+                    status: '0',
+                    delete: '0',
+                    ignorePresence: ignPres,
                     // Vehicle data - clean dashes from vehicle numbers, send space if empty to force update
                     lpn1: subscriberData.vehicle1 ? subscriberData.vehicle1.replace(/-/g, '') : ' ',
                     lpn2: subscriberData.vehicle2 ? subscriberData.vehicle2.replace(/-/g, '') : ' ',
@@ -2332,6 +2380,7 @@ class ParkingUIIntegrationXML {
                 const firstName = rawFirstName || ' '; // If empty, set to space
                 const fullName = `${lastName} ${firstName}`.trim();
 
+                const newHasTag = Boolean(subscriberData.tagNum && subscriberData.tagNum.trim() !== '');
                 consumerData = {
                     consumer: {
                         id: '',  // Empty for new subscriber
@@ -2339,7 +2388,7 @@ class ParkingUIIntegrationXML {
                         name: fullName,
                         xValidFrom: formatDateWithTimezone(subscriberData.validFrom),
                         xValidUntil: formatDateWithTimezone(subscriberData.validUntil),
-                        filialId: this.currentContract.filialId || '2228'
+                        filialId: this.currentContract.filialId || '1093'
                     },
                     person: {
                         firstName: firstName,
@@ -2347,9 +2396,9 @@ class ParkingUIIntegrationXML {
                     },
                     identification: {
                         ptcptType: '2',
-                        cardno: subscriberData.tagNum || '',
-                        cardclass: '1',  // Keep as 1
-                        identificationType: '54',  // Back to 54 as per your requirement
+                        cardno: newHasTag ? subscriberData.tagNum.trim() : '',
+                        cardclass: newHasTag ? '1' : '0',
+                        identificationType: newHasTag ? '54' : '55',
                         validFrom: formatDateWithTimezone(subscriberData.validFrom),
                         validUntil: formatDateWithTimezone(subscriberData.validUntil),
 
@@ -2478,74 +2527,64 @@ class ParkingUIIntegrationXML {
 
 
 
-                // If update failed with 500 error, try different approaches
-                if (!result.success && result.error && result.error.includes('500')) {
-                    // Update failed with 500
+                // If update failed, check if it's validity error 30001 (exceeds contract validity)
+                const isValidityError = !result.success && result.error && (
+                    result.error.includes('30001') ||
+                    result.error.includes('validity') ||
+                    result.error.includes('Validity') ||
+                    result.error.includes('חורג')
+                );
 
-                    // Check if this is company 8 or other large companies
-                    const isLargeCompany = this.currentContract.id === '8' ||
-                        this.currentContract.id === '4' ||
-                        this.currentContract.id === '10';
-
-                    if (isLargeCompany) {
-                        // Large company detected
-
-                        // For large companies, try WITHOUT identification at all
-                        const minimalData = {
-                            firstName: consumerData.person.firstName,
-                            surname: consumerData.person.surname,
-                            lpn1: consumerData.lpn1 || ' ',
-                            lpn2: consumerData.lpn2 || ' ',
-                            lpn3: consumerData.lpn3 || ' ',
-                            consumer: consumerData.consumer
-                            // NO identification block at all for large companies
-                        };
-
-                        // Trying with minimal data
-                        result = await this.api.updateConsumer(
-                            this.currentContract.id,
-                            subscriberData.subscriberNum,
-                            minimalData
-                        );
-
-                        if (result.success) {
-                            // Consumer updated successfully
-                            this.showNotification('✅ הנתונים הבסיסיים נשמרו בהצלחה', 'success');
+                if (isValidityError) {
+                    console.warn('[saveSubscriber] Update failed with validity error 30001, fetching contract validity and retrying...');
+                    try {
+                        const cRes = await this.api.getContractDetails(this.currentContract.id);
+                        if (cRes.success && cRes.data) {
+                            const cData = Array.isArray(cRes.data) ? cRes.data[0] : (cRes.data.contract || cRes.data);
+                            const realContractDate = (cData.xValidUntil || cData.validUntil || '').split(/[ T+]/)[0];
+                            if (realContractDate) {
+                                this.currentContract.xValidUntil = realContractDate;
+                                subscriberData.validUntil = realContractDate;
+                                consumerData.consumer.xValidUntil = formatDateWithTimezone(realContractDate);
+                                if (consumerData.identification) {
+                                    consumerData.identification.validUntil = formatDateWithTimezone(realContractDate);
+                                }
+                                result = await this.api.updateConsumer(
+                                    this.currentContract.id,
+                                    subscriberData.subscriberNum,
+                                    consumerData
+                                );
+                            }
                         }
-                    }
-
-                    // If still failed, try without identification at all for problematic companies
-                    if (!result.success) {
-                        // Still failing
-
-                        // Create a copy without identification
-                        const dataWithoutIdentification = {
-                            firstName: consumerData.firstName || consumerData.surname || 'Unknown',
-                            surname: consumerData.surname || consumerData.firstName || 'Unknown',
-                            lpn1: consumerData.lpn1 || '',
-                            // Only include lpn2 if not empty
-                            ...(consumerData.lpn2 ? { lpn2: consumerData.lpn2 } : {}),
-                            // Only include lpn3 if lpn2 exists
-                            ...(consumerData.lpn2 && consumerData.lpn3 ? { lpn3: consumerData.lpn3 } : {}),
-                            consumer: consumerData.consumer
-                            // NO identification at all
-                        };
-
-                        result = await this.api.updateConsumer(
-                            this.currentContract.id,
-                            subscriberData.subscriberNum,
-                            dataWithoutIdentification
-                        );
-
-                        if (result.success) {
-                            // Consumer updated successfully
-                            this.showNotification('⚠️ הנתונים נשמרו ללא פרופיל שימוש', 'warning');
-                        }
+                    } catch (retryErr) {
+                        console.error('[saveSubscriber] Failed to retry with contract validity:', retryErr);
                     }
                 }
 
-                if (result.success) {
-                    // Consumer updated successfully
+                // If update failed with 500 error, try fallback WITHOUT identification block
+                // In Scheidt & Bachmann, when identification has constraints or card errors, updating without identification succeeds cleanly
+                if (!result.success && result.error && (result.error.includes('500') || result.status === 500)) {
+                    console.warn('[saveSubscriber] Primary update failed with 500, attempting fallback without identification block');
+
+                    const minimalData = {
+                        consumer: {
+                            ...consumerData.consumer,
+                            xValidUntil: consumerData.consumer.xValidUntil
+                        },
+                        person: {
+                            firstName: consumerData.person.firstName,
+                            surname: consumerData.person.surname
+                        },
+                        lpn1: consumerData.lpn1 || ' ',
+                        lpn2: consumerData.lpn2 || ' ',
+                        lpn3: consumerData.lpn3 || ' '
+                    };
+
+                    result = await this.api.updateConsumer(
+                        this.currentContract.id,
+                        subscriberData.subscriberNum,
+                        minimalData
+                    );
                 }
             }
 
@@ -2561,18 +2600,12 @@ class ParkingUIIntegrationXML {
                     // Convert to string for comparison
                     const subscriberNumStr = String(subscriberData.subscriberNum);
 
-                    // Looking for subscriber in array
-
                     const index = this.subscribers.findIndex(s =>
                         String(s.subscriberNum) === subscriberNumStr ||
                         String(s.id) === subscriberNumStr
                     );
 
-                    // Found subscriber
-
                     if (index !== -1) {
-                        // Updating subscriber
-
                         // Update local data - preserve important fields
                         const updatedSubscriber = {
                             ...this.subscribers[index],
@@ -2589,8 +2622,8 @@ class ParkingUIIntegrationXML {
                             validUntil: subscriberData.validUntil,
                             xValidFrom: subscriberData.validFrom,
                             xValidUntil: subscriberData.validUntil,
-                            tagNum: subscriberData.tagNum,
-                            cardno: subscriberData.tagNum,
+                            tagNum: subscriberData.tagNum || tagNum || this.subscribers[index].tagNum || '',
+                            cardno: subscriberData.tagNum || tagNum || this.subscribers[index].cardno || '',
                             profile: subscriberData.profileId,
                             profileName: subscriberData.profile,
                             // Keep current presence - it will be updated from server on next load
@@ -2600,11 +2633,12 @@ class ParkingUIIntegrationXML {
                             companyName: this.subscribers[index].companyName,
                             isLargeCompany: this.subscribers[index].isLargeCompany,
                             loadingStrategy: this.subscribers[index].loadingStrategy,
-                            hasFullDetails: false  // Reset to force reload on next edit
+                            hasFullDetails: true  // Retain full details so subsequent edits don't lose data
                         };
 
                         // CRITICAL: Actually update the subscriber in the array!
                         this.subscribers[index] = updatedSubscriber;
+                        this._syncCache();
 
                         // Updated subscriber in array
 
@@ -2638,6 +2672,7 @@ class ParkingUIIntegrationXML {
 
                     // Add to subscribers array
                     this.subscribers.push(newSubscriber);
+                    this._syncCache();
 
                     // Add only the new row instead of re-displaying the entire table
                     const tbody = document.querySelector('#subscribersTable tbody');
@@ -2671,7 +2706,6 @@ class ParkingUIIntegrationXML {
                             <td>${newSubscriber.vehicle3 || ''}</td>
                             <td class="${isExpired ? 'status-inactive' : 'status-active'}">${this.formatDate(newSubscriber.validUntil) || ''}</td>
                             <td style="color: #888;" title="פרופיל ${newSubscriber.profile || ''}">${newSubscriber.profileName || `פרופיל ${newSubscriber.profile || ''}`}</td>
-                            <td>${this.formatDate(newSubscriber.validFrom) || ''}</td>
                             <td style="text-align: center; font-size: 18px;">${newSubscriber.presence ? '✅' : '❌'}</td>
                         `;
 
@@ -2715,16 +2749,15 @@ class ParkingUIIntegrationXML {
 
                 return true;
             } else {
-                // Provide clearer error messages based on the error type
                 let errorMessage = 'שגיאה בשמירת הנתונים';
-
+                // Provide clearer error messages based on the error type
                 if (result.error) {
                     if (result.error.includes('500') || result.error.includes('Internal Server Error')) {
-                        // Check if it's a present subscriber error
-                        if (consumerData.identification && consumerData.identification.present === 'true') {
+                        // Check if it's a confirmed present subscriber error
+                        if (currentSubscriber && (currentSubscriber.presence || currentSubscriber.present)) {
                             errorMessage = '⚠️ לא ניתן לעדכן מנוי נוכח בחניון - יש להוציא את הרכב מהחניון לפני עדכון פרטים';
                         } else {
-                            errorMessage = '⚠️ שגיאת שרת - ייתכן שהמנוי נוכח בחניון או שיש בעיה בנתונים שנשלחו';
+                            errorMessage = `⚠️ שגיאת שרת בעדכון הנתונים (${result.error || '500'})`;
                         }
                     } else if (result.error.includes('400') || result.error.includes('Bad Request')) {
                         errorMessage = '❌ הנתונים שהוזנו אינם תקינים - אנא בדוק את הפרטים';
@@ -2759,6 +2792,17 @@ class ParkingUIIntegrationXML {
             return false;
         } finally {
             this.setLoading(false);
+            this.isSaving = false;
+            const saveTopBtn = document.getElementById('saveTopBtn');
+            const saveBottomBtn = document.querySelector('#editForm button[type="submit"]');
+            if (saveTopBtn) {
+                saveTopBtn.disabled = false;
+                saveTopBtn.style.opacity = '1';
+            }
+            if (saveBottomBtn) {
+                saveBottomBtn.disabled = false;
+                saveBottomBtn.style.opacity = '1';
+            }
         }
     }
 
@@ -2779,7 +2823,10 @@ class ParkingUIIntegrationXML {
 
             if (result.success) {
                 this.showNotification('המנוי נמחק בהצלחה', 'success');
-                await this.loadSubscribers(); // Refresh the list
+                // Remove from local array and update cache
+                this.subscribers = this.subscribers.filter(s => String(s.subscriberNum) !== String(subscriberId) && String(s.id) !== String(subscriberId));
+                this._syncCache();
+                this.displaySubscribers(this.subscribers);
             } else {
                 this.showNotification('שגיאה במחיקת המנוי', 'error');
             }
@@ -3096,14 +3143,19 @@ class ParkingUIIntegrationXML {
                         document.getElementById('editModal')?.classList.contains('guest-mode')
                 };
 
-                // Save via API
-                const success = await this.saveSubscriber(formData);
+                try {
+                    // Save via API
+                    const success = await this.saveSubscriber(formData);
 
-                if (success) {
-                    // Close modal
-                    if (window.closeModal) {
-                        window.closeModal();
+                    if (success) {
+                        // Close modal
+                        if (window.closeModal) {
+                            window.closeModal();
+                        }
                     }
+                } catch (err) {
+                    console.error('Error during saveSubscriber execution:', err);
+                    if (this.setLoading) this.setLoading(false);
                 }
             };
         }
