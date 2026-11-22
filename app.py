@@ -2284,6 +2284,8 @@ def get_user_redirect_url(email):
                 return '/mobile-parking-controller'
             elif code_type_lower.replace('-', '_') == 'tenant_manager':
                 return '/tenant-manager'
+            elif code_type_lower.replace('-', '_') in ('parking_control_manager', 'control_parking', 'parking_controller'):
+                return '/parking-control'
             else:
                 return '/dashboard'
         else:
@@ -3141,7 +3143,8 @@ def master_create_user():
             'verification_code': None,
             'code_expires_at': None,
             'password_expires_at': None,
-            'company_list': company_list if company_list else None
+            'company_list': company_list if company_list else None,
+            'phone_number': clean_phone_number(phone_number) if phone_number else None
         }
         
         print(f"💾 Inserting user data with user_id {next_user_id}")
@@ -7610,6 +7613,13 @@ try:
     app.register_blueprint(tenant_bp)
 except Exception as _tenant_err:
     print(f" Warning: Failed to load tenant_system blueprint: {_tenant_err}")
+
+# ========== PARKING CONTROL MANAGER MODULE ==========
+try:
+    from parking_control_system import parking_control_bp
+    app.register_blueprint(parking_control_bp)
+except Exception as _ctrl_err:
+    print(f" Warning: Failed to load parking_control_system blueprint: {_ctrl_err}")
 
 if __name__ == '__main__':
     # Pre-flight email system check
