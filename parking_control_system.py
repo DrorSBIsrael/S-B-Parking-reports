@@ -629,6 +629,10 @@ def _resolve_local_lan_ip_port(ip, port):
             return "10.35.112.100", 8443
         elif req_port == 8240:
             return "10.35.240.100", 8443
+        elif 8001 <= req_port <= 8999:
+            subnet = req_port - 8000
+            if 1 <= subnet <= 254:
+                return f"10.35.{subnet}.100", 8443
     return req_ip, req_port
 
 def _resolve_oracle_ip(ip, port):
@@ -3256,12 +3260,48 @@ def fetch_online_daily_report(project_number, ip, port, target_date=None, end_da
             # Include sibling facilities of the same parking site (e.g. 473223100 + 473223200, or 421121121 + 421121122...)
             proj_str = str(project_number).strip()
             candidate_projs_str = [proj_str]
+            parking_name_hint = ""
             if len(proj_str) == 9 and proj_str.startswith("473223"):
                 candidate_projs_str = ["473223100", "473223200"]
+                parking_name_hint = "מבנה"
             elif len(proj_str) == 9 and proj_str.startswith("421121"):
-                candidate_projs_str = ["421121121", "421121122", "421121155", "421121166", "421121100", "421121200"]
+                candidate_projs_str = ["421121121", "421121122", "421121155", "421121166", "421121100", "421121200", "1121", "1122", "1112"]
+                parking_name_hint = "שערי צדק"
             elif proj_str == "3050":
                 candidate_projs_str = ["3050", "3200", "473223100", "473223200"]
+                parking_name_hint = "מבנה"
+
+            # Resolve any additional project_number / parking_id entries from project_parking_mapping or parkings table
+            candidate_parking_ids = []
+            try:
+                p_res = sb.table("parkings").select("id, name, description").eq("description", proj_str).execute()
+                for pr in (p_res.data or []):
+                    if pr.get("id") is not None:
+                        candidate_parking_ids.append(pr["id"])
+                    if not parking_name_hint and pr.get("name"):
+                        parking_name_hint = str(pr["name"]).strip()
+            except Exception:
+                pass
+            if parking_name_hint:
+                try:
+                    m_res = sb.table("project_parking_mapping").select("project_number, parking_id, parking_name").ilike("parking_name", f"%{parking_name_hint}%").execute()
+                    for mr in (m_res.data or []):
+                        mp_num = str(mr.get("project_number") or "").strip()
+                        if mp_num and mp_num not in candidate_projs_str:
+                            candidate_projs_str.append(mp_num)
+                        if mr.get("parking_id") is not None and mr["parking_id"] not in candidate_parking_ids:
+                            candidate_parking_ids.append(mr["parking_id"])
+                except Exception:
+                    pass
+                try:
+                    up_res = sb.table("user_parkings").select("project_number, parking_name").ilike("parking_name", f"%{parking_name_hint}%").execute()
+                    for ur in (up_res.data or []):
+                        up_num = str(ur.get("project_number") or "").strip()
+                        if up_num and up_num != "0" and up_num not in candidate_projs_str:
+                            candidate_projs_str.append(up_num)
+                except Exception:
+                    pass
+
             candidate_projs_int = [int(x) for x in candidate_projs_str if x.isdigit()]
             prefix6_min = int(proj_str[:6] + "000") if (len(proj_str) == 9 and proj_str.isdigit()) else None
             prefix6_max = int(proj_str[:6] + "999") if (len(proj_str) == 9 and proj_str.isdigit()) else None
@@ -3282,6 +3322,21 @@ def fetch_online_daily_report(project_number, ip, port, target_date=None, end_da
                         break
                 except Exception:
                     pass
+                if not all_rows and candidate_parking_ids and tbl_name == "parking_data":
+                    try:
+                        q_res = (
+                            sb.table(tbl_name)
+                            .select("*")
+                            .in_("parking_id", candidate_parking_ids)
+                            .order("report_date", desc=True)
+                            .limit(200)
+                            .execute()
+                        )
+                        if q_res.data:
+                            all_rows = q_res.data
+                            break
+                    except Exception:
+                        pass
                 if not all_rows and prefix6_min and prefix6_max:
                     try:
                         q_res = (
@@ -3304,6 +3359,21 @@ def fetch_online_daily_report(project_number, ip, port, target_date=None, end_da
                             sb.table(tbl_name)
                             .select("*")
                             .in_("project_number", candidate_projs_str)
+                            .order("report_date", desc=True)
+                            .limit(200)
+                            .execute()
+                        )
+                        if q_res.data:
+                            all_rows = q_res.data
+                            break
+                    except Exception:
+                        pass
+                if not all_rows and parking_name_hint:
+                    try:
+                        q_res = (
+                            sb.table(tbl_name)
+                            .select("*")
+                            .ilike("c_text" if tbl_name == "parking_data" else "ctext", f"%{parking_name_hint}%")
                             .order("report_date", desc=True)
                             .limit(200)
                             .execute()
