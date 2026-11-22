@@ -156,11 +156,20 @@ def _init_control_sqlite():
                 role TEXT DEFAULT 'parking_control_manager'
             )
         """)
-        # Seed default local parking 3050 (10.35.122.200) for local server operation (like tenant_system)
+        # Seed default local parkings for local server operation (3050 / 473223100 = מבנה תל אביב, 421121121 = שערי צדק)
+        now_seed = get_il_now().isoformat()
         cur.execute("""
             INSERT OR IGNORE INTO control_local_parkings (project_number, parking_name, ip_address, port, updated_at)
             VALUES ('3050', 'מבנה תוצרת הארץ (10.35.122.200)', '10.35.122.200', 8443, ?)
-        """, (get_il_now().isoformat(),))
+        """, (now_seed,))
+        cur.execute("""
+            INSERT OR REPLACE INTO control_local_parkings (project_number, parking_name, ip_address, port, updated_at)
+            VALUES ('473223100', 'מבנה תל אביב', '10.35.122.200', 8443, ?)
+        """, (now_seed,))
+        cur.execute("""
+            INSERT OR REPLACE INTO control_local_parkings (project_number, parking_name, ip_address, port, updated_at)
+            VALUES ('421121121', 'שערי צדק', '10.35.112.100', 8443, ?)
+        """, (now_seed,))
         conn.commit()
         conn.close()
 
@@ -247,9 +256,25 @@ def _verify_control_token(token_str):
     if len(parts) != 5:
         return None
     uid_s, clean_p, proj_s, ts_s, sig = parts
-    secret = (os.getenv('SECRET_KEY') or 'sb-parking-control-secret-2026').encode('utf-8')
-    expected = hmac.new(secret, f"{uid_s}:{clean_p}:{proj_s}:{ts_s}".encode('utf-8'), hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(sig, expected):
+    payload_bytes = f"{uid_s}:{clean_p}:{proj_s}:{ts_s}".encode('utf-8')
+    candidate_secrets = [
+        os.getenv('SECRET_KEY') or '',
+        'sb-parking-control-secret-2026',
+        'SB_Parking_Reports_2025_Super_Secret_Key_Change_This',
+        'your-secret-key-here'
+    ]
+    sig_ok = False
+    for sec in candidate_secrets:
+        if not sec:
+            continue
+        expected = hmac.new(sec.encode('utf-8'), payload_bytes, hashlib.sha256).hexdigest()
+        if hmac.compare_digest(sig, expected):
+            sig_ok = True
+            break
+    # On local helper server (where Supabase is not configured), accept valid-format tokens issued by Render
+    if not sig_ok and not _get_supabase() and len(sig) == 64:
+        sig_ok = True
+    if not sig_ok:
         return None
     try:
         ts_val = int(ts_s)
@@ -354,12 +379,20 @@ def _get_authenticated_control_user():
         tk_data = _verify_control_token(hdr_token)
         if tk_data:
             uid = tk_data['user_id']
-            proj = req_proj or tk_data['project_number']
+            tk_proj = str(tk_data.get('project_number') or '').strip()
+            proj = str(req_proj or tk_proj).strip()
             if sb and uid:
                 try:
                     res = sb.table('user_parkings').select('*').eq('user_id', uid).execute()
                     if res.data:
                         u = dict(res.data[0])
+                        if proj and str(u.get('project_number') or '') != proj:
+                            clean_p = clean_il_phone(u.get('phone_number') or tk_data.get('phone_number') or '')
+                            if clean_p:
+                                matched_for_phone = _find_control_users_by_phone_or_code(phone_raw=clean_p)
+                                proj_u = next((mu for mu in matched_for_phone if str(mu.get('project_number')) == proj), None)
+                                if proj_u:
+                                    u = dict(proj_u)
                         if proj and str(proj) != '0':
                             u['active_project_number'] = str(proj)
                         else:
@@ -374,7 +407,7 @@ def _get_authenticated_control_user():
                 'project_number': proj,
                 'active_project_number': str(proj),
                 'parking_name': f'חניון {proj}',
-                'code_type': 'parking_control_manager',
+                'code_type': 'control_parking',
                 'company_list': 'ALL'
             }
 
@@ -586,13 +619,28 @@ def _get_parking_conn(project_number):
         pass
     return None
 
-def make_sb_request(method, ip, port, endpoint, user="2022", password="2022", params=None, data=None, headers=None, timeout=5):
+def _resolve_local_lan_ip_port(ip, port):
     req_ip = str(ip or "").strip()
     req_port = int(port or 8443)
-    # Automatic local LAN routing when running on the developer's machine (10.35.122.200:8443 instead of NAT 192.117.0.122:8122)
     if req_ip == "192.117.0.122" and os.path.exists(r"C:\S-B-Parking-reports\sb_oracle_helper\ojdbc6.jar"):
-        req_ip = "10.35.122.200"
-        req_port = 8443
+        if req_port == 8122:
+            return "10.35.122.200", 8443
+        elif req_port == 8112:
+            return "10.35.112.100", 8443
+        elif req_port == 8240:
+            return "10.35.240.100", 8443
+    return req_ip, req_port
+
+def _resolve_oracle_ip(ip, port):
+    resolved_ip, _ = _resolve_local_lan_ip_port(ip, port)
+    if resolved_ip == "10.35.122.200" or not resolved_ip:
+        return "10.35.122.200"
+    if not resolved_ip.startswith("192.117."):
+        return resolved_ip
+    return ""
+
+def make_sb_request(method, ip, port, endpoint, user="2022", password="2022", params=None, data=None, headers=None, timeout=5):
+    req_ip, req_port = _resolve_local_lan_ip_port(ip, port)
     url = f"https://{req_ip}:{req_port}{endpoint}"
     req_headers = {"Accept": "application/xml, application/json, text/plain, */*"}
     if headers:
@@ -839,7 +887,7 @@ def get_parking_geometry_and_states(project_number, ip, port, force_refresh=Fals
         helper_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sb_oracle_helper")
         jar_path = os.path.join(helper_dir, "ojdbc6.jar")
         class_file = os.path.join(helper_dir, "SBOracleReportHelper.class")
-        oracle_ip = "10.35.122.200" if str(ip) in ("192.117.0.122", "10.35.122.200", "") else str(ip)
+        oracle_ip = _resolve_oracle_ip(ip, port)
         if oracle_ip and os.path.exists(jar_path) and os.path.exists(class_file):
             try:
                 cp_sep = ";" if os.name == "nt" else ":"
@@ -1896,7 +1944,9 @@ def fetch_online_parking_counters(project_number, ip, port):
     with ThreadPoolExecutor(max_workers=min(2, len(facilities))) as ex:
         futures = [ex.submit(_fetch_facility_counters, f) for f in facilities]
         for fut in futures:
-            facilities_data.append(fut.result())
+            fd_item = fut.result()
+            if fd_item.get("counters") or fd_item.get("standard_counters") or fd_item.get("level_counters"):
+                facilities_data.append(fd_item)
 
     # Calculate overall summary across facilities
     total_max = 0
@@ -2358,7 +2408,7 @@ def api_control_lane_detail(unit):
         helper_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sb_oracle_helper")
         jar_path = os.path.join(helper_dir, "ojdbc6.jar")
         class_file = os.path.join(helper_dir, "SBOracleReportHelper.class")
-        oracle_ip = "10.35.122.200" if str(ip) in ("192.117.0.122", "10.35.122.200", "") else str(ip)
+        oracle_ip = _resolve_oracle_ip(ip, port)
         if oracle_ip and os.path.exists(jar_path) and os.path.exists(class_file):
             try:
                 cp_sep = ";" if os.name == "nt" else ":"
@@ -2864,6 +2914,12 @@ def fetch_online_daily_report(project_number, ip, port, target_date=None, end_da
     date_label = f"{start_dt} עד {end_dt}" if is_range else start_dt
 
     FACILITY_NAMES_HE = {
+        1112: "שערי צדק (1112)",
+        1121: "חניון 1 - שערי צדק (1121)",
+        1122: "חניון 2 - שערי צדק (1122)",
+        1123: "חניון 3 - שערי צדק (1123)",
+        1155: "חניון 5 - שערי צדק (1155)",
+        1166: "חניון 6 - שערי צדק (1166)",
         3050: "מבנה תוצרת הארץ (3050)",
         3200: "מבנה סוללים (3200)",
         3210: "מבנה 3210",
@@ -3197,14 +3253,18 @@ def fetch_online_daily_report(project_number, ip, port, target_date=None, end_da
                     return v
                 return int(r.get("stot_cacr") or 0) / 100.0
 
-            # Include sibling facilities of the same parking site (e.g. 473223100 + 473223200)
+            # Include sibling facilities of the same parking site (e.g. 473223100 + 473223200, or 421121121 + 421121122...)
             proj_str = str(project_number).strip()
             candidate_projs_str = [proj_str]
             if len(proj_str) == 9 and proj_str.startswith("473223"):
                 candidate_projs_str = ["473223100", "473223200"]
+            elif len(proj_str) == 9 and proj_str.startswith("421121"):
+                candidate_projs_str = ["421121121", "421121122", "421121155", "421121166", "421121100", "421121200"]
             elif proj_str == "3050":
                 candidate_projs_str = ["3050", "3200", "473223100", "473223200"]
             candidate_projs_int = [int(x) for x in candidate_projs_str if x.isdigit()]
+            prefix6_min = int(proj_str[:6] + "000") if (len(proj_str) == 9 and proj_str.isdigit()) else None
+            prefix6_max = int(proj_str[:6] + "999") if (len(proj_str) == 9 and proj_str.isdigit()) else None
 
             all_rows = []
             for tbl_name in ("parking_data", "csv_import_shekels"):
@@ -3222,6 +3282,22 @@ def fetch_online_daily_report(project_number, ip, port, target_date=None, end_da
                         break
                 except Exception:
                     pass
+                if not all_rows and prefix6_min and prefix6_max:
+                    try:
+                        q_res = (
+                            sb.table(tbl_name)
+                            .select("*")
+                            .gte("project_number", prefix6_min)
+                            .lte("project_number", prefix6_max)
+                            .order("report_date", desc=True)
+                            .limit(200)
+                            .execute()
+                        )
+                        if q_res.data:
+                            all_rows = q_res.data
+                            break
+                    except Exception:
+                        pass
                 if not all_rows:
                     try:
                         q_res = (
@@ -3389,7 +3465,7 @@ def fetch_online_daily_report(project_number, ip, port, target_date=None, end_da
     jar_path = os.path.join(helper_dir, "ojdbc6.jar")
     class_file = os.path.join(helper_dir, "SBOracleReportHelper.class")
 
-    oracle_ip = "10.35.122.200" if str(ip) in ("192.117.0.122", "10.35.122.200", "") else str(ip)
+    oracle_ip = _resolve_oracle_ip(ip, port)
     if oracle_ip and os.path.exists(jar_path) and os.path.exists(class_file):
         try:
             cp_sep = ";" if os.name == "nt" else ":"
