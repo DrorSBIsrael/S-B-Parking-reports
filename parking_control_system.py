@@ -3811,27 +3811,47 @@ def api_control_update_subscriber():
         new_lpn3 = re.sub(r'[^0-9A-Za-zמ]', '', str(data.get('lpn3') or '')).upper()
         cur_lpn1 = _clean_sb_val(root.findtext('ns:lpn1', default='', namespaces=ns))
 
-        # If subscriber is present in parking and manager wants to reset presence OR change lpn1, book an exit transaction first
-        if was_present and (want_present is False or (new_lpn1 != cur_lpn1)):
-            add_park_transaction(ip, port, comp_id, "exit", "201", cell="1", facility_id="1")
-            time.sleep(0.2)
-            # Re-fetch fresh consumer detail after exit transaction
+        # In S&B CustomerMediaWebService, ANY PUT to /consumers/{id}/detail is rejected with 10020 while present=true!
+        # Therefore, whenever was_present is True, we temporarily book an exit transaction (using the subscriber's actual facility/computer from parktrans),
+        # perform the PUT, and if the manager did not ask to reset presence (want_present is not False), immediately book the entry transaction back!
+        last_fac_id = "1"
+        last_comp_id = "1"
+        last_entry_dev = "101"
+        last_exit_dev = "201"
+        if was_present:
+            try:
+                pt_res = make_sb_request("GET", ip, port, f"/CustomerMediaWebService/consumers/{comp_id}/parktrans", headers={"Accept": "application/xml"}, timeout=5)
+                if pt_res["status"] == 200 and pt_res["data"]:
+                    pt_root = ET.fromstring(pt_res["data"])
+                    for tx in pt_root.findall('.//ns:parkTransaction', ns):
+                        fin = (tx.findtext('ns:facilityin', default='0', namespaces=ns) or '0').strip()
+                        if fin and fin != '0':
+                            last_fac_id = fin
+                            last_comp_id = (tx.findtext('ns:computer', default='1', namespaces=ns) or '1').strip()
+                            dev_v = (tx.findtext('ns:device', default='101', namespaces=ns) or '101').strip()
+                            if dev_v.isdigit():
+                                last_entry_dev = dev_v
+                            break
+            except Exception:
+                pass
+            add_park_transaction(ip, port, comp_id, "exit", last_exit_dev, cell=last_comp_id, facility_id=last_fac_id)
+            time.sleep(0.15)
             refetched = make_sb_request("GET", ip, port, f"/CustomerMediaWebService/consumers/{comp_id}/detail", headers={"Accept": "application/xml"}, timeout=6)
             if refetched["status"] == 200 and refetched["data"]:
                 root = ET.fromstring(refetched["data"])
 
-        # Update Person Name
+        # Update Person Name (both inside <person> and at root level if present)
         if 'first_name' in data:
-            fn_el = root.find('.//ns:person/ns:firstName', ns)
-            if fn_el is not None:
-                fn_el.text = str(data.get('first_name') or '').strip()
+            new_fn = str(data.get('first_name') or '').strip()
+            for fn_el in root.findall('.//ns:firstName', ns):
+                fn_el.text = new_fn
         if 'last_name' in data:
-            sn_el = root.find('.//ns:person/ns:surname', ns)
-            if sn_el is not None:
-                sn_el.text = str(data.get('last_name') or '').strip()
+            new_ln = str(data.get('last_name') or '').strip()
+            for sn_el in root.findall('.//ns:surname', ns):
+                sn_el.text = new_ln
             cname_el = root.find('.//ns:consumer/ns:name', ns)
             if cname_el is not None:
-                cname_el.text = str(data.get('last_name') or '').strip()
+                cname_el.text = new_ln
 
         # Update LPNs (in S&B, sending a single space ' ' clears an LPN tag)
         for tag_k, clean_v in [('lpn1', new_lpn1), ('lpn2', new_lpn2), ('lpn3', new_lpn3)]:
@@ -3880,9 +3900,9 @@ def api_control_update_subscriber():
         )
 
         ok = put_res["status"] in (200, 201, 202, 204)
-        # If subscriber was present and manager only wanted to change lpn1 (and keep present=True), re-book entry
-        if ok and was_present and want_present is not False and (new_lpn1 != cur_lpn1):
-            add_park_transaction(ip, port, comp_id, "entry", "101", cell="1", facility_id="1")
+        # If subscriber was present and manager did NOT ask to reset presence (want_present is not False), re-book entry in the exact same facility
+        if ok and was_present and want_present is not False:
+            add_park_transaction(ip, port, comp_id, "entry", last_entry_dev, cell=last_comp_id, facility_id=last_fac_id)
 
         record_local_audit_event(
             project_number=proj,
