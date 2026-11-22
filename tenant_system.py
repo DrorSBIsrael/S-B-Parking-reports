@@ -438,32 +438,51 @@ class TenantStore:
             conn.close()
 
     @staticmethod
-    def update_local_subscriber_plates(project_number, apartment_number, subscriber_id, lpn1, lpn2, lpn3):
+    def update_local_subscriber_plates(project_number, apartment_number, subscriber_id, lpn1, lpn2, lpn3, first_name=None, last_name=None):
         p_num = str(project_number)
         apt_str = str(apartment_number).strip()
         sid_str = str(subscriber_id).strip()
         now_iso = get_il_now().isoformat()
+        upd_dict = {'lpn1': lpn1, 'lpn2': lpn2, 'lpn3': lpn3, 'updated_at': now_iso}
+        if first_name is not None:
+            upd_dict['first_name'] = str(first_name).strip()
+        if last_name is not None:
+            upd_dict['family_name'] = str(last_name).strip()
         sb = _get_supabase()
         if sb:
             try:
-                sb.table('tenant_local_subscribers').update({
-                    'lpn1': lpn1, 'lpn2': lpn2, 'lpn3': lpn3, 'updated_at': now_iso
-                }).eq('project_number', p_num).eq('apartment_number', apt_str).eq('subscriber_index', int(sid_str)).execute()
+                sb.table('tenant_local_subscribers').update(upd_dict).eq('project_number', p_num).eq('apartment_number', apt_str).eq('subscriber_index', int(sid_str)).execute()
             except Exception:
                 pass
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
-            cur = conn.execute("""
-                UPDATE tenant_local_subscribers
-                SET lpn1 = ?, lpn2 = ?, lpn3 = ?, updated_at = ?
-                WHERE project_number = ? AND apartment_number = ? AND (subscriber_index = ? OR id = ?)
-            """, (lpn1, lpn2, lpn3, now_iso, p_num, apt_str, int(sid_str) if sid_str.isdigit() else -1, int(sid_str) if sid_str.isdigit() else -1))
+            sid_int = int(sid_str) if sid_str.isdigit() else -1
+            if first_name is not None or last_name is not None:
+                cur_row = conn.execute(
+                    "SELECT first_name, family_name FROM tenant_local_subscribers WHERE project_number = ? AND apartment_number = ? AND (subscriber_index = ? OR id = ?)",
+                    (p_num, apt_str, sid_int, sid_int)
+                ).fetchone()
+                fn_val = str(first_name).strip() if first_name is not None else (cur_row[0] if cur_row else '')
+                ln_val = str(last_name).strip() if last_name is not None else (cur_row[1] if cur_row else '')
+                cur = conn.execute("""
+                    UPDATE tenant_local_subscribers
+                    SET first_name = ?, family_name = ?, lpn1 = ?, lpn2 = ?, lpn3 = ?, updated_at = ?
+                    WHERE project_number = ? AND apartment_number = ? AND (subscriber_index = ? OR id = ?)
+                """, (fn_val, ln_val, lpn1, lpn2, lpn3, now_iso, p_num, apt_str, sid_int, sid_int))
+            else:
+                fn_val = f'דירה {apt_str}'
+                ln_val = ''
+                cur = conn.execute("""
+                    UPDATE tenant_local_subscribers
+                    SET lpn1 = ?, lpn2 = ?, lpn3 = ?, updated_at = ?
+                    WHERE project_number = ? AND apartment_number = ? AND (subscriber_index = ? OR id = ?)
+                """, (lpn1, lpn2, lpn3, now_iso, p_num, apt_str, sid_int, sid_int))
             if cur.rowcount == 0:
                 conn.execute("""
                     INSERT INTO tenant_local_subscribers
                     (project_number, apartment_number, subscriber_index, family_name, first_name, parking_spot, lpn1, lpn2, lpn3, updated_at)
-                    VALUES (?, ?, 1, '', ?, '', ?, ?, ?, ?)
-                """, (p_num, apt_str, f'דירה {apt_str}', lpn1, lpn2, lpn3, now_iso))
+                    VALUES (?, ?, 1, ?, ?, '', ?, ?, ?, ?)
+                """, (p_num, apt_str, ln_val, fn_val or f'דירה {apt_str}', lpn1, lpn2, lpn3, now_iso))
             conn.commit()
             conn.close()
         return True
@@ -1408,12 +1427,14 @@ def get_apartment_subscribers(project_number, apartment_number):
     except Exception as e:
         return {'success': False, 'message': str(e), 'subscribers': []}
 
-def update_apartment_subscriber_plates(project_number, apartment_number, subscriber_id, lpn1, lpn2, lpn3):
+def update_apartment_subscriber_plates(project_number, apartment_number, subscriber_id, lpn1, lpn2, lpn3, first_name=None, last_name=None):
     """
-    עדכון מספרי רכב של מנוי בדירה:
+    עדכון שם ומספרי רכב של מנוי בדירה:
     - במתחם עצמאי (ללא בקר חניון): מעדכן ישירות בטבלת המנויים המקומית ללא בדיקת נוכחות.
     - במתחם עם בקר שיידט: מעדכן מול הבקר כולל בדיקת נוכחות רכב ספציפי ו-7 ימים.
     """
+    from xml.sax.saxutils import escape as _xml_esc
+
     def _validate_plate_common(raw_val):
         s = re.sub(r'[\s\-]', '', str(raw_val or '').strip()).upper()
         if not s:
@@ -1435,9 +1456,10 @@ def update_apartment_subscriber_plates(project_number, apartment_number, subscri
             clean_vals[k] = cl
         TenantStore.update_local_subscriber_plates(
             project_number, apartment_number, subscriber_id,
-            clean_vals['lpn1'], clean_vals['lpn2'], clean_vals['lpn3']
+            clean_vals['lpn1'], clean_vals['lpn2'], clean_vals['lpn3'],
+            first_name=first_name, last_name=last_name
         )
-        return {'success': True, 'message': 'מספרי הרכב עודכנו ונשמרו בהצלחה!'}
+        return {'success': True, 'message': 'פרטי המנוי ומספרי הרכב עודכנו ונשמרו בהצלחה!'}
 
     conn = _get_parking_conn(project_number)
     if not conn or not conn.get('ip_address'):
@@ -1459,6 +1481,15 @@ def update_apartment_subscriber_plates(project_number, apartment_number, subscri
         ident = root.find('ns:identification', ns)
         pres_txt = ident.findtext('ns:present', default='false', namespaces=ns) if ident is not None else 'false'
         is_present = str(pres_txt).strip().lower() in ('true', '1', 'yes')
+
+        person_el = root.find('ns:person', ns)
+        cur_first = ((person_el.findtext('ns:firstName', default='', namespaces=ns) if person_el is not None else '') or root.findtext('ns:firstName', default='', namespaces=ns) or '').strip()
+        cur_last = ((person_el.findtext('ns:surname', default='', namespaces=ns) if person_el is not None else '') or root.findtext('ns:surname', default='', namespaces=ns) or '').strip()
+        cur_match_code = ((person_el.findtext('ns:matchCode', default='', namespaces=ns) if person_el is not None else '') or '').strip()
+
+        new_first = str(first_name).strip() if first_name is not None else cur_first
+        new_last = str(last_name).strip() if last_name is not None else cur_last
+        name_changed = (first_name is not None and new_first != cur_first) or (last_name is not None and new_last != cur_last)
 
         cur_lpn1 = re.sub(r'[^0-9CCDמ]', '', (root.findtext('ns:lpn1', default='', namespaces=ns) or '').strip().upper())
         cur_lpn2 = re.sub(r'[^0-9CCDמ]', '', (root.findtext('ns:lpn2', default='', namespaces=ns) or '').strip().upper())
@@ -1492,19 +1523,35 @@ def update_apartment_subscriber_plates(project_number, apartment_number, subscri
                 # בשיידט שליחת רווח בודד מנקה את מספר הרכב אם המשתמש מחק אותו
                 changed_tags[tag_name] = clean_plate if clean_plate else ' '
 
-        if not changed_tags:
-            return {'success': True, 'message': 'מספרי הרכב עודכנו בהצלחה בחניון!'}
+        if not changed_tags and not name_changed:
+            return {'success': True, 'message': 'פרטי המנוי ומספרי הרכב עודכנו בהצלחה בחניון!'}
+
+        person_xml_part = ''
+        cons_name_tag = ''
+        if name_changed:
+            mc_tag = f'<matchCode>{_xml_esc(cur_match_code)}</matchCode>' if cur_match_code else ''
+            person_xml_part = f'<person><firstName>{_xml_esc(new_first)}</firstName><surname>{_xml_esc(new_last)}</surname>{mc_tag}</person>'
+            cons_name_val = f"{new_last} {new_first}".strip()
+            if cons_name_val:
+                cons_name_tag = f'<name>{_xml_esc(cons_name_val)}</name>'
 
         lpn_xml_parts = ''.join(f'<{k}>{v}</{k}>' for k, v in changed_tags.items())
         minimal_xml = (
             f'<?xml version="1.0" encoding="UTF-8"?>'
             f'<consumerDetail xmlns="{ns_uri}">'
             f'<consumer href="/consumers/{apt_str},{sid_str}">'
-            f'<id>{sid_str}</id><contractid>{apt_str}</contractid>'
+            f'<id>{sid_str}</id><contractid>{apt_str}</contractid>{cons_name_tag}'
             f'</consumer>'
+            f'{person_xml_part}'
             f'{lpn_xml_parts}'
             f'</consumerDetail>'
         ).encode('utf-8')
+
+        if not changed_tags and name_changed:
+            put_resp = sess.put(url, data=minimal_xml, headers=_skidata_headers('application/xml'), verify=False, timeout=15)
+            if put_resp.status_code in (200, 201, 204):
+                return {'success': True, 'message': 'שם המנוי עודכן בהצלחה בחניון!'}
+            return {'success': False, 'message': f'בקר החניון דחה את העדכון ({put_resp.status_code})'}
 
         def _book_exit(fac_id, comp_id, dev_id):
             now_tx = datetime.datetime.now().astimezone().isoformat(timespec='milliseconds')
@@ -3495,14 +3542,37 @@ def api_tenant_update_plates():
     if not sub_id:
         return jsonify({'success': False, 'message': 'חסר מזהה מנוי'})
 
+    first_name = data.get('first_name')
+    last_name = data.get('last_name')
+
     res = update_apartment_subscriber_plates(
         project_number=tenant['project_number'],
         apartment_number=tenant['apartment_number'],
         subscriber_id=sub_id,
         lpn1=data.get('lpn1', ''),
         lpn2=data.get('lpn2', ''),
-        lpn3=data.get('lpn3', '')
+        lpn3=data.get('lpn3', ''),
+        first_name=first_name,
+        last_name=last_name
     )
+
+    if res.get('success') and (first_name is not None or last_name is not None):
+        fn_clean = str(first_name or '').strip()
+        ln_clean = str(last_name or '').strip()
+        new_full_name = f"{fn_clean} {ln_clean}".strip()
+        if new_full_name and int(tenant.get('id') or 0) > 0:
+            try:
+                TenantStore.update_tenant(
+                    tenant['id'],
+                    new_full_name,
+                    tenant['phone_number'],
+                    tenant['apartment_number'],
+                    tenant.get('base_max_counter'),
+                    True
+                )
+            except Exception:
+                pass
+
     return jsonify(res)
 
 @tenant_bp.route('/api/tenant/share-spot', methods=['POST'])

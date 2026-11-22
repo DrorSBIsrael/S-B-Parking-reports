@@ -629,11 +629,13 @@
                 no_subscribers: 'לא נמצאו מנויים משויכים לדירה זו בבקר החניון.',
                 status_in_parking: '🟢 נמצא בחניון',
                 status_out_parking: '⚪ מחוץ לחניון',
+                first_name_lbl: 'שם פרטי',
+                last_name_lbl: 'שם משפחה',
                 car_1: 'רכב 1',
                 car_2: 'רכב 2',
                 car_3: 'רכב 3',
                 no_car: 'ללא רכב',
-                save_plates_btn: '💾 שמור מספרי רכב בחניון',
+                save_plates_btn: '💾 שמור שם ומספרי רכב בחניון',
                 active_bookings_title: '📌 חניות פעילות / מוזמנות שלי',
                 avail_slots_title: '🅿️ חניות פנויות לתפיסה בבניין',
                 no_avail_slots: 'אין כרגע חניות פנויות בפול הכללי או עבור דירתך.',
@@ -697,11 +699,13 @@
                 no_subscribers: 'No subscribers linked to this apartment in the controller.',
                 status_in_parking: '🟢 In Parking Lot',
                 status_out_parking: '⚪ Outside',
+                first_name_lbl: 'First Name',
+                last_name_lbl: 'Last Name',
                 car_1: 'Car 1',
                 car_2: 'Car 2',
                 car_3: 'Car 3',
                 no_car: 'No Car',
-                save_plates_btn: '💾 Save License Plates',
+                save_plates_btn: '💾 Save Name & License Plates',
                 active_bookings_title: '📌 My Active / Reserved Spots',
                 avail_slots_title: '🅿️ Available Spots in Building',
                 no_avail_slots: 'No available parking spots in the pool right now.',
@@ -765,11 +769,13 @@
                 no_subscribers: 'Нет абонентов, привязанных к этой квартире.',
                 status_in_parking: '🟢 На парковке',
                 status_out_parking: '⚪ Вне парковки',
+                first_name_lbl: 'Имя',
+                last_name_lbl: 'Фамилия',
                 car_1: 'Авто 1',
                 car_2: 'Авто 2',
                 car_3: 'Авто 3',
                 no_car: 'Нет авто',
-                save_plates_btn: '💾 Сохранить номера авто',
+                save_plates_btn: '💾 Сохранить имя и номера авто',
                 active_bookings_title: '📌 Мои активные бронирования',
                 avail_slots_title: '🅿️ Свободные места в доме',
                 no_avail_slots: 'Сейчас нет свободных парковочных мест.',
@@ -833,11 +839,13 @@
                 no_subscribers: 'لا يوجد مشتركون مرتبطون بهذه الشقة.',
                 status_in_parking: '🟢 داخل الموقف',
                 status_out_parking: '⚪ خارج الموقف',
+                first_name_lbl: 'الاسم الأول',
+                last_name_lbl: 'اسم العائلة',
                 car_1: 'سيارة 1',
                 car_2: 'سيارة 2',
                 car_3: 'سيارة 3',
                 no_car: 'بدون سيارة',
-                save_plates_btn: '💾 حفظ أرقام السيارات',
+                save_plates_btn: '💾 حفظ الاسم وأرقام السيارات',
                 active_bookings_title: '📌 حجوزاتي النشطة',
                 avail_slots_title: '🅿️ مواقف متاحة في المبنى',
                 no_avail_slots: 'لا توجد مواقف متاحة حالياً.',
@@ -901,11 +909,13 @@
                 no_subscribers: 'Aucun abonné associé à cet appartement.',
                 status_in_parking: '🟢 Dans le parking',
                 status_out_parking: '⚪ À l’extérieur',
+                first_name_lbl: 'Prénom',
+                last_name_lbl: 'Nom',
                 car_1: 'Véhicule 1',
                 car_2: 'Véhicule 2',
                 car_3: 'Véhicule 3',
                 no_car: 'Aucun véhicule',
-                save_plates_btn: '💾 Enregistrer les plaques',
+                save_plates_btn: '💾 Enregistrer le nom et les plaques',
                 active_bookings_title: '📌 Mes réservations actives',
                 avail_slots_title: '🅿️ Places disponibles dans l’immeuble',
                 no_avail_slots: 'Aucune place disponible dans le pool actuellement.',
@@ -1932,6 +1942,18 @@
                         </div>
                         <span title="${s.present ? t('status_in_parking') : t('status_out_parking')}" style="font-size:16px; line-height:1; flex-shrink:0;">${s.present ? '🟢' : '🔴'}</span>
                     </div>
+                    <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:8px; margin-bottom:10px;">
+                        <div>
+                            <label for="fname_${escapeHtml(s.id)}" style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:3px;">${t('first_name_lbl')}</label>
+                            <input type="text" id="fname_${escapeHtml(s.id)}" maxlength="40" value="${escapeHtml(s.firstName || '')}" placeholder="${t('first_name_lbl')}"
+                                   style="width:100%; padding:8px 10px; border:1.5px solid #cbd5e1; background:#ffffff; border-radius:8px; font-size:14px; font-weight:700; color:#0f172a;">
+                        </div>
+                        <div>
+                            <label for="lname_${escapeHtml(s.id)}" style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:3px;">${t('last_name_lbl')}</label>
+                            <input type="text" id="lname_${escapeHtml(s.id)}" maxlength="40" value="${escapeHtml(s.lastName || '')}" placeholder="${t('last_name_lbl')}"
+                                   style="width:100%; padding:8px 10px; border:1.5px solid #cbd5e1; background:#ffffff; border-radius:8px; font-size:14px; font-weight:700; color:#0f172a;">
+                        </div>
+                    </div>
                     <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:6px; margin-bottom:12px;">
                         ${renderSingleCarSlot(s, 'lpn1', 'car_1')}
                         ${renderSingleCarSlot(s, 'lpn2', 'car_2')}
@@ -1944,6 +1966,10 @@
 
         async function saveSubscriberPlates(subId, btnEl) {
             if (_portalActionBusy) return;
+            const fnEl = document.getElementById(`fname_${subId}`);
+            const lnEl = document.getElementById(`lname_${subId}`);
+            const first_name = fnEl ? fnEl.value.trim() : undefined;
+            const last_name = lnEl ? lnEl.value.trim() : undefined;
             const lpn1 = document.getElementById(`lpn1_${subId}`).value.trim();
             const lpn2 = document.getElementById(`lpn2_${subId}`).value.trim();
             const lpn3 = document.getElementById(`lpn3_${subId}`).value.trim();
@@ -1957,13 +1983,13 @@
             const origText = btnEl ? btnEl.textContent : '';
             if (btnEl) {
                 btnEl.disabled = true;
-                btnEl.textContent = '⏳ שומר מספרי רכב...';
+                btnEl.textContent = '⏳ שומר נתונים...';
             }
             try {
                 const res = await fetch('/api/tenant/update-plates', {
                     method: 'POST',
                     headers: getPortalAuthHeaders({'Content-Type': 'application/json'}),
-                    body: JSON.stringify({ subscriber_id: subId, lpn1, lpn2, lpn3 })
+                    body: JSON.stringify({ subscriber_id: subId, first_name, last_name, lpn1, lpn2, lpn3 })
                 });
                 const data = await res.json();
                 if (data.success) {
