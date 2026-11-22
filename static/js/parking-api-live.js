@@ -16,13 +16,20 @@ class ParkingAPIXML {
             baseUrl = window.location.origin + '/api/company-manager/proxy';
         }
         
+        let savedParkingId = null;
+        try {
+            if (typeof localStorage !== 'undefined') {
+                savedParkingId = localStorage.getItem('currentParkingId');
+            }
+        } catch(e) {}
+
         this.config = {
             baseUrl: baseUrl,
             username: '2022',
             password: '2022',
             timeout: 30000,
             useProxy: true,  // Always use proxy
-            currentParkingId: null
+            currentParkingId: savedParkingId
         };
         // Initialization complete - using secure proxy
     }
@@ -38,7 +45,11 @@ class ParkingAPIXML {
     
     setCurrentParking(parkingId) {
         this.config.currentParkingId = parkingId;
-        // Current parking set
+        if (parkingId && typeof localStorage !== 'undefined') {
+            try {
+                localStorage.setItem('currentParkingId', parkingId);
+            } catch(e) {}
+        }
     }
     
     parseXML(xmlString) {
@@ -107,8 +118,13 @@ class ParkingAPIXML {
                     endpoint = `CustomerMediaWebService/${endpoint}`;
                 }
                 
+                const effectiveParkingId = this.config.currentParkingId || 
+                                           window.currentParking?.id || 
+                                           (typeof localStorage !== 'undefined' ? localStorage.getItem('currentParkingId') : null) || 
+                                           '1';
+                
                 const requestBody = {
-                    parking_id: this.config.currentParkingId,
+                    parking_id: effectiveParkingId,
                     endpoint: endpoint,
                     method: method,
                     payload: data
@@ -163,8 +179,9 @@ class ParkingAPIXML {
             }
             
             if (!response.ok) {
-                console.error('[makeRequest] Response not OK:', response.status, response.statusText);
-                return { success: false, error: `HTTP ${response.status}: ${response.statusText}` };
+                console.error('[makeRequest] Response not OK:', response.status, response.statusText, result);
+                const errMsg = result?.message || result?.error || `HTTP ${response.status}: ${response.statusText}`;
+                return { success: false, error: errMsg, status: response.status, data: result?.data };
             }
             
             if (result.success && result.data) {
@@ -285,19 +302,209 @@ class ParkingAPIXML {
         // Call the regular getConsumerDetail method
         return this.getConsumerDetail(contractId, consumerId);
     }
+
+    /**
+     * Get bulk detailed information for all consumers in a contract in one request
+     * Supports optional minId / maxId range chunking for very large contracts
+     */
+    async getContractConsumersDetail(contractId, minId = null, maxId = null) {
+        let endpoint = `contracts/${contractId}/consumersdetail`;
+        const params = [];
+        if (minId !== null && minId !== undefined) params.push(`minId=${minId}`);
+        if (maxId !== null && maxId !== undefined) params.push(`maxId=${maxId}`);
+        if (params.length > 0) {
+            endpoint += `?${params.join('&')}`;
+        }
+        return this.makeRequest(endpoint, 'GET');
+    }
+
+    /**
+     * Normalize a raw consumerDetail object into a UI subscriber object
+     */
+    mapConsumerDetailToSubscriber(detail, companyId, companyName = '', isLargeCompany = false, loadingStrategy = 'bulk', fallbackSubscriber = null) {
+        const base = fallbackSubscriber || {};
+        const consumerNode = detail.consumer || detail || {};
+        const person = detail.person || {};
+        const ident = detail.identification || {};
+        const usageProf = ident.usageProfile || detail.usageProfile || {};
+
+        const subId = consumerNode.id || detail.id || detail.subscriberNum || base.subscriberNum || base.id;
+        const fname = person.firstName || detail.firstName || base.firstName || '';
+        const lname = person.surname || detail.surname || detail.lastName || consumerNode.name || detail.name || base.lastName || '';
+        const tag = ident.cardno || detail.tagNum || detail.cardno || base.tagNum || '';
+        const profId = usageProf.id || detail.profile || detail.profileId || detail.extCardProfile || base.profile || '1';
+        const profName = usageProf.name || detail.profileName || base.profileName || (profId ? `פרופיל ${profId}` : 'רגיל');
+        const vFrom = ident.validFrom || consumerNode.xValidFrom || detail.validFrom || detail.xValidFrom || base.validFrom || '2024-01-01';
+        const vUntil = ident.validUntil || consumerNode.xValidUntil || detail.validUntil || detail.xValidUntil || base.validUntil || '2030-12-31';
+        const isPres = ident.present === 'true' || ident.present === true || detail.present === 'true' || detail.present === true || detail.presence === true || base.presence || false;
+        const cleanLpn = (val) => (typeof val === 'string' ? val.trim() : '');
+        const l1 = cleanLpn(detail.lpn1) || cleanLpn(detail.vehicle1) || base.vehicle1 || '';
+        const l2 = cleanLpn(detail.lpn2) || cleanLpn(detail.vehicle2) || base.vehicle2 || '';
+        const l3 = cleanLpn(detail.lpn3) || cleanLpn(detail.vehicle3) || base.vehicle3 || '';
+        const filialId = consumerNode.filialId || detail.filialId || base.filialId || '2240';
+        const ignorePres = ident.ignorePresence === '1' ||
+                           ident.ignorePresence === 'true' ||
+                           ident.ignorePresence === true ||
+                           detail.ignorePresence === '1' ||
+                           detail.ignorePresence === 'true' ||
+                           detail.ignorePresence === true ||
+                           base.ignorePresence || false;
+
+        return {
+            ...base,
+            id: subId,
+            subscriberNum: subId,
+            contractId: companyId,
+            companyNum: companyId,
+            companyName: companyName || base.companyName || '',
+            firstName: fname,
+            lastName: lname,
+            name: lname,
+            vehicleNum: l1,
+            lpn1: l1,
+            lpn2: l2,
+            lpn3: l3,
+            vehicle1: l1,
+            vehicle2: l2,
+            vehicle3: l3,
+            validFrom: vFrom,
+            validUntil: vUntil,
+            xValidFrom: vFrom,
+            xValidUntil: vUntil,
+            tagNum: tag,
+            cardno: tag,
+            profile: profId,
+            profileId: profId,
+            profileName: profName,
+            extCardProfile: profId,
+            facility: detail.facility || base.facility || '0',
+            filialId: filialId,
+            present: isPres,
+            presence: isPres,
+            ignorePresence: ignorePres,
+            hasFullDetails: true,
+            loadingStrategy: loadingStrategy,
+            isLargeCompany: isLargeCompany
+        };
+    }
+
+    // Cancel any in-flight progressive loading when switching companies
+    cancelActiveLoad() {
+        this._activeLoadGeneration = (this._activeLoadGeneration || 0) + 1;
+    }
+
+    getCacheKey(companyId) {
+        const effectiveParkingId = this.config.currentParkingId ||
+                                   window.currentParking?.id ||
+                                   (typeof localStorage !== 'undefined' ? localStorage.getItem('currentParkingId') : null) ||
+                                   '1';
+        return `skidata_cache_p${effectiveParkingId}_c${companyId}`;
+    }
+
+    _saveToLocalCache(cacheKey, companyId, timestamp, subscribers) {
+        try {
+            // Remove legacy unscoped cache key if present
+            try { localStorage.removeItem('skidata_cache_company_' + companyId); } catch (e) {}
+            const payloadStr = JSON.stringify({
+                timestamp: timestamp,
+                subscribers: subscribers
+            });
+            try {
+                localStorage.setItem(cacheKey, payloadStr);
+            } catch (quotaErr) {
+                // Evict oldest skidata_cache_* entries to free space and retry
+                const cacheEntries = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (k && k.startsWith('skidata_cache_')) {
+                        let ts = 0;
+                        try {
+                            const m = localStorage.getItem(k)?.match(/"timestamp"\s*:\s*(\d+)/);
+                            if (m) ts = parseInt(m[1], 10) || 0;
+                        } catch (e) {}
+                        cacheEntries.push({ key: k, ts });
+                    }
+                }
+                cacheEntries.sort((a, b) => a.ts - b.ts);
+                for (const entry of cacheEntries) {
+                    try { localStorage.removeItem(entry.key); } catch (e) {}
+                    try {
+                        localStorage.setItem(cacheKey, payloadStr);
+                        break;
+                    } catch (e) {}
+                }
+            }
+        } catch (e) {
+            console.warn('[Cache] Failed to save company cache:', e);
+        }
+    }
     
-    // Progressive loading methods for large datasets with optimization
+    // Progressive loading methods for large datasets with bulk consumersdetail optimization
     async getSubscribersProgressive(companyId, callbacks = {}) {
         const { 
             onBasicLoaded = () => {}, 
             onDetailLoaded = () => {}, 
+            onChunkLoaded = null,
             onProgress = () => {},
-            forceFullLoad = false  // Add this parameter
+            onComplete = () => {},
+            forceFullLoad = false
         } = callbacks;
+
+        this._activeLoadGeneration = (this._activeLoadGeneration || 0) + 1;
+        const myLoadGen = this._activeLoadGeneration;
+        const isCancelled = () => this._activeLoadGeneration !== myLoadGen;
+        
+        const cacheKey = this.getCacheKey(companyId);
+        const legacyCacheKey = 'skidata_cache_company_' + companyId;
+        
+        if (forceFullLoad) {
+            try {
+                localStorage.removeItem(cacheKey);
+                localStorage.removeItem(legacyCacheKey);
+            } catch(e) {}
+        } else {
+            try {
+                const cached = localStorage.getItem(cacheKey);
+                if (cached) {
+                    const parsedData = JSON.parse(cached);
+                    const CACHE_VALID_HOURS = 12; 
+                    const cacheAgeMs = Date.now() - (parsedData.timestamp || 0);
+                    const isCacheValid = cacheAgeMs < (CACHE_VALID_HOURS * 60 * 60 * 1000);
+                    const allHaveDetails = parsedData.subscribers && parsedData.subscribers.every(s => s.hasFullDetails);
+                    
+                    // שמירת מטמון לחברות בינוניות וגדולות (200+ מנויים) כאשר כל הפרטים מלאים
+                    if (isCacheValid && parsedData.subscribers && parsedData.subscribers.length >= 200 && allHaveDetails) {
+                        const isLarge = parsedData.subscribers.length > 500;
+                        console.log(`[Cache] Loaded ${parsedData.subscribers.length} subscribers from cache for company ${companyId}`);
+                        
+                        parsedData.subscribers = parsedData.subscribers.map(sub => ({
+                            ...sub,
+                            companyNum: companyId,
+                            contractId: companyId,
+                            companyName: callbacks.companyName || sub.companyName,
+                            hasFullDetails: true,
+                            isLargeCompany: isLarge
+                        }));
+                        
+                        onBasicLoaded(parsedData.subscribers, true, parsedData.timestamp);
+                        if (onProgress) onProgress({ percent: 100, message: 'הנתונים נטענו מזיכרון מקומי (מטמון)' });
+                        if (onComplete) onComplete(parsedData.subscribers, true, parsedData.timestamp);
+                        return { success: true, data: parsedData.subscribers, fromCache: true, timestamp: parsedData.timestamp };
+                    } else {
+                        localStorage.removeItem(cacheKey);
+                    }
+                }
+            } catch(e) {
+                try { localStorage.removeItem(cacheKey); } catch(err) {}
+            }
+        }
         
         try {
-            // Step 1: Get basic list
-        const result = await this.getConsumers(companyId, companyId);
+            // Step 1: Get basic consumer list (fast ~0.5-1.1s) so table renders immediately
+            const result = await this.getConsumers(companyId, companyId);
+            if (isCancelled()) {
+                return { success: false, cancelled: true };
+            }
             
             if (!result.success) {
                 console.error('[Progressive] Failed to get consumers list');
@@ -309,12 +516,11 @@ class ParkingAPIXML {
             
             // Filter by contractId if API returns all consumers
             if (consumersArray.length > 1000) {
-                // Filtering consumers by contractId
                 const filtered = consumersArray.filter(c => 
                     c.contractId === companyId || 
                     c.contractId === String(companyId) ||
-                    c.contractid === companyId ||  // lowercase version
-                    c.contractid === String(companyId) ||  // lowercase version
+                    c.contractid === companyId ||
+                    c.contractid === String(companyId) ||
                     c.contract === companyId ||
                     c.contract === String(companyId) ||
                     c.contractNum === companyId ||
@@ -324,231 +530,320 @@ class ParkingAPIXML {
                 );
                 if (filtered.length > 0) {
                     consumers = filtered;
-                    // Consumers filtered successfully
                 } else {
-                    // No consumers found after filtering
-                    // No limit - return all consumers
                     consumers = consumersArray;
                 }
             }
             
             const finalConsumers = Array.isArray(consumers) ? consumers : [consumers];
-            // PERFORMANCE OPTIMIZATION: Smart loading based on company size
-            const INSTANT_LOAD_THRESHOLD = 30;    // Load all at once (1 batch)
-            const BATCH_LOAD_THRESHOLD = 300;     // Load in batches of 50
-            const ON_DEMAND_THRESHOLD = 300;      // Load on hover only (>300)
-            
             const subscriberCount = finalConsumers.length;
-            let loadingStrategy = 'instant';
+            const BULK_SINGLE_CALL_LIMIT = 800; // Up to 800 subscribers in a single /consumersdetail request
+            const BULK_CHUNK_SIZE = 400;        // For > 800 subscribers, load in chunks of 400 (2 chunks in parallel)
+            const CONCURRENT_CHUNKS = 2;
+            const isLargeCompany = subscriberCount > 500;
+            const shouldCacheCompany = subscriberCount >= 200;
+            const loadingStrategy = subscriberCount <= BULK_SINGLE_CALL_LIMIT ? 'bulk' : 'bulk-chunked';
+
+            let basicSubscribers = finalConsumers.map(consumer => {
+                const person = consumer.person || {};
+                const ident = consumer.identification || {};
+                const usageProf = ident.usageProfile || consumer.usageProfile || {};
+
+                const fname = person.firstName || consumer.firstName || '';
+                const lname = person.surname || consumer.lastName || consumer.name || '';
+                const tag = ident.cardno || consumer.tagNum || consumer.cardNum || consumer.cardno || '';
+                const profId = usageProf.id || consumer.profile || consumer.extCardProfile || '1';
+                const profName = usageProf.name || consumer.profileName || (profId ? `פרופיל ${profId}` : 'רגיל');
+                const vFrom = ident.validFrom || consumer.xValidFrom || consumer.validFrom || '2024-01-01';
+                const vUntil = ident.validUntil || consumer.xValidUntil || consumer.validUntil || '2030-12-31';
+                const isPres = ident.present === 'true' || ident.present === true || consumer.presence || consumer.present || false;
+                const l1 = consumer.lpn1 || consumer.vehicle1 || consumer.vehicleNum || '';
+                const l2 = consumer.lpn2 || consumer.vehicle2 || '';
+                const l3 = consumer.lpn3 || consumer.vehicle3 || '';
+
+                return {
+                    id: consumer.id || consumer.subscriberNum,
+                    subscriberNum: consumer.id || consumer.subscriberNum,
+                    contractId: companyId,
+                    companyNum: companyId,
+                    companyName: callbacks.companyName || '',
+                    firstName: fname,
+                    lastName: lname,
+                    name: lname,
+                    vehicleNum: l1,
+                    lpn1: l1,
+                    lpn2: l2,
+                    lpn3: l3,
+                    vehicle1: l1,
+                    vehicle2: l2,
+                    vehicle3: l3,
+                    validFrom: vFrom,
+                    validUntil: vUntil,
+                    xValidFrom: vFrom,
+                    xValidUntil: vUntil,
+                    tagNum: tag,
+                    cardno: tag,
+                    profile: profId,
+                    profileId: profId,
+                    profileName: profName,
+                    extCardProfile: profId,
+                    facility: consumer.facility || '0',
+                    filialId: consumer.filialId || '2240',
+                    presence: isPres,
+                    ignorePresence: consumer.ignorePresence || false,
+                    hasFullDetails: false,
+                    loadingStrategy: loadingStrategy,
+                    isLargeCompany: isLargeCompany
+                };
+            });
             
-            if (forceFullLoad) {
-                // If forcing full load, use batch-50 strategy even for large companies
-                loadingStrategy = subscriberCount <= INSTANT_LOAD_THRESHOLD ? 'instant' : 'batch-50';
-                // Force full load requested
-            } else if (subscriberCount <= INSTANT_LOAD_THRESHOLD) {
-                loadingStrategy = 'instant';
-            } else if (subscriberCount <= BATCH_LOAD_THRESHOLD) {
-                loadingStrategy = 'batch-50';
-            } else {
-                loadingStrategy = 'on-demand';
+            // Render initial table immediately
+            onBasicLoaded(basicSubscribers, false);
+
+            if (subscriberCount === 0) {
+                const emptyTs = Date.now();
+                if (onProgress) onProgress({ percent: 100 });
+                if (onComplete) onComplete([], false, emptyTs);
+                return { success: true, data: [], total: 0, progressive: false, loadingStrategy: 'bulk' };
             }
-            
-            // Map ALL available data from consumer list
-            let basicSubscribers = finalConsumers.map(consumer => ({
-                // IDs
-                id: consumer.id || consumer.subscriberNum,
-                subscriberNum: consumer.id || consumer.subscriberNum,
-                contractId: companyId,
-                companyNum: companyId,
-                companyName: callbacks.companyName || '',  // Will be passed from UI
-                
-                // Names - don't duplicate if only last name exists
-                firstName: consumer.firstName || '',
-                lastName: consumer.lastName || consumer.name || '',
-                name: consumer.name || '',
-                
-                // Vehicles
-                vehicleNum: consumer.vehicleNum || consumer.lpn1 || '',
-                lpn1: consumer.lpn1 || consumer.vehicleNum || '',
-                lpn2: consumer.lpn2 || '',
-                lpn3: consumer.lpn3 || '',
-                vehicle1: consumer.lpn1 || consumer.vehicleNum || '',
-                vehicle2: consumer.lpn2 || '',
-                vehicle3: consumer.lpn3 || '',
-                
-                // Dates
-                validFrom: consumer.xValidFrom || consumer.validFrom || '2024-01-01',
-                validUntil: consumer.xValidUntil || consumer.validUntil || '2030-12-31',
-                xValidFrom: consumer.xValidFrom || consumer.validFrom || '2024-01-01',
-                xValidUntil: consumer.xValidUntil || consumer.validUntil || '2030-12-31',
-                
-                // Other fields
-                tagNum: consumer.tagNum || consumer.cardNum || '',
-                profile: consumer.profile || consumer.extCardProfile || '0',
-                extCardProfile: consumer.extCardProfile || consumer.profile || '0',
-                facility: consumer.facility || '0',
-                filialId: consumer.filialId || '2240',
-                
-                // Status
-                presence: consumer.presence || false,
-                ignorePresence: consumer.ignorePresence || false,
-                hasFullDetails: false,  // Will be set to true after loading details
-                loadingStrategy: loadingStrategy,
-                isLargeCompany: loadingStrategy === 'on-demand'
-            }));
-            
-            // Skip heavy debug logs for performance
-            // Loading strategy determined
-            
-            // Return basic data immediately
-            onBasicLoaded(basicSubscribers);
-            
-            // Load details based on company size strategy  
-            if (loadingStrategy !== 'on-demand') {
-                // Load details in background AFTER showing the table
-                setTimeout(async () => {
-                
-                    const processSubscriber = async (subscriber) => {
-                        try {
-                            const detailResult = await this.getConsumerDetail(
-                                subscriber.contractId,
-                                subscriber.id
-                            );
-                            
-                            if (detailResult.success && detailResult.data) {
-                                const detail = detailResult.data;
-                                
-                                return {
-                                    ...subscriber,
-                                    companyName: callbacks.companyName || subscriber.companyName,
-                                    tagNum: detail.identification?.cardno || '',
-                                    cardno: detail.identification?.cardno || '',
-                                    firstName: detail.person?.firstName || detail.firstName || subscriber.firstName,
-                                    lastName: detail.person?.surname || detail.surname || subscriber.lastName,
-                                    lpn1: detail.lpn1 || '',
-                                    lpn2: detail.lpn2 || '',
-                                    lpn3: detail.lpn3 || '',
-                                    vehicle1: detail.lpn1 || '',
-                                    vehicle2: detail.lpn2 || '',
-                                    vehicle3: detail.lpn3 || '',
-                                    profile: detail.identification?.usageProfile?.id || '',
-                                    profileName: detail.identification?.usageProfile?.name || '',
-                                    validFrom: detail.identification?.validFrom || detail.validFrom || subscriber.validFrom,
-                                    validUntil: detail.identification?.validUntil || detail.validUntil || subscriber.validUntil,
-                                    present: detail.identification?.present === 'true',
-                                    presence: detail.identification?.present === 'true',
-                                    ignorePresence: detail.identification?.ignorePresence === '1' || 
-                                                   detail.identification?.ignorePresence === 'true' || 
-                                                   detail.identification?.ignorePresence === true ||
-                                                   detail.ignorePresence === '1' ||
-                                                   detail.ignorePresence === 'true' ||
-                                                   detail.ignorePresence === true,
-                                    hasFullDetails: true
-                                };
+
+            // Step 2: Fetch full details via bulk /contracts/{id}/consumersdetail
+            setTimeout(async () => {
+                if (isCancelled()) return;
+
+                const subMapById = new Map();
+                basicSubscribers.forEach((sub, idx) => {
+                    subMapById.set(String(sub.subscriberNum), { sub, idx });
+                });
+
+                let bulkSucceeded = false;
+
+                try {
+                    if (subscriberCount <= BULK_SINGLE_CALL_LIMIT) {
+                        if (onProgress) {
+                            onProgress({
+                                percent: 15,
+                                message: `טוען פרטי ${subscriberCount} מנויים...`
+                            });
+                        }
+
+                        const bulkRes = await this.getContractConsumersDetail(companyId);
+                        if (isCancelled()) return;
+
+                        if (bulkRes.success && bulkRes.data) {
+                            const detailList = Array.isArray(bulkRes.data) ? bulkRes.data : [bulkRes.data];
+                            if (detailList.length > 0) {
+                                detailList.forEach(detail => {
+                                    const consumerNode = detail.consumer || detail || {};
+                                    const sid = String(consumerNode.id || detail.id || detail.subscriberNum || '');
+                                    const existingEntry = subMapById.get(sid);
+                                    const mapped = this.mapConsumerDetailToSubscriber(
+                                        detail,
+                                        companyId,
+                                        callbacks.companyName,
+                                        isLargeCompany,
+                                        loadingStrategy,
+                                        existingEntry ? existingEntry.sub : null
+                                    );
+                                    if (existingEntry) {
+                                        basicSubscribers[existingEntry.idx] = mapped;
+                                    } else if (sid) {
+                                        basicSubscribers.push(mapped);
+                                    }
+                                });
+                                bulkSucceeded = true;
                             }
-                            return subscriber;
-                        } catch (error) {
-                            console.error(`Error loading detail for consumer ${subscriber.id}:`, error);
-                            return subscriber;
                         }
-                    };
-                    
-                    if (loadingStrategy === 'instant') {
-                        // Show loading message for instant loading
-                        if (callbacks.onProgress) {
-                            callbacks.onProgress({ 
-                                percent: 0,
-                                message: `טוען פרטי ${basicSubscribers.length} מנויים...`
-                            });
-                        }
-                        
-                        // Load all at once for small companies
-                        const detailPromises = basicSubscribers.map(processSubscriber);
-                        const detailedSubscribers = await Promise.all(detailPromises);
-                        onBasicLoaded(detailedSubscribers);
-                        basicSubscribers = detailedSubscribers;
-                        
-                        // Hide progress message when done
-                        if (callbacks.onProgress) {
-                            callbacks.onProgress({ 
-                                percent: 100,
-                                message: `הושלמה טעינת ${basicSubscribers.length} מנויים`
-                            });
-                        }
-                    } else if (loadingStrategy === 'batch-50') {
-                        // Show initial loading message
-                        if (callbacks.onProgress) {
-                            callbacks.onProgress({ 
-                                percent: 0,
-                                message: `מתחיל לטעון פרטי ${basicSubscribers.length} מנויים המתן לסיום...`
-                            });
-                        }
-                        
-                        // Load in batches of 50 for companies up to 300 subscribers
-                        const BATCH_SIZE = 50;
-                        const totalBatches = Math.ceil(basicSubscribers.length / BATCH_SIZE);
-                        // Loading subscribers in batches
-                        let allUpdated = [];
-                        
-                        for (let i = 0; i < basicSubscribers.length; i += BATCH_SIZE) {
-                            const batch = basicSubscribers.slice(i, Math.min(i + BATCH_SIZE, basicSubscribers.length));
-                            const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-                            // Loading batch
-                            
-                            const batchPromises = batch.map(processSubscriber);
-                            const batchResults = await Promise.all(batchPromises);
-                            
-                            allUpdated = [...allUpdated, ...batchResults];
-                            
-                            // Update UI after each batch
-                            const progress = Math.round((allUpdated.length / basicSubscribers.length) * 100);
-                            if (callbacks.onProgress) {
-                                callbacks.onProgress({ 
-                                    percent: progress,
-                                    current: allUpdated.length,
-                                    total: basicSubscribers.length,
-                                    message: `טוען פרטי מנויים... ${allUpdated.length} מתוך ${basicSubscribers.length}`
+                    } else {
+                        // Large company (> 800 subscribers): load in chunks of 400 with 2 parallel requests at a time
+                        const sortedNumericIds = basicSubscribers
+                            .map(s => parseInt(s.subscriberNum, 10))
+                            .filter(n => !isNaN(n))
+                            .sort((a, b) => a - b);
+
+                        if (sortedNumericIds.length > 0) {
+                            const chunkRanges = [];
+                            for (let i = 0; i < sortedNumericIds.length; i += BULK_CHUNK_SIZE) {
+                                const slice = sortedNumericIds.slice(i, Math.min(i + BULK_CHUNK_SIZE, sortedNumericIds.length));
+                                chunkRanges.push({
+                                    minId: slice[0],
+                                    maxId: slice[slice.length - 1],
+                                    count: slice.length
                                 });
                             }
-                            
-                            // Update only the changed items in the UI
-                            batchResults.forEach((updated, idx) => {
-                                const originalIndex = i + idx;
-                                if (callbacks.onDetailLoaded) {
-                                    callbacks.onDetailLoaded(updated, originalIndex);
+
+                            let loadedCount = 0;
+                            let allChunksOk = true;
+                            let rangeBugDetected = false;
+
+                            for (let cIdx = 0; cIdx < chunkRanges.length; cIdx += CONCURRENT_CHUNKS) {
+                                if (isCancelled()) return;
+                                const activeGroup = chunkRanges.slice(cIdx, cIdx + CONCURRENT_CHUNKS);
+
+                                const pct = Math.max(5, Math.round((loadedCount / subscriberCount) * 100));
+                                if (onProgress) {
+                                    onProgress({
+                                        percent: pct,
+                                        current: loadedCount,
+                                        total: subscriberCount,
+                                        message: `טוען פרטי מנויים... ${loadedCount} מתוך ${subscriberCount}`
+                                    });
                                 }
-                            });
-                            
-                            // Small delay between batches to let UI breathe
-                            if (i + BATCH_SIZE < basicSubscribers.length) {
-                                await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
+
+                                const groupResponses = await Promise.all(
+                                    activeGroup.map(r => this.getContractConsumersDetail(companyId, r.minId, r.maxId))
+                                );
+                                if (isCancelled()) return;
+
+                                for (let g = 0; g < groupResponses.length; g++) {
+                                    const chunkRes = groupResponses[g];
+                                    const rangeInfo = activeGroup[g];
+
+                                    if (chunkRes.success && chunkRes.data) {
+                                        const detailList = Array.isArray(chunkRes.data) ? chunkRes.data : [chunkRes.data];
+                                        // Detect older Skidata WAR bug where minId/maxId returns only 1 item (id == minId)
+                                        if (rangeInfo.count > 2 && detailList.length <= 1) {
+                                            rangeBugDetected = true;
+                                            break;
+                                        }
+                                        // Update in-memory array WITHOUT calling onDetailLoaded 1500 times (prevents DOM layout thrashing!)
+                                        for (let d = 0; d < detailList.length; d++) {
+                                            const detail = detailList[d];
+                                            const consumerNode = detail.consumer || detail || {};
+                                            const sid = String(consumerNode.id || detail.id || detail.subscriberNum || '');
+                                            const existingEntry = subMapById.get(sid);
+                                            if (existingEntry) {
+                                                const mapped = this.mapConsumerDetailToSubscriber(
+                                                    detail,
+                                                    companyId,
+                                                    callbacks.companyName,
+                                                    isLargeCompany,
+                                                    loadingStrategy,
+                                                    existingEntry.sub
+                                                );
+                                                basicSubscribers[existingEntry.idx] = mapped;
+                                            }
+                                        }
+                                        loadedCount += rangeInfo.count;
+                                    } else {
+                                        allChunksOk = false;
+                                        break;
+                                    }
+                                }
+
+                                if (rangeBugDetected) {
+                                    console.warn('[Progressive] Server ignores minId/maxId range, switching to full bulk request');
+                                    const fullBulkRes = await this.getContractConsumersDetail(companyId);
+                                    if (isCancelled()) return;
+                                    if (fullBulkRes.success && fullBulkRes.data) {
+                                        const fullList = Array.isArray(fullBulkRes.data) ? fullBulkRes.data : [fullBulkRes.data];
+                                        for (let d = 0; d < fullList.length; d++) {
+                                            const detail = fullList[d];
+                                            const consumerNode = detail.consumer || detail || {};
+                                            const sid = String(consumerNode.id || detail.id || detail.subscriberNum || '');
+                                            const existingEntry = subMapById.get(sid);
+                                            if (existingEntry) {
+                                                basicSubscribers[existingEntry.idx] = this.mapConsumerDetailToSubscriber(
+                                                    detail,
+                                                    companyId,
+                                                    callbacks.companyName,
+                                                    isLargeCompany,
+                                                    'bulk',
+                                                    existingEntry.sub
+                                                );
+                                            }
+                                        }
+                                        allChunksOk = true;
+                                    } else {
+                                        allChunksOk = false;
+                                    }
+                                    break;
+                                }
+
+                                if (!allChunksOk) break;
+
+                                // Batch UI update once per chunk group if not the final group
+                                if (onChunkLoaded && loadedCount < subscriberCount) {
+                                    onChunkLoaded(basicSubscribers, loadedCount, subscriberCount);
+                                }
                             }
+                            bulkSucceeded = allChunksOk;
                         }
-                        
-                        basicSubscribers = allUpdated;
-                        // All details loaded successfully
-                    } else {
-                        // Should not reach here with current strategy
-                        // Unknown loading strategy
                     }
-                    
-                    // Hide loading message (only if not already handled by instant loading)
-                    if (loadingStrategy !== 'instant' && callbacks.onProgress) {
-                        callbacks.onProgress({ percent: 100 });
+                } catch (bulkErr) {
+                    console.warn('[Progressive] Bulk consumersdetail failed, falling back to safe small batches:', bulkErr);
+                    bulkSucceeded = false;
+                }
+
+                // Safe fallback if bulk endpoint is unavailable on an older server:
+                // Use small batch size of 3 (never 25!) so the Skidata server never chokes or times out
+                if (!bulkSucceeded && !isCancelled()) {
+                    const SAFE_BATCH_SIZE = 3;
+                    for (let i = 0; i < basicSubscribers.length; i += SAFE_BATCH_SIZE) {
+                        if (isCancelled()) return;
+                        const batch = basicSubscribers.slice(i, Math.min(i + SAFE_BATCH_SIZE, basicSubscribers.length));
+                        const batchResults = await Promise.all(batch.map(async (sub) => {
+                            if (sub.hasFullDetails) return sub;
+                            const detailRes = await this.getConsumerDetail(sub.contractId, sub.id);
+                            if (detailRes.success && detailRes.data) {
+                                return this.mapConsumerDetailToSubscriber(
+                                    detailRes.data,
+                                    companyId,
+                                    callbacks.companyName,
+                                    isLargeCompany,
+                                    'safe-batch',
+                                    sub
+                                );
+                            }
+                            return sub;
+                        }));
+
+                        if (isCancelled()) return;
+
+                        batchResults.forEach((updated, idx) => {
+                            const originalIndex = i + idx;
+                            basicSubscribers[originalIndex] = updated;
+                            if (onDetailLoaded) {
+                                onDetailLoaded(updated, originalIndex);
+                            }
+                        });
+
+                        const doneCount = Math.min(i + SAFE_BATCH_SIZE, basicSubscribers.length);
+                        const progress = Math.round((doneCount / basicSubscribers.length) * 100);
+                        if (onProgress) {
+                            onProgress({
+                                percent: progress,
+                                current: doneCount,
+                                total: basicSubscribers.length,
+                                message: `טוען פרטי מנויים... ${doneCount} מתוך ${basicSubscribers.length}`
+                            });
+                        }
                     }
-                }, 100); // Small delay to let UI render first
-            }
-            else if (loadingStrategy === 'on-demand') {
-                // For very large companies (300+), don't auto-load details
-                if (callbacks.onProgress) {
-                    callbacks.onProgress({ 
+                }
+
+                if (isCancelled()) return;
+
+                const finishTimestamp = Date.now();
+                onBasicLoaded(basicSubscribers, false, finishTimestamp);
+
+                if (shouldCacheCompany) {
+                    this._saveToLocalCache(cacheKey, companyId, finishTimestamp, basicSubscribers);
+                } else {
+                    try { localStorage.removeItem(cacheKey); } catch (e) {}
+                }
+
+                if (onProgress) {
+                    onProgress({
                         percent: 100,
-                        message: `חברה גדולה - פרטי מנויים ייטענו בעת הצורך`
+                        message: `הושלמה טעינת ${basicSubscribers.length} מנויים`
                     });
                 }
-            }
-            
-                        return { 
+                if (onComplete) {
+                    onComplete(basicSubscribers, false, finishTimestamp);
+                }
+            }, 10);
+
+            return { 
                 success: true,
                 data: basicSubscribers,
                 total: finalConsumers.length,
@@ -566,8 +861,6 @@ class ParkingAPIXML {
      * Load details in background for small companies
      */
     async loadDetailsInBackground(contractId, consumers, subscribers, options) {
-        // DISABLED - we don't need details loading, basic data is sufficient
-        // Background detail loading disabled
         return;
     }
     
@@ -580,8 +873,19 @@ class ParkingAPIXML {
         return this.getUsageProfiles();
     }
     
+    async getSubscriber(companyId, subscriberId) {
+        const res = await this.getConsumerDetail(companyId, subscriberId);
+        if (res.success && res.data) {
+            return {
+                success: true,
+                data: this.mapConsumerDetailToSubscriber(res.data, companyId)
+            };
+        }
+        return res;
+    }
+
     async refreshSingleSubscriber(companyId, subscriberId) {
-        return this.makeRequest(`consumers/${companyId},${subscriberId}`);
+        return this.getSubscriber(companyId, subscriberId);
     }
     
     async exportToCSV(companyId) {
