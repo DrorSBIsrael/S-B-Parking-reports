@@ -4974,16 +4974,11 @@ def company_manager_proxy():
                 content_type = response.headers.get('content-type', '')
                 # Checking content type
                 
-                if 'xml' in content_type.lower() or response.text.startswith('<?xml'):
-                    # פרש XML לJSON
-                    # Got XML response, parsing
-                    # XML PARSER - checking endpoint type
-                    
+                if 'xml' in content_type.lower() or response.content.lstrip().startswith(b'<'):
+                    # פרש XML לJSON ישירות מתוך ה-bytes ללא קידוד כפול
                     try:
                         import xml.etree.ElementTree as ET
-                        # Fix encoding issues
-                        response.encoding = 'utf-8'
-                        root = ET.fromstring(response.text.encode('utf-8'))
+                        root = ET.fromstring(response.content)
                         
                         # Check for detail endpoints FIRST
                         # Checking if detail endpoint
@@ -5303,15 +5298,10 @@ def company_manager_proxy():
                             # Returning consumers from XML
                             return jsonify({'success': True, 'data': consumers})
                         elif '/detail' in endpoint and 'consumer' in endpoint:
-                            # Parse consumer DETAIL from XML
-                            # Removed verbose XML logging for performance
-                            
-                            # Parse the consumer detail
+                            # Parse consumer DETAIL from already-parsed XML root
                             consumer_detail = {}
-                            
-                            # Try to parse as XML
                             try:
-                                detail_root = ET.fromstring(response.text)
+                                detail_root = root
                                 
                                 # Extract all fields recursively
                                 def extract_fields(element, prefix=''):
