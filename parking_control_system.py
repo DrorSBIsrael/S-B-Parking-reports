@@ -1552,39 +1552,128 @@ def add_park_transaction(ip, port, subscriber_id, direction, unit, cell="1", fac
         print(f"add_park_transaction error: {e}")
         return False
 
+def get_device_display_price(ip, port, cell, unit):
+    """
+    בודק האם מופיע כרגע מחיר לתשלום על צג יחידת היציאה (2XX) או מכונת התשלום (6XX)
+    דרך /DeviceControlWebService/disputedfee-fielddevice-price?cellcomputernumber={cell}&fielddevicenumber={unit}.
+    status == 0 וגם price > 0 משמעותו שהיחידה במצב תשלום פעיל על המסך.
+    """
+    target_device = str(unit).split(",")[-1].strip()
+    physical_cell = str(cell or "1").strip() or "1"
+    endpoint = f"/DeviceControlWebService/disputedfee-fielddevice-price?cellcomputernumber={physical_cell}&fielddevicenumber={target_device}"
+    try:
+        res = make_sb_request("GET", ip, port, endpoint, headers={"Accept": "application/xml, application/json"}, timeout=2.5)
+        if res.get("status") == 200 and res.get("text"):
+            data_str = res["text"]
+            st_m = re.search(r"<status[^>]*>(\d+)</status>", data_str, re.IGNORECASE) or re.search(r'"status"\s*:\s*"?(\d+)"?', data_str, re.IGNORECASE)
+            pr_m = re.search(r"<price[^>]*>(\d+)</price>", data_str, re.IGNORECASE) or re.search(r'"price"\s*:\s*"?(\d+)"?', data_str, re.IGNORECASE)
+            st_val = int(st_m.group(1)) if st_m else -1
+            pr_agorot = int(pr_m.group(1)) if pr_m else 0
+            if st_val == 0 and pr_agorot > 0:
+                price_ils = round(pr_agorot / 100.0, 2)
+                return {
+                    "active": True,
+                    "status_code": 0,
+                    "price_agorot": pr_agorot,
+                    "price_ils": price_ils,
+                    "price_display": f"₪{int(price_ils)}" if price_ils == int(price_ils) else f"₪{price_ils:.2f}"
+                }
+            return {
+                "active": False,
+                "status_code": st_val,
+                "price_agorot": 0,
+                "price_ils": 0.0,
+                "price_display": "אין חיוב פעיל על הצג"
+            }
+    except Exception:
+        pass
+    return {
+        "active": False,
+        "status_code": -1,
+        "price_agorot": 0,
+        "price_ils": 0.0,
+        "price_display": "אין חיוב פעיל על הצג"
+    }
+
 def force_price_on_exit_column(project_number, parking_name, ip, port, user_obj, cell, unit, price_agorot, reason="שליחת מחיר לעמדת יציאה"):
     """
-    שולח פקודת אובדן כרטיס (44080) להערת עמדת היציאה (2XX) ומעדכן את המחיר המדויק דרך disputedfee.
+    שולח מחיר לתשלום לצג יחידת היציאה (2XX) ב-2 שלבים (כמו ב-intercom-server):
+    שלב 1: אם עדיין אין מחיר פעיל על הצג (status != 0), שולח פקודת אובדן כרטיס (44080 ביציאה 2XX / 44067 במכונה 6XX)
+            כדי להעלות על הצג את המחיר המלא (Original Lost Ticket Price), ודוגם את המחיר המלא מ-disputedfee-fielddevice-price.
+    שלב 2: שולח פקודת הנחה (disputedfee) מהמחיר המלא (originalprice) אל הסכום המבוקש לתשלום (discountedprice=price_agorot).
+    ומבצע רישום מלא ביומן האירועים (DB.USER_AUDIT + SQLite).
     """
     target_device = str(unit).split(",")[-1].strip()
     physical_cell = str(cell or "1").strip() or "1"
     dev_num = int(target_device) if target_device.isdigit() else 201
     cmd_code = 44080 if (200 <= dev_num < 300) else 44067
-
-    make_sb_request("PUT", ip, port, f"/DeviceControlWebService/command/{physical_cell}/{target_device}/{cmd_code}", timeout=4)
-    time.sleep(1.4)
-
     price_endpoint = f"/DeviceControlWebService/disputedfee-fielddevice-price?cellcomputernumber={physical_cell}&fielddevicenumber={target_device}"
-    original_price = 0
-    for _ in range(5):
-        p_res = make_sb_request("GET", ip, port, price_endpoint, headers={"Accept": "application/xml"}, timeout=2.5)
-        if p_res.get("status") == 200 and p_res.get("text"):
-            st_m = re.search(r"<status[^>]*>(\d+)</status>", p_res["text"], re.IGNORECASE)
-            pr_m = re.search(r"<price[^>]*>(\d+)</price>", p_res["text"], re.IGNORECASE)
-            st_val = int(st_m.group(1)) if st_m else -1
-            pr_val = int(pr_m.group(1)) if pr_m else 0
-            if st_val == 0 and pr_val > 0:
-                original_price = pr_val
-                break
-        time.sleep(0.9)
 
-    if original_price > 0 and original_price != price_agorot:
-        dispute_endpoint = (
-            f"/DeviceControlWebService/disputedfee?cellcomputernumber={physical_cell}"
-            f"&fielddevicenumber={target_device}&originalprice={original_price}"
-            f"&discountedprice={price_agorot}&discountreason=manager"
+    # בדיקה מקדימה: האם כבר מופיע מחיר פעיל על צג היחידה (status == 0 && price > 0)
+    current_screen = get_device_display_price(ip, port, physical_cell, target_device)
+    original_price = current_screen["price_agorot"] if current_screen.get("active") else 0
+
+    # שלב 1: אם אין מחיר פעיל על הצג - שליחת פקודת מחיר מלא (Lost Ticket 44080) והמתנה לכניסה למצב תשלום
+    if original_price <= 0:
+        make_sb_request("PUT", ip, port, f"/DeviceControlWebService/command/{physical_cell}/{target_device}/{cmd_code}", timeout=4)
+        time.sleep(1.4)
+        for _ in range(5):
+            p_res = make_sb_request("GET", ip, port, price_endpoint, headers={"Accept": "application/xml"}, timeout=2.5)
+            if p_res.get("status") == 200 and p_res.get("text"):
+                st_m = re.search(r"<status[^>]*>(\d+)</status>", p_res["text"], re.IGNORECASE)
+                pr_m = re.search(r"<price[^>]*>(\d+)</price>", p_res["text"], re.IGNORECASE)
+                st_val = int(st_m.group(1)) if st_m else -1
+                pr_val = int(pr_m.group(1)) if pr_m else 0
+                if st_val == 0 and pr_val > 0:
+                    original_price = pr_val
+                    break
+            time.sleep(0.9)
+
+    dispute_ok = False
+    if original_price > 0:
+        if original_price == price_agorot:
+            dispute_ok = True
+        else:
+            # שלב 2: שליחת ההנחה מהמחיר המלא (original_price) אל המחיר המבוקש (price_agorot)
+            dispute_endpoint = (
+                f"/DeviceControlWebService/disputedfee?cellcomputernumber={physical_cell}"
+                f"&fielddevicenumber={target_device}&originalprice={original_price}"
+                f"&discountedprice={price_agorot}&discountreason=intercom"
+            )
+            d_res = make_sb_request("PUT", ip, port, dispute_endpoint, headers={"Accept": "application/xml"}, timeout=3.5)
+            d_txt = d_res.get("text") or ""
+            if d_res.get("status") in (200, 201, 202, 204) and ("<status>1</status>" in d_txt or "<status>0</status>" in d_txt or not d_txt.strip()):
+                dispute_ok = True
+
+    u_name = (user_obj.get('username') or user_obj.get('email') or 'מנהל חניון') if isinstance(user_obj, dict) else 'מנהל חניון'
+    orig_ils = round(original_price / 100.0, 2) if original_price > 0 else 0
+    target_ils = round(price_agorot / 100.0, 2)
+    full_reason = f"אפליקציית מנהל ({u_name}) | שליחת מחיר ₪{target_ils:g} לצג יחידה {target_device} (מחיר בסיס: ₪{orig_ils:g}) | {reason}"[:200]
+
+    # Log to S&B DB.USER_AUDIT via /vehicle-api/api/log-audit
+    audit_ok = False
+    try:
+        audit_payload = {
+            "cell": physical_cell,
+            "device": target_device,
+            "reason": full_reason,
+            "ip": "127.0.0.1",
+            "ptcptId": "7",
+            "commandCode": str(cmd_code)
+        }
+        audit_res = make_sb_request(
+            "POST",
+            ip,
+            port,
+            "/vehicle-api/api/log-audit",
+            data=audit_payload,
+            headers={"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"},
+            timeout=3
         )
-        make_sb_request("PUT", ip, port, dispute_endpoint, headers={"Accept": "application/xml"}, timeout=3)
+        if audit_res.get("status") == 200 and '"success"' in (audit_res.get("text") or ""):
+            audit_ok = True
+    except Exception:
+        pass
 
     record_local_audit_event(
         project_number=project_number,
@@ -1594,9 +1683,25 @@ def force_price_on_exit_column(project_number, parking_name, ip, port, user_obj,
         cell=physical_cell,
         unit=target_device,
         command_code=str(cmd_code),
-        reason=reason,
-        sb_cmd_ok=(original_price > 0)
+        reason=full_reason,
+        sb_cmd_ok=dispute_ok,
+        sb_audit_ok=audit_ok
     )
+
+    updated_screen = get_device_display_price(ip, port, physical_cell, target_device)
+    return {
+        "success": dispute_ok,
+        "original_price_agorot": original_price,
+        "original_price_ils": orig_ils,
+        "target_price_agorot": price_agorot,
+        "target_price_ils": target_ils,
+        "screen_price": updated_screen,
+        "message": (
+            f"✅ המחיר ₪{target_ils:g} נשלח בהצלחה לצג יחידה {target_device} (מחיר מלא: ₪{orig_ils:g} -> לאחר הנחה: ₪{target_ils:g})"
+            if dispute_ok
+            else f"⚠️ יחידה {target_device} לא נכנסה למצב תשלום פעיל על הצג (ודא שיש רכב על הלולאה ביציאה)"
+        )
+    }
 
 # ============================================================================
 # 5. TAB 2: DIFFERENCE COUNTING WEB SERVICE (ONLINE COUNTERS & MANIPULATION)
@@ -2317,6 +2422,11 @@ def api_control_lane_detail(unit):
         calc_transient_price=(direction == "exit")
     )
 
+    screen_price = None
+    if direction == "exit" or (600 <= dev_num <= 699):
+        cell_num = request.args.get("cell") or "1"
+        screen_price = get_device_display_price(ip, port, cell_num, u_str)
+
     return jsonify({
         "success": True,
         "unit": u_str,
@@ -2326,8 +2436,89 @@ def api_control_lane_detail(unit):
         "event_time": event_time,
         "source_file": source_file,
         "vehicle": vehicle_info,
+        "screen_price": screen_price,
         "history": []
     })
+
+@parking_control_bp.route('/api/parking-control/device-price/<unit>', methods=['GET'])
+def api_control_get_device_price(unit):
+    """
+    בודק בזמן אמת האם יש מחיר שמוצג כרגע על צג עמדת היציאה (2XX).
+    """
+    user = _get_authenticated_control_user()
+    hdr_token = request.headers.get('X-Control-Token') or request.args.get('auth_token') or request.args.get('token')
+    if not user and not hdr_token:
+        return jsonify({'success': False, 'message': 'לא מחובר'}), 401
+
+    proj = str(
+        request.args.get('project_number')
+        or request.headers.get('X-Control-Project')
+        or (user.get('active_project_number') if user else '')
+        or (user.get('project_number') if user else '')
+        or '473223100'
+    )
+    cell = str(request.args.get('cell') or '1').strip() or '1'
+    conn = _get_parking_conn(proj) or {'ip_address': '10.35.122.200', 'port': 8443}
+    if not conn or not conn.get('ip_address'):
+        return jsonify({'success': False, 'message': 'אין חיבור לבקר החניון'}), 404
+
+    sp = get_device_display_price(conn['ip_address'], conn.get('port', 8443), cell, str(unit).strip())
+    return jsonify({
+        'success': True,
+        'unit': str(unit).strip(),
+        'screen_price': sp
+    })
+
+@parking_control_bp.route('/api/parking-control/send-price', methods=['POST'])
+def api_control_send_exit_price():
+    """
+    שולח מחיר לתשלום לצג יחידת יציאה (2XX) בשני שלבים:
+    1. שליחת פקודת מחיר מלא (44080) אם אין עדיין מחיר על הצג, וקריאת המחיר המלא מ-disputedfee-fielddevice-price.
+    2. שליחת הנחה (disputedfee) מהמחיר המלא אל הסכום המבוקש לתשלום.
+    """
+    user = _get_authenticated_control_user()
+    if not user:
+        return jsonify({'success': False, 'message': 'פג תוקף החיבור - נא להתחבר מחדש'}), 401
+
+    data = request.get_json(silent=True) or {}
+    proj = str(data.get('project_number') or user.get('active_project_number') or user.get('project_number') or '473223100')
+    unit = str(data.get('unit') or '').strip()
+    cell = str(data.get('cell') or '1').strip() or '1'
+    plate = str(data.get('plate') or '').strip()
+    amount_raw = data.get('amount_ils') if data.get('amount_ils') is not None else data.get('price_ils')
+
+    try:
+        amount_ils = float(amount_raw)
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'message': 'נא להזין סכום תקין בש"ח לשליחה לצג היציאה'}), 400
+
+    if amount_ils <= 0 or amount_ils > 5000:
+        return jsonify({'success': False, 'message': 'הסכום לתשלום חייב להיות גדול מ-0 ש"ח'}), 400
+
+    dev_num = int(unit) if unit.isdigit() else 0
+    if not (200 <= dev_num <= 299 or 600 <= dev_num <= 699):
+        return jsonify({'success': False, 'message': 'שליחת מחיר לצג נתמכת רק בעמדות יציאה (2XX) או מכונות תשלום (6XX)'}), 400
+
+    conn = _get_parking_conn(proj) or {'ip_address': '10.35.122.200', 'port': 8443}
+    if not conn or not conn.get('ip_address'):
+        return jsonify({'success': False, 'message': 'אין חיבור לבקר החניון'}), 404
+
+    price_agorot = int(round(amount_ils * 100))
+    p_name = conn.get('name') or user.get('parking_name') or f'חניון {proj}'
+    reason = f"רכב: {plate}" if plate else "שליחת מחיר ידנית לצג יציאה"
+
+    res = force_price_on_exit_column(
+        project_number=proj,
+        parking_name=p_name,
+        ip=conn['ip_address'],
+        port=conn.get('port', 8443),
+        user_obj=user,
+        cell=cell,
+        unit=unit,
+        price_agorot=price_agorot,
+        reason=reason
+    )
+    return jsonify(res)
 
 @parking_control_bp.route('/api/parking-control/lane-image/<unit>', methods=['GET'])
 def api_control_lane_image(unit):

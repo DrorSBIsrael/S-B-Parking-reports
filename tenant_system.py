@@ -1047,8 +1047,9 @@ def get_apartment_pooling_status(project_number, apartment_number):
                 raw_max_c = int(chosen.findtext('ns:maxCounter', default='0', namespaces=ns) or 0)
                 pres_c = int(chosen.findtext('ns:presentCounter', default='0', namespaces=ns) or 0)
 
-        # אם החוזה בסטטוס חסום (status == 2), מכסת החניות הפעילה שלו בפועל היא 0
-        is_blocked_zero = (contract_status != 0)
+        # אם החוזה בסטטוס חסום (status == 2) ו-maxCounter הוא 1 או פחות, זו דירה שהוגדרה כ"דירה ללא חניה (0 חניות)".
+        # אם בבקר מוגדר maxCounter > 1 (למשל דירה עם 2 חניות כמו 1133), נציג את כמות החניות האמיתית שלה (raw_max_c).
+        is_blocked_zero = (contract_status != 0 and raw_max_c <= 1)
         effective_max_c = 0 if is_blocked_zero else raw_max_c
 
         return {
@@ -1123,6 +1124,22 @@ def set_apartment_zero_spot_mode(project_number, apartment_number, is_zero_spot)
         else:
             st_el.text = '0'
             cur_raw_max = int((max_el.text if max_el is not None else '1') or 1)
+            # אם בבקר יש מספר מנויים עם חניה מוגדרת (matchCode), שחזר את כמות החניות לפי כמות החניות של המנויים
+            try:
+                subs_url = f"https://{ip}:{port}/CustomerMediaWebService/contracts/{apartment_number}/consumersdetail"
+                s_resp = sess.get(subs_url, headers=_skidata_headers(), verify=False, timeout=10)
+                if s_resp.status_code == 200:
+                    s_root = ET.fromstring(s_resp.content)
+                    spots_cnt = sum(
+                        1 for cd in s_root.findall('.//ns:consumerDetail', ns)
+                        if ((cd.findtext('.//ns:matchCode', default='', namespaces=ns) or '').strip() not in ('', '0', '-'))
+                    )
+                    if spots_cnt > cur_raw_max:
+                        cur_raw_max = spots_cnt
+                        if max_el is not None:
+                            max_el.text = str(cur_raw_max)
+            except Exception:
+                pass
             if cur_raw_max < 1 and max_el is not None:
                 max_el.text = '1'
                 cur_raw_max = 1
@@ -1382,20 +1399,25 @@ def get_apartment_subscribers(project_number, apartment_number):
         resp.encoding = 'utf-8'
         ns = {'ns': 'http://gsph.sub.com/cust/types'}
         root = ET.fromstring(resp.content)
+        all_cds = root.findall('.//ns:consumerDetail', ns)
         subs = []
-        for cd in root.findall('.//ns:consumerDetail', ns):
+        for cd in all_cds:
             cons = cd.find('ns:consumer', ns)
             person = cd.find('ns:person', ns)
             ident = cd.find('ns:identification', ns)
             sid = (cons.findtext('ns:id', default='', namespaces=ns) if cons is not None else '').strip()
-            fname = (person.findtext('ns:firstName', default='', namespaces=ns) if person is not None else '') or cd.findtext('ns:firstName', default='', namespaces=ns)
-            lname = (person.findtext('ns:surname', default='', namespaces=ns) if person is not None else '') or cd.findtext('ns:surname', default='', namespaces=ns)
+            fname = ((person.findtext('ns:firstName', default='', namespaces=ns) if person is not None else '') or cd.findtext('ns:firstName', default='', namespaces=ns) or '').strip()
+            lname = ((person.findtext('ns:surname', default='', namespaces=ns) if person is not None else '') or cd.findtext('ns:surname', default='', namespaces=ns) or '').strip()
             match_code = ((person.findtext('ns:matchCode', default='', namespaces=ns) if person is not None else '') or cd.findtext('ns:matchCode', default='', namespaces=ns) or '').strip()
             pres = ident.findtext('ns:present', default='false', namespaces=ns) if ident is not None else 'false'
             is_pres = str(pres).lower() in ('true', '1', 'yes')
             lpn1 = (cd.findtext('ns:lpn1', default='', namespaces=ns) or '').strip()
             lpn2 = (cd.findtext('ns:lpn2', default='', namespaces=ns) or '').strip()
             lpn3 = (cd.findtext('ns:lpn3', default='', namespaces=ns) or '').strip()
+
+            # דילוג על כרטיסי שלד ריקים בבקר ("שם המנוי" ללא רכב וללא מספר חניה) כאשר כבר יש מנויים אמיתיים בדירה
+            if len(all_cds) > 1 and lname in ('שם המנוי', 'Default') and not fname and not lpn1 and not lpn2 and not lpn3 and not match_code and not is_pres:
+                continue
 
             parked_slot = None
             parked_lpn = ''
