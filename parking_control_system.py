@@ -760,54 +760,123 @@ def get_parking_geometry_and_states(project_number, ip, port, force_refresh=Fals
                                 "category_he": category_he
                             })
 
-                geom_devices.sort(key=lambda d: int(d["number"]) if str(d["number"]).isdigit() else 9999)
+                def _lane_sort_key(d):
+                    fac_n = int(d["facility_number"]) if str(d.get("facility_number")).isdigit() else 9999
+                    dir_rank = {"entry": 1, "exit": 2, "passage": 3}.get(d.get("direction"), 4)
+                    dev_n = int(d["number"]) if str(d["number"]).isdigit() else 9999
+                    return (fac_n, dir_rank, dev_n)
+
+                geom_devices.sort(key=_lane_sort_key)
                 with _cache_lock:
                     _geom_cache[p_key] = {"devices": geom_devices, "ts": now_ts}
             except Exception as e:
                 print(f"Error parsing geometry for project {p_key}: {e}")
 
-    # Poll only lastevents/150 for lane statuses (no continuous LPR polling across all lanes)
+    # Poll lastevents/150 for lane statuses, and fetch latest license plate per lane once every 45 seconds
     events_by_dev = {}
-    ev_res = make_sb_request("GET", ip, port, "/DeviceControlWebService/lastevents/150", timeout=3.5)
-    if ev_res["status"] == 200 and ev_res["data"]:
-        try:
-            ev_xml = re.sub(r'\sxmlns="[^"]+"', '', ev_res["data"].decode("utf-8", errors="replace"))
-            ev_root = ET.fromstring(ev_xml)
-            all_ev = ev_root.findall(".//event")
-            for ev in reversed(all_ev):
-                fdn = (ev.findtext("field-device-number") or "").strip()
-                if not fdn:
-                    continue
-                d_state = (ev.findtext("device-state") or "").strip()
-                s_state = (ev.findtext("device-single-state") or ev.findtext("single-state") or "").strip()
-                dyn_state = (ev.findtext("device-high-dyn-state") or "").strip()
-                ev_txt = (ev.findtext("event-text") or ev.findtext("text") or "").strip()
-                ev_time = (ev.findtext("event-date-time") or ev.findtext("time") or "").strip()
-                alarm_val = (ev.findtext("alarm") or "0").strip()
-
-                if fdn not in events_by_dev:
-                    events_by_dev[fdn] = {
-                        "device_state": int(d_state) if d_state.isdigit() else 1,
-                        "single_state_hex": s_state,
-                        "high_dyn_hex": dyn_state,
-                        "recent_events": []
-                    }
-                if ev_txt and len(events_by_dev[fdn]["recent_events"]) < 6:
-                    fmt_t = ev_time
-                    if len(ev_time) == 14 and ev_time.isdigit():
-                        fmt_t = f"{ev_time[8:10]}:{ev_time[10:12]}:{ev_time[12:14]} ({ev_time[6:8]}/{ev_time[4:6]})"
-                    events_by_dev[fdn]["recent_events"].append({
-                        "time": fmt_t,
-                        "text": ev_txt,
-                        "alarm": alarm_val == "1"
-                    })
-        except Exception as e:
-            print(f"Error parsing lastevents: {e}")
-
     live_lpr_units = {}
     with _cache_lock:
         if p_key in _live_units_cache and isinstance(_live_units_cache[p_key].get("units"), dict):
             live_lpr_units = dict(_live_units_cache[p_key]["units"])
+            cache_age = now_ts - _live_units_cache[p_key].get("timestamp", 0)
+        else:
+            cache_age = 9999
+
+    def _fetch_last_events():
+        ev_res = make_sb_request("GET", ip, port, "/DeviceControlWebService/lastevents/150", timeout=3.5)
+        if ev_res["status"] == 200 and ev_res["data"]:
+            try:
+                ev_xml = re.sub(r'\sxmlns="[^"]+"', '', ev_res["data"].decode("utf-8", errors="replace"))
+                ev_root = ET.fromstring(ev_xml)
+                all_ev = ev_root.findall(".//event")
+                for ev in reversed(all_ev):
+                    fdn = (ev.findtext("field-device-number") or "").strip()
+                    if not fdn:
+                        continue
+                    d_state = (ev.findtext("device-state") or "").strip()
+                    s_state = (ev.findtext("device-single-state") or ev.findtext("single-state") or "").strip()
+                    dyn_state = (ev.findtext("device-high-dyn-state") or "").strip()
+                    ev_txt = (ev.findtext("event-text") or ev.findtext("text") or "").strip()
+                    ev_time = (ev.findtext("event-date-time") or ev.findtext("time") or "").strip()
+                    alarm_val = (ev.findtext("alarm") or "0").strip()
+
+                    if fdn not in events_by_dev:
+                        events_by_dev[fdn] = {
+                            "device_state": int(d_state) if d_state.isdigit() else 1,
+                            "single_state_hex": s_state,
+                            "high_dyn_hex": dyn_state,
+                            "recent_events": []
+                        }
+                    if ev_txt and len(events_by_dev[fdn]["recent_events"]) < 6:
+                        fmt_t = ev_time
+                        if len(ev_time) == 14 and ev_time.isdigit():
+                            fmt_t = f"{ev_time[8:10]}:{ev_time[10:12]}:{ev_time[12:14]} ({ev_time[6:8]}/{ev_time[4:6]})"
+                        events_by_dev[fdn]["recent_events"].append({
+                            "time": fmt_t,
+                            "text": ev_txt,
+                            "alarm": alarm_val == "1"
+                        })
+            except Exception as e:
+                print(f"Error parsing lastevents: {e}")
+
+    def _fetch_latest_plates_snapshot():
+        if not force_refresh and live_lpr_units and cache_age < 45:
+            return
+        # 1. Quick check of /vehicle-api/live-events.jsp
+        try:
+            lpr_res = make_sb_request("GET", ip, port, "/vehicle-api/live-events.jsp", params={"since": "0", "timeout": "100"}, timeout=2.0)
+            if lpr_res["status"] == 200 and lpr_res["data"]:
+                parsed = json.loads(lpr_res["data"].decode("utf-8", errors="replace"))
+                if isinstance(parsed.get("units"), dict):
+                    for uk, uv in parsed["units"].items():
+                        if uv.get("plate"):
+                            live_lpr_units[str(uk)] = uv
+        except Exception:
+            pass
+
+        # 2. Single lightweight SQL query to UDBIDENTDATA for latest plate per device (no images!)
+        import subprocess
+        helper_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sb_oracle_helper")
+        jar_path = os.path.join(helper_dir, "ojdbc6.jar")
+        class_file = os.path.join(helper_dir, "SBOracleReportHelper.class")
+        oracle_ip = "10.35.122.200" if str(ip) in ("192.117.0.122", "10.35.122.200", "") else str(ip)
+        if oracle_ip and os.path.exists(jar_path) and os.path.exists(class_file):
+            try:
+                cp_sep = ";" if os.name == "nt" else ":"
+                cp_arg = f"{helper_dir}{cp_sep}{jar_path}"
+                proc = subprocess.run(
+                    ["java", "-cp", cp_arg, "SBOracleReportHelper", oracle_ip, "LATEST_PLATES"],
+                    capture_output=True,
+                    timeout=4
+                )
+                if proc.returncode == 0 and proc.stdout:
+                    for r_line in proc.stdout.decode("utf-8", errors="replace").splitlines():
+                        ln = r_line.strip()
+                        if not ln or ln.startswith("[SECTION:"):
+                            continue
+                        pts = ln.split("\t")
+                        if len(pts) >= 2:
+                            uk = str(pts[0]).strip()
+                            lp_val = str(pts[1]).strip()
+                            dt_val = pts[2].strip() if len(pts) > 2 else ""
+                            if uk and lp_val and len(lp_val) >= 5:
+                                live_lpr_units[uk] = {
+                                    "unit": uk,
+                                    "plate": lp_val,
+                                    "raw": lp_val,
+                                    "event_time": dt_val
+                                }
+            except Exception:
+                pass
+
+        with _cache_lock:
+            _live_units_cache[p_key] = {"units": dict(live_lpr_units), "timestamp": time.time()}
+
+    with ThreadPoolExecutor(max_workers=2) as ex:
+        f1 = ex.submit(_fetch_last_events)
+        f2 = ex.submit(_fetch_latest_plates_snapshot)
+        f1.result()
+        f2.result()
 
     DEVICE_STATE_NAMES = {
         1: ("תקין", "green"),

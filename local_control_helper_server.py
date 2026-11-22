@@ -18,6 +18,18 @@ except Exception:
 import parking_control_system
 from parking_control_system import parking_control_bp
 
+# Local LAN helper allows the app (which validated its token on Render) to fetch live controller data
+parking_control_system._get_authenticated_control_user = lambda: {
+    'user_id': 1,
+    'username': 'DrorControl',
+    'phone_number': '972545484210',
+    'project_number': '473223100',
+    'active_project_number': '473223100',
+    'parking_name': 'מבנה תל אביב',
+    'code_type': 'control_parking',
+    'company_list': 'ALL'
+}
+
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'local-dev-secret')
 sys.modules['__main__'].supabase = supabase
