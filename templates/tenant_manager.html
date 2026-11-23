@@ -20,9 +20,66 @@
         }
 
         .container {
-            max-width: 1150px;
+            max-width: 1280px;
             margin: 0 auto;
             padding: 20px;
+        }
+
+        th.sortable-th {
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s, color 0.15s;
+            white-space: nowrap;
+        }
+        th.sortable-th:hover {
+            background: #eef2ff;
+            color: #4f46e5;
+        }
+        .sort-indicator {
+            font-size: 12px;
+            margin-right: 4px;
+            color: #94a3b8;
+        }
+        th.sortable-th.active-sort .sort-indicator {
+            color: #4f46e5;
+            font-weight: 900;
+        }
+        .a11y-top-controls {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #f1f5f9;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 9px;
+            padding: 3px 6px;
+        }
+        .a11y-top-btn {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 5px 9px;
+            font-size: 13px;
+            font-weight: 800;
+            color: #1e293b;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .a11y-top-btn:hover {
+            background: #e0e7ff;
+            border-color: #6366f1;
+            color: #3730a3;
+        }
+        .toolbar-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 11px;
+            padding: 12px 14px;
+            margin-bottom: 14px;
         }
 
         .header {
@@ -299,7 +356,13 @@
                     <p id="buildingSubtitle">ממשק מנהל מתחם - ניהול דירות, מכסות שיתוף ודו"ח התחשבנות חודשי</p>
                 </div>
             </div>
-            <div class="header-actions">
+            <div class="header-actions" style="flex-wrap: wrap;">
+                <div class="a11y-top-controls" title="נגישות והגדלת/הקטנת תצוגה">
+                    <button type="button" class="a11y-top-btn" onclick="a11yChangeFontSize(1)" title="הגדל תצוגה וטקסט">🔍+ הגדל</button>
+                    <span id="a11yZoomPctBadge" style="font-size: 12px; font-weight: 800; color: #334155; min-width: 40px; text-align: center;">100%</span>
+                    <button type="button" class="a11y-top-btn" onclick="a11yChangeFontSize(-1)" title="הקטן תצוגה וטקסט">🔎- הקטן</button>
+                    <button type="button" class="a11y-top-btn" style="background:#1d4ed8; color:#fff; border-color:#1d4ed8;" onclick="toggleA11yPanel()" title="תפריט נגישות מלא">♿ נגישות</button>
+                </div>
                 <select id="mgrLangSelector" onchange="setManagerLanguage(this.value)" aria-label="בחירת שפה / Language"
                         style="padding:9px 12px; border-radius:8px; border:1.5px solid #667eea; font-weight:700; color:#334155; cursor:pointer;">
                     <option value="he">🇮🇱 עברית</option>
@@ -327,7 +390,7 @@
             <div class="card">
                 <h2 class="section-title">➕ הוספת דייר לחניון הבניין (ללא מייל - כניסה בוואטסאפ בלבד)</h2>
                 <form id="createTenantForm" onsubmit="handleCreateTenant(event)">
-                    <div class="form-grid">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; align-items: end;">
                         <div class="form-group">
                             <label>שם הדייר / משפחה *</label>
                             <input type="text" id="tFullName" placeholder="לדוגמה: משפחת כהן" required>
@@ -341,13 +404,13 @@
                             <input type="text" id="tApartment" placeholder="לדוגמה: 201" required>
                         </div>
                         <div class="form-group">
-                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:#fff1f2; border:1px solid #fecdd3; padding:10px 12px; border-radius:8px; color:#9f1239; margin-bottom:0;">
-                                <input type="checkbox" id="tIsZeroSpot" style="width:18px; height:18px; cursor:pointer;">
-                                <span>🚫 דירה ללא חניה קבועה (0 חניות)</span>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:#fff1f2; border:1px solid #fecdd3; padding:11px 12px; border-radius:8px; color:#9f1239; margin-bottom:0; white-space:nowrap;">
+                                <input type="checkbox" id="tIsZeroSpot" style="width:18px; height:18px; cursor:pointer; flex-shrink:0;">
+                                <span style="font-size:13.5px; font-weight:700;">🚫 ללא חניה (0 חניות)</span>
                             </label>
                         </div>
                         <div class="form-group">
-                            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;">
+                            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; white-space: nowrap;">
                                 ✅ הוסף דייר לבניין
                             </button>
                         </div>
@@ -358,20 +421,31 @@
             <div class="card">
                 <div class="section-title">
                     <span>📋 רשימת דיירי הבניין (<span id="tenantsCount">0</span>)</span>
-                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                        <button class="btn btn-primary" onclick="openImportApartmentsModal()" style="font-size: 13px; padding: 8px 14px; background: #4f46e5;">
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="openImportApartmentsModal()" style="font-size: 13px; padding: 8px 13px; background: #4f46e5;">
                             📥 טעינת דירות מהחניון
                         </button>
-                        <button class="btn btn-success" onclick="openUploadApartmentsFileModal()" style="font-size: 13px; padding: 8px 14px; background: #0d9488;">
-                            📂 טעינת קובץ דירות ורכבים (ללא מערכת חניון)
+                        <button class="btn btn-success" onclick="openUploadApartmentsFileModal()" style="font-size: 13px; padding: 8px 13px; background: #0d9488;">
+                            📂 טעינת קובץ דירות ורכבים
                         </button>
-                        <button class="btn btn-success" onclick="sendBulkWhatsAppInvites(this)" style="font-size: 13px; padding: 8px 14px; background: #16a34a;" title="שליחה מבוקרת ברקע: 10 הודעות כל 10 שניות למניעת חסימה">
-                            💬 שלח וואטסאפ לכל הדיירים (10 ב-10 שניות)
+                        <button class="btn btn-success" onclick="exportTenantsCSV()" style="font-size: 13px; padding: 8px 13px; background: #0284c7;">
+                            📊 ייצוא דיירים ל-Excel / CSV
                         </button>
-                        <button class="btn btn-outline" onclick="refreshAllTenantsQuotas(this)" style="font-size: 13px; padding: 8px 14px;">
-                            🔄 רענון כללי (בדוק מכסות לכל הדירות מול המערכת)
+                        <button class="btn btn-success" onclick="sendBulkWhatsAppInvites(this)" style="font-size: 13px; padding: 8px 13px; background: #16a34a;" title="שליחה מבוקרת ברקע: 10 הודעות כל 10 שניות למניעת חסימה">
+                            💬 שלח וואטסאפ לכולם
                         </button>
-                        <input type="text" id="tenantSearch" placeholder="🔍 חפש לפי שם, טלפון או מספר דירה..." oninput="renderTenantsTable()" style="max-width: 260px; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 8px; font-size: 14px;">
+                        <button class="btn btn-outline" onclick="refreshAllTenantsQuotas(this)" style="font-size: 13px; padding: 8px 13px;">
+                            🔄 רענון מכסות כללי
+                        </button>
+                    </div>
+                </div>
+
+                <div class="toolbar-row">
+                    <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 260px;">
+                        <input type="text" id="tenantSearch" placeholder="🔍 חפש לפי שם דייר, טלפון או מספר דירה..." oninput="renderTenantsTable()" style="width: 100%; max-width: 380px; padding: 9px 14px; border: 1.5px solid #cbd5e1; border-radius: 9px; font-size: 14px; background: #fff;">
+                    </div>
+                    <div style="font-size: 12.5px; color: #64748b; font-weight: 600;">
+                        💡 לחץ על כל כותרת עמודה בטבלה כדי למיין (סדר עולה / יורד)
                     </div>
                 </div>
 
@@ -379,16 +453,18 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>מספר דירה</th>
-                                <th>שם הדייר</th>
-                                <th>טלפון נייד (וואטסאפ)</th>
-                                <th>חניות מוגדרות לדירה</th>
-                                <th>תאריך הקמה</th>
+                                <th class="sortable-th" id="th_sort_apt" onclick="sortTenantsBy('apartment_number')">מספר דירה <span class="sort-indicator" id="sort_ind_apartment_number">▲</span></th>
+                                <th class="sortable-th" id="th_sort_name" onclick="sortTenantsBy('full_name')">שם הדייר <span class="sort-indicator" id="sort_ind_full_name">⇅</span></th>
+                                <th class="sortable-th" id="th_sort_hours" onclick="sortTenantsBy('given_used_hours_total')">שעות שתרם <span class="sort-indicator" id="sort_ind_given_used_hours_total">⇅</span></th>
+                                <th class="sortable-th" id="th_sort_phone" onclick="sortTenantsBy('phone_number')">טלפון נייד (וואטסאפ) <span class="sort-indicator" id="sort_ind_phone_number">⇅</span></th>
+                                <th class="sortable-th" id="th_sort_quota" onclick="sortTenantsBy('base_max_counter')">חניות מוגדרות לדירה <span class="sort-indicator" id="sort_ind_base_max_counter">⇅</span></th>
+                                <th class="sortable-th" id="th_sort_present" onclick="sortTenantsBy('present_now')">בפנים כעת <span class="sort-indicator" id="sort_ind_present_now">⇅</span></th>
+                                <th class="sortable-th" id="th_sort_date" onclick="sortTenantsBy('created_at')">תאריך הקמה <span class="sort-indicator" id="sort_ind_created_at">⇅</span></th>
                                 <th>פעולות</th>
                             </tr>
                         </thead>
                         <tbody id="tenantsTableBody">
-                            <tr><td colspan="6" style="text-align:center; padding: 20px;">טוען דיירים...</td></tr>
+                            <tr><td colspan="8" style="text-align:center; padding: 20px;">טוען דיירים...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -398,18 +474,21 @@
             <div class="card">
                 <div class="section-title">
                     <span>🅿️ חניות משוחררות במתחם (<span id="mainSharesCount">0</span>)</span>
-                    <button class="btn btn-outline" onclick="initManagerPage()" style="font-size: 13px; padding: 7px 14px;">🔄 רענן רשימה</button>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-success" onclick="exportSharesCSV()" style="font-size: 13px; padding: 7px 14px; background: #0284c7;">📊 ייצוא חניות משוחררות ל-Excel / CSV</button>
+                        <button class="btn btn-outline" onclick="initManagerPage()" style="font-size: 13px; padding: 7px 14px;">🔄 רענן רשימה</button>
+                    </div>
                 </div>
                 <div class="table-wrapper">
                     <table>
                         <thead>
                             <tr>
-                                <th>דירה משחררת</th>
-                                <th>שם הדייר</th>
-                                <th>כמות חניות</th>
-                                <th>מיועד ל-</th>
-                                <th>ימים / תאריך</th>
-                                <th>שעות שחרור</th>
+                                <th class="sortable-th" onclick="sortSharesBy('owner_apartment')">דירה משחררת <span class="sort-indicator" id="sort_sh_owner_apartment">⇅</span></th>
+                                <th class="sortable-th" onclick="sortSharesBy('owner_name')">שם הדייר <span class="sort-indicator" id="sort_sh_owner_name">⇅</span></th>
+                                <th class="sortable-th" onclick="sortSharesBy('spots_offered')">כמות חניות <span class="sort-indicator" id="sort_sh_spots_offered">⇅</span></th>
+                                <th class="sortable-th" onclick="sortSharesBy('share_target_type')">מיועד ל- <span class="sort-indicator" id="sort_sh_share_target_type">⇅</span></th>
+                                <th class="sortable-th" onclick="sortSharesBy('schedule_type')">ימים / תאריך <span class="sort-indicator" id="sort_sh_schedule_type">⇅</span></th>
+                                <th class="sortable-th" onclick="sortSharesBy('start_time')">שעות שחרור <span class="sort-indicator" id="sort_sh_start_time">⇅</span></th>
                                 <th>פעולות</th>
                             </tr>
                         </thead>
@@ -426,18 +505,21 @@
             <div class="card">
                 <div class="section-title">
                     <span>🅿️ כל החניות המשוחררות על ידי דיירים</span>
-                    <button class="btn btn-outline" onclick="initManagerPage()" style="font-size: 13px; padding: 7px 14px;">🔄 רענן נתונים</button>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-success" onclick="exportSharesCSV()" style="font-size: 13px; padding: 7px 14px; background: #0284c7;">📊 ייצוא חניות משוחררות ל-Excel / CSV</button>
+                        <button class="btn btn-outline" onclick="initManagerPage()" style="font-size: 13px; padding: 7px 14px;">🔄 רענן נתונים</button>
+                    </div>
                 </div>
                 <div class="table-wrapper">
                     <table>
                         <thead>
                             <tr>
-                                <th>דירה משחררת</th>
-                                <th>שם הדייר</th>
-                                <th>כמות חניות</th>
-                                <th>מיועד ל-</th>
-                                <th>ימים / תאריך</th>
-                                <th>שעות שחרור</th>
+                                <th class="sortable-th" onclick="sortSharesBy('owner_apartment')">דירה משחררת ⇅</th>
+                                <th class="sortable-th" onclick="sortSharesBy('owner_name')">שם הדייר ⇅</th>
+                                <th class="sortable-th" onclick="sortSharesBy('spots_offered')">כמות חניות ⇅</th>
+                                <th class="sortable-th" onclick="sortSharesBy('share_target_type')">מיועד ל- ⇅</th>
+                                <th class="sortable-th" onclick="sortSharesBy('schedule_type')">ימים / תאריך ⇅</th>
+                                <th class="sortable-th" onclick="sortSharesBy('start_time')">שעות שחרור ⇅</th>
                                 <th>פעולות</th>
                             </tr>
                         </thead>
@@ -492,14 +574,14 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>מספר דירה</th>
-                                <th>שם דייר</th>
-                                <th>חניות ששחרר (נתן)</th>
-                                <th>סה"כ שעות שנתן</th>
-                                <th>חניות שלקח (השתמש)</th>
-                                <th>סה"כ שעות שלקח</th>
-                                <th>מאזן נטו (נתן פחות לקח)</th>
-                                <th>איחורים בפינוי</th>
+                                <th class="sortable-th" onclick="sortReportSummaryBy('apartment_number')">מספר דירה <span class="sort-indicator" id="sort_rep_apartment_number">▲</span></th>
+                                <th class="sortable-th" onclick="sortReportSummaryBy('tenant_name')">שם דייר <span class="sort-indicator" id="sort_rep_tenant_name">⇅</span></th>
+                                <th class="sortable-th" onclick="sortReportSummaryBy('given_count')">חניות ששחרר (נתן) <span class="sort-indicator" id="sort_rep_given_count">⇅</span></th>
+                                <th class="sortable-th" onclick="sortReportSummaryBy('given_hours')">סה"כ שעות שנתן <span class="sort-indicator" id="sort_rep_given_hours">⇅</span></th>
+                                <th class="sortable-th" onclick="sortReportSummaryBy('taken_count')">חניות שלקח (השתמש) <span class="sort-indicator" id="sort_rep_taken_count">⇅</span></th>
+                                <th class="sortable-th" onclick="sortReportSummaryBy('taken_hours')">סה"כ שעות שלקח <span class="sort-indicator" id="sort_rep_taken_hours">⇅</span></th>
+                                <th class="sortable-th" onclick="sortReportSummaryBy('net_balance')">מאזן נטו (נתן פחות לקח) <span class="sort-indicator" id="sort_rep_net_balance">⇅</span></th>
+                                <th class="sortable-th" onclick="sortReportSummaryBy('late_exits')">איחורים בפינוי <span class="sort-indicator" id="sort_rep_late_exits">⇅</span></th>
                             </tr>
                         </thead>
                         <tbody id="reportSummaryBody">
@@ -918,6 +1000,36 @@
             if (t) openEditModal(t);
         }
 
+        let tenantSortField = 'apartment_number';
+        let tenantSortAsc = true;
+        let sharesSortField = 'owner_apartment';
+        let sharesSortAsc = true;
+        let reportSortField = 'apartment_number';
+        let reportSortAsc = true;
+
+        function sortTenantsBy(field) {
+            if (tenantSortField === field) {
+                tenantSortAsc = !tenantSortAsc;
+            } else {
+                tenantSortField = field;
+                tenantSortAsc = true;
+            }
+            const cols = ['apartment_number', 'full_name', 'given_used_hours_total', 'phone_number', 'base_max_counter', 'present_now', 'created_at'];
+            cols.forEach(c => {
+                const ind = document.getElementById(`sort_ind_${c}`);
+                if (ind) {
+                    if (c === tenantSortField) {
+                        ind.textContent = tenantSortAsc ? '▲' : '▼';
+                        ind.parentElement.classList.add('active-sort');
+                    } else {
+                        ind.textContent = '⇅';
+                        ind.parentElement.classList.remove('active-sort');
+                    }
+                }
+            });
+            renderTenantsTable();
+        }
+
         function renderTenantsTable() {
             const q = (document.getElementById('tenantSearch').value || '').trim().toLowerCase();
             const filtered = allTenants.filter(t => {
@@ -925,51 +1037,123 @@
                 return term.includes(q);
             });
 
+            filtered.sort((a, b) => {
+                let vA, vB;
+                if (tenantSortField === 'apartment_number') {
+                    const nA = parseInt(a.apartment_number, 10);
+                    const nB = parseInt(b.apartment_number, 10);
+                    if (!isNaN(nA) && !isNaN(nB) && nA !== nB) return tenantSortAsc ? (nA - nB) : (nB - nA);
+                    vA = String(a.apartment_number || '');
+                    vB = String(b.apartment_number || '');
+                } else if (tenantSortField === 'base_max_counter') {
+                    vA = (a.base_max_counter !== undefined && a.base_max_counter !== null) ? intOrZero(a.base_max_counter) : 1;
+                    vB = (b.base_max_counter !== undefined && b.base_max_counter !== null) ? intOrZero(b.base_max_counter) : 1;
+                    return tenantSortAsc ? (vA - vB) : (vB - vA);
+                } else if (tenantSortField === 'present_now') {
+                    const lA = liveAptStatus[String(a.apartment_number)];
+                    const lB = liveAptStatus[String(b.apartment_number)];
+                    vA = (lA && lA.present !== undefined) ? Number(lA.present) : -1;
+                    vB = (lB && lB.present !== undefined) ? Number(lB.present) : -1;
+                    return tenantSortAsc ? (vA - vB) : (vB - vA);
+                } else if (tenantSortField === 'given_used_hours_total') {
+                    vA = Number(a.given_used_hours_total || 0);
+                    vB = Number(b.given_used_hours_total || 0);
+                    return tenantSortAsc ? (vA - vB) : (vB - vA);
+                } else {
+                    vA = String(a[tenantSortField] || '').toLowerCase();
+                    vB = String(b[tenantSortField] || '').toLowerCase();
+                }
+                const cmp = String(vA).localeCompare(String(vB), 'he');
+                return tenantSortAsc ? cmp : -cmp;
+            });
+
             document.getElementById('tenantsCount').textContent = filtered.length;
             const tbody = document.getElementById('tenantsTableBody');
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px; color:#6c757d;">לא נמצאו דיירים רשומים</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px; color:#6c757d;">לא נמצאו דיירים רשומים</td></tr>';
                 return;
             }
 
             tbody.innerHTML = filtered.map(t => {
                 const dateStr = t.created_at ? escapeHtml(t.created_at.split('T')[0]) : '-';
                 const liveInfo = liveAptStatus[String(t.apartment_number)];
-                const presText = (liveInfo && liveInfo.present !== undefined)
-                    ? ` <span class="badge badge-green" style="margin-right:4px;">בפנים כעת: ${escapeHtml(liveInfo.present)}</span>`
-                    : '';
+                const presCellHtml = (liveInfo && liveInfo.present !== undefined)
+                    ? `<span class="badge badge-green" style="white-space:nowrap;">בפנים כעת: ${escapeHtml(liveInfo.present)}</span>`
+                    : `<span style="color:#94a3b8; font-size:12px;">-</span>`;
                 const usedHoursTot = escapeHtml(t.given_used_hours_total ?? 0);
                 const usedHoursMonth = escapeHtml(t.given_used_hours_month ?? 0);
-                const starBadge = `<span class="badge badge-yellow" style="border:1px solid #eab308; margin-right:6px;" title="שעות חניה שתרם הדייר ונוצלו בפועל ע״י שכנים (החודש: ${usedHoursMonth} שעות)">⭐ ${usedHoursTot} שעות שתרם</span>`;
+                const starBadge = `<span class="badge badge-yellow" style="border:1px solid #eab308; white-space:nowrap;" title="שעות חניה שתרם הדייר ונוצלו בפועל ע״י שכנים (החודש: ${usedHoursMonth} שעות)">⭐ ${usedHoursTot} שעות שתרם</span>`;
                 const phoneDisp = escapeHtml(formatPhoneDisplay(t.phone_number));
                 const phoneCellHtml = phoneDisp
-                    ? `<span style="direction: ltr; display: inline-block;">${phoneDisp}</span>`
+                    ? `<span style="direction: ltr; display: inline-block; white-space:nowrap; font-weight:600;">${phoneDisp}</span>`
                     : `<span style="color:#94a3b8; font-style:italic; font-size:12.5px;">טרם הוזן טלפון</span>`;
                 const quotaVal = (t.base_max_counter !== undefined && t.base_max_counter !== null) ? intOrZero(t.base_max_counter) : 1;
                 const quotaHtml = (quotaVal === 0)
-                    ? `<span class="badge badge-red" title="דירה ללא חניה קבועה (חסומה בבקר status=2 אלא בזמן השאלת חניה משכן)">🚫 0 חניות (ללא חניה)</span>`
-                    : `<strong>${quotaVal} חניות</strong>`;
+                    ? `<span class="badge badge-red" style="white-space:nowrap;" title="דירה ללא חניה קבועה (חסומה בבקר status=2 אלא בזמן השאלת חניה משכן)">🚫 0 חניות (ללא חניה)</span>`
+                    : `<strong style="white-space:nowrap;">${quotaVal} חניות</strong>`;
                 const tid = intOrZero(t.id);
                 return `
                     <tr>
-                        <td><span class="badge badge-blue">דירה ${escapeHtml(t.apartment_number)}</span></td>
-                        <td style="font-weight: 600;">${escapeHtml(t.full_name)} ${starBadge}</td>
-                        <td style="text-align: right;">${phoneCellHtml}</td>
-                        <td>
-                            ${quotaHtml}${presText}
-                            <button class="btn btn-outline" style="padding: 3px 8px; font-size: 11px; margin-right: 6px;" title="משוך כמות חניות מעודכנת מבקר החניון" onclick="refreshSingleTenantQuota(${tid}, this)">
-                                🔄 בדוק מכסה מול המערכת
-                            </button>
+                        <td style="white-space:nowrap;"><span class="badge badge-blue">דירה ${escapeHtml(t.apartment_number)}</span></td>
+                        <td style="font-weight: 700;">${escapeHtml(t.full_name)}</td>
+                        <td style="white-space:nowrap;">${starBadge}</td>
+                        <td style="text-align: right; white-space:nowrap;">${phoneCellHtml}</td>
+                        <td style="white-space:nowrap;">
+                            <div style="display:inline-flex; align-items:center; gap:8px; flex-wrap:nowrap;">
+                                ${quotaHtml}
+                                <button class="btn btn-outline" style="padding: 4px 9px; font-size: 11.5px; white-space:nowrap;" title="משוך כמות חניות מעודכנת מבקר החניון" onclick="refreshSingleTenantQuota(${tid}, this)">
+                                    🔄 בדוק מכסה
+                                </button>
+                            </div>
                         </td>
-                        <td>${dateStr}</td>
-                        <td>
-                            <button class="btn btn-success" style="padding: 5px 10px; font-size: 12px;" onclick="sendWhatsAppInvite(${tid})">💬 שלח קישור לוואטסאפ</button>
-                            <button class="btn btn-outline" style="padding: 5px 10px; font-size: 12px;" onclick="openEditModalById(${tid})">✏️ ערוך</button>
-                            <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="deleteTenant(${tid})">🗑️ מחק</button>
+                        <td style="white-space:nowrap;">${presCellHtml}</td>
+                        <td style="white-space:nowrap;">${dateStr}</td>
+                        <td style="white-space:nowrap;">
+                            <div style="display:inline-flex; align-items:center; gap:5px; flex-wrap:nowrap;">
+                                <button class="btn btn-success" style="padding: 5px 10px; font-size: 12px; white-space:nowrap;" onclick="sendWhatsAppInvite(${tid})">💬 שלח וואטסאפ</button>
+                                <button class="btn btn-outline" style="padding: 5px 10px; font-size: 12px; white-space:nowrap;" onclick="openEditModalById(${tid})">✏️ ערוך</button>
+                                <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px; white-space:nowrap;" onclick="deleteTenant(${tid})">🗑️ מחק</button>
+                            </div>
                         </td>
                     </tr>
                 `;
             }).join('');
+        }
+
+        function exportTenantsCSV() {
+            const q = (document.getElementById('tenantSearch').value || '').trim().toLowerCase();
+            const list = allTenants.filter(t => {
+                const term = `${t.full_name || ''} ${t.phone_number || ''} ${formatPhoneDisplay(t.phone_number)} ${t.apartment_number || ''}`.toLowerCase();
+                return term.includes(q);
+            });
+            if (list.length === 0) {
+                showAlert('אין דיירים לייצוא', 'danger');
+                return;
+            }
+            const rows = [
+                ['מספר דירה', 'שם הדייר', 'שעות שתרם (סה"כ)', 'שעות שתרם (החודש)', 'טלפון נייד', 'חניות מוגדרות לדירה', 'בפנים כעת', 'תאריך הקמה']
+            ];
+            list.forEach(t => {
+                const liveInfo = liveAptStatus[String(t.apartment_number)];
+                const presVal = (liveInfo && liveInfo.present !== undefined) ? liveInfo.present : '-';
+                const quotaVal = (t.base_max_counter !== undefined && t.base_max_counter !== null) ? intOrZero(t.base_max_counter) : 1;
+                rows.push([
+                    t.apartment_number || '',
+                    t.full_name || '',
+                    t.given_used_hours_total ?? 0,
+                    t.given_used_hours_month ?? 0,
+                    formatPhoneDisplay(t.phone_number) || '',
+                    quotaVal,
+                    presVal,
+                    t.created_at ? t.created_at.split('T')[0] : ''
+                ]);
+            });
+            const csvContent = '\uFEFF' + rows.map(e => e.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `tenants_list_${currentProjectNumber || 'building'}_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
         }
 
         function intOrZero(v) {
@@ -1244,6 +1428,52 @@
             }
         }
 
+        function sortSharesBy(field) {
+            if (sharesSortField === field) {
+                sharesSortAsc = !sharesSortAsc;
+            } else {
+                sharesSortField = field;
+                sharesSortAsc = true;
+            }
+            ['owner_apartment', 'owner_name', 'spots_offered', 'share_target_type', 'schedule_type', 'start_time'].forEach(c => {
+                const ind = document.getElementById(`sort_sh_${c}`);
+                if (ind) ind.textContent = (c === sharesSortField) ? (sharesSortAsc ? '▲' : '▼') : '⇅';
+            });
+            renderManagerSharesAndTransfers();
+        }
+
+        function exportSharesCSV() {
+            if (!allShares || allShares.length === 0) {
+                showAlert('אין חניות משוחררות לייצוא', 'danger');
+                return;
+            }
+            const rows = [
+                ['דירה משחררת', 'שם הדייר', 'כמות חניות', 'מספר חניה', 'מיועד ל-', 'ימים / תאריך', 'שעת התחלה', 'שעת סיום']
+            ];
+            allShares.forEach(sh => {
+                const targetStr = (sh.share_target_type === 'APT') ? `דירה ${sh.target_apartment}` : 'פול כללי';
+                const schedStr = (sh.schedule_type === 'ONCE')
+                    ? `חד-פעמי: ${sh.specific_date || ''}`
+                    : `קבוע: ${String(sh.days_of_week || '').split(',').filter(Boolean).map(d => DAY_NAMES_HE[parseInt(d,10)] || d).join(', ')}`;
+                rows.push([
+                    sh.owner_apartment || '',
+                    sh.owner_name || '',
+                    sh.spots_offered || 1,
+                    sh.parking_spot_number || '',
+                    targetStr,
+                    schedStr,
+                    sh.start_time || '',
+                    sh.end_time || ''
+                ]);
+            });
+            const csvContent = '\uFEFF' + rows.map(e => e.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `released_spots_${currentProjectNumber || 'building'}_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+        }
+
         function renderManagerSharesAndTransfers() {
             document.getElementById('tabSharesBadge').textContent = allShares.length;
             document.getElementById('mainSharesCount').textContent = allShares.length;
@@ -1253,7 +1483,22 @@
                 if (!allShares || allShares.length === 0) {
                     return '<tr><td colspan="7" style="text-align:center; padding: 18px; color:#6c757d;">אין כרגע חניות משוחררות במתחם</td></tr>';
                 }
-                return allShares.map(sh => {
+                const sortedShares = [...allShares].sort((a, b) => {
+                    if (sharesSortField === 'owner_apartment') {
+                        const nA = parseInt(a.owner_apartment, 10);
+                        const nB = parseInt(b.owner_apartment, 10);
+                        if (!isNaN(nA) && !isNaN(nB) && nA !== nB) return sharesSortAsc ? (nA - nB) : (nB - nA);
+                    } else if (sharesSortField === 'spots_offered') {
+                        const sA = Number(a.spots_offered || 1);
+                        const sB = Number(b.spots_offered || 1);
+                        return sharesSortAsc ? (sA - sB) : (sB - sA);
+                    }
+                    const vA = String(a[sharesSortField] || '').toLowerCase();
+                    const vB = String(b[sharesSortField] || '').toLowerCase();
+                    const cmp = vA.localeCompare(vB, 'he');
+                    return sharesSortAsc ? cmp : -cmp;
+                });
+                return sortedShares.map(sh => {
                     const targetBadge = (sh.share_target_type === 'APT')
                         ? `<span class="badge badge-green">לדירה ${sh.target_apartment} בלבד</span>`
                         : `<span class="badge badge-blue">לפול הכללי של הבניין</span>`;
@@ -1519,42 +1764,75 @@
             showAlert('הקישור לפורטל הדיירים הועתק ללוח!', 'success');
         }
 
+        function sortReportSummaryBy(field) {
+            if (reportSortField === field) {
+                reportSortAsc = !reportSortAsc;
+            } else {
+                reportSortField = field;
+                reportSortAsc = true;
+            }
+            ['apartment_number', 'tenant_name', 'given_count', 'given_hours', 'taken_count', 'taken_hours', 'net_balance', 'late_exits'].forEach(c => {
+                const ind = document.getElementById(`sort_rep_${c}`);
+                if (ind) ind.textContent = (c === reportSortField) ? (reportSortAsc ? '▲' : '▼') : '⇅';
+            });
+            renderReportSummaryTable();
+        }
+
+        function renderReportSummaryTable() {
+            const sBody = document.getElementById('reportSummaryBody');
+            if (!currentReportData || !currentReportData.summary || currentReportData.summary.length === 0) {
+                sBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">אין נתונים להצגה בחודש זה</td></tr>';
+                return;
+            }
+            const sortedSummary = [...currentReportData.summary].sort((a, b) => {
+                if (reportSortField === 'apartment_number') {
+                    const nA = parseInt(a.apartment_number, 10);
+                    const nB = parseInt(b.apartment_number, 10);
+                    if (!isNaN(nA) && !isNaN(nB) && nA !== nB) return reportSortAsc ? (nA - nB) : (nB - nA);
+                } else if (['given_count', 'given_hours', 'taken_count', 'taken_hours', 'net_balance', 'late_exits'].includes(reportSortField)) {
+                    const vA = Number(a[reportSortField] || 0);
+                    const vB = Number(b[reportSortField] || 0);
+                    return reportSortAsc ? (vA - vB) : (vB - vA);
+                }
+                const sA = String(a[reportSortField] || '').toLowerCase();
+                const sB = String(b[reportSortField] || '').toLowerCase();
+                const cmp = sA.localeCompare(sB, 'he');
+                return reportSortAsc ? cmp : -cmp;
+            });
+
+            sBody.innerHTML = sortedSummary.map(row => {
+                let netBadge = `<span class="badge badge-blue">0 (מאוזן)</span>`;
+                if (row.net_balance > 0) {
+                    netBadge = `<span class="badge badge-green">+${row.net_balance} (לזכות / תגמול)</span>`;
+                } else if (row.net_balance < 0) {
+                    netBadge = `<span class="badge badge-red">${row.net_balance} (לחיוב / ניכוי)</span>`;
+                }
+                const lateHtml = row.late_exits > 0
+                    ? `<span class="badge badge-red">${row.late_exits} איחורים</span>`
+                    : '0';
+
+                return `
+                    <tr>
+                        <td><strong>דירה ${row.apartment_number}</strong></td>
+                        <td>${row.tenant_name}</td>
+                        <td><strong>${row.given_count}</strong> פעמים</td>
+                        <td><span class="badge badge-yellow" style="border:1px solid #eab308;">⭐ ${row.given_hours} שעות</span></td>
+                        <td><strong>${row.taken_count}</strong> פעמים</td>
+                        <td>${row.taken_hours} שעות</td>
+                        <td>${netBadge}</td>
+                        <td>${lateHtml}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
         async function loadMonthlyReport() {
             const month = document.getElementById('reportMonth').value;
             const res = await fetch(`/api/tenant-manager/monthly-report?month=${encodeURIComponent(month)}`);
             const data = await res.json();
             if (!data.success) return;
             currentReportData = data;
-
-            const sBody = document.getElementById('reportSummaryBody');
-            if (!data.summary || data.summary.length === 0) {
-                sBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">אין נתונים להצגה בחודש זה</td></tr>';
-            } else {
-                sBody.innerHTML = data.summary.map(row => {
-                    let netBadge = `<span class="badge badge-blue">0 (מאוזן)</span>`;
-                    if (row.net_balance > 0) {
-                        netBadge = `<span class="badge badge-green">+${row.net_balance} (לזכות / תגמול)</span>`;
-                    } else if (row.net_balance < 0) {
-                        netBadge = `<span class="badge badge-red">${row.net_balance} (לחיוב / ניכוי)</span>`;
-                    }
-                    const lateHtml = row.late_exits > 0
-                        ? `<span class="badge badge-red">${row.late_exits} איחורים</span>`
-                        : '0';
-
-                    return `
-                        <tr>
-                            <td><strong>דירה ${row.apartment_number}</strong></td>
-                            <td>${row.tenant_name}</td>
-                            <td><strong>${row.given_count}</strong> פעמים</td>
-                            <td><span class="badge badge-yellow" style="border:1px solid #eab308;">⭐ ${row.given_hours} שעות</span></td>
-                            <td><strong>${row.taken_count}</strong> פעמים</td>
-                            <td>${row.taken_hours} שעות</td>
-                            <td>${netBadge}</td>
-                            <td>${lateHtml}</td>
-                        </tr>
-                    `;
-                }).join('');
-            }
+            renderReportSummaryTable();
 
             const dBody = document.getElementById('reportDetailsBody');
             if (!data.transfers || data.transfers.length === 0) {
@@ -1945,9 +2223,12 @@
         }
 
         function a11yChangeFontSize(dir) {
-            a11yFontStep = Math.max(-1, Math.min(3, a11yFontStep + dir));
-            const zoomPct = 100 + (a11yFontStep * 12);
+            a11yFontStep = Math.max(-2, Math.min(4, a11yFontStep + dir));
+            const zoomPct = 100 + (a11yFontStep * 10);
             document.documentElement.style.fontSize = zoomPct + '%';
+            document.body.style.zoom = (zoomPct / 100).toFixed(2);
+            const b = document.getElementById('a11yZoomPctBadge');
+            if (b) b.textContent = zoomPct + '%';
             saveA11yPrefs();
         }
 
@@ -1984,6 +2265,9 @@
         function a11yResetAll() {
             a11yFontStep = 0;
             document.documentElement.style.fontSize = '100%';
+            document.body.style.zoom = '1';
+            const b = document.getElementById('a11yZoomPctBadge');
+            if (b) b.textContent = '100%';
             a11yState = { grayscale: false, dark: false, light: false, links: false, font: false, anim: false };
             applyA11yState();
             try { localStorage.removeItem('sb_a11y_prefs'); } catch (e) {}
@@ -2002,7 +2286,11 @@
                 const parsed = JSON.parse(raw);
                 if (typeof parsed.fontStep === 'number') {
                     a11yFontStep = parsed.fontStep;
-                    document.documentElement.style.fontSize = (100 + a11yFontStep * 12) + '%';
+                    const zoomPct = 100 + (a11yFontStep * 10);
+                    document.documentElement.style.fontSize = zoomPct + '%';
+                    document.body.style.zoom = (zoomPct / 100).toFixed(2);
+                    const b = document.getElementById('a11yZoomPctBadge');
+                    if (b) b.textContent = zoomPct + '%';
                 }
                 if (parsed.state) {
                     a11yState = { ...a11yState, ...parsed.state };
