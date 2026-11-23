@@ -3123,11 +3123,17 @@ def fetch_online_daily_report(project_number, ip, port, target_date=None, end_da
                         udb_open_b += qty
                 elif art_cls == 901:
                     discounts_ils += ils
-                    report["discounts_breakdown"].append({
-                        "name": _normalize_sb_hebrew_label(ctext) or "שובר / הנחה",
-                        "count": qty,
-                        "amount_ils": round(ils, 2)
-                    })
+                    d_lbl = _normalize_sb_hebrew_label(ctext) or "שובר / הנחה"
+                    existing_d = next((d for d in report["discounts_breakdown"] if d["name"] == d_lbl), None)
+                    if existing_d:
+                        existing_d["count"] += qty
+                        existing_d["amount_ils"] = round(existing_d["amount_ils"] + ils, 2)
+                    else:
+                        report["discounts_breakdown"].append({
+                            "name": d_lbl,
+                            "count": qty,
+                            "amount_ils": round(ils, 2)
+                        })
                 elif art_cls == 1000:
                     net_turnover_ils += ils
                     pos_paid_cnt += qty
@@ -3274,10 +3280,6 @@ def fetch_online_daily_report(project_number, ip, port, target_date=None, end_da
             cash_ils = tset_cash
         if credit_ils == 0.0 and tset_cred > 0:
             credit_ils = tset_cred
-        if pango_ils == 0.0 and tset_pango > 0:
-            pango_ils = tset_pango
-        if cello_ils == 0.0 and tset_celo > 0:
-            cello_ils = tset_celo
 
         if cash_ils == 0.0 and net_turnover_ils > credit_ils and credit_ils > 0:
             cash_ils = round(net_turnover_ils - credit_ils, 2)
@@ -3287,10 +3289,10 @@ def fetch_online_daily_report(project_number, ip, port, target_date=None, end_da
         if net_turnover_ils == 0.0 and (cash_ils + credit_ils) > 0:
             net_turnover_ils = cash_ils + credit_ils
 
-        total_combined_rev = round(net_turnover_ils + pango_ils + cello_ils, 2)
-        total_vat = round(total_combined_rev - (total_combined_rev / 1.18), 2) if total_combined_rev > 0 else 0.0
-        total_net_no_vat = round(total_combined_rev - total_vat, 2)
-        total_paid_vehicles = pos_paid_cnt + pango_cnt + cello_cnt
+        total_pos_rev = round(net_turnover_ils, 2)
+        total_vat = round(total_pos_rev - (total_pos_rev / 1.18), 2) if total_pos_rev > 0 else 0.0
+        total_net_no_vat = round(total_pos_rev - total_vat, 2)
+        total_paid_vehicles = pos_paid_cnt if pos_paid_cnt > 0 else (cash_cnt + credit_cnt)
 
         best_open_b = udb_open_b if udb_open_b > 0 else tset_open_b
         report["traffic"]["barrier_manual_opens"] = best_open_b
@@ -3316,42 +3318,38 @@ def fetch_online_daily_report(project_number, ip, port, target_date=None, end_da
         }
 
         report["source"] = "live_udb_flexrep"
-        report["source_label_he"] = "ישירות מבקר החניון (FlexRep: UDBMOVEMENT + DIFFCNTRHISTORY + LOGGVORGANG)"
+        report["source_label_he"] = "ישירות מבקר החניון (FlexRep: UDBMOVEMENT + DIFFCNTRHISTORY)"
         report["revenue"] = {
-            "total_revenue_ils": total_combined_rev,
-            "pos_turnover_ils": round(net_turnover_ils, 2),
+            "total_revenue_ils": total_pos_rev,
+            "pos_turnover_ils": total_pos_rev,
             "cash_ils": round(cash_ils, 2),
             "cash_count": cash_cnt,
             "credit_ils": round(credit_ils if credit_ils > 0 else max(0.0, net_turnover_ils - cash_ils), 2),
-            "credit_count": credit_cnt if credit_cnt > 0 else max(0, pos_paid_cnt - cash_cnt),
-            "pango_ils": round(pango_ils, 2),
-            "pango_count": pango_cnt,
-            "cello_ils": round(cello_ils, 2),
-            "cello_count": cello_cnt,
+            "credit_count": credit_cnt if credit_cnt > 0 else max(0, total_paid_vehicles - cash_cnt),
+            "pango_ils": 0.0,
+            "pango_count": 0,
+            "cello_ils": 0.0,
+            "cello_count": 0,
             "net_revenue_no_vat_ils": total_net_no_vat,
             "vat_ils": total_vat,
-            "gross_tariff_ils": round((gross_ils if gross_ils > 0 else (net_turnover_ils - discounts_ils)) + pango_ils + cello_ils, 2),
+            "gross_tariff_ils": round(gross_ils if gross_ils > 0 else (net_turnover_ils - discounts_ils), 2),
             "discounts_total_ils": round(discounts_ils, 2),
             "paid_transactions_count": total_paid_vehicles,
-            "pos_paid_count": pos_paid_cnt
+            "pos_paid_count": total_paid_vehicles
         }
 
         report["payment_channels"] = [
             {"key": "cash", "name": "💵 מזומן בקופות", "amount_ils": round(cash_ils, 2), "count": cash_cnt},
-            {"key": "credit", "name": "💳 כרטיסי אשראי (קופות/יציאה)", "amount_ils": round(report["revenue"]["credit_ils"], 2), "count": report["revenue"]["credit_count"]},
-            {"key": "pango", "name": "🅿️ פנגו (Pango #610)", "amount_ils": round(pango_ils, 2), "count": pango_cnt},
-            {"key": "cello", "name": "📱 סלופארק (Cellopark #699)", "amount_ils": round(cello_ils, 2), "count": cello_cnt}
+            {"key": "credit", "name": "💳 כרטיסי אשראי (קופות/יציאה)", "amount_ils": round(report["revenue"]["credit_ils"], 2), "count": report["revenue"]["credit_count"]}
         ]
 
-        # Build detailed payment methods list (always including Cash, Credit brands, Pango, Cellopark)
+        # Build detailed payment methods list (Cash + Credit card brands)
         pm_list = [{"name": "💵 מזומן בקופות", "count": cash_cnt, "amount_ils": round(cash_ils, 2)}]
         pm_list.extend(sorted(
             list(pay_methods_map.values()),
             key=lambda x: x["amount_ils"],
             reverse=True
         ))
-        pm_list.append({"name": "🅿️ פנגו (Pango - מסוף 610)", "count": pango_cnt, "amount_ils": round(pango_ils, 2)})
-        pm_list.append({"name": "📱 סלופארק (Cellopark - מסוף 699)", "count": cello_cnt, "amount_ils": round(cello_ils, 2)})
         report["payment_methods"] = pm_list
         return report
 
@@ -3393,114 +3391,114 @@ def fetch_online_daily_report(project_number, ip, port, target_date=None, end_da
         except Exception as e:
             print(f"Live Oracle FlexRep report notice for {oracle_ip}: {e}")
 
-    # 3. Direct Port-8443 / Render Port-Forwarding fallback (/DifferenceCountingWebService on ip:port e.g. 192.117.0.122:8112 / 8122)
-    if ip:
+    # 3. Direct Controller FlexRep Date-Filtered Cache (for Render when daily-report.jsp is not yet in remote Tomcat)
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    cache_json_path = os.path.join(helper_dir, "controller_daily_cache.json")
+    if not os.path.exists(cache_json_path):
+        cache_json_path = os.path.join(base_dir, "controller_daily_cache.json")
+    if os.path.exists(cache_json_path):
         try:
-            fac_list = []
-            f_res = make_sb_request("GET", ip, port, "/DifferenceCountingWebService/facilities", headers={"Accept": "application/xml"}, timeout=4.0)
-            if f_res["status"] == 200 and f_res["data"]:
-                f_xml = re.sub(r'\sxmlns="[^"]+"', '', f_res["data"].decode("utf-8", errors="replace"))
-                f_root = ET.fromstring(f_xml)
-                for f_el in f_root.findall(".//facility"):
-                    f_id = (f_el.findtext("facilityid") or f_el.findtext("id") or f_el.findtext("number") or "").strip()
-                    f_nm = (f_el.findtext("facilityname") or f_el.findtext("name") or "").strip()
-                    if f_id:
-                        fac_list.append((f_id, f_nm))
+            req_port = int(port or 8443)
+            proj_s = str(project_number or "").strip()
+            ctrl_key = ""
+            if ip == "10.35.112.100" or req_port == 8112 or proj_s.startswith("421121") or proj_s in ("1112", "1121", "1122", "1155", "1166"):
+                ctrl_key = "10.35.112.100"
+            elif ip == "10.35.122.200" or req_port == 8122 or proj_s.startswith("473223") or proj_s in ("3050", "3200", "3210", "3220", "3300"):
+                ctrl_key = "10.35.122.200"
 
-            if fac_list:
-                tot_pres = 0
-                tr_pres = 0
-                sb_pres = 0
-                for f_id, f_nm in fac_list:
-                    c_res = make_sb_request(
-                        "GET",
-                        ip,
-                        port,
-                        "/DifferenceCountingWebService/counters",
-                        params={"facilityid": f_id, "locale": "en_GB"},
-                        headers={"Accept": "application/xml"},
-                        timeout=4.5
-                    )
-                    if c_res["status"] != 200 or not c_res["data"]:
-                        c_res = make_sb_request(
-                            "GET",
-                            ip,
-                            port,
-                            "/DifferenceCountingWebService/standardcounters",
-                            params={"facilityid": f_id},
-                            headers={"Accept": "application/xml"},
-                            timeout=4.0
-                        )
-                    if c_res["status"] == 200 and c_res["data"]:
-                        c_xml = re.sub(r'\sxmlns="[^"]+"', '', c_res["data"].decode("utf-8", errors="replace"))
-                        c_root = ET.fromstring(c_xml)
-                        f_tr_p = 0
-                        f_sb_p = 0
-                        for sc in c_root.findall(".//standard-counter"):
-                            cid = (sc.findtext("id") or "").strip()
-                            pv = max(0, int(sc.findtext("present") or 0))
-                            if cid == "1":
-                                f_tr_p = pv
-                            elif cid == "2":
-                                f_sb_p = pv
-                        tr_pres += f_tr_p
-                        sb_pres += f_sb_p
-                        tot_pres += (f_tr_p + f_sb_p)
+            if ctrl_key:
+                with open(cache_json_path, "r", encoding="utf-8") as cf:
+                    cache_all = json.load(cf)
+                host_days = cache_all.get(ctrl_key) or {}
+                if host_days:
+                    if not is_range and start_dt in host_days:
+                        return _parse_udb_tsv_output(host_days[start_dt])
 
-                        sum_map = {}
-                        for sumc in c_root.findall(".//sum-counter"):
-                            sid = (sumc.findtext("id") or "").strip()
-                            sval = int(sumc.findtext("resetable") or sumc.findtext("unresetable") or 0)
-                            sum_map[sid] = sval
+                    # Date range or multi-day aggregation across [start_dt, end_dt]
+                    matched_dts = sorted([d for d in host_days.keys() if start_dt <= d <= end_dt])
+                    if matched_dts:
+                        sec_buckets = {
+                            "BREAKDOWN": [],
+                            "FACILITIES_TRAFFIC": {},
+                            "OCCUPANCY_PEAK": {},
+                            "STAY_DURATION": [0] * 10,
+                            "USER_AUDIT_COUNT": 0,
+                            "HOURLY": {},
+                            "RECENT_DAYS": []
+                        }
+                        for d_k in matched_dts:
+                            cur_sec = ""
+                            for raw_l in host_days[d_k].splitlines():
+                                l_s = raw_l.strip()
+                                if not l_s:
+                                    continue
+                                if l_s.startswith("[SECTION:") and l_s.endswith("]"):
+                                    cur_sec = l_s[9:-1]
+                                    continue
+                                pts = l_s.split("\t")
+                                if cur_sec == "BREAKDOWN" and len(pts) >= 6:
+                                    sec_buckets["BREAKDOWN"].append(l_s)
+                                elif cur_sec == "FACILITIES_TRAFFIC" and len(pts) >= 11:
+                                    f_id = pts[0]
+                                    prev = sec_buckets["FACILITIES_TRAFFIC"].get(f_id, [0]*8 + [0.0, 0])
+                                    for idx_i in range(1, 9):
+                                        prev[idx_i - 1] += int(float(pts[idx_i]))
+                                    prev[8] = round(prev[8] + float(pts[9]), 2)
+                                    prev[9] += int(float(pts[10]))
+                                    sec_buckets["FACILITIES_TRAFFIC"][f_id] = prev
+                                elif cur_sec == "OCCUPANCY_PEAK" and len(pts) >= 6:
+                                    f_id = pts[0]
+                                    prev = sec_buckets["OCCUPANCY_PEAK"].get(f_id, [0]*5)
+                                    for idx_i in range(1, 6):
+                                        prev[idx_i - 1] = max(prev[idx_i - 1], int(float(pts[idx_i])))
+                                    sec_buckets["OCCUPANCY_PEAK"][f_id] = prev
+                                elif cur_sec == "STAY_DURATION" and len(pts) >= 10:
+                                    for idx_i in range(10):
+                                        sec_buckets["STAY_DURATION"][idx_i] += int(float(pts[idx_i]))
+                                elif cur_sec == "USER_AUDIT_COUNT" and len(pts) >= 1:
+                                    sec_buckets["USER_AUDIT_COUNT"] += int(float(pts[0]))
+                                elif cur_sec == "HOURLY" and len(pts) >= 4:
+                                    hr_k = pts[0]
+                                    prev = sec_buckets["HOURLY"].get(hr_k, [0, 0, 0.0])
+                                    prev[0] += int(float(pts[1]))
+                                    prev[1] += int(float(pts[2]))
+                                    prev[2] = round(prev[2] + float(pts[3]), 2)
+                                    sec_buckets["HOURLY"][hr_k] = prev
 
-                        ent_tr = sum_map.get("101", 0) or sum_map.get("120", 0)
-                        ent_sb = sum_map.get("102", 0) or sum_map.get("110", 0)
-                        ext_tr = sum_map.get("201", 0) or sum_map.get("220", 0)
-                        ext_sb = sum_map.get("202", 0) or sum_map.get("210", 0)
-                        bar_op = sum_map.get("130", 0) + sum_map.get("230", 0)
-                        grace_ex = sum_map.get("280", 0)
+                        # Take recent_days from the latest matched date
+                        latest_tsv = host_days[matched_dts[-1]]
+                        in_rec = False
+                        for raw_l in latest_tsv.splitlines():
+                            l_s = raw_l.strip()
+                            if l_s == "[SECTION:RECENT_DAYS]":
+                                in_rec = True
+                                continue
+                            elif l_s.startswith("[SECTION:"):
+                                in_rec = False
+                                continue
+                            if in_rec and l_s:
+                                sec_buckets["RECENT_DAYS"].append(l_s)
 
-                        fid_int = int(f_id) if f_id.isdigit() else 0
-                        f_disp = FACILITY_NAMES_HE.get(fid_int, f_nm or f"מתחם #{f_id}")
-                        if ent_tr > 0 or ent_sb > 0 or ext_tr > 0 or ext_sb > 0 or (f_tr_p + f_sb_p) > 0:
-                            report["facilities_traffic"].append({
-                                "facility_id": fid_int or f_id,
-                                "facility_name": f_disp,
-                                "entries_total": ent_tr + ent_sb,
-                                "entries_transient": ent_tr,
-                                "entries_subscribers": ent_sb,
-                                "entries_app": 0,
-                                "exits_total": ext_tr + ext_sb,
-                                "exits_transient": ext_tr,
-                                "exits_subscribers": ext_sb,
-                                "exits_app": 0,
-                                "pos_revenue_ils": 0.0,
-                                "barrier_opens": bar_op,
-                                "peak_total": f_tr_p + f_sb_p,
-                                "peak_transient": f_tr_p,
-                                "peak_subscribers": f_sb_p
-                            })
-                            report["traffic"]["entries_total"] += (ent_tr + ent_sb)
-                            report["traffic"]["entries_transient"] += ent_tr
-                            report["traffic"]["entries_subscribers"] += ent_sb
-                            report["traffic"]["exits_total"] += (ext_tr + ext_sb)
-                            report["traffic"]["exits_transient"] += ext_tr
-                            report["traffic"]["exits_subscribers"] += ext_sb
-                            report["traffic"]["exits_grace_free"] += grace_ex
-                            report["traffic"]["barrier_manual_opens"] += bar_op
-
-                if tot_pres > 0 or report["facilities_traffic"]:
-                    report["occupancy"] = {
-                        "peak_total": tot_pres,
-                        "peak_transient": tr_pres,
-                        "peak_subscribers": sb_pres,
-                        "capacity": 0,
-                        "occupancy_percent": 0
-                    }
-                    report["source"] = "live_8443_counters"
-                    report["source_label_he"] = f"ישירות מבקר החניון ({ip}:{port} - DifferenceCountingWebService)"
+                        merged_lines = ["[SECTION:BREAKDOWN]"] + sec_buckets["BREAKDOWN"]
+                        merged_lines.append("[SECTION:FACILITIES_TRAFFIC]")
+                        for f_id, fv in sorted(sec_buckets["FACILITIES_TRAFFIC"].items()):
+                            merged_lines.append(f"{f_id}\t" + "\t".join(str(x) for x in fv))
+                        merged_lines.append("[SECTION:OCCUPANCY_PEAK]")
+                        for f_id, ov in sorted(sec_buckets["OCCUPANCY_PEAK"].items()):
+                            merged_lines.append(f"{f_id}\t" + "\t".join(str(x) for x in ov))
+                        merged_lines.append("[SECTION:STAY_DURATION]")
+                        merged_lines.append("\t".join(str(x) for x in sec_buckets["STAY_DURATION"]))
+                        merged_lines.append("[SECTION:USER_AUDIT_COUNT]")
+                        merged_lines.append(str(sec_buckets["USER_AUDIT_COUNT"]))
+                        merged_lines.append("[SECTION:HOURLY]")
+                        for hr_k, hv in sorted(sec_buckets["HOURLY"].items()):
+                            merged_lines.append(f"{hr_k}\t{hv[0]}\t{hv[1]}\t{hv[2]}")
+                        merged_lines.append("[SECTION:RECENT_DAYS]")
+                        merged_lines.extend(sec_buckets["RECENT_DAYS"])
+                        merged_lines.append("[SECTION:END]")
+                        return _parse_udb_tsv_output("\n".join(merged_lines))
         except Exception as e:
-            print(f"Direct port-8443 counters report fallback error: {e}")
+            print(f"Controller daily cache read error: {e}")
 
     return report
 
