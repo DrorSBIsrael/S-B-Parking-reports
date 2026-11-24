@@ -652,15 +652,13 @@
         </section>
 
         <!-- TAB 2: ONLINE PARKING DATA, COUNTERS & FLEXREP DAILY/HISTORICAL REPORTS -->
-        <section id="tabSection_counters" style="display: none;">
-            <div id="facilitiesCountersContainer" style="display: grid; gap: 14px; margin-bottom: 18px;"></div>
-            <div class="counters-summary-grid" id="countersSummaryGrid" style="display: none;"></div>
-
-            <!-- DAILY & HISTORICAL REVENUE & TRAFFIC REPORT (FLEXREP / UDB) -->
-            <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 18px;">
+        <section id="tabSection_counters" style="display: none; direction: rtl; text-align: right;">
+            <!-- 1. FIRST: DAILY & HISTORICAL REVENUE & TRAFFIC REPORT (FLEXREP / UDB) -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 18px; text-align: right;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
-                    <div>
-                        <h3 style="font-size: 17px; font-weight: 800; color: #f8fafc;">💰 דוח הכנסות, תשלומים ותנועות רכבים (FlexRep Online)</h3>
+                    <div style="text-align: right;">
+                        <h3 style="font-size: 17px; font-weight: 800; color: #f8fafc;">💰 דוח הכנסות, תשלומים ותנועות רכבים</h3>
+                        <div style="font-size: 12px; color: #94a3b8; font-weight: 700;">(FlexRep Online)</div>
                         <div id="dailyReportSourceBadge" style="font-size: 12px; color: #38bdf8; margin-top: 2px;">טוען נתוני דוח...</div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -681,11 +679,13 @@
                 <!-- Revenue & Traffic KPI cards for selected date -->
                 <div class="counters-summary-grid" id="dailyReportKpiGrid" style="margin-bottom: 14px;"></div>
 
-                <!-- Detailed Breakdowns: Payment Methods, Vouchers/Discounts, Hourly & 7-Days -->
+                <!-- Detailed Breakdowns: Payment Methods, Vouchers/Discounts, Stay Duration Bar Chart & Hourly -->
                 <div id="dailyReportDetailsContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;"></div>
             </div>
 
-            <div id="facilitiesCountersContainer" style="display: grid; gap: 16px;"></div>
+            <!-- 2. AT END (AFTER MOVEMENTS & REVENUE): LIVE OCCUPANCY & COUNTERS -->
+            <div class="counters-summary-grid" id="countersSummaryGrid" style="margin-bottom: 14px;"></div>
+            <div id="facilitiesCountersContainer" style="display: grid; gap: 14px; margin-bottom: 18px;"></div>
         </section>
 
         <!-- TAB 3: COMPANIES & SUBSCRIBERS -->
@@ -1326,47 +1326,74 @@
             if (kpiGrid) {
                 kpiGrid.innerHTML = `
                     <div class="stat-box" style="background:rgba(16,185,129,0.12);border-color:rgba(16,185,129,0.4);">
-                        <div style="color:#6ee7b7;font-size:12.5px;font-weight:700;">💰 סה״כ הכנסות בחניון (${rep.date_display || rep.report_date})</div>
                         <div class="stat-num" style="color:#34d399;">₪${Number(rev.total_revenue_ils || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                        <div style="color:#6ee7b7;font-size:12.5px;font-weight:800;margin-top:4px;">💰 סה״כ הכנסות בחניון</div>
+                        <div style="color:#94a3b8;font-size:11px;font-weight:700;">(${rep.date_display || rep.report_date})</div>
                         <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">נטו: ₪${Number(rev.net_revenue_no_vat_ils || 0).toFixed(2)} | מע״מ: ₪${Number(rev.vat_ils || 0).toFixed(2)}</div>
                     </div>
                     <div class="stat-box">
-                        <div style="color:var(--text-muted);font-size:12.5px;">🎟️ רכבים ששילמו</div>
-                        <div class="stat-num" style="color:#fbbf24;">${rev.paid_transactions_count || 0} <span style="font-size:14px;font-weight:600;">רכבים</span></div>
+                        <div class="stat-num" style="color:#fbbf24;">${rev.paid_transactions_count || 0}</div>
+                        <div style="color:#f8fafc;font-size:12.5px;font-weight:800;margin-top:4px;">🎟️ רכבים ששילמו</div>
                         <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">מזומן: ₪${Number(rev.cash_ils || 0).toFixed(0)} (${rev.cash_count || 0}) | אשראי: ₪${Number(rev.credit_ils || 0).toFixed(0)} (${rev.credit_count || 0})</div>
                     </div>
                     <div class="stat-box">
-                        <div style="color:var(--text-muted);font-size:12.5px;">🟢 סה״כ כניסות (כל החניונים)</div>
                         <div class="stat-num" style="color:#60a5fa;">${Number(tr.entries_total || 0).toLocaleString()}</div>
-                        <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">מזדמן: ${tr.entries_transient || 0} | מנוי: ${tr.entries_subscribers || 0} | אפליקציה: ${tr.entries_app_external || 0}</div>
+                        <div style="color:#f8fafc;font-size:12.5px;font-weight:800;margin-top:4px;">🟢 סה״כ כניסות</div>
+                        <div style="color:#cbd5e1;font-size:11px;font-weight:700;">(כל החניונים)</div>
+                        <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">מזדמן: ${tr.entries_transient || 0} | מנוי: ${tr.entries_subscribers || 0}</div>
                     </div>
                     <div class="stat-box">
-                        <div style="color:var(--text-muted);font-size:12.5px;">🔴 סה״כ יציאות (כל החניונים)</div>
                         <div class="stat-num" style="color:#c084fc;">${Number(tr.exits_total || 0).toLocaleString()}</div>
+                        <div style="color:#f8fafc;font-size:12.5px;font-weight:800;margin-top:4px;">🔴 סה״כ יציאות</div>
+                        <div style="color:#cbd5e1;font-size:11px;font-weight:700;">(כל החניונים)</div>
                         <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">מזדמן: ${tr.exits_transient || 0} | מנוי: ${tr.exits_subscribers || 0} | פתיחות מחסום: 🚧 ${tr.barrier_manual_opens || 0}</div>
                     </div>
                 `;
             }
 
-            // Detailed tables: Payment Methods, Discounts/Vouchers, Hourly Traffic
+            // Detailed tables: Payment Methods, Discounts/Vouchers, Stay Duration Bar Graph & Hourly Traffic
             const detailsCont = document.getElementById('dailyReportDetailsContainer');
             if (detailsCont) {
                 const pmRows = (rep.payment_methods || []).map(pm => `
-                    <div style="display:flex;justify-content:space-between;padding:6px 8px;background:var(--bg-input);border-radius:7px;font-size:13px;">
-                        <span>💳 <strong>${pm.name}</strong> (${pm.count} עסקאות)</span>
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--bg-input);border-radius:7px;font-size:13px;text-align:right;">
+                        <div>
+                            <div>💳 <strong>${pm.name}</strong></div>
+                            <div style="font-size:11px;color:var(--text-muted);">(${pm.count} עסקאות)</div>
+                        </div>
                         <strong style="color:#34d399;">₪${Number(pm.amount_ils || 0).toFixed(2)}</strong>
                     </div>
                 `).join('') || `<div style="color:var(--text-muted);font-size:12.5px;">אין עסקאות תשלום בתאריך זה</div>`;
 
                 const discRows = (rep.discounts_breakdown || []).map(dc => `
-                    <div style="display:flex;justify-content:space-between;padding:6px 8px;background:var(--bg-input);border-radius:7px;font-size:13px;">
-                        <span>🏷️ <strong>${dc.name}</strong> (${dc.count} שוברים)</span>
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--bg-input);border-radius:7px;font-size:13px;text-align:right;">
+                        <div>
+                            <div>🏷️ <strong>${dc.name}</strong></div>
+                            <div style="font-size:11px;color:var(--text-muted);">(${dc.count} שוברים)</div>
+                        </div>
                         <strong style="color:#fbbf24;">₪${Number(dc.amount_ils || 0).toFixed(2)}</strong>
                     </div>
                 `).join('') || `<div style="color:var(--text-muted);font-size:12.5px;">אין שוברים/הנחות בתאריך זה</div>`;
 
+                const stayList = rep.stay_duration || [];
+                const maxStay = Math.max(1, ...stayList.map(s => Number(s.count || 0)));
+                const totStay = stayList.reduce((acc, s) => acc + Number(s.count || 0), 0);
+                const stayRows = stayList.map(s => {
+                    const cnt = Number(s.count || 0);
+                    const pct = Math.max(4, Math.round((cnt / maxStay) * 100));
+                    const share = totStay > 0 ? Math.round((cnt / totStay) * 100) : 0;
+                    return `
+                        <div style="display:grid;grid-template-columns:86px 1fr 78px;align-items:center;gap:8px;padding:4px 8px;background:var(--bg-input);border-radius:6px;font-size:12px;">
+                            <strong style="text-align:right;">${s.label}</strong>
+                            <div style="height:10px;background:#1e293b;border-radius:5px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:#38bdf8;border-radius:5px;"></div>
+                            </div>
+                            <strong style="color:#38bdf8;text-align:left;">${cnt} (${share}%)</strong>
+                        </div>
+                    `;
+                }).join('') || `<div style="color:var(--text-muted);font-size:12.5px;">אין נתוני שהייה לתאריך זה</div>`;
+
                 const hourlyRows = (rep.hourly || []).map(h => `
-                    <div style="display:grid;grid-template-columns:55px 1fr 1fr 1fr;padding:5px 8px;background:var(--bg-input);border-radius:6px;font-size:12.5px;align-items:center;">
+                    <div style="display:grid;grid-template-columns:55px 1fr 1fr 1fr;padding:5px 8px;background:var(--bg-input);border-radius:6px;font-size:12.5px;align-items:center;text-align:right;">
                         <strong>${h.hour}</strong>
                         <span style="color:#60a5fa;">⬆️ ${h.entries}</span>
                         <span style="color:#c084fc;">⬇️ ${h.exits}</span>
@@ -1375,8 +1402,9 @@
                 `).join('') || `<div style="color:var(--text-muted);font-size:12.5px;">אין נתונים שעתיים לתאריך זה</div>`;
 
                 detailsCont.innerHTML = `
-                    <div style="background:rgba(15,23,42,0.55);border:1px solid var(--border);border-radius:12px;padding:12px;">
-                        <h4 style="font-size:14px;font-weight:800;margin-bottom:8px;color:#38bdf8;">💳 פילוח אמצעי תשלום</h4>
+                    <div style="background:rgba(15,23,42,0.55);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:right;">
+                        <h4 style="font-size:14px;font-weight:800;margin-bottom:2px;color:#38bdf8;">💳 פילוח אמצעי תשלום</h4>
+                        <div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">(מזומן ואשראי)</div>
                         <div style="display:grid;gap:6px;">${pmRows}</div>
                         <h4 style="font-size:14px;font-weight:800;margin:12px 0 8px 0;color:#fbbf24;">🏷️ פילוח שוברים והנחות</h4>
                         <div style="display:grid;gap:6px;">${discRows}</div>
@@ -1385,8 +1413,12 @@
                             <span>🔄 מעברים פנימיים: <strong>${tr.internal_passages || 0}</strong></span>
                         </div>
                     </div>
-                    <div style="background:rgba(15,23,42,0.55);border:1px solid var(--border);border-radius:12px;padding:12px;">
-                        <h4 style="font-size:14px;font-weight:800;margin-bottom:8px;color:#38bdf8;">🕒 תנועות ופדיון לפי שעות היום (${rep.report_date})</h4>
+                    <div style="background:rgba(15,23,42,0.55);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:right;">
+                        <h4 style="font-size:14px;font-weight:800;margin-bottom:2px;color:#38bdf8;">⏱️ התפלגות זמני שהייה בחניון</h4>
+                        <div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">(סה״כ ${totStay} יציאות מתועדות)</div>
+                        <div style="display:grid;gap:5px;margin-bottom:14px;">${stayRows}</div>
+                        <h4 style="font-size:14px;font-weight:800;margin-bottom:2px;color:#38bdf8;">🕒 תנועות ופדיון לפי שעות היום</h4>
+                        <div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">(${rep.date_display || rep.report_date})</div>
                         <div style="display:grid;gap:5px;max-height:240px;overflow-y:auto;">${hourlyRows}</div>
                     </div>
                 `;
