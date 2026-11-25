@@ -603,7 +603,12 @@ def _get_parking_conn(project_number):
             conn.row_factory = sqlite3.Row
             row = conn.execute("SELECT * FROM control_local_parkings WHERE project_number = ?", (p_key,)).fetchone()
             if not row:
-                row = conn.execute("SELECT * FROM control_local_parkings LIMIT 1").fetchone()
+                if p_key.startswith("421121") or p_key in ("1112", "1121", "1122", "1123", "1155", "1166"):
+                    row = conn.execute("SELECT * FROM control_local_parkings WHERE project_number = '421121121'").fetchone()
+                elif p_key.startswith("473223") or p_key in ("3050", "3200", "3210", "3220", "3300"):
+                    row = conn.execute("SELECT * FROM control_local_parkings WHERE project_number IN ('473223100', '3050') LIMIT 1").fetchone()
+                else:
+                    row = conn.execute("SELECT * FROM control_local_parkings LIMIT 1").fetchone()
             conn.close()
             if row and row['ip_address']:
                 d = {
@@ -617,12 +622,32 @@ def _get_parking_conn(project_number):
                 return d
     except Exception:
         pass
+    # Ultimate fallback by project number prefix (Render WAN vs Local LAN)
+    is_local_win = os.name == "nt" and (
+        os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "sb_oracle_helper", "ojdbc6.jar"))
+        or os.path.exists(r"C:\S-B-Parking-reports\sb_oracle_helper\ojdbc6.jar")
+    )
+    if p_key.startswith("421121") or p_key in ("1112", "1121", "1122", "1123", "1155", "1166"):
+        return {
+            'ip_address': '10.35.112.100' if is_local_win else '192.117.0.122',
+            'port': 8443 if is_local_win else 8112,
+            'name': 'שערי צדק',
+            'ts': now_ts
+        }
+    if p_key.startswith("473223") or p_key in ("3050", "3200", "3210", "3220", "3300"):
+        return {
+            'ip_address': '10.35.122.200' if is_local_win else '192.117.0.122',
+            'port': 8443 if is_local_win else 8122,
+            'name': 'מבנה תל אביב',
+            'ts': now_ts
+        }
     return None
 
 def _resolve_local_lan_ip_port(ip, port):
     req_ip = str(ip or "").strip()
     req_port = int(port or 8443)
-    if req_ip == "192.117.0.122" and os.path.exists(r"C:\S-B-Parking-reports\sb_oracle_helper\ojdbc6.jar"):
+    local_jar = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sb_oracle_helper", "ojdbc6.jar")
+    if req_ip == "192.117.0.122" and (os.path.exists(local_jar) or os.path.exists(r"C:\S-B-Parking-reports\sb_oracle_helper\ojdbc6.jar")):
         if req_port == 8122:
             return "10.35.122.200", 8443
         elif req_port == 8112:
@@ -3363,7 +3388,7 @@ def fetch_online_daily_report(project_number, ip, port, target_date=None, end_da
                     port,
                     jsp_ep,
                     params={"date": start_dt, "start_date": start_dt, "end_date": end_dt},
-                    timeout=6
+                    timeout=14
                 )
                 if jsp_res["status"] == 200 and "[SECTION:BREAKDOWN]" in (jsp_res.get("text") or ""):
                     return _parse_udb_tsv_output(jsp_res["text"])
@@ -3383,7 +3408,7 @@ def fetch_online_daily_report(project_number, ip, port, target_date=None, end_da
             proc = subprocess.run(
                 ["java", "-cp", cp_arg, "SBOracleReportHelper", oracle_ip, start_dt, end_dt],
                 capture_output=True,
-                timeout=12
+                timeout=16
             )
             if proc.returncode == 0 and proc.stdout:
                 out_text = proc.stdout.decode("utf-8", errors="replace")
@@ -3416,6 +3441,15 @@ def fetch_online_daily_report(project_number, ip, port, target_date=None, end_da
 
                     # Date range or multi-day aggregation across [start_dt, end_dt]
                     matched_dts = sorted([d for d in host_days.keys() if start_dt <= d <= end_dt])
+                    if not matched_dts and not is_range and start_dt == today_iso:
+                        # If today is requested on Render before daily-report.jsp is deployed on the controller, show latest cached day
+                        latest_key = sorted(host_days.keys())[-1]
+                        parsed_latest = _parse_udb_tsv_output(host_days[latest_key])
+                        parsed_latest["report_date"] = latest_key
+                        parsed_latest["start_date"] = latest_key
+                        parsed_latest["end_date"] = latest_key
+                        parsed_latest["date_display"] = f"{latest_key} (מוצג יום אחרון זמין — להצגת היום בזמן אמת יש להעתיק daily-report.jsp לבקר)"
+                        return parsed_latest
                     if matched_dts:
                         sec_buckets = {
                             "BREAKDOWN": [],
