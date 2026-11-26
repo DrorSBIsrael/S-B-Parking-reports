@@ -1848,20 +1848,39 @@ def fetch_online_parking_counters(project_number, ip, port):
         3: ("חסום", "red")
     }
 
-    FACILITY_ID_NAMES_HE = {
-        "1112": "שערי צדק (1112)",
-        "1121": "חניון 1 - שערי צדק (1121)",
-        "1122": "חניון 2 - שערי צדק (1122)",
-        "1123": "חניון 3 - שערי צדק (1123)",
-        "1155": "חניון 5 - שערי צדק (1155)",
-        "1166": "חניון 6 - שערי צדק (1166)",
-        "3050": "מבנה תוצרת הארץ (3050)",
-        "3100": "מבנה נחלת יצחק (3100)",
-        "3200": "חניון סוללים (3200)",
-        "3210": "סוללים 2- (3210)",
-        "3220": "סוללים 4- (3220)",
-        "3300": "חניון הר החוצבים (3300)"
-    }
+    p_str = str(project_number or "").strip()
+    is_shaare_zedek_proj = (
+        p_str.startswith("421121")
+        or p_str in ("1112", "1121", "1122", "1123", "1155", "1166")
+        or str(ip or "").strip() == "10.35.112.100"
+        or int(port or 8443) == 8112
+    )
+    is_mivne_tlv_proj = (
+        p_str.startswith("473223")
+        or p_str in ("3050", "3100", "3200", "3210", "3220", "3300")
+        or str(ip or "").strip() == "10.35.122.200"
+        or int(port or 8443) == 8122
+    )
+
+    FACILITY_ID_NAMES_HE = {}
+    if is_shaare_zedek_proj:
+        FACILITY_ID_NAMES_HE.update({
+            "1112": "שערי צדק (1112)",
+            "1121": "חניון 1 - שערי צדק (1121)",
+            "1122": "חניון 2 - שערי צדק (1122)",
+            "1123": "חניון 3 - שערי צדק (1123)",
+            "1155": "חניון 5 - שערי צדק (1155)",
+            "1166": "חניון 6 - שערי צדק (1166)"
+        })
+    elif is_mivne_tlv_proj:
+        FACILITY_ID_NAMES_HE.update({
+            "3050": "מבנה תוצרת הארץ (3050)",
+            "3100": "מבנה נחלת יצחק (3100)",
+            "3200": "חניון סוללים (3200)",
+            "3210": "סוללים 2- (3210)",
+            "3220": "סוללים 4- (3220)",
+            "3300": "חניון הר החוצבים (3300)"
+        })
 
     COUNTER_ID_HE = {
         "0": "מוזמנים מראש (Pre-booked)",
@@ -1894,7 +1913,10 @@ def fetch_online_parking_counters(project_number, ip, port):
         if fid in FACILITY_ID_NAMES_HE and (not raw_fname or raw_fname.lower().startswith("park ") or raw_fname.startswith("אזור ")):
             fac_display_name = FACILITY_ID_NAMES_HE[fid]
         else:
-            fac_display_name = raw_fname or FACILITY_ID_NAMES_HE.get(fid, f"אזור {fid}")
+            if raw_fname and fid and f"({fid})" not in raw_fname and fid not in raw_fname:
+                fac_display_name = f"{raw_fname} ({fid})"
+            else:
+                fac_display_name = raw_fname or FACILITY_ID_NAMES_HE.get(fid, f"מתחם ({fid})")
 
         # Query /DifferenceCountingWebService/standardcounters first (fast ~900 bytes over Render WAN port-forwarding), fallback to /counters
         c_res = make_sb_request(
@@ -2991,21 +3013,40 @@ def fetch_online_daily_report(project_number, ip, port, target_date=None, end_da
     is_range = (start_dt != end_dt)
     date_label = f"{start_dt} עד {end_dt}" if is_range else start_dt
 
-    FACILITY_NAMES_HE = {
-        1112: "שערי צדק (1112)",
-        1121: "חניון 1 - שערי צדק (1121)",
-        1122: "חניון 2 - שערי צדק (1122)",
-        1123: "חניון 3 - שערי צדק (1123)",
-        1155: "חניון 5 - שערי צדק (1155)",
-        1166: "חניון 6 - שערי צדק (1166)",
-        3050: "מבנה תוצרת הארץ (3050)",
-        3200: "מבנה סוללים (3200)",
-        3210: "מבנה 3210",
-        3220: "מבנה 3220",
-        3300: "מבנה 3300",
-        473223100: "מבנה תל אביב (תוצרת הארץ)",
-        473223200: "מבנה סוללים"
-    }
+    p_str = str(project_number or "").strip()
+    is_shaare_zedek_proj = (
+        p_str.startswith("421121")
+        or p_str in ("1112", "1121", "1122", "1123", "1155", "1166")
+        or str(ip or "").strip() == "10.35.112.100"
+        or int(port or 8443) == 8112
+    )
+    is_mivne_tlv_proj = (
+        p_str.startswith("473223")
+        or p_str in ("3050", "3100", "3200", "3210", "3220", "3300")
+        or str(ip or "").strip() == "10.35.122.200"
+        or int(port or 8443) == 8122
+    )
+
+    FACILITY_NAMES_HE = {}
+    if is_shaare_zedek_proj:
+        FACILITY_NAMES_HE.update({
+            1112: "שערי צדק (1112)",
+            1121: "חניון 1 - שערי צדק (1121)",
+            1122: "חניון 2 - שערי צדק (1122)",
+            1123: "חניון 3 - שערי צדק (1123)",
+            1155: "חניון 5 - שערי צדק (1155)",
+            1166: "חניון 6 - שערי צדק (1166)"
+        })
+    elif is_mivne_tlv_proj:
+        FACILITY_NAMES_HE.update({
+            3050: "מבנה תוצרת הארץ (3050)",
+            3200: "מבנה סוללים (3200)",
+            3210: "מבנה 3210",
+            3220: "מבנה 3220",
+            3300: "מבנה 3300",
+            473223100: "מבנה תל אביב (תוצרת הארץ)",
+            473223200: "מבנה סוללים"
+        })
 
     report = {
         "report_date": start_dt,
@@ -3533,6 +3574,244 @@ def fetch_online_daily_report(project_number, ip, port, target_date=None, end_da
                         return _parse_udb_tsv_output("\n".join(merged_lines))
         except Exception as e:
             print(f"Controller daily cache read error: {e}")
+
+    # 4. Supabase parking_data / csv_import_shekels report fallback for the selected project_number (e.g. Basar City, Azrieli, etc.)
+    sb = _get_supabase()
+    if sb and project_number:
+        try:
+            def _row_field_ils(r, shekel_col, agorot_col):
+                v = float(r.get(shekel_col) or 0)
+                if v > 0:
+                    return v
+                return int(r.get(agorot_col) or 0) / 100.0
+
+            def _row_rev_ils(r):
+                cash_v = _row_field_ils(r, "s_cash_shekels", "s_cash_agorot")
+                cred_v = _row_field_ils(r, "s_credit_shekels", "s_credit_agorot")
+                pango_v = _row_field_ils(r, "s_pango_shekels", "s_pango_agorot")
+                celo_v = _row_field_ils(r, "s_celo_shekels", "s_celo_agorot")
+                channels_sum = cash_v + cred_v + pango_v + celo_v
+                if channels_sum > 0:
+                    return channels_sum
+                v = float(r.get("total_revenue_shekels") or 0)
+                if v > 0:
+                    return v
+                return int(r.get("stot_cacr") or 0) / 100.0
+
+            proj_str = str(project_number).strip()
+            candidate_projs_str = [proj_str]
+            if len(proj_str) == 9 and proj_str.startswith("473223"):
+                candidate_projs_str = ["473223100", "473223200"]
+            elif len(proj_str) == 9 and proj_str.startswith("421121"):
+                candidate_projs_str = ["421121121", "421121122", "421121155", "421121166", "421121100", "421121200"]
+            elif proj_str == "3050":
+                candidate_projs_str = ["3050", "3200", "473223100", "473223200"]
+            candidate_projs_int = [int(x) for x in candidate_projs_str if x.isdigit()]
+            prefix6_min = int(proj_str[:6] + "000") if (len(proj_str) == 9 and proj_str.isdigit()) else None
+            prefix6_max = int(proj_str[:6] + "999") if (len(proj_str) == 9 and proj_str.isdigit()) else None
+
+            all_rows = []
+            for tbl_name in ("parking_data", "csv_import_shekels"):
+                try:
+                    q_res = (
+                        sb.table(tbl_name)
+                        .select("*")
+                        .in_("project_number", candidate_projs_int)
+                        .order("report_date", desc=True)
+                        .limit(250)
+                        .execute()
+                    )
+                    if q_res.data:
+                        all_rows = q_res.data
+                        break
+                except Exception:
+                    pass
+                if not all_rows and prefix6_min and prefix6_max:
+                    try:
+                        q_res = (
+                            sb.table(tbl_name)
+                            .select("*")
+                            .gte("project_number", prefix6_min)
+                            .lte("project_number", prefix6_max)
+                            .order("report_date", desc=True)
+                            .limit(250)
+                            .execute()
+                        )
+                        if q_res.data:
+                            all_rows = q_res.data
+                            break
+                    except Exception:
+                        pass
+                if not all_rows:
+                    try:
+                        q_res = (
+                            sb.table(tbl_name)
+                            .select("*")
+                            .in_("project_number", candidate_projs_str)
+                            .order("report_date", desc=True)
+                            .limit(250)
+                            .execute()
+                        )
+                        if q_res.data:
+                            all_rows = q_res.data
+                            break
+                    except Exception:
+                        pass
+
+            if all_rows:
+                by_date = {}
+                for r in all_rows:
+                    dt_k = str(r.get("report_date") or "").strip()[:10]
+                    if not dt_k:
+                        continue
+                    by_date.setdefault(dt_k, []).append(r)
+
+                sorted_dates = sorted(by_date.keys(), reverse=True)
+                for dt_k in sorted_dates[:14]:
+                    d_rows = by_date[dt_k]
+                    report["recent_days"].append({
+                        "date": dt_k,
+                        "entries": sum(int(x.get("t_entry_tot") or 0) for x in d_rows),
+                        "exits": sum(int(x.get("t_exit_tot") or 0) for x in d_rows),
+                        "revenue_ils": round(sum(_row_rev_ils(x) for x in d_rows), 2),
+                        "paid_count": sum(
+                            int(x.get("stay_015") or 0) + int(x.get("stay_030") or 0) + int(x.get("stay_045") or 0) +
+                            int(x.get("stay_060") or 0) + int(x.get("stay_2") or 0) + int(x.get("stay_3") or 0) +
+                            int(x.get("stay_4") or 0) + int(x.get("stay_5") or 0) + int(x.get("stay_6") or 0) +
+                            int(x.get("stay_724") or 0)
+                            for x in d_rows
+                        )
+                    })
+
+                rows = []
+                for dt_k, d_rows in by_date.items():
+                    if start_dt <= dt_k <= end_dt:
+                        rows.extend(d_rows)
+
+                if not rows and sorted_dates and not is_range:
+                    latest_dt = sorted_dates[0]
+                    rows = by_date.get(latest_dt, [])
+                    report["report_date"] = latest_dt
+                    report["start_date"] = latest_dt
+                    report["end_date"] = latest_dt
+                    report["date_display"] = f"{latest_dt} (דוח אחרון זמין במערכת)" if start_dt != latest_dt else latest_dt
+                    report["is_today"] = (latest_dt == today_iso)
+
+                if rows:
+                    cash_ils = sum(_row_field_ils(r, "s_cash_shekels", "s_cash_agorot") for r in rows)
+                    cred_ils = sum(_row_field_ils(r, "s_credit_shekels", "s_credit_agorot") for r in rows)
+                    pango_ils = sum(_row_field_ils(r, "s_pango_shekels", "s_pango_agorot") for r in rows)
+                    celo_ils = sum(_row_field_ils(r, "s_celo_shekels", "s_celo_agorot") for r in rows)
+                    tot_rev = cash_ils + cred_ils + pango_ils + celo_ils
+                    if tot_rev <= 0:
+                        tot_rev = sum(_row_rev_ils(r) for r in rows)
+                    net_rev = round(tot_rev / 1.18, 2) if tot_rev > 0 else 0.0
+
+                    ent_tot = sum(int(r.get("t_entry_tot") or 0) for r in rows)
+                    ent_s = sum(int(r.get("t_entry_s") or 0) for r in rows)
+                    ent_p = sum(int(r.get("t_entry_p") or 0) for r in rows)
+                    ent_ap = sum(int(r.get("t_entry_ap") or 0) for r in rows)
+                    ext_tot = sum(int(r.get("t_exit_tot") or 0) for r in rows)
+                    ext_s = sum(int(r.get("t_exit_s") or 0) for r in rows)
+                    ext_p = sum(int(r.get("t_exit_p") or 0) for r in rows)
+                    ext_ap = sum(int(r.get("t_exit_ap") or 0) for r in rows)
+                    open_b = sum(int(r.get("t_open_b") or 0) for r in rows)
+
+                    stay_buckets = [
+                        ("0-15 דקות", sum(int(r.get("stay_015") or 0) for r in rows)),
+                        ("15-30 דקות", sum(int(r.get("stay_030") or 0) for r in rows)),
+                        ("30-45 דקות", sum(int(r.get("stay_045") or 0) for r in rows)),
+                        ("45-60 דקות", sum(int(r.get("stay_060") or 0) for r in rows)),
+                        ("1-2 שעות", sum(int(r.get("stay_2") or 0) for r in rows)),
+                        ("2-3 שעות", sum(int(r.get("stay_3") or 0) for r in rows)),
+                        ("3-4 שעות", sum(int(r.get("stay_4") or 0) for r in rows)),
+                        ("4-5 שעות", sum(int(r.get("stay_5") or 0) for r in rows)),
+                        ("5-6 שעות", sum(int(r.get("stay_6") or 0) for r in rows)),
+                        ("7-24 שעות", sum(int(r.get("stay_724") or 0) for r in rows))
+                    ]
+                    report["stay_duration"] = [{"label": lbl, "count": cnt} for lbl, cnt in stay_buckets if cnt > 0]
+                    stay_paid_cnt = sum(cnt for _, cnt in stay_buckets)
+
+                    fac_map = {}
+                    for r in rows:
+                        f_code = int(r.get("s_computer") or r.get("project_number") or 0)
+                        raw_ctext = str(r.get("c_text") or r.get("ctext") or "").strip()
+                        if raw_ctext and f"({f_code})" not in raw_ctext and str(f_code) not in raw_ctext:
+                            f_name = f"{raw_ctext} ({f_code})"
+                        else:
+                            f_name = raw_ctext or FACILITY_NAMES_HE.get(f_code, f"מתחם ({f_code})")
+                        if f_code not in fac_map:
+                            fac_map[f_code] = {
+                                "facility_id": f_code,
+                                "facility_name": f_name,
+                                "entries_total": 0,
+                                "entries_transient": 0,
+                                "entries_subscribers": 0,
+                                "entries_app": 0,
+                                "exits_total": 0,
+                                "exits_transient": 0,
+                                "exits_subscribers": 0,
+                                "exits_app": 0,
+                                "pos_revenue_ils": 0.0,
+                                "barrier_opens": 0
+                            }
+                        fm = fac_map[f_code]
+                        fm["entries_total"] += int(r.get("t_entry_tot") or 0)
+                        fm["entries_transient"] += int(r.get("t_entry_p") or 0)
+                        fm["entries_subscribers"] += int(r.get("t_entry_s") or 0)
+                        fm["entries_app"] += int(r.get("t_entry_ap") or 0)
+                        fm["exits_total"] += int(r.get("t_exit_tot") or 0)
+                        fm["exits_transient"] += int(r.get("t_exit_p") or 0)
+                        fm["exits_subscribers"] += int(r.get("t_exit_s") or 0)
+                        fm["exits_app"] += int(r.get("t_exit_ap") or 0)
+                        fm["pos_revenue_ils"] = round(fm["pos_revenue_ils"] + _row_rev_ils(r), 2)
+                        fm["barrier_opens"] += int(r.get("t_open_b") or 0)
+                    report["facilities_traffic"] = list(fac_map.values())
+
+                    paid_cnt_est = stay_paid_cnt if stay_paid_cnt > 0 else ext_p
+                    report["source"] = "supabase_parking_data"
+                    report["source_label_he"] = "דוח חניון מסונכרן (Supabase TSETHELP)"
+                    report["revenue"] = {
+                        "total_revenue_ils": round(tot_rev, 2),
+                        "pos_turnover_ils": round(cash_ils + cred_ils, 2),
+                        "cash_ils": round(cash_ils, 2),
+                        "cash_count": 0,
+                        "credit_ils": round(cred_ils, 2),
+                        "credit_count": paid_cnt_est if cred_ils > 0 else 0,
+                        "pango_ils": round(pango_ils, 2),
+                        "pango_count": 0,
+                        "cello_ils": round(celo_ils, 2),
+                        "cello_count": 0,
+                        "net_revenue_no_vat_ils": round(net_rev, 2),
+                        "vat_ils": round(max(0.0, tot_rev - net_rev), 2),
+                        "gross_tariff_ils": round(tot_rev, 2),
+                        "discounts_total_ils": 0.0,
+                        "paid_transactions_count": paid_cnt_est,
+                        "pos_paid_count": paid_cnt_est
+                    }
+                    report["payment_channels"] = [
+                        {"key": "cash", "name": "💵 מזומן בקופות", "amount_ils": round(cash_ils, 2), "count": 0},
+                        {"key": "credit", "name": "💳 כרטיסי אשראי (קופות/יציאה)", "amount_ils": round(cred_ils, 2), "count": 0}
+                    ]
+                    report["payment_methods"] = [
+                        {"name": "💵 מזומן", "count": 0, "amount_ils": round(cash_ils, 2)},
+                        {"name": "💳 כרטיסי אשראי", "count": 0, "amount_ils": round(cred_ils, 2)}
+                    ]
+                    report["traffic"].update({
+                        "entries_total": ent_tot,
+                        "entries_transient": ent_p,
+                        "entries_subscribers": ent_s,
+                        "entries_app_external": ent_ap,
+                        "exits_total": ext_tot,
+                        "exits_transient": ext_p,
+                        "exits_subscribers": ext_s,
+                        "exits_app_external": ext_ap,
+                        "barrier_manual_opens": open_b,
+                        "tsethelp_barrier_opens": open_b
+                    })
+                    return report
+        except Exception as e:
+            print(f"Supabase parking_data report fallback error: {e}")
 
     return report
 
