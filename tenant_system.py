@@ -145,8 +145,14 @@ def _init_sqlite():
             "ALTER TABLE tenant_building_settings ADD COLUMN standalone_mode INTEGER DEFAULT 0",
             "ALTER TABLE tenant_building_settings ADD COLUMN ios_app_url TEXT",
             "ALTER TABLE tenant_building_settings ADD COLUMN android_app_url TEXT",
+            "ALTER TABLE tenant_building_settings ADD COLUMN base_credit_hours REAL DEFAULT 24.0",
+            "ALTER TABLE tenant_building_settings ADD COLUMN credit_earn_percent REAL DEFAULT 100.0",
+            "ALTER TABLE tenant_building_settings ADD COLUMN credit_enforce_active INTEGER DEFAULT 1",
             "ALTER TABLE tenant_spot_shares ADD COLUMN parking_spot_number TEXT",
+            "ALTER TABLE tenant_spot_shares ADD COLUMN end_date TEXT",
             "ALTER TABLE tenant_quota_transfers ADD COLUMN parking_spot_number TEXT",
+            "ALTER TABLE tenant_quota_transfers ADD COLUMN end_date TEXT",
+            "ALTER TABLE tenant_quota_transfers ADD COLUMN notified_waiting_exit INTEGER DEFAULT 0",
             "CREATE INDEX IF NOT EXISTS idx_tu_phone ON tenant_users (phone_number, is_active)",
             "CREATE INDEX IF NOT EXISTS idx_tu_proj_apt ON tenant_users (project_number, apartment_number)",
             "CREATE INDEX IF NOT EXISTS idx_tss_proj_act ON tenant_spot_shares (project_number, is_active)",
@@ -212,17 +218,32 @@ class TenantStore:
                 local_row = dict(row)
         if sb_row:
             if local_row:
-                for k in ('logo_data', 'parking_lat', 'parking_lng', 'parking_address', 'standalone_mode', 'ios_app_url', 'android_app_url'):
+                for k in ('logo_data', 'parking_lat', 'parking_lng', 'parking_address', 'standalone_mode', 'ios_app_url', 'android_app_url', 'base_credit_hours', 'credit_earn_percent', 'credit_enforce_active'):
                     if sb_row.get(k) in (None, '') and local_row.get(k) not in (None, ''):
                         sb_row[k] = local_row[k]
+            if sb_row.get('base_credit_hours') is None:
+                sb_row['base_credit_hours'] = 24.0
+            if sb_row.get('credit_earn_percent') is None:
+                sb_row['credit_earn_percent'] = 100.0
+            if sb_row.get('credit_enforce_active') is None:
+                sb_row['credit_enforce_active'] = 1
             return sb_row
         if local_row:
+            if local_row.get('base_credit_hours') is None:
+                local_row['base_credit_hours'] = 24.0
+            if local_row.get('credit_earn_percent') is None:
+                local_row['credit_earn_percent'] = 100.0
+            if local_row.get('credit_enforce_active') is None:
+                local_row['credit_enforce_active'] = 1
             return local_row
         return {
             'project_number': p_num,
             'parking_name': default_name,
             'max_bookings_per_day': 5,
             'max_bookings_per_month': 30,
+            'base_credit_hours': 24.0,
+            'credit_earn_percent': 100.0,
+            'credit_enforce_active': 1,
             'check_interval_minutes': 30,
             'reminder_minutes_before': 30,
             'logo_data': '',
@@ -235,7 +256,7 @@ class TenantStore:
         }
 
     @staticmethod
-    def save_building_settings(project_number, parking_name, max_day=5, max_month=30, check_interval=30, reminder_mins=30, logo_data=None, parking_lat=None, parking_lng=None, parking_address=None, standalone_mode=None, ios_app_url=None, android_app_url=None):
+    def save_building_settings(project_number, parking_name, max_day=5, max_month=30, check_interval=30, reminder_mins=30, logo_data=None, parking_lat=None, parking_lng=None, parking_address=None, standalone_mode=None, ios_app_url=None, android_app_url=None, base_credit_hours=None, credit_earn_percent=None, credit_enforce_active=None):
         p_num = str(project_number)
         now_iso = get_il_now().isoformat()
         existing = TenantStore.get_building_settings(p_num, parking_name)
@@ -244,6 +265,9 @@ class TenantStore:
         final_standalone = (1 if bool(standalone_mode) else 0) if standalone_mode is not None else int(existing.get('standalone_mode') or 0)
         final_ios_url = str(ios_app_url).strip() if ios_app_url is not None else (existing.get('ios_app_url') or '')
         final_android_url = str(android_app_url).strip() if android_app_url is not None else (existing.get('android_app_url') or '')
+        final_base_credit = float(base_credit_hours) if base_credit_hours is not None else float(existing.get('base_credit_hours') if existing.get('base_credit_hours') is not None else 24.0)
+        final_earn_pct = float(credit_earn_percent) if credit_earn_percent is not None else float(existing.get('credit_earn_percent') if existing.get('credit_earn_percent') is not None else 100.0)
+        final_credit_enforce = (1 if bool(credit_enforce_active) else 0) if credit_enforce_active is not None else int(existing.get('credit_enforce_active') if existing.get('credit_enforce_active') is not None else 1)
 
         def _parse_coord(val, fallback):
             if val is None:
@@ -264,6 +288,9 @@ class TenantStore:
             'parking_name': parking_name or '',
             'max_bookings_per_day': int(max_day),
             'max_bookings_per_month': int(max_month),
+            'base_credit_hours': final_base_credit,
+            'credit_earn_percent': final_earn_pct,
+            'credit_enforce_active': final_credit_enforce,
             'check_interval_minutes': int(check_interval),
             'reminder_minutes_before': int(reminder_mins),
             'logo_data': final_logo,
@@ -282,7 +309,7 @@ class TenantStore:
             except Exception as _sbe:
                 # אם העמודות החדשות טרם נוספו ב-Supabase, שמור את עמודות הבסיס כדי שלא תיכשל השמירה
                 try:
-                    base_payload = {k: v for k, v in payload.items() if k not in ('parking_lat', 'parking_lng', 'parking_address', 'standalone_mode', 'ios_app_url', 'android_app_url')}
+                    base_payload = {k: v for k, v in payload.items() if k not in ('parking_lat', 'parking_lng', 'parking_address', 'standalone_mode', 'ios_app_url', 'android_app_url', 'base_credit_hours', 'credit_earn_percent', 'credit_enforce_active')}
                     sb.table('tenant_building_settings').upsert(base_payload).execute()
                 except Exception as _sbe2:
                     _trip_sb_circuit_if_missing(_sbe2)
@@ -290,12 +317,15 @@ class TenantStore:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.execute("""
                 INSERT INTO tenant_building_settings
-                (project_number, parking_name, max_bookings_per_day, max_bookings_per_month, check_interval_minutes, reminder_minutes_before, logo_data, parking_lat, parking_lng, parking_address, standalone_mode, ios_app_url, android_app_url, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (project_number, parking_name, max_bookings_per_day, max_bookings_per_month, base_credit_hours, credit_earn_percent, credit_enforce_active, check_interval_minutes, reminder_minutes_before, logo_data, parking_lat, parking_lng, parking_address, standalone_mode, ios_app_url, android_app_url, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(project_number) DO UPDATE SET
                     parking_name=excluded.parking_name,
                     max_bookings_per_day=excluded.max_bookings_per_day,
                     max_bookings_per_month=excluded.max_bookings_per_month,
+                    base_credit_hours=excluded.base_credit_hours,
+                    credit_earn_percent=excluded.credit_earn_percent,
+                    credit_enforce_active=excluded.credit_enforce_active,
                     check_interval_minutes=excluded.check_interval_minutes,
                     reminder_minutes_before=excluded.reminder_minutes_before,
                     logo_data=excluded.logo_data,
@@ -307,6 +337,7 @@ class TenantStore:
                     android_app_url=excluded.android_app_url,
                     updated_at=excluded.updated_at
             """, (p_num, payload['parking_name'], payload['max_bookings_per_day'], payload['max_bookings_per_month'],
+                  final_base_credit, final_earn_pct, final_credit_enforce,
                   payload['check_interval_minutes'], payload['reminder_minutes_before'], final_logo,
                   final_lat, final_lng, final_addr, final_standalone, final_ios_url, final_android_url, now_iso))
             conn.commit()
@@ -695,6 +726,8 @@ class TenantStore:
                         d = dict(row)
                         if not d.get('parking_spot_number') and int(d['id']) in local_map:
                             d['parking_spot_number'] = local_map[int(d['id'])].get('parking_spot_number') or ''
+                        if not d.get('end_date') and int(d['id']) in local_map:
+                            d['end_date'] = local_map[int(d['id'])].get('end_date') or ''
                         out.append(d)
                     return out
             except Exception as _sbe:
@@ -705,6 +738,7 @@ class TenantStore:
     def create_share(data):
         now_iso = get_il_now().isoformat()
         spot_no = str(data.get('parking_spot_number') or '').strip()
+        end_date_val = str(data.get('end_date') or '').strip() or None
         payload = {
             'project_number': str(data['project_number']),
             'owner_tenant_id': int(data.get('owner_tenant_id') or 0),
@@ -717,6 +751,7 @@ class TenantStore:
             'schedule_type': data.get('schedule_type', 'WEEKLY'),
             'days_of_week': str(data.get('days_of_week') or ''),
             'specific_date': str(data.get('specific_date') or '') or None,
+            'end_date': end_date_val,
             'start_time': data['start_time'],
             'end_time': data['end_time'],
             'is_active': True,
@@ -730,7 +765,7 @@ class TenantStore:
                     payload['id'] = res.data[0].get('id')
             except Exception as _sbe:
                 try:
-                    base_payload = {k: v for k, v in payload.items() if k != 'parking_spot_number'}
+                    base_payload = {k: v for k, v in payload.items() if k not in ('parking_spot_number', 'end_date')}
                     res = sb.table('tenant_spot_shares').insert(base_payload).execute()
                     if res.data:
                         payload['id'] = res.data[0].get('id')
@@ -742,11 +777,11 @@ class TenantStore:
             cur.execute("""
                 INSERT INTO tenant_spot_shares
                 (project_number, owner_tenant_id, owner_name, owner_apartment, spots_offered, parking_spot_number, share_target_type, target_apartment,
-                 schedule_type, days_of_week, specific_date, start_time, end_time, is_active, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+                 schedule_type, days_of_week, specific_date, end_date, start_time, end_time, is_active, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
             """, (payload['project_number'], payload['owner_tenant_id'], payload['owner_name'], payload['owner_apartment'],
                   payload['spots_offered'], spot_no, payload['share_target_type'], payload['target_apartment'],
-                  payload['schedule_type'], payload['days_of_week'], payload['specific_date'],
+                  payload['schedule_type'], payload['days_of_week'], payload['specific_date'], end_date_val,
                   payload['start_time'], payload['end_time'], now_iso))
             if 'id' not in payload or not payload['id']:
                 payload['id'] = cur.lastrowid
@@ -815,6 +850,10 @@ class TenantStore:
                         d = dict(row)
                         if not d.get('parking_spot_number') and int(d['id']) in local_map:
                             d['parking_spot_number'] = local_map[int(d['id'])].get('parking_spot_number') or ''
+                        if not d.get('end_date') and int(d['id']) in local_map:
+                            d['end_date'] = local_map[int(d['id'])].get('end_date') or ''
+                        if d.get('notified_waiting_exit') is None and int(d['id']) in local_map:
+                            d['notified_waiting_exit'] = bool(local_map[int(d['id'])].get('notified_waiting_exit'))
                         out.append(d)
                     return out
             except Exception as _sbe:
@@ -825,6 +864,7 @@ class TenantStore:
     def create_transfer(data):
         now_iso = get_il_now().isoformat()
         spot_no = str(data.get('parking_spot_number') or '').strip()
+        end_date_val = str(data.get('end_date') or data.get('booking_date') or '').strip()
         payload = {
             'share_id': int(data['share_id']),
             'slot_index': int(data.get('slot_index') or 1),
@@ -836,6 +876,7 @@ class TenantStore:
             'borrower_name': data.get('borrower_name') or '',
             'borrower_phone': clean_il_phone(data.get('borrower_phone') or ''),
             'booking_date': str(data['booking_date']),
+            'end_date': end_date_val,
             'start_time': str(data['start_time']),
             'end_time': str(data['end_time']),
             'window_start': str(data['window_start']),
@@ -843,6 +884,7 @@ class TenantStore:
             'status': data.get('status', 'SCHEDULED'),
             'notified_start': False,
             'notified_ending_soon': False,
+            'notified_waiting_exit': False,
             'late_exit_flag': False,
             'created_at': now_iso
         }
@@ -854,7 +896,7 @@ class TenantStore:
                     payload['id'] = res.data[0].get('id')
             except Exception as _sbe:
                 try:
-                    base_payload = {k: v for k, v in payload.items() if k != 'parking_spot_number'}
+                    base_payload = {k: v for k, v in payload.items() if k not in ('parking_spot_number', 'end_date', 'notified_waiting_exit')}
                     res = sb.table('tenant_quota_transfers').insert(base_payload).execute()
                     if res.data:
                         payload['id'] = res.data[0].get('id')
@@ -866,11 +908,11 @@ class TenantStore:
             cur.execute("""
                 INSERT INTO tenant_quota_transfers
                 (share_id, slot_index, project_number, from_apartment, to_apartment, parking_spot_number, borrower_tenant_id, borrower_name, borrower_phone,
-                 booking_date, start_time, end_time, window_start, window_end, status, notified_start, notified_ending_soon, late_exit_flag, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, ?)
+                 booking_date, end_date, start_time, end_time, window_start, window_end, status, notified_start, notified_ending_soon, notified_waiting_exit, late_exit_flag, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, ?)
             """, (payload['share_id'], payload['slot_index'], payload['project_number'], payload['from_apartment'],
                   payload['to_apartment'], spot_no, payload['borrower_tenant_id'], payload['borrower_name'], payload['borrower_phone'],
-                  payload['booking_date'], payload['start_time'], payload['end_time'], payload['window_start'],
+                  payload['booking_date'], end_date_val, payload['start_time'], payload['end_time'], payload['window_start'],
                   payload['window_end'], payload['status'], now_iso))
             if 'id' not in payload or not payload['id']:
                 payload['id'] = cur.lastrowid
@@ -885,7 +927,12 @@ class TenantStore:
             try:
                 sb.table('tenant_quota_transfers').update(updates).eq('id', int(transfer_id)).execute()
             except Exception as _sbe:
-                _trip_sb_circuit_if_missing(_sbe)
+                try:
+                    safe_updates = {k: v for k, v in updates.items() if k not in ('notified_waiting_exit', 'end_date')}
+                    if safe_updates:
+                        sb.table('tenant_quota_transfers').update(safe_updates).eq('id', int(transfer_id)).execute()
+                except Exception as _sbe2:
+                    _trip_sb_circuit_if_missing(_sbe2)
         with _db_lock:
             conn = sqlite3.connect(SQLITE_PATH)
             cols = []
@@ -1829,9 +1876,10 @@ def try_activate_transfer(transfer):
         if borrower_phone:
             spot_no = (transfer.get('parking_spot_number') or '').strip()
             spot_line = f"🅿️ מספר חניה: *{spot_no}*\n" if spot_no else ""
+            end_d_disp = f" ({transfer.get('end_date')})" if transfer.get('end_date') and str(transfer.get('end_date')) != str(transfer.get('booking_date')) else ""
             msg = (
                 f"שלום {transfer.get('borrower_name') or ''}! 🚗\n"
-                f"החניה שהזמנת (מדירה {from_apt}) פנויה וזמינה עבורך כעת ועד השעה *{transfer.get('end_time')}*.\n"
+                f"החניה שהזמנת (מדירה {from_apt}) פנויה וזמינה עבורך כעת ועד השעה *{transfer.get('end_time')}*{end_d_disp}.\n"
                 f"{spot_line}"
                 f"מכסת החניות של דירה {to_apt} הוגדלה ב-1. חניה נעימה!"
             )
@@ -1840,10 +1888,43 @@ def try_activate_transfer(transfer):
         return {'activated': True, 'status': 'ACTIVE'}
     else:
         # הרכב של הדירה המשחררת עדיין בחניון - ממתינים ליציאה ובודקים שוב בהמשך
-        TenantStore.update_transfer(t_id, {
+        already_notified_wait = bool(transfer.get('notified_waiting_exit'))
+        upd_wait = {
             'status': 'WAITING_FOR_EXIT',
             'last_checked_at': now_iso
-        })
+        }
+        if not already_notified_wait:
+            upd_wait['notified_waiting_exit'] = True
+            spot_no = (transfer.get('parking_spot_number') or '').strip()
+            spot_txt = f" (חניה *{spot_no}*)" if spot_no else ""
+            # 1. הודעה לדייר השואל (שלקח את החניה) שהחניה טרם התפנתה ויקבל הודעה ברגע שהרכב ייצא
+            borrower_phone = transfer.get('borrower_phone')
+            if borrower_phone:
+                wait_msg = (
+                    f"שלום {transfer.get('borrower_name') or ''} (דירה {to_apt})! ⏳🚗\n"
+                    f"הגיע מועד תחילת החניה שהזמנת מדירה *{from_apt}*{spot_txt} (שעה *{transfer.get('start_time')}*), "
+                    f"אך רכב של דירה {from_apt} עדיין נמצא בחניון ולכן טרם התפנתה מכסה.\n"
+                    f"המערכת בודקת אוטומטית את היציאה מהחניון ותשלח לך הודעת וואטסאפ *מיד ברגע שהרכב ייצא* והחניה תופעל עבורך!"
+                )
+                send_whatsapp_message(borrower_phone, wait_msg)
+
+            # 2. תזכורת לדייר המשחרר (בעל החניה) ששכן ממתין לחניה ששחרר
+            try:
+                owner_tenants = [
+                    t for t in TenantStore.list_tenants(p_num)
+                    if str(t.get('apartment_number') or '').strip() == str(from_apt).strip() and t.get('phone_number')
+                ]
+                for ot in owner_tenants:
+                    owner_msg = (
+                        f"שלום {ot.get('full_name') or ''} (דירה {from_apt})! 🔔🚗\n"
+                        f"תזכורת: שחררת חניה{spot_txt} החל מהשעה *{transfer.get('start_time')}*, ודירה *{to_apt}* ({transfer.get('borrower_name') or 'שכן'}) הזמינה אותה וממתינה להיכנס.\n"
+                        f"נכון לעכשיו רכב של דירתך עדיין רשום בתוך החניון (אין מכסה פנויה). ברגע שתצא מהחניון המכסה תועבר אוטומטית לשכן."
+                    )
+                    send_whatsapp_message(ot['phone_number'], owner_msg)
+            except Exception:
+                pass
+
+        TenantStore.update_transfer(t_id, upd_wait)
         return {'activated': False, 'status': 'WAITING_FOR_EXIT', 'reason': 'owner_still_in_parking'}
 
 def restore_active_transfer(transfer, early_cancel=False):
@@ -2006,8 +2087,63 @@ def tenant_manager_page():
         return redirect('/login')
     return render_template('tenant_manager.html')
 
+def _resolve_share_window_for_date(sh, d_str):
+    """
+    מחשב את תאריך ושעת ההתחלה והסיום עבור שחרור חניה (sh) בתאריך התחלה d_str (YYYY-MM-DD).
+    - אם שחרור חד-פעמי (ONCE) ומוגדר end_date מפורש >= d_str: משתמש ב-end_date.
+    - אם end_time <= start_time (למשל משעה 22:00 עד שעה 07:00): מבין אוטומטית שזה עד ליום למחרת!
+    מחזיר (start_dt, end_dt, resolved_end_date_str)
+    """
+    start_time_s = str(sh.get('start_time') or '08:00').strip()
+    end_time_s = str(sh.get('end_time') or '17:00').strip()
+    start_dt = datetime.datetime.strptime(f"{d_str} {start_time_s}", "%Y-%m-%d %H:%M")
+
+    sched_type = str(sh.get('schedule_type') or 'WEEKLY').upper()
+    explicit_end_date = str(sh.get('end_date') or '').strip()
+
+    if sched_type == 'ONCE' and explicit_end_date and explicit_end_date >= d_str:
+        end_d_str = explicit_end_date
+        if end_d_str == d_str and end_time_s <= start_time_s:
+            end_d_str = (start_dt.date() + timedelta(days=1)).strftime('%Y-%m-%d')
+    else:
+        if end_time_s <= start_time_s:
+            end_d_str = (start_dt.date() + timedelta(days=1)).strftime('%Y-%m-%d')
+        else:
+            end_d_str = d_str
+
+    end_dt = datetime.datetime.strptime(f"{end_d_str} {end_time_s}", "%Y-%m-%d %H:%M")
+    if end_dt <= start_dt:
+        end_dt += timedelta(days=1)
+        end_d_str = end_dt.strftime('%Y-%m-%d')
+    return start_dt, end_dt, end_d_str
+
+def _is_share_expired(sh, now=None):
+    """בודק האם שחרור חניה פג תוקפו (למשל שחרור חד-פעמי ONCE שזמן הסיום שלו כבר עבר, או שחרור עם תאריך סיום שעבר)."""
+    if now is None:
+        now = get_il_now()
+    sched_type = str(sh.get('schedule_type') or 'WEEKLY').upper()
+    if sched_type == 'ONCE':
+        spec_d = str(sh.get('specific_date') or '').strip()
+        if not spec_d:
+            return False
+        try:
+            _, end_dt, _ = _resolve_share_window_for_date(sh, spec_d)
+            return end_dt <= now
+        except Exception:
+            return False
+    else:
+        exp_end_d = str(sh.get('end_date') or '').strip()
+        if exp_end_d:
+            try:
+                end_time_s = str(sh.get('end_time') or '23:59').strip()
+                end_dt = datetime.datetime.strptime(f"{exp_end_d} {end_time_s}", "%Y-%m-%d %H:%M")
+                return end_dt <= now
+            except Exception:
+                return False
+    return False
+
 def _calc_transfer_used_hours(tr):
-    """מחשב שעות חניה שנתן הדייר ושנוצלו בפועל (רק כאשר הסטטוס ACTIVE או RESTORED)."""
+    """מחשב שעות חניה שנוצלו בפועל (כאשר הסטטוס ACTIVE או RESTORED)."""
     if tr.get('status') not in ('ACTIVE', 'RESTORED'):
         return 0.0
     win_hours = 0.0
@@ -2029,6 +2165,101 @@ def _calc_transfer_used_hours(tr):
             pass
     return round(win_hours, 1)
 
+def _calc_transfer_window_hours(tr):
+    """מחשב את אורך חלון ההזמנה בשעות (עבור הזמנות פעילות/משוריינות או שהושלמו)."""
+    if tr.get('status') in ('ACTIVE', 'RESTORED') and tr.get('actual_activated_at') and tr.get('actual_restored_at'):
+        return _calc_transfer_used_hours(tr)
+    try:
+        ws = datetime.datetime.fromisoformat(str(tr['window_start']).replace('Z', ''))
+        we = datetime.datetime.fromisoformat(str(tr['window_end']).replace('Z', ''))
+        return round(max(0.0, (we - ws).total_seconds() / 3600.0), 1)
+    except Exception:
+        return 0.0
+
+def _compute_project_apartments_credit(project_number, b_settings=None, all_transfers=None, target_month=None):
+    """
+    מחשב את מאזן קרדיט השעות החודשי של כל דירה במתחם:
+    1. קרדיט חודשי התחלתי לדירה = base_credit_hours (ברירת מחדל 24 שעות בכל חודש מחדש).
+    2. דירה שנתנה חניה מקבלת קרדיט אך ורק במידה והחניה נוצלה בפועל ע"י שכן (סטטוס ACTIVE או RESTORED ב-tenant_quota_transfers),
+       לפי יחס האחוזים credit_earn_percent (ברירת מחדל 100%, ניתן להגדיר 50% וכו'). שחרור חניה שלא נתפסה/נוצלה אינו מעלה קרדיט!
+    3. ככל שהדירה קיבלה/לקחה חניה באותו חודש — הקרדיט החודשי שלה יורד בשעות שלקחה.
+    4. credit_enforce_active (1=פעיל ואוכף, 0=לתצוגה בלבד ללא חסימת לקיחת חניה).
+    """
+    p_num = str(project_number)
+    if b_settings is None:
+        b_settings = TenantStore.get_building_settings(p_num)
+    base_credit = float(b_settings.get('base_credit_hours') if b_settings.get('base_credit_hours') is not None else 24.0)
+    earn_pct = float(b_settings.get('credit_earn_percent') if b_settings.get('credit_earn_percent') is not None else 100.0)
+    enforce_active = bool(int(b_settings.get('credit_enforce_active') if b_settings.get('credit_enforce_active') is not None else 1))
+    earn_ratio = max(0.0, earn_pct / 100.0)
+
+    if all_transfers is None:
+        all_transfers = TenantStore.list_transfers(
+            project_number=p_num,
+            statuses=['SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE', 'RESTORED']
+        )
+
+    cur_month = target_month or get_il_now().strftime('%Y-%m')
+    apt_map = {}
+
+    def _ensure_apt(a_key):
+        if a_key not in apt_map:
+            apt_map[a_key] = {
+                'month': cur_month,
+                'base_credit_hours': round(base_credit, 1),
+                'credit_earn_percent': round(earn_pct, 1),
+                'credit_enforce_active': enforce_active,
+                'given_hours_total': 0.0,
+                'given_hours_month': 0.0,
+                'given_count': 0,
+                'given_count_month': 0,
+                'earned_credit_hours_total': 0.0,
+                'earned_credit_hours_month': 0.0,
+                'taken_hours_total': 0.0,
+                'taken_hours_month': 0.0,
+                'taken_count': 0,
+                'taken_count_month': 0,
+                'credit_balance_hours': round(base_credit, 1)
+            }
+        return apt_map[a_key]
+
+    for tr in all_transfers:
+        st = tr.get('status')
+        f_apt = str(tr.get('from_apartment') or '').strip()
+        t_apt = str(tr.get('to_apartment') or '').strip()
+        is_target_month = str(tr.get('booking_date') or '').startswith(cur_month)
+
+        # דירה שנתנה חניה מקבלת קרדיט אך ורק אם החניה נתפסה ונוצלה בפועל (ACTIVE או RESTORED)!
+        if f_apt and st in ('ACTIVE', 'RESTORED'):
+            info_f = _ensure_apt(f_apt)
+            g_hrs = _calc_transfer_used_hours(tr)
+            earned_h = round(g_hrs * earn_ratio, 2)
+            info_f['given_hours_total'] = round(info_f['given_hours_total'] + g_hrs, 1)
+            info_f['earned_credit_hours_total'] = round(info_f['earned_credit_hours_total'] + earned_h, 1)
+            info_f['given_count'] += 1
+            if is_target_month:
+                info_f['given_hours_month'] = round(info_f['given_hours_month'] + g_hrs, 1)
+                info_f['earned_credit_hours_month'] = round(info_f['earned_credit_hours_month'] + earned_h, 1)
+                info_f['given_count_month'] += 1
+
+        # שעות שדירה לקחה (כולל הזמנות פעילות/משוריינות באותו חודש)
+        if t_apt and st in ('SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE', 'RESTORED'):
+            info_t = _ensure_apt(t_apt)
+            tk_hrs = _calc_transfer_window_hours(tr)
+            info_t['taken_hours_total'] = round(info_t['taken_hours_total'] + tk_hrs, 1)
+            info_t['taken_count'] += 1
+            if is_target_month:
+                info_t['taken_hours_month'] = round(info_t['taken_hours_month'] + tk_hrs, 1)
+                info_t['taken_count_month'] += 1
+
+    # הקרדיט הוא חודשי: בסיס חודשי (24 שעות) + שעות שנתנה ונוצלו החודש (לפי אחוז הזיכוי) - שעות שלקחה החודש
+    for a_key, info in apt_map.items():
+        bal = base_credit + (info['given_hours_month'] * earn_ratio) - info['taken_hours_month']
+        info['credit_balance_hours'] = round(max(0.0, bal), 1)
+        info['raw_credit_balance_hours'] = round(bal, 1)
+
+    return apt_map, base_credit, earn_pct, enforce_active
+
 @tenant_bp.route('/api/tenant-manager/init', methods=['GET'])
 def api_tenant_manager_init():
     mgr = _get_logged_in_tenant_manager()
@@ -2040,36 +2271,29 @@ def api_tenant_manager_init():
     run_scheduler_cycle()
     b_settings = TenantStore.get_building_settings(p_num, p_name)
     tenants = TenantStore.list_tenants(p_num)
-    shares = TenantStore.list_shares(p_num, active_only=True)
+    raw_shares = TenantStore.list_shares(p_num, active_only=True)
+    shares = [sh for sh in raw_shares if not _is_share_expired(sh)]
     active_transfers = TenantStore.list_transfers(
         project_number=p_num,
         statuses=['SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE']
     )
 
-    # חישוב שעות שכל דירה נתנה ושנוצלו בפועל (ACTIVE / RESTORED) להצגת כוכב ⭐ ליד כל דייר
-    used_transfers = TenantStore.list_transfers(
-        project_number=p_num,
-        statuses=['ACTIVE', 'RESTORED']
-    )
-    cur_month = get_il_now().strftime('%Y-%m')
-    apt_used_total = {}
-    apt_used_month = {}
-    apt_used_count = {}
-    for tr in used_transfers:
-        f_apt = str(tr.get('from_apartment') or '').strip()
-        if not f_apt:
-            continue
-        hrs = _calc_transfer_used_hours(tr)
-        apt_used_total[f_apt] = round(apt_used_total.get(f_apt, 0.0) + hrs, 1)
-        apt_used_count[f_apt] = apt_used_count.get(f_apt, 0) + 1
-        if str(tr.get('booking_date') or '').startswith(cur_month):
-            apt_used_month[f_apt] = round(apt_used_month.get(f_apt, 0.0) + hrs, 1)
+    apt_credit_map, base_credit, earn_pct, enforce_active = _compute_project_apartments_credit(p_num, b_settings)
 
     for t in tenants:
         apt_k = str(t.get('apartment_number') or '').strip()
-        t['given_used_hours_total'] = apt_used_total.get(apt_k, 0.0)
-        t['given_used_hours_month'] = apt_used_month.get(apt_k, 0.0)
-        t['given_used_count'] = apt_used_count.get(apt_k, 0)
+        c_info = apt_credit_map.get(apt_k) or {}
+        t['given_used_hours_total'] = c_info.get('given_hours_total', 0.0)
+        t['given_used_hours_month'] = c_info.get('given_hours_month', 0.0)
+        t['given_used_count'] = c_info.get('given_count', 0)
+        t['taken_hours_total'] = c_info.get('taken_hours_total', 0.0)
+        t['taken_hours_month'] = c_info.get('taken_hours_month', 0.0)
+        t['earned_credit_hours_total'] = c_info.get('earned_credit_hours_total', 0.0)
+        t['earned_credit_hours_month'] = c_info.get('earned_credit_hours_month', 0.0)
+        t['credit_balance_hours'] = c_info.get('credit_balance_hours', round(base_credit, 1))
+        t['base_credit_hours'] = round(base_credit, 1)
+        t['credit_earn_percent'] = round(earn_pct, 1)
+        t['credit_enforce_active'] = enforce_active
 
     return jsonify({
         'success': True,
@@ -2121,7 +2345,10 @@ def api_tenant_manager_save_settings():
         parking_address=data.get('parking_address'),
         standalone_mode=data.get('standalone_mode'),
         ios_app_url=data.get('ios_app_url'),
-        android_app_url=data.get('android_app_url')
+        android_app_url=data.get('android_app_url'),
+        base_credit_hours=data.get('base_credit_hours'),
+        credit_earn_percent=data.get('credit_earn_percent'),
+        credit_enforce_active=data.get('credit_enforce_active')
     )
     return jsonify({'success': True, 'message': 'הגדרות המתחם נשמרו בהצלחה', 'settings': saved})
 
@@ -2814,6 +3041,10 @@ def api_tenant_manager_monthly_report():
     p_num = str(mgr.get('project_number') or '')
     month = request.args.get('month') or get_il_now().strftime('%Y-%m')
 
+    b_settings = TenantStore.get_building_settings(p_num)
+    apt_credit_map, base_credit, earn_pct, enforce_active = _compute_project_apartments_credit(p_num, b_settings, target_month=month)
+    earn_ratio = max(0.0, earn_pct / 100.0)
+
     tenants = TenantStore.list_tenants(p_num)
     transfers = TenantStore.list_transfers(project_number=p_num, month_prefix=month)
 
@@ -2826,9 +3057,11 @@ def api_tenant_manager_monthly_report():
                 'tenant_names': [],
                 'given_count': 0,
                 'given_hours': 0.0,
+                'earned_credit_hours': 0.0,
                 'taken_count': 0,
                 'taken_hours': 0.0,
                 'net_balance': 0,
+                'credit_balance_hours': (apt_credit_map.get(apt) or {}).get('credit_balance_hours', round(base_credit, 1)),
                 'late_exits': 0
             }
         if t['full_name'] not in apt_stats[apt]['tenant_names']:
@@ -2852,14 +3085,17 @@ def api_tenant_manager_monthly_report():
                     'tenant_names': [f'דירה {apt_key}'],
                     'given_count': 0,
                     'given_hours': 0.0,
+                    'earned_credit_hours': 0.0,
                     'taken_count': 0,
                     'taken_hours': 0.0,
                     'net_balance': 0,
+                    'credit_balance_hours': (apt_credit_map.get(apt_key) or {}).get('credit_balance_hours', round(base_credit, 1)),
                     'late_exits': 0
                 }
 
         apt_stats[from_apt]['given_count'] += 1
         apt_stats[from_apt]['given_hours'] = round(apt_stats[from_apt]['given_hours'] + hours, 1)
+        apt_stats[from_apt]['earned_credit_hours'] = round(apt_stats[from_apt]['given_hours'] * earn_ratio, 1)
 
         apt_stats[to_apt]['taken_count'] += 1
         apt_stats[to_apt]['taken_hours'] = round(apt_stats[to_apt]['taken_hours'] + hours, 1)
@@ -2874,7 +3110,7 @@ def api_tenant_manager_monthly_report():
     for apt, st_obj in apt_stats.items():
         st_obj['tenant_name'] = ', '.join(st_obj['tenant_names']) if st_obj['tenant_names'] else f'דירה {apt}'
         st_obj['net_balance'] = st_obj['given_count'] - st_obj['taken_count']
-        st_obj['net_hours'] = round(st_obj['given_hours'] - st_obj['taken_hours'], 1)
+        st_obj['net_hours'] = round(st_obj['earned_credit_hours'] - st_obj['taken_hours'], 1)
         summary_list.append(st_obj)
 
     summary_list.sort(key=lambda x: (int(x['apartment_number']) if str(x['apartment_number']).isdigit() else 999999, x['apartment_number']))
@@ -2882,6 +3118,8 @@ def api_tenant_manager_monthly_report():
     return jsonify({
         'success': True,
         'month': month,
+        'base_credit_hours': round(base_credit, 1),
+        'credit_earn_percent': round(earn_pct, 1),
         'summary': summary_list,
         'transfers': transfers
     })
@@ -3023,9 +3261,17 @@ def _build_demo_viewer_dashboard_payload(tenant):
             'used_today': 1,
             'max_per_month': 30,
             'used_this_month': 4,
-            'given_used_hours_month': 12.5,
-            'given_used_hours_total': 36.0,
-            'given_used_count': 6
+            'base_credit_hours': 24.0,
+            'credit_earn_percent': 100.0,
+            'credit_enforce_active': True,
+            'credit_balance_hours': 30.0,
+            'earned_credit_hours_total': 12.0,
+            'earned_credit_hours_month': 12.0,
+            'taken_hours_total': 6.0,
+            'taken_hours_month': 6.0,
+            'given_used_hours_month': 12.0,
+            'given_used_hours_total': 12.0,
+            'given_used_count': 2
         },
         'pooling': {
             'success': True,
@@ -3388,8 +3634,10 @@ def _get_current_tenant():
     return None
 
 def _compute_available_slots_for_tenant(project_number, my_apt, days_ahead=7):
-    """מחשב את כל החניות הפנויות בפול הכללי או ששוחררו ספציפית עבור הדירה שלי ב-7 הימים הקרובים."""
-    shares = TenantStore.list_shares(project_number, active_only=True)
+    """מחשב את כל החניות הפנויות בפול הכללי או ששוחררו ספציפית עבור הדירה שלי ב-7 הימים הקרובים (מסנן חניות שפג תוקפן)."""
+    raw_shares = TenantStore.list_shares(project_number, active_only=True)
+    now = get_il_now()
+    shares = [sh for sh in raw_shares if not _is_share_expired(sh, now)]
     existing_transfers = TenantStore.list_transfers(
         project_number=project_number,
         statuses=['SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE']
@@ -3401,7 +3649,6 @@ def _compute_available_slots_for_tenant(project_number, my_apt, days_ahead=7):
         key = (int(tr['share_id']), str(tr['booking_date']))
         taken_map.setdefault(key, []).append(tr)
 
-    now = get_il_now()
     today = now.date()
     available_slots = []
 
@@ -3428,17 +3675,23 @@ def _compute_available_slots_for_tenant(project_number, my_apt, days_ahead=7):
                 days_list = [x.strip() for x in str(sh.get('days_of_week') or '').split(',') if x.strip() != '']
                 if str(il_weekday) not in days_list:
                     continue
+                if sh.get('end_date') and str(sh.get('end_date')).strip() < d_str:
+                    continue
 
             try:
-                end_dt = datetime.datetime.strptime(f"{d_str} {sh['end_time']}", "%Y-%m-%d %H:%M")
+                start_dt, end_dt, end_d_str = _resolve_share_window_for_date(sh, d_str)
+                # חניה שפג תוקפה (זמן הסיום עבר) לא תופיע ברשימה!
                 if end_dt <= now:
                     continue
+                win_hours = round(max(0.0, (end_dt - start_dt).total_seconds() / 3600.0), 1)
             except Exception:
                 continue
 
             total_offered = int(sh.get('spots_offered') or 1)
             taken_list = taken_map.get((int(sh['id']), d_str), [])
             spots_remaining = max(0, total_offered - len(taken_list))
+            if spots_remaining <= 0:
+                continue
 
             available_slots.append({
                 'share_id': sh['id'],
@@ -3450,8 +3703,10 @@ def _compute_available_slots_for_tenant(project_number, my_apt, days_ahead=7):
                 'is_for_me_specifically': (target_type == 'APT' and target_apt == str(my_apt)),
                 'is_mine': (owner_apt == str(my_apt)),
                 'booking_date': d_str,
+                'end_date': end_d_str,
                 'start_time': sh['start_time'],
                 'end_time': sh['end_time'],
+                'duration_hours': win_hours,
                 'spots_offered': total_offered,
                 'spots_remaining': spots_remaining
             })
@@ -3485,33 +3740,48 @@ def api_tenant_dashboard():
         pooling_info = fut_pool.result()
         subs_info = fut_subs.result()
 
-    # חישוב ניצול מכסה יומית וחודשית של הדירה שלי
+    # חישוב ניצול מכסה יומית וחודשית ומאזן קרדיט השעות של הדירה שלי
     now = get_il_now()
     today_str = now.strftime('%Y-%m-%d')
     month_str = now.strftime('%Y-%m')
 
-    month_transfers = TenantStore.list_transfers(project_number=p_num, month_prefix=month_str)
+    all_project_transfers = TenantStore.list_transfers(
+        project_number=p_num,
+        statuses=['SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE', 'RESTORED']
+    )
+    apt_credit_map, base_credit, earn_pct, enforce_active = _compute_project_apartments_credit(p_num, b_settings, all_project_transfers, target_month=month_str)
+    my_credit_info = apt_credit_map.get(my_apt) or {
+        'base_credit_hours': round(base_credit, 1),
+        'credit_earn_percent': round(earn_pct, 1),
+        'credit_enforce_active': enforce_active,
+        'given_hours_total': 0.0,
+        'given_hours_month': 0.0,
+        'given_count': 0,
+        'given_count_month': 0,
+        'earned_credit_hours_total': 0.0,
+        'earned_credit_hours_month': 0.0,
+        'taken_hours_total': 0.0,
+        'taken_hours_month': 0.0,
+        'taken_count': 0,
+        'taken_count_month': 0,
+        'credit_balance_hours': round(base_credit, 1)
+    }
+
     my_Bookings_month = [
-        tr for tr in month_transfers
-        if str(tr.get('to_apartment')) == my_apt and tr.get('status') in ('SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE', 'RESTORED')
+        tr for tr in all_project_transfers
+        if str(tr.get('to_apartment')) == my_apt and str(tr.get('booking_date') or '').startswith(month_str)
     ]
     my_bookings_today = [tr for tr in my_Bookings_month if str(tr.get('booking_date')) == today_str]
 
-    # חישוב שעות חניה שהדייר נתן ושנוצלו בפועל על ידי שכנים (ACTIVE / RESTORED)
-    all_used_transfers = TenantStore.list_transfers(project_number=p_num, statuses=['ACTIVE', 'RESTORED'])
-    my_given_used_all = [tr for tr in all_used_transfers if str(tr.get('from_apartment')) == my_apt]
-    my_given_used_month = [tr for tr in my_given_used_all if str(tr.get('booking_date') or '').startswith(month_str)]
-    given_used_hours_total = round(sum(_calc_transfer_used_hours(tr) for tr in my_given_used_all), 1)
-    given_used_hours_month = round(sum(_calc_transfer_used_hours(tr) for tr in my_given_used_month), 1)
-
     all_shares = TenantStore.list_shares(p_num, active_only=True)
-    my_shares = [sh for sh in all_shares if str(sh.get('owner_apartment')) == my_apt]
+    my_shares = [sh for sh in all_shares if str(sh.get('owner_apartment')) == my_apt and not _is_share_expired(sh, now)]
 
     available_slots = _compute_available_slots_for_tenant(p_num, my_apt, days_ahead=7)
 
     active_bookings = [
-        tr for tr in TenantStore.list_transfers(project_number=p_num, statuses=['SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE'])
-        if str(tr.get('to_apartment')) == my_apt or str(tr.get('from_apartment')) == my_apt
+        tr for tr in all_project_transfers
+        if tr.get('status') in ('SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE')
+        and (str(tr.get('to_apartment')) == my_apt or str(tr.get('from_apartment')) == my_apt)
     ]
 
     subs_list = subs_info.get('subscribers', [])
@@ -3548,9 +3818,17 @@ def api_tenant_dashboard():
             'used_today': len(my_bookings_today),
             'max_per_month': int(b_settings.get('max_bookings_per_month') or 30),
             'used_this_month': len(my_Bookings_month),
-            'given_used_hours_month': given_used_hours_month,
-            'given_used_hours_total': given_used_hours_total,
-            'given_used_count': len(my_given_used_all)
+            'base_credit_hours': my_credit_info['base_credit_hours'],
+            'credit_earn_percent': my_credit_info['credit_earn_percent'],
+            'credit_enforce_active': my_credit_info['credit_enforce_active'],
+            'credit_balance_hours': my_credit_info['credit_balance_hours'],
+            'earned_credit_hours_total': my_credit_info['earned_credit_hours_total'],
+            'earned_credit_hours_month': my_credit_info['earned_credit_hours_month'],
+            'taken_hours_total': my_credit_info['taken_hours_total'],
+            'taken_hours_month': my_credit_info['taken_hours_month'],
+            'given_used_hours_month': my_credit_info['given_hours_month'],
+            'given_used_hours_total': my_credit_info['given_hours_total'],
+            'given_used_count': my_credit_info['given_count']
         },
         'pooling': pooling_info,
         'subscribers': subs_list,
@@ -3622,7 +3900,8 @@ def api_tenant_share_spot():
     target_apartment = str(data.get('target_apartment') or '').strip()
     schedule_type = data.get('schedule_type', 'WEEKLY')
     days_of_week = data.get('days_of_week', '')
-    specific_date = data.get('specific_date', '')
+    specific_date = str(data.get('specific_date') or '').strip()
+    end_date = str(data.get('end_date') or '').strip()
 
     raw_t_base = tenant.get('base_max_counter')
     max_allowed_spots = 1 if raw_t_base is None else int(raw_t_base)
@@ -3634,8 +3913,8 @@ def api_tenant_share_spot():
     if spots_offered < 1 or spots_offered > max_allowed_spots:
         return jsonify({'success': False, 'message': f'כמות החניות לשחרור חייבת להיות בין 1 ל-{max_allowed_spots} (כמות החניות של דירתך)'})
 
-    if not start_time or not end_time or start_time >= end_time:
-        return jsonify({'success': False, 'message': 'נא לבחור שעת התחלה ושעת סיום תקינות (שעת סיום אחרי שעת התחלה)'})
+    if not start_time or not end_time:
+        return jsonify({'success': False, 'message': 'נא לבחור שעת התחלה ושעת סיום תקינות'})
 
     if share_target_type == 'APT' and not target_apartment:
         return jsonify({'success': False, 'message': 'נא להזין את מספר הדירה שעבורה משחררים את החניה'})
@@ -3643,8 +3922,25 @@ def api_tenant_share_spot():
     if schedule_type == 'WEEKLY' and not str(days_of_week).strip():
         return jsonify({'success': False, 'message': 'נא לבחור לפחות יום אחד בשבוע'})
 
-    if schedule_type == 'ONCE' and not str(specific_date).strip():
-        return jsonify({'success': False, 'message': 'נא לבחור תאריך לשחרור החניה'})
+    if schedule_type == 'ONCE':
+        if not specific_date:
+            return jsonify({'success': False, 'message': 'נא לבחור תאריך לשחרור החניה'})
+        try:
+            s_dt = datetime.datetime.strptime(specific_date, '%Y-%m-%d').date()
+            if end_date:
+                e_dt = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
+                if e_dt < s_dt:
+                    return jsonify({'success': False, 'message': 'תאריך הסיום אינו יכול להיות לפני תאריך ההתחלה'})
+            # אם שעת הסיום קטנה או שווה לשעת ההתחלה (למשל משעה 22:00 עד 07:00) ולא נבחר תאריך סיום מאוחר יותר -> קבע אוטומטית ליום למחרת!
+            if end_time <= start_time and (not end_date or end_date <= specific_date):
+                end_date = (s_dt + timedelta(days=1)).strftime('%Y-%m-%d')
+            elif not end_date:
+                end_date = specific_date
+            w_end_chk = datetime.datetime.strptime(f"{end_date} {end_time}", "%Y-%m-%d %H:%M")
+            if w_end_chk <= get_il_now():
+                return jsonify({'success': False, 'message': 'מועד סיום שחרור החניה כבר עבר — נא לבחור תאריך או שעת סיום עתידיים'})
+        except Exception:
+            return jsonify({'success': False, 'message': 'תאריך או שעה אינם תקינים'})
 
     # אם הדייר לא הזין ידנית מספר חניה, משוך אוטומטית משדה קוד התאמה (matchCode) של מנויי הדירה
     if not parking_spot_number:
@@ -3674,7 +3970,7 @@ def api_tenant_share_spot():
                 and str(ex_sh.get('target_apartment') or '') == (str(target_apartment) if share_target_type == 'APT' else '')
                 and str(ex_sh.get('parking_spot_number') or '').strip() == str(parking_spot_number).strip()
             ):
-                if schedule_type == 'ONCE' and str(ex_sh.get('specific_date') or '') == str(specific_date):
+                if schedule_type == 'ONCE' and str(ex_sh.get('specific_date') or '') == str(specific_date) and str(ex_sh.get('end_date') or specific_date) == str(end_date or specific_date):
                     spot_confirm = f" (חניה: {parking_spot_number})" if parking_spot_number else ""
                     return jsonify({'success': True, 'deduplicated': True, 'message': f'הגדרת שחרור החניה{spot_confirm} נשמרה בהצלחה!', 'share': ex_sh})
                 if schedule_type == 'WEEKLY' and str(ex_sh.get('days_of_week') or '') == str(days_of_week):
@@ -3693,6 +3989,7 @@ def api_tenant_share_spot():
             'schedule_type': schedule_type,
             'days_of_week': days_of_week,
             'specific_date': specific_date,
+            'end_date': end_date,
             'start_time': start_time,
             'end_time': end_time
         })
@@ -3701,13 +3998,22 @@ def api_tenant_share_spot():
     if share_target_type == 'APT' and target_apartment:
         all_tenants = TenantStore.list_tenants(tenant['project_number'])
         spot_txt = f" (חניה מס׳: *{parking_spot_number}*)" if parking_spot_number else ""
+        date_span_txt = ""
+        if schedule_type == 'ONCE':
+            if end_date and end_date != specific_date:
+                date_span_txt = f" מתאריך *{specific_date}* בשעה *{start_time}* עד תאריך *{end_date}* בשעה *{end_time}*"
+            else:
+                date_span_txt = f" בתאריך *{specific_date}* בין השעות *{start_time}* עד *{end_time}*"
+        else:
+            next_day_note = " (למחרת)" if end_time <= start_time else ""
+            date_span_txt = f" בין השעות *{start_time}* עד *{end_time}*{next_day_note}"
         for t in all_tenants:
             if str(t.get('apartment_number')) == target_apartment and t.get('phone_number'):
                 host_url = request.host_url.rstrip('/')
                 msg = (
                     f"שלום {t.get('full_name')} (דירה {target_apartment})! 🎁\n"
-                    f"דירה {tenant['apartment_number']} ({owner_disp_name}) שחררה עבורך {spots_offered} חניה/ות{spot_txt} "
-                    f"בין השעות *{start_time}* עד *{end_time}*.\n"
+                    f"דירה {tenant['apartment_number']} ({owner_disp_name}) שחררה עבורך {spots_offered} חניה/ות{spot_txt}"
+                    f"{date_span_txt}.\n"
                     f"לצפייה ותפיסת החניה היכנס לפורטל הדיירים:\n{host_url}/tenant-portal"
                 )
                 send_whatsapp_message(t['phone_number'], msg)
@@ -3728,15 +4034,29 @@ def api_tenant_request_spot():
     data = request.get_json() or {}
     schedule_type = (data.get('schedule_type') or 'ONCE').strip().upper()
     specific_date = str(data.get('specific_date') or '').strip()
+    end_date = str(data.get('end_date') or '').strip()
     days_of_week = str(data.get('days_of_week') or '').strip()
     start_time = (data.get('start_time') or '').strip()
     end_time = (data.get('end_time') or '').strip()
 
-    if not start_time or not end_time or start_time >= end_time:
-        return jsonify({'success': False, 'message': 'נא לבחור שעת התחלה ושעת סיום תקינות (שעת סיום אחרי שעת התחלה)'})
+    if not start_time or not end_time:
+        return jsonify({'success': False, 'message': 'נא לבחור שעת התחלה ושעת סיום תקינות'})
 
-    if schedule_type == 'ONCE' and not specific_date:
-        return jsonify({'success': False, 'message': 'נא לבחור תאריך לבקשת החניה'})
+    if schedule_type == 'ONCE':
+        if not specific_date:
+            return jsonify({'success': False, 'message': 'נא לבחור תאריך לבקשת החניה'})
+        try:
+            s_dt = datetime.datetime.strptime(specific_date, '%Y-%m-%d').date()
+            if end_date:
+                e_dt = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
+                if e_dt < s_dt:
+                    return jsonify({'success': False, 'message': 'תאריך הסיום אינו יכול להיות לפני תאריך ההתחלה'})
+            if end_time <= start_time and (not end_date or end_date <= specific_date):
+                end_date = (s_dt + timedelta(days=1)).strftime('%Y-%m-%d')
+            elif not end_date:
+                end_date = specific_date
+        except Exception:
+            return jsonify({'success': False, 'message': 'תאריך לא תקין'})
 
     if schedule_type == 'WEEKLY' and not days_of_week:
         return jsonify({'success': False, 'message': 'נא לבחור לפחות יום אחד בשבוע'})
@@ -3754,14 +4074,21 @@ def api_tenant_request_spot():
 
     day_names_he = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
     if schedule_type == 'ONCE':
-        sched_text = f"בתאריך *{specific_date}*"
+        if end_date and end_date != specific_date:
+            sched_text = f"מתאריך *{specific_date}* עד תאריך *{end_date}*"
+        else:
+            sched_text = f"בתאריך *{specific_date}*"
     else:
         d_idxs = [int(x) for x in days_of_week.split(',') if x.strip().isdigit() and 0 <= int(x) <= 6]
         d_labels = ', '.join(f"יום {day_names_he[i]}" for i in d_idxs)
         sched_text = f"בימים קבועים: *{d_labels}*"
 
-    if start_time == '00:00' and end_time == '23:59':
+    if start_time == '00:00' and end_time == '23:59' and (schedule_type != 'ONCE' or end_date == specific_date):
         hours_text = "*יום מלא (00:00 עד 23:59)*"
+    elif schedule_type == 'ONCE' and end_date and end_date != specific_date:
+        hours_text = f"*{start_time}* ({specific_date}) עד *{end_time}* ({end_date})"
+    elif end_time <= start_time:
+        hours_text = f"*{start_time} עד {end_time} (למחרת)*"
     else:
         hours_text = f"*{start_time} עד {end_time}*"
 
@@ -3773,6 +4100,7 @@ def api_tenant_request_spot():
         'req_name': req_disp_name,
         'sched': schedule_type,
         'date': specific_date if schedule_type == 'ONCE' else '',
+        'end_date': end_date if schedule_type == 'ONCE' else '',
         'days': days_of_week if schedule_type == 'WEEKLY' else '',
         'start': start_time,
         'end': end_time
@@ -3842,27 +4170,46 @@ def api_tenant_claim_spot():
         if share.get('share_target_type') == 'APT' and str(share.get('target_apartment')) != my_apt:
             return jsonify({'success': False, 'message': 'חניה זו שוחררה עבור דירה אחרת בלבד'})
 
-        # 1. בדיקת מכסה יומית וחודשית של המתחם
+        # 1. בדיקת מכסה יומית וקרדיט שעות של הדירה במתחם
         b_settings = TenantStore.get_building_settings(p_num)
         max_day = int(b_settings.get('max_bookings_per_day') or 5)
-        max_month = int(b_settings.get('max_bookings_per_month') or 30)
 
-        month_prefix = booking_date[:7]
-        month_transfers = TenantStore.list_transfers(project_number=p_num, month_prefix=month_prefix)
-        my_month_active = [
-            tr for tr in month_transfers
-            if str(tr.get('to_apartment')) == my_apt and tr.get('status') in ('SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE', 'RESTORED')
+        w_start_dt, w_end_dt, resolved_end_date = _resolve_share_window_for_date(share, booking_date)
+        now = get_il_now()
+
+        if w_end_dt <= now:
+            return jsonify({'success': False, 'message': 'חלון הזמן של חניה זו כבר הסתיים (פג תוקף)'})
+
+        requested_hours = round(max(0.1, (w_end_dt - w_start_dt).total_seconds() / 3600.0), 1)
+
+        all_project_transfers = TenantStore.list_transfers(
+            project_number=p_num,
+            statuses=['SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE', 'RESTORED']
+        )
+        booking_month_str = booking_date[:7] if len(booking_date) >= 7 else now.strftime('%Y-%m')
+        apt_credit_map, base_credit, earn_pct, enforce_active = _compute_project_apartments_credit(p_num, b_settings, all_project_transfers, target_month=booking_month_str)
+        my_credit_info = apt_credit_map.get(my_apt)
+        avail_credit_hours = my_credit_info['credit_balance_hours'] if my_credit_info else round(base_credit, 1)
+
+        my_day_active = [
+            tr for tr in all_project_transfers
+            if str(tr.get('to_apartment')) == my_apt and str(tr.get('booking_date')) == booking_date
+            and tr.get('status') in ('SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE', 'RESTORED')
         ]
-        my_day_active = [tr for tr in my_month_active if str(tr.get('booking_date')) == booking_date]
 
         if len(my_day_active) >= max_day:
             return jsonify({'success': False, 'message': f'הגעת למגבלת החניות המותרת ליום אחד במתחם ({max_day} חניות ביום)'})
-        if len(my_month_active) >= max_month:
-            return jsonify({'success': False, 'message': f'הגעת למגבלת החניות המותרת לחודש במתחם ({max_month} חניות בחודש)'})
+
+        # אכיפת קרדיט שעות חודשי רק אם המנהל הגדיר "קרדיטים פעילים" (credit_enforce_active == True)
+        if enforce_active and avail_credit_hours < requested_hours:
+            return jsonify({
+                'success': False,
+                'message': f'אין לדירתך מספיק קרדיט שעות חודשי להזמנה זו (נדרשות {requested_hours} שעות, יתרת הקרדיט החודשי שלך: {avail_credit_hours} שעות). שחרר חניה שתיקח דירה אחרת כדי להגדיל את קרדיט השעות של דירתך!'
+            })
 
         # 2. בדיקה שהסלוט עדיין פנוי ולא נתפס ע"י דייר אחר!
         existing_for_share = [
-            tr for tr in month_transfers
+            tr for tr in all_project_transfers
             if int(tr.get('share_id')) == share_id and str(tr.get('booking_date')) == booking_date
             and tr.get('status') in ('SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE')
         ]
@@ -3874,13 +4221,6 @@ def api_tenant_claim_spot():
         slot_index = 1
         while slot_index in used_slots:
             slot_index += 1
-
-        w_start_dt = datetime.datetime.strptime(f"{booking_date} {share['start_time']}", "%Y-%m-%d %H:%M")
-        w_end_dt = datetime.datetime.strptime(f"{booking_date} {share['end_time']}", "%Y-%m-%d %H:%M")
-        now = get_il_now()
-
-        if w_end_dt <= now:
-            return jsonify({'success': False, 'message': 'חלון הזמן של חניה זו כבר הסתיים'})
 
         raw_share_spots = str(share.get('parking_spot_number') or '').strip()
         assigned_spot_no = raw_share_spots
@@ -3900,6 +4240,7 @@ def api_tenant_claim_spot():
             'borrower_name': tenant['full_name'],
             'borrower_phone': tenant['phone_number'],
             'booking_date': booking_date,
+            'end_date': resolved_end_date,
             'start_time': share['start_time'],
             'end_time': share['end_time'],
             'window_start': w_start_dt.isoformat(),
@@ -3908,6 +4249,7 @@ def api_tenant_claim_spot():
         })
 
     spot_msg_part = f" (חניה מס׳: {assigned_spot_no})" if assigned_spot_no else ""
+    end_d_note = f" ({resolved_end_date})" if resolved_end_date != booking_date else ""
 
     # אם חלון הזמן כבר פעיל כעת - נסה להעביר את המונה מיד!
     if w_start_dt <= now < w_end_dt:
@@ -3915,17 +4257,17 @@ def api_tenant_claim_spot():
         if act_res.get('activated'):
             return jsonify({
                 'success': True,
-                'message': f'החניה מדירה {from_apt}{spot_msg_part} הופעלה עבורך מיד! מכסת החניות של דירתך עלתה ב-1 עד {share["end_time"]}.'
+                'message': f'החניה מדירה {from_apt}{spot_msg_part} הופעלה עבורך מיד! מכסת החניות של דירתך עלתה ב-1 עד {share["end_time"]}{end_d_note}.'
             })
         elif act_res.get('status') == 'WAITING_FOR_EXIT':
             return jsonify({
                 'success': True,
-                'message': f'החניה מדירה {from_apt}{spot_msg_part} שוריינה עבורך! הרכב של דירה {from_apt} עדיין בחניון – ברגע שייצא, המכסה תועבר אליך ותקבל הודעת וואטסאפ.'
+                'message': f'החניה מדירה {from_apt}{spot_msg_part} שוריינה עבורך! הרכב של דירה {from_apt} עדיין בחניון (אין מכסה פנויה כעת) – נשלחה התראה, וברגע שהרכב ייצא המכסה תועבר אליך אוטומטית ותקבל הודעת וואטסאפ.'
             })
 
     return jsonify({
         'success': True,
-        'message': f'החניה מדירה {from_apt}{spot_msg_part} שוריינה עבורך לתאריך {booking_date} בין {share["start_time"]} ל-{share["end_time"]}! תקבל הודעת וואטסאפ ברגע שהחניה תיכנס לתוקף.'
+        'message': f'החניה מדירה {from_apt}{spot_msg_part} שוריינה עבורך לתאריך {booking_date} בין {share["start_time"]} ל-{share["end_time"]}{end_d_note}! תקבל הודעת וואטסאפ ברגע שהחניה תיכנס לתוקף.'
     })
 
 @tenant_bp.route('/api/tenant/release-booking/<int:transfer_id>', methods=['POST'])
