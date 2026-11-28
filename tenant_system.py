@@ -2031,6 +2031,18 @@ def run_scheduler_cycle(min_interval_sec=0):
                         )
                         send_whatsapp_message(borrower_phone, msg)
                     TenantStore.update_transfer(tr['id'], {'notified_ending_soon': True})
+        # שלב ב': כיבוי אוטומטי ב-DB של שחרורי חניות (tenant_spot_shares) שפג תוקפם (גם אם לא נוצלו ע"י אף דייר)
+        try:
+            with _db_lock:
+                conn = sqlite3.connect(SQLITE_PATH)
+                conn.row_factory = sqlite3.Row
+                active_sh_rows = [dict(r) for r in conn.execute("SELECT * FROM tenant_spot_shares WHERE is_active = 1").fetchall()]
+                conn.close()
+            for sh in active_sh_rows:
+                if _is_share_expired(sh, now):
+                    TenantStore.deactivate_share(sh['id'], sh['project_number'])
+        except Exception:
+            pass
     except Exception as e:
         print(f"[TenantScheduler] Error in cycle: {e}")
 
@@ -2272,11 +2284,30 @@ def api_tenant_manager_init():
     b_settings = TenantStore.get_building_settings(p_num, p_name)
     tenants = TenantStore.list_tenants(p_num)
     raw_shares = TenantStore.list_shares(p_num, active_only=True)
-    shares = [sh for sh in raw_shares if not _is_share_expired(sh)]
-    active_transfers = TenantStore.list_transfers(
+    now = get_il_now()
+    shares = []
+    for sh in raw_shares:
+        if _is_share_expired(sh, now):
+            try:
+                TenantStore.deactivate_share(sh['id'], p_num)
+            except Exception:
+                pass
+        else:
+            shares.append(sh)
+    raw_active_transfers = TenantStore.list_transfers(
         project_number=p_num,
         statuses=['SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE']
     )
+    active_transfers = []
+    for tr in raw_active_transfers:
+        try:
+            we = datetime.datetime.fromisoformat(str(tr.get('window_end') or '').replace('Z', ''))
+            if we <= now:
+                restore_active_transfer(tr, early_cancel=False)
+                continue
+        except Exception:
+            pass
+        active_transfers.append(tr)
 
     apt_credit_map, base_credit, earn_pct, enforce_active = _compute_project_apartments_credit(p_num, b_settings)
 
@@ -3774,15 +3805,33 @@ def api_tenant_dashboard():
     my_bookings_today = [tr for tr in my_Bookings_month if str(tr.get('booking_date')) == today_str]
 
     all_shares = TenantStore.list_shares(p_num, active_only=True)
-    my_shares = [sh for sh in all_shares if str(sh.get('owner_apartment')) == my_apt and not _is_share_expired(sh, now)]
+    my_shares = []
+    for sh in all_shares:
+        if _is_share_expired(sh, now):
+            try:
+                TenantStore.deactivate_share(sh['id'], p_num)
+            except Exception:
+                pass
+            continue
+        if str(sh.get('owner_apartment')) == my_apt:
+            my_shares.append(sh)
 
     available_slots = _compute_available_slots_for_tenant(p_num, my_apt, days_ahead=7)
 
-    active_bookings = [
-        tr for tr in all_project_transfers
-        if tr.get('status') in ('SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE')
-        and (str(tr.get('to_apartment')) == my_apt or str(tr.get('from_apartment')) == my_apt)
-    ]
+    active_bookings = []
+    for tr in all_project_transfers:
+        if tr.get('status') not in ('SCHEDULED', 'WAITING_FOR_EXIT', 'ACTIVE'):
+            continue
+        if str(tr.get('to_apartment')) != my_apt and str(tr.get('from_apartment')) != my_apt:
+            continue
+        try:
+            we = datetime.datetime.fromisoformat(str(tr.get('window_end') or '').replace('Z', ''))
+            if we <= now:
+                restore_active_transfer(tr, early_cancel=False)
+                continue
+        except Exception:
+            pass
+        active_bookings.append(tr)
 
     subs_list = subs_info.get('subscribers', [])
     if subs_info.get('success') and pooling_info.get('success') and not is_standalone_building(p_num):
