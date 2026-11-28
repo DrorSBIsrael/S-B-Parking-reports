@@ -455,7 +455,7 @@
                             <tr>
                                 <th class="sortable-th" id="th_sort_apt" onclick="sortTenantsBy('apartment_number')">מספר דירה <span class="sort-indicator" id="sort_ind_apartment_number">▲</span></th>
                                 <th class="sortable-th" id="th_sort_name" onclick="sortTenantsBy('full_name')">שם הדייר <span class="sort-indicator" id="sort_ind_full_name">⇅</span></th>
-                                <th class="sortable-th" id="th_sort_hours" onclick="sortTenantsBy('given_used_hours_total')">שעות שתרם <span class="sort-indicator" id="sort_ind_given_used_hours_total">⇅</span></th>
+                                <th class="sortable-th" id="th_sort_hours" onclick="sortTenantsBy('credit_balance_hours')">יתרת קרדיט שעות (נתן / לקח) <span class="sort-indicator" id="sort_ind_credit_balance_hours">⇅</span></th>
                                 <th class="sortable-th" id="th_sort_phone" onclick="sortTenantsBy('phone_number')">טלפון נייד (וואטסאפ) <span class="sort-indicator" id="sort_ind_phone_number">⇅</span></th>
                                 <th class="sortable-th" id="th_sort_quota" onclick="sortTenantsBy('base_max_counter')">חניות מוגדרות לדירה <span class="sort-indicator" id="sort_ind_base_max_counter">⇅</span></th>
                                 <th class="sortable-th" id="th_sort_present" onclick="sortTenantsBy('present_now')">בפנים כעת <span class="sort-indicator" id="sort_ind_present_now">⇅</span></th>
@@ -638,7 +638,22 @@
                             <input type="number" id="setMaxDay" min="1" max="50" value="5" required>
                         </div>
                         <div class="form-group">
-                            <label>מקסימום חניות שדירה יכולה לקחת בחודש</label>
+                            <label>קרדיט שעות חודשי התחלתי לכל דירה (שעות בחודש)</label>
+                            <input type="number" step="0.5" id="setBaseCreditHours" min="0" max="1000" value="24" required>
+                        </div>
+                        <div class="form-group">
+                            <label>יחס זיכוי שעות שדירה נתנה ונוצלו באחוזים (100% = שווה, 50% = חצי)</label>
+                            <input type="number" step="5" id="setCreditEarnPercent" min="0" max="500" value="100" required>
+                        </div>
+                        <div class="form-group">
+                            <label>מצב מנגנון קרדיט שעות במתחם</label>
+                            <input type="hidden" id="setCreditEnforceActive" value="1">
+                            <button type="button" id="creditModeToggleBtn" onclick="toggleCreditEnforceMode()" class="btn btn-success" style="width: 100%; padding: 11px 12px; font-size: 14px; font-weight: 800; border-radius: 8px;">
+                                ✅ קרדיטים פעילים (אכיפת יתרת שעות)
+                            </button>
+                        </div>
+                        <div class="form-group">
+                            <label>מקסימום הזמנות בחודש לדירה (בקרה כללית)</label>
                             <input type="number" id="setMaxMonth" min="1" max="500" value="30" required>
                         </div>
                         <div class="form-group">
@@ -916,6 +931,12 @@
                 document.getElementById('setParkingName').value = data.settings.parking_name || data.manager.parking_name || '';
                 document.getElementById('setMaxDay').value = data.settings.max_bookings_per_day ?? 5;
                 document.getElementById('setMaxMonth').value = data.settings.max_bookings_per_month ?? 30;
+                const baseCredEl = document.getElementById('setBaseCreditHours');
+                if (baseCredEl) baseCredEl.value = data.settings.base_credit_hours ?? 24;
+                const earnPctEl = document.getElementById('setCreditEarnPercent');
+                if (earnPctEl) earnPctEl.value = data.settings.credit_earn_percent ?? 100;
+                const isCreditActive = (data.settings.credit_enforce_active === undefined || data.settings.credit_enforce_active === null) ? true : Boolean(Number(data.settings.credit_enforce_active));
+                applyCreditEnforceToggleUI(isCreditActive);
                 document.getElementById('setCheckInterval').value = data.settings.check_interval_minutes ?? 30;
                 document.getElementById('setReminderMins').value = data.settings.reminder_minutes_before ?? 30;
                 document.getElementById('setParkingAddress').value = data.settings.parking_address || '';
@@ -1014,7 +1035,7 @@
                 tenantSortField = field;
                 tenantSortAsc = true;
             }
-            const cols = ['apartment_number', 'full_name', 'given_used_hours_total', 'phone_number', 'base_max_counter', 'present_now', 'created_at'];
+            const cols = ['apartment_number', 'full_name', 'credit_balance_hours', 'phone_number', 'base_max_counter', 'present_now', 'created_at'];
             cols.forEach(c => {
                 const ind = document.getElementById(`sort_ind_${c}`);
                 if (ind) {
@@ -1055,9 +1076,9 @@
                     vA = (lA && lA.present !== undefined) ? Number(lA.present) : -1;
                     vB = (lB && lB.present !== undefined) ? Number(lB.present) : -1;
                     return tenantSortAsc ? (vA - vB) : (vB - vA);
-                } else if (tenantSortField === 'given_used_hours_total') {
-                    vA = Number(a.given_used_hours_total || 0);
-                    vB = Number(b.given_used_hours_total || 0);
+                } else if (tenantSortField === 'credit_balance_hours' || tenantSortField === 'given_used_hours_total') {
+                    vA = Number(a.credit_balance_hours ?? 24);
+                    vB = Number(b.credit_balance_hours ?? 24);
                     return tenantSortAsc ? (vA - vB) : (vB - vA);
                 } else {
                     vA = String(a[tenantSortField] || '').toLowerCase();
@@ -1080,9 +1101,13 @@
                 const presCellHtml = (liveInfo && liveInfo.present !== undefined)
                     ? `<span class="badge badge-green" style="white-space:nowrap;">בפנים כעת: ${escapeHtml(liveInfo.present)}</span>`
                     : `<span style="color:#94a3b8; font-size:12px;">-</span>`;
-                const usedHoursTot = escapeHtml(t.given_used_hours_total ?? 0);
+                const creditBal = escapeHtml(t.credit_balance_hours ?? 24);
                 const usedHoursMonth = escapeHtml(t.given_used_hours_month ?? 0);
-                const starBadge = `<span class="badge badge-yellow" style="border:1px solid #eab308; white-space:nowrap;" title="שעות חניה שתרם הדייר ונוצלו בפועל ע״י שכנים (החודש: ${usedHoursMonth} שעות)">⭐ ${usedHoursTot} שעות שתרם</span>`;
+                const takenHoursMonth = escapeHtml(t.taken_hours_month ?? 0);
+                const usedHoursTot = escapeHtml(t.given_used_hours_total ?? 0);
+                const earnPct = escapeHtml(t.credit_earn_percent ?? 100);
+                const modeNote = (t.credit_enforce_active === false) ? ' [לתצוגה בלבד]' : '';
+                const starBadge = `<span class="badge badge-yellow" style="border:1px solid #eab308; white-space:nowrap;" title="קרדיט חודשי (בסיס: ${escapeHtml(t.base_credit_hours ?? 24)} שעות) | נתן ונוצל החודש: ${usedHoursMonth} שעות (זיכוי ${earnPct}%) | לקח החודש: ${takenHoursMonth} שעות | סה״כ נתן אי-פעם: ${usedHoursTot} שעות">⏱️ קרדיט חודשי: ${creditBal} שעות (נתן ${usedHoursMonth} / לקח ${takenHoursMonth})${modeNote}</span>`;
                 const phoneDisp = escapeHtml(formatPhoneDisplay(t.phone_number));
                 const phoneCellHtml = phoneDisp
                     ? `<span style="direction: ltr; display: inline-block; white-space:nowrap; font-weight:600;">${phoneDisp}</span>`
@@ -1504,11 +1529,13 @@
                         : `<span class="badge badge-blue">לפול הכללי של הבניין</span>`;
                     let schedStr = '';
                     if (sh.schedule_type === 'ONCE') {
-                        schedStr = `חד-פעמי: ${sh.specific_date || '-'}`;
+                        const endDPart = (sh.end_date && sh.end_date !== sh.specific_date) ? ` עד ${sh.end_date}` : '';
+                        schedStr = `חד-פעמי: ${sh.specific_date || '-'}${endDPart}`;
                     } else {
                         const dNames = String(sh.days_of_week || '').split(',').filter(Boolean).map(d => `יום ${DAY_NAMES_HE[parseInt(d,10)] || d}`).join(', ');
                         schedStr = `קבוע: ${dNames}`;
                     }
+                    const nextDayTag = (sh.end_time && sh.start_time && sh.end_time <= sh.start_time && (!sh.end_date || sh.end_date === sh.specific_date)) ? ' (למחרת)' : '';
                     const spotBadge = sh.parking_spot_number
                         ? ` <span class="badge badge-green">🅿️ חניה: ${sh.parking_spot_number}</span>`
                         : '';
@@ -1519,7 +1546,7 @@
                             <td><strong>${sh.spots_offered || 1}</strong> חניות${spotBadge}</td>
                             <td>${targetBadge}</td>
                             <td>${schedStr}</td>
-                            <td><strong>${sh.start_time} – ${sh.end_time}</strong></td>
+                            <td><strong>${sh.start_time} – ${sh.end_time}${nextDayTag}</strong></td>
                             <td>
                                 <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="managerCancelShare(${sh.id})">
                                     🗑️ בטל שחרור
@@ -1725,15 +1752,45 @@
             );
         }
 
+        function applyCreditEnforceToggleUI(isActive) {
+            const hid = document.getElementById('setCreditEnforceActive');
+            const btn = document.getElementById('creditModeToggleBtn');
+            if (hid) hid.value = isActive ? '1' : '0';
+            if (btn) {
+                if (isActive) {
+                    btn.className = 'btn btn-success';
+                    btn.style.background = '#16a34a';
+                    btn.style.color = '#ffffff';
+                    btn.innerHTML = '✅ קרדיטים פעילים (אכיפת יתרת שעות)';
+                } else {
+                    btn.className = 'btn btn-outline';
+                    btn.style.background = '#fef9c3';
+                    btn.style.color = '#854d0e';
+                    btn.style.borderColor = '#eab308';
+                    btn.innerHTML = '👁️ קרדיטים לתצוגה בלבד (ללא חסימה)';
+                }
+            }
+        }
+
+        function toggleCreditEnforceMode() {
+            const hid = document.getElementById('setCreditEnforceActive');
+            const cur = hid ? (hid.value === '1') : true;
+            applyCreditEnforceToggleUI(!cur);
+        }
+
         async function handleSaveSettings(e) {
             e.preventDefault();
             const latVal = document.getElementById('setParkingLat').value.trim();
             const lngVal = document.getElementById('setParkingLng').value.trim();
             const standaloneChk = document.getElementById('setStandaloneMode');
+            const creditEnforceEl = document.getElementById('setCreditEnforceActive');
             const payload = {
                 parking_name: document.getElementById('setParkingName').value.trim(),
                 max_bookings_per_day: parseInt(document.getElementById('setMaxDay').value, 10) || 5,
                 max_bookings_per_month: parseInt(document.getElementById('setMaxMonth').value, 10) || 30,
+                base_credit_hours: parseFloat(document.getElementById('setBaseCreditHours')?.value ?? '24') || 24,
+                credit_earn_percent: parseFloat(document.getElementById('setCreditEarnPercent')?.value ?? '100') || 100,
+                credit_enforce_active: creditEnforceEl ? (creditEnforceEl.value === '1') : true,
                 check_interval_minutes: parseInt(document.getElementById('setCheckInterval').value, 10) || 30,
                 reminder_minutes_before: parseInt(document.getElementById('setReminderMins').value, 10) || 30,
                 parking_address: document.getElementById('setParkingAddress').value.trim(),
@@ -1800,23 +1857,26 @@
                 return reportSortAsc ? cmp : -cmp;
             });
 
+            const earnPct = (currentReportData && currentReportData.credit_earn_percent !== undefined) ? currentReportData.credit_earn_percent : 100;
             sBody.innerHTML = sortedSummary.map(row => {
-                let netBadge = `<span class="badge badge-blue">0 (מאוזן)</span>`;
-                if (row.net_balance > 0) {
-                    netBadge = `<span class="badge badge-green">+${row.net_balance} (לזכות / תגמול)</span>`;
-                } else if (row.net_balance < 0) {
-                    netBadge = `<span class="badge badge-red">${row.net_balance} (לחיוב / ניכוי)</span>`;
+                const curCred = (row.credit_balance_hours !== undefined) ? row.credit_balance_hours : 24;
+                let netBadge = `<span class="badge badge-blue">⏱️ יתרה: ${curCred} שעות (מאוזן)</span>`;
+                if (row.net_hours > 0) {
+                    netBadge = `<span class="badge badge-green">⏱️ יתרה: ${curCred} שעות (+${row.net_hours} שעות החודש)</span>`;
+                } else if (row.net_hours < 0) {
+                    netBadge = `<span class="badge badge-red">⏱️ יתרה: ${curCred} שעות (${row.net_hours} שעות החודש)</span>`;
                 }
                 const lateHtml = row.late_exits > 0
                     ? `<span class="badge badge-red">${row.late_exits} איחורים</span>`
                     : '0';
+                const earnedNote = (earnPct != 100 && row.given_hours > 0) ? ` <small>(זיכוי ${earnPct}%: +${row.earned_credit_hours ?? row.given_hours} ש׳)</small>` : '';
 
                 return `
                     <tr>
                         <td><strong>דירה ${row.apartment_number}</strong></td>
                         <td>${row.tenant_name}</td>
                         <td><strong>${row.given_count}</strong> פעמים</td>
-                        <td><span class="badge badge-yellow" style="border:1px solid #eab308;">⭐ ${row.given_hours} שעות</span></td>
+                        <td><span class="badge badge-yellow" style="border:1px solid #eab308;">⭐ ${row.given_hours} שעות</span>${earnedNote}</td>
                         <td><strong>${row.taken_count}</strong> פעמים</td>
                         <td>${row.taken_hours} שעות</td>
                         <td>${netBadge}</td>

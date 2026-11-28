@@ -350,7 +350,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 6px; flex-wrap: nowrap;">
                 <div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1;">
                     <span id="i18n_apt_status_title" style="font-weight: 800; font-size: 14px; color: #334155; white-space: nowrap;">מצב הדירה שלי</span>
-                    <span id="portalStarHoursBadge" class="badge badge-yellow" style="border: 1px solid #eab308; font-size: 12px; font-weight: 800; white-space: nowrap; flex-shrink: 0;">⭐ 0 שעות שתרמתי</span>
+                    <span id="portalStarHoursBadge" class="badge badge-yellow" style="border: 1px solid #eab308; font-size: 12px; font-weight: 800; white-space: nowrap; flex-shrink: 0;">⏱️ קרדיט: 24 שעות</span>
                 </div>
                 <button type="button" id="i18n_refresh_quota_btn" onclick="refreshApartmentStatus(this)" class="btn btn-outline" style="width: auto; padding: 6px 10px; font-size: 12px; border-radius: 8px; background: white; white-space: nowrap; flex-shrink: 0;">
                     🔄 רענן מכסה
@@ -494,9 +494,17 @@
                             </div>
                         </div>
 
-                        <div class="input-group" id="shOnceDateGroup" style="display: none;">
-                            <label id="i18n_date_lbl">תאריך שחרור החניה:</label>
-                            <input type="date" id="shSpecificDate">
+                        <div id="shOnceDateGroup" style="display: none;">
+                            <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px;">
+                                <div class="input-group" style="min-width: 0;">
+                                    <label id="i18n_date_lbl">מתאריך:</label>
+                                    <input type="date" id="shSpecificDate" onchange="onShareDateOrTimeChange('start_date')">
+                                </div>
+                                <div class="input-group" style="min-width: 0;">
+                                    <label id="i18n_end_date_lbl">עד תאריך:</label>
+                                    <input type="date" id="shEndDate" onchange="onShareDateOrTimeChange('end_date')">
+                                </div>
+                            </div>
                         </div>
 
                         <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
@@ -517,6 +525,7 @@
                                 <input type="time" id="shEndTime" value="17:00" oninput="onManualTimeChange()" required>
                             </div>
                         </div>
+                        <div id="shOvernightHint" style="display: none; margin-top: -6px; margin-bottom: 12px; padding: 8px 12px; border-radius: 8px; background: #eff6ff; border: 1px solid #93c5fd; font-size: 12.5px; font-weight: 700; color: #1e3a8a;"></div>
 
                         <button type="submit" id="i18n_publish_btn" class="btn btn-primary">✅ פרסם ושחרר חניה</button>
                     </form>
@@ -545,9 +554,17 @@
                             </select>
                         </div>
 
-                        <div class="input-group" id="reqOnceDateGroup">
-                            <label id="i18n_req_date_lbl">תאריך מבוקש לחניה:</label>
-                            <input type="date" id="reqSpecificDate">
+                        <div id="reqOnceDateGroup">
+                            <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px;">
+                                <div class="input-group" style="min-width: 0;">
+                                    <label id="i18n_req_date_lbl">מתאריך:</label>
+                                    <input type="date" id="reqSpecificDate" onchange="onReqDateOrTimeChange('start_date')">
+                                </div>
+                                <div class="input-group" style="min-width: 0;">
+                                    <label id="i18n_req_end_date_lbl">עד תאריך:</label>
+                                    <input type="date" id="reqEndDate" onchange="onReqDateOrTimeChange('end_date')">
+                                </div>
+                            </div>
                         </div>
 
                         <div class="input-group" id="reqWeeklyDaysGroup" style="display: none;">
@@ -581,6 +598,7 @@
                                 <input type="time" id="reqEndTime" value="17:00" oninput="onReqManualTimeChange()" required>
                             </div>
                         </div>
+                        <div id="reqOvernightHint" style="display: none; margin-top: -6px; margin-bottom: 12px; padding: 8px 12px; border-radius: 8px; background: #eff6ff; border: 1px solid #93c5fd; font-size: 12.5px; font-weight: 700; color: #1e3a8a;"></div>
 
                         <button type="submit" id="reqSubmitBtn" class="btn btn-whatsapp">💬 שלח בקשת חניה לוואטסאפ שלי</button>
                     </form>
@@ -1038,8 +1056,11 @@
                     spotsHint.textContent = d.max_spots_hint(spotsInput.max || 1);
                 }
                 if (lastDashboardData.quota_limits) {
-                    document.getElementById('quotaTodayBadge').textContent = d.quota_today(lastDashboardData.quota_limits.used_today, lastDashboardData.quota_limits.max_per_day);
-                    document.getElementById('quotaMonthBadge').textContent = d.quota_month(lastDashboardData.quota_limits.used_this_month, lastDashboardData.quota_limits.max_per_month);
+                    const ql = lastDashboardData.quota_limits;
+                    const credBal = ql.credit_balance_hours ?? 24;
+                    const modeSuffix = (ql.credit_enforce_active === false) ? ' (לתצוגה)' : '';
+                    document.getElementById('quotaTodayBadge').textContent = d.quota_today(ql.used_today, ql.max_per_day);
+                    document.getElementById('quotaMonthBadge').textContent = `⏱️ קרדיט חודשי: ${credBal} שעות${modeSuffix}`;
                 }
                 renderMySubscribers(lastDashboardData.subscribers || []);
                 renderActiveBookings(lastDashboardData.active_bookings || []);
@@ -1083,6 +1104,7 @@
                     req_name: params.get('req_name') || '',
                     sched: (params.get('sched') || 'ONCE').toUpperCase(),
                     date: params.get('date') || new Date().toISOString().split('T')[0],
+                    end_date: params.get('end_date') || '',
                     days: params.get('days') || '',
                     start: params.get('start') || '08:00',
                     end: params.get('end') || '17:00'
@@ -1143,7 +1165,9 @@
                     });
                 } else if (reqObj.date) {
                     const dateEl = document.getElementById('shSpecificDate');
+                    const endDateEl = document.getElementById('shEndDate');
                     if (dateEl) dateEl.value = reqObj.date;
+                    if (endDateEl) endDateEl.value = reqObj.end_date || reqObj.date;
                 }
 
                 // 4. מלא שעות (או יום מלא)
@@ -1189,8 +1213,12 @@
         document.addEventListener('DOMContentLoaded', () => {
             const todayIso = new Date().toISOString().split('T')[0];
             document.getElementById('shSpecificDate').value = todayIso;
+            const shEndEl = document.getElementById('shEndDate');
+            if (shEndEl) shEndEl.value = todayIso;
             const reqDateEl = document.getElementById('reqSpecificDate');
             if (reqDateEl) reqDateEl.value = todayIso;
+            const reqEndDateEl = document.getElementById('reqEndDate');
+            if (reqEndDateEl) reqEndDateEl.value = todayIso;
             setPortalLanguage(currentLang);
 
             // קליטת לינק חכם של בקשת חניה (אם הגענו מקבוצת הוואטסאפ של הבניין)
@@ -1279,10 +1307,95 @@
 
         let isReqFullDaySelected = false;
 
+        function addDaysToIsoDate(isoDateStr, daysToAdd) {
+            if (!isoDateStr) return '';
+            const parts = String(isoDateStr).split('-');
+            if (parts.length !== 3) return isoDateStr;
+            const d = new Date(Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10)));
+            d.setUTCDate(d.getUTCDate() + daysToAdd);
+            return d.toISOString().split('T')[0];
+        }
+
+        function updateOvernightDateAndHint(prefix) {
+            const isShare = (prefix === 'sh');
+            const schedEl = document.getElementById(isShare ? 'shScheduleType' : 'reqScheduleType');
+            const startDateEl = document.getElementById(isShare ? 'shSpecificDate' : 'reqSpecificDate');
+            const endDateEl = document.getElementById(isShare ? 'shEndDate' : 'reqEndDate');
+            const startTimeEl = document.getElementById(isShare ? 'shStartTime' : 'reqStartTime');
+            const endTimeEl = document.getElementById(isShare ? 'shEndTime' : 'reqEndTime');
+            const hintEl = document.getElementById(isShare ? 'shOvernightHint' : 'reqOvernightHint');
+            if (!startTimeEl || !endTimeEl) return;
+
+            const st = startTimeEl.value || '';
+            const et = endTimeEl.value || '';
+            const sched = schedEl ? schedEl.value : 'ONCE';
+            const sDate = startDateEl ? startDateEl.value : '';
+            let eDate = endDateEl ? endDateEl.value : '';
+
+            if (sDate && endDateEl) {
+                if (!eDate || eDate < sDate) {
+                    eDate = sDate;
+                    endDateEl.value = eDate;
+                }
+                if (st && et && et <= st && eDate === sDate) {
+                    // עד שעה קטן/שווה למשעה -> מבין אוטומטית שזה עד ליום למחרת ומעדכן את "עד תאריך"!
+                    eDate = addDaysToIsoDate(sDate, 1);
+                    endDateEl.value = eDate;
+                }
+            }
+
+            if (hintEl) {
+                if (sched === 'ONCE' && sDate && eDate && eDate > sDate) {
+                    hintEl.textContent = `🌙 עד תאריך ${eDate} בשעה ${et} (למחרת / מעבר יום)`;
+                    hintEl.style.display = 'block';
+                } else if (sched === 'WEEKLY' && st && et && et <= st) {
+                    hintEl.textContent = `🌙 שעת הסיום (${et}) קטנה משעת ההתחלה (${st}) — החניה תימשך עד השעה ${et} ביום שלמחרת!`;
+                    hintEl.style.display = 'block';
+                } else {
+                    hintEl.style.display = 'none';
+                }
+            }
+        }
+
+        function onShareDateOrTimeChange(source) {
+            const startDateEl = document.getElementById('shSpecificDate');
+            const endDateEl = document.getElementById('shEndDate');
+            const startTimeEl = document.getElementById('shStartTime');
+            const endTimeEl = document.getElementById('shEndTime');
+            if (source === 'start_date' && startDateEl && endDateEl) {
+                const st = startTimeEl ? startTimeEl.value : '';
+                const et = endTimeEl ? endTimeEl.value : '';
+                if (st && et && et <= st) {
+                    endDateEl.value = addDaysToIsoDate(startDateEl.value, 1);
+                } else if (!endDateEl.value || endDateEl.value < startDateEl.value) {
+                    endDateEl.value = startDateEl.value;
+                }
+            }
+            updateOvernightDateAndHint('sh');
+        }
+
+        function onReqDateOrTimeChange(source) {
+            const startDateEl = document.getElementById('reqSpecificDate');
+            const endDateEl = document.getElementById('reqEndDate');
+            const startTimeEl = document.getElementById('reqStartTime');
+            const endTimeEl = document.getElementById('reqEndTime');
+            if (source === 'start_date' && startDateEl && endDateEl) {
+                const st = startTimeEl ? startTimeEl.value : '';
+                const et = endTimeEl ? endTimeEl.value : '';
+                if (st && et && et <= st) {
+                    endDateEl.value = addDaysToIsoDate(startDateEl.value, 1);
+                } else if (!endDateEl.value || endDateEl.value < startDateEl.value) {
+                    endDateEl.value = startDateEl.value;
+                }
+            }
+            updateOvernightDateAndHint('req');
+        }
+
         function toggleReqScheduleType() {
             const st = document.getElementById('reqScheduleType').value;
             document.getElementById('reqWeeklyDaysGroup').style.display = (st === 'WEEKLY') ? 'block' : 'none';
             document.getElementById('reqOnceDateGroup').style.display = (st === 'ONCE') ? 'block' : 'none';
+            updateOvernightDateAndHint('req');
         }
 
         function toggleReqFullDay() {
@@ -1303,6 +1416,7 @@
                 btn.style.color = '#4f46e5';
                 btn.innerHTML = '☀️ יום מלא';
             }
+            updateOvernightDateAndHint('req');
         }
 
         function onReqManualTimeChange() {
@@ -1320,6 +1434,7 @@
                 btn.style.color = '#4f46e5';
                 btn.innerHTML = '☀️ יום מלא';
             }
+            updateOvernightDateAndHint('req');
         }
 
         async function handleRequestSpot(e) {
@@ -1327,6 +1442,7 @@
             if (_portalActionBusy) return;
             const schedule_type = document.getElementById('reqScheduleType').value;
             const specific_date = document.getElementById('reqSpecificDate').value;
+            const end_date = document.getElementById('reqEndDate') ? document.getElementById('reqEndDate').value : specific_date;
             const start_time = document.getElementById('reqStartTime').value;
             const end_time = document.getElementById('reqEndTime').value;
             const selectedDays = Array.from(document.querySelectorAll('#reqDaysSelector .day-chip.selected'))
@@ -1347,6 +1463,7 @@
                     body: JSON.stringify({
                         schedule_type,
                         specific_date,
+                        end_date,
                         days_of_week: selectedDays,
                         start_time,
                         end_time
@@ -1409,6 +1526,7 @@
                 btn.style.color = '#4f46e5';
                 btn.innerHTML = '☀️ יום מלא';
             }
+            updateOvernightDateAndHint('sh');
         }
 
         function onManualTimeChange() {
@@ -1426,19 +1544,25 @@
                 btn.style.color = '#4f46e5';
                 btn.innerHTML = '☀️ יום מלא';
             }
+            updateOvernightDateAndHint('sh');
         }
 
-        function formatHoursDisplay(start, end) {
-            if (start === '00:00' && end === '23:59') {
+        function formatHoursDisplay(start, end, startDate = '', endDate = '') {
+            if (start === '00:00' && end === '23:59' && (!endDate || endDate === startDate)) {
                 return '☀️ יום מלא';
             }
-            return `<span dir="ltr">${start} – ${end}</span>`;
+            if (startDate && endDate && endDate !== startDate) {
+                return `<span dir="ltr">${start} (${startDate}) – ${end} (${endDate})</span>`;
+            }
+            const nextDayNote = (start && end && end <= start) ? ' <span style="color:#1d4ed8;">(עד למחרת)</span>' : '';
+            return `<span dir="ltr">${start} – ${end}</span>${nextDayNote}`;
         }
 
         function toggleScheduleType() {
             const st = document.getElementById('shScheduleType').value;
             document.getElementById('shWeeklyDaysGroup').style.display = (st === 'WEEKLY') ? 'block' : 'none';
             document.getElementById('shOnceDateGroup').style.display = (st === 'ONCE') ? 'block' : 'none';
+            updateOvernightDateAndHint('sh');
         }
 
         async function sendOtp(chosenPkg = null) {
@@ -1770,16 +1894,28 @@
             }
 
             if (data.quota_limits) {
-                document.getElementById('quotaTodayBadge').textContent = `ניצול יומי: ${data.quota_limits.used_today} מתוך ${data.quota_limits.max_per_day}`;
-                document.getElementById('quotaMonthBadge').textContent = `ניצול חודשי: ${data.quota_limits.used_this_month} מתוך ${data.quota_limits.max_per_month}`;
-                const gMonth = data.quota_limits.given_used_hours_month ?? 0;
-                const gTot = data.quota_limits.given_used_hours_total ?? 0;
+                const ql = data.quota_limits;
+                const credBal = ql.credit_balance_hours ?? 24;
+                const baseCred = ql.base_credit_hours ?? 24;
+                const earnPct = ql.credit_earn_percent ?? 100;
+                const gMonth = ql.given_used_hours_month ?? 0;
+                const earnedMonth = ql.earned_credit_hours_month ?? gMonth;
+                const takenMonth = ql.taken_hours_month ?? 0;
+                const isEnforced = (ql.credit_enforce_active !== false);
+                const modeSuffix = isEnforced ? '' : ' (לתצוגה בלבד)';
+
+                document.getElementById('quotaTodayBadge').textContent = `ניצול יומי: ${ql.used_today} מתוך ${ql.max_per_day}`;
+                document.getElementById('quotaMonthBadge').textContent = `⏱️ קרדיט חודשי: ${credBal} שעות${modeSuffix}`;
                 const starTop = document.getElementById('portalStarHoursBadge');
-                if (starTop) starTop.textContent = `⭐ ${gTot} שעות שתרמתי`;
+                if (starTop) {
+                    starTop.textContent = `⏱️ קרדיט: ${credBal} שעות${isEnforced ? '' : ' (תצוגה)'}`;
+                    starTop.title = `קרדיט חודשי: בסיס ${baseCred} שעות | נתתי ונוצל החודש: +${earnedMonth} שעות | קיבלתי החודש: -${takenMonth} שעות`;
+                }
                 const gM = document.getElementById('givenHoursMonthBadge');
-                if (gM) gM.textContent = `⭐ שעות חניה שתרמתי החודש: ${gMonth} שעות`;
+                const pctNote = (Number(earnPct) !== 100) ? ` (לפי יחס ${earnPct}% = +${earnedMonth} שעות לקרדיט)` : '';
+                if (gM) gM.textContent = `⭐ נתתי החודש (שנוצל): ${gMonth} שעות${pctNote} | 🚗 קיבלתי החודש: ${takenMonth} שעות`;
                 const gT = document.getElementById('givenHoursTotalBadge');
-                if (gT) gT.textContent = `⭐ סה״כ כללי שתרמתי: ${gTot} שעות`;
+                if (gT) gT.textContent = `⏱️ יתרת קרדיט חודשי לדירה: ${credBal} שעות (בסיס חודשי ${baseCred} שעות + שעות שנתתי ונוצלו − שעות שקיבלתי)${modeSuffix}`;
             }
 
             renderMySubscribers(data.subscribers || []);
@@ -2019,7 +2155,7 @@
             card.style.display = 'block';
             const statusLabels = {
                 'ACTIVE': '<span class="badge badge-green">פעיל כעת בחניון (+1 למכסה)</span>',
-                'WAITING_FOR_EXIT': '<span class="badge badge-yellow">ממתין ליציאת הרכב של המשחרר</span>',
+                'WAITING_FOR_EXIT': '<span class="badge badge-yellow">⏳ הרכב של הדירה המשחררת טרם יצא מהחניון — תקבל הודעת וואטסאפ ברגע שייצא והמכסה תופעל!</span>',
                 'SCHEDULED': '<span class="badge badge-blue">משוריין</span>'
             };
             list.innerHTML = bookings.map(b => {
@@ -2028,11 +2164,12 @@
                 const desc = isBorrower
                     ? `שאלת חניה מדירה <strong>${b.from_apartment}</strong>${spotBadge}`
                     : `השאלת חניה לדירה <strong>${b.to_apartment}</strong>${spotBadge}`;
+                const dateDisp = (b.end_date && b.end_date !== b.booking_date) ? `${b.booking_date} עד ${b.end_date}` : b.booking_date;
                 return `
                     <div class="slot-item">
                         <div>
                             <div style="font-size:15px;">${desc}</div>
-                            <div style="font-size:13px; color:#64748b; margin-top:3px;">📅 ${b.booking_date} | 🕒 ${b.start_time} עד ${b.end_time}</div>
+                            <div style="font-size:13px; color:#64748b; margin-top:3px;">📅 ${dateDisp} | 🕒 ${b.start_time} עד ${b.end_time}</div>
                             <div style="margin-top:5px;">${statusLabels[b.status] || b.status}</div>
                         </div>
                         <button class="btn btn-danger" style="width:auto; padding:8px 14px; font-size:13px;" onclick="releaseBooking(${b.id})">
@@ -2045,7 +2182,16 @@
 
         function renderAvailableSlots(slots) {
             const container = document.getElementById('availableSlotsList');
-            const openSlots = (slots || []).filter(s => !s.is_mine && s.spots_remaining > 0);
+            const nowMs = Date.now();
+            const openSlots = (slots || []).filter(s => {
+                if (s.is_mine || s.spots_remaining <= 0) return false;
+                const endD = s.end_date || s.booking_date;
+                if (endD && s.end_time) {
+                    const expTs = new Date(`${endD}T${s.end_time}:00`).getTime();
+                    if (!isNaN(expTs) && expTs <= nowMs) return false;
+                }
+                return true;
+            });
             if (openSlots.length === 0) {
                 container.innerHTML = '<p style="text-align:center; color:#64748b; padding:16px;">אין כרגע חניות פנויות בפול הכללי או עבור דירתך.</p>';
                 return;
@@ -2054,6 +2200,7 @@
             container.innerHTML = openSlots.map(s => {
                 const ownerExtra = (s.owner_name && !String(s.owner_name).startsWith('דירה')) ? ` (${s.owner_name})` : '';
                 const spotBadge = s.parking_spot_number ? `<span class="badge badge-green" style="border:1px solid #86efac;">🅿️ מספר חניה: ${s.parking_spot_number}</span>` : '';
+                const dateRangeDisp = (s.end_date && s.end_date !== s.booking_date) ? `${s.booking_date} עד ${s.end_date}` : s.booking_date;
                 return `
                 <div class="slot-item ${s.is_for_me_specifically ? 'special-for-me' : ''}">
                     <div>
@@ -2065,7 +2212,7 @@
                                 : '<span class="badge badge-purple">🌐 פול כללי</span>'}
                         </div>
                         <div style="font-size:13px; color:#475569; margin-top:4px;">
-                            📅 תאריך: <strong>${s.booking_date}</strong> | 🕒 שעות: <strong>${formatHoursDisplay(s.start_time, s.end_time)}</strong>
+                            📅 תאריך: <strong>${dateRangeDisp}</strong> | 🕒 שעות: <strong>${formatHoursDisplay(s.start_time, s.end_time, s.booking_date, s.end_date)}</strong>
                         </div>
                         <div style="font-size:12px; color:#64748b; margin-top:2px;">
                             חניות פנויות בחלון זה: <strong>${s.spots_remaining}</strong> מתוך ${s.spots_offered}
@@ -2140,6 +2287,7 @@
             const target_apartment = document.getElementById('shTargetApt').value.trim();
             const schedule_type = document.getElementById('shScheduleType').value;
             const specific_date = document.getElementById('shSpecificDate').value;
+            const end_date = document.getElementById('shEndDate') ? document.getElementById('shEndDate').value : specific_date;
             const start_time = document.getElementById('shStartTime').value;
             const end_time = document.getElementById('shEndTime').value;
 
@@ -2166,6 +2314,7 @@
                         schedule_type,
                         days_of_week: selectedDays,
                         specific_date,
+                        end_date,
                         start_time,
                         end_time
                     })
@@ -2198,7 +2347,8 @@
             container.innerHTML = shares.map(sh => {
                 let schedDesc = '';
                 if (sh.schedule_type === 'ONCE') {
-                    schedDesc = `📅 חד-פעמי בתאריך ${sh.specific_date}`;
+                    const endDPart = (sh.end_date && sh.end_date !== sh.specific_date) ? ` עד ${sh.end_date}` : '';
+                    schedDesc = `📅 חד-פעמי: ${sh.specific_date}${endDPart}`;
                 } else {
                     const dNames = String(sh.days_of_week || '').split(',').filter(Boolean).map(d => `יום ${DAY_NAMES[parseInt(d,10)] || d}`).join(', ');
                     schedDesc = `📅 קבוע: ${dNames}`;
@@ -2213,7 +2363,7 @@
                         <div>
                             <div>${spotPart}<strong>${sh.spots_offered} חניה/ות</strong> | ${targetDesc}</div>
                             <div style="font-size:13px; color:#475569; margin-top:4px;">${schedDesc}</div>
-                            <div style="font-size:13px; color:#64748b;">🕒 שעות: <strong>${formatHoursDisplay(sh.start_time, sh.end_time)}</strong></div>
+                            <div style="font-size:13px; color:#64748b;">🕒 שעות: <strong>${formatHoursDisplay(sh.start_time, sh.end_time, sh.specific_date, sh.end_date)}</strong></div>
                         </div>
                         <button class="btn btn-danger" style="width:auto; padding:8px 12px; font-size:13px;" onclick="cancelShare(${sh.id})">
                             בטל
