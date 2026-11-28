@@ -2145,10 +2145,36 @@
             }
         }
 
+        function isBookingOrShareExpired(item) {
+            if (!item) return false;
+            const nowMs = Date.now();
+            if (item.window_end) {
+                const wEndTs = new Date(item.window_end).getTime();
+                if (!isNaN(wEndTs) && wEndTs <= nowMs) return true;
+            }
+            const sched = String(item.schedule_type || 'ONCE').toUpperCase();
+            if (sched === 'ONCE') {
+                const startD = item.specific_date || item.booking_date || '';
+                let endD = item.end_date || startD;
+                if (startD && item.end_time) {
+                    if (endD === startD && item.start_time && item.end_time <= item.start_time) {
+                        endD = addDaysToIsoDate(startD, 1);
+                    }
+                    const expTs = new Date(`${endD}T${item.end_time}:00`).getTime();
+                    if (!isNaN(expTs) && expTs <= nowMs) return true;
+                }
+            } else if (item.end_date && item.end_time) {
+                const expTs = new Date(`${item.end_date}T${item.end_time}:00`).getTime();
+                if (!isNaN(expTs) && expTs <= nowMs) return true;
+            }
+            return false;
+        }
+
         function renderActiveBookings(bookings) {
             const card = document.getElementById('myActiveBookingsCard');
             const list = document.getElementById('myActiveBookingsList');
-            if (!bookings || bookings.length === 0) {
+            const validBookings = (bookings || []).filter(b => !isBookingOrShareExpired(b));
+            if (validBookings.length === 0) {
                 card.style.display = 'none';
                 return;
             }
@@ -2158,7 +2184,7 @@
                 'WAITING_FOR_EXIT': '<span class="badge badge-yellow">⏳ הרכב של הדירה המשחררת טרם יצא מהחניון — תקבל הודעת וואטסאפ ברגע שייצא והמכסה תופעל!</span>',
                 'SCHEDULED': '<span class="badge badge-blue">משוריין</span>'
             };
-            list.innerHTML = bookings.map(b => {
+            list.innerHTML = validBookings.map(b => {
                 const isBorrower = String(b.to_apartment) === String(currentTenant.apartment_number);
                 const spotBadge = b.parking_spot_number ? ` <span class="badge badge-green">🅿️ חניה: ${b.parking_spot_number}</span>` : '';
                 const desc = isBorrower
@@ -2340,11 +2366,12 @@
 
         function renderMyShares(shares) {
             const container = document.getElementById('mySharesList');
-            if (!shares || shares.length === 0) {
+            const activeShares = (shares || []).filter(sh => !isBookingOrShareExpired(sh));
+            if (activeShares.length === 0) {
                 container.innerHTML = '<p style="text-align:center; color:#64748b; padding:12px;">אין לך כרגע שחרורי חניה פעילים.</p>';
                 return;
             }
-            container.innerHTML = shares.map(sh => {
+            container.innerHTML = activeShares.map(sh => {
                 let schedDesc = '';
                 if (sh.schedule_type === 'ONCE') {
                     const endDPart = (sh.end_date && sh.end_date !== sh.specific_date) ? ` עד ${sh.end_date}` : '';
